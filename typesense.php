@@ -90,7 +90,7 @@ function typesense_product_indexer_page()
     <h1>Typesense Product Indexer</h1>
     <div id="wrapper-id" class="message-wrapper">
         <div class="message-image">
-            <img src="<?php echo plugins_url('blazeWooless/assets/frontend/images/Shape.png'); ?>" alt="" srcset="">
+            <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/Shape.png'); ?>" alt="" srcset="">
         </div>
         <div class="wooless_message">
             <div class="message_success">Success</div>
@@ -103,7 +103,8 @@ function typesense_product_indexer_page()
             <input class="input_p" type="password" id="api_key" name="api_key"
                 value="<?php echo esc_attr($private_key_master); ?>" />
             <div class="error-icon" id="error_id" style="display: none;">
-                <img src="<?php echo plugins_url('blazeWooless/assets/frontend/images/error.png'); ?>" alt="" srcset="">
+                <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/error.png'); ?>" alt=""
+                    srcset="">
                 <div id="error_message"></div>
             </div>
         </div>
@@ -312,17 +313,19 @@ function get_typesense_collections()
 
 function getTermData($taxonomyTerms)
 {
-    $termNames = [];
-    $termLinks = [];
+    $termData = [];
     if (!empty($taxonomyTerms)) {
         foreach ($taxonomyTerms as $term) {
-            $termNames[] = $term->name;
-            $termLinks[] = get_term_link($term->term_id);
+            $termData[] = [
+                'name' => $term->name,
+                'url' => get_term_link($term->term_id),
+            ];
         }
     }
 
-    return [$termNames, $termLinks];
+    return $termData;
 }
+
 
 function getProductDataForTypeSense($product)
 {
@@ -342,53 +345,77 @@ function getProductDataForTypeSense($product)
     $meta = YoastSEO()->meta->for_post($product_id);
     $fullHead = wp_gql_seo_get_full_head($meta);
 
+     $seo_head = '';
+    if (is_plugin_active('wordpress-seo/wp-seo.php')) {
+        include_once ABSPATH . 'wp-admin/includes/plugin.php';
+        $prev_post = $GLOBALS['post'];
+        $GLOBALS['post'] = get_post($product->get_id());
+
+        $wpseo_frontend = WPSEO_Frontend::get_instance();
+        $title = $wpseo_frontend->get_content_title();
+        $metadesc = $wpseo_frontend->get_meta_description();
+
+        $canonical = WPSEO_Meta::get_value('canonical');
+        $canonical = $canonical ? $canonical : get_permalink($product->get_id());
+
+        $seo_head = "<title>$title</title>";
+        $seo_head .= "<meta name='description' content='$metadesc' />";
+        $seo_head .= "<link rel='canonical' href='$canonical' />";
+
+        $GLOBALS['post'] = $prev_post;
+    }
+
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
 
     $thumbnail = get_the_post_thumbnail_url($product_id);
     $stockQuantity = $product->get_stock_quantity();
 
+    $categories = get_the_terms($product_id, 'product_cat');
+    $categoryData = getTermData($categories);
+
     $ingredients = get_the_terms($product_id, 'product_ingredients');
-    $ingredients = array_map(function ($term) {
+    $ingredientData = array_map(function ($term) {
         return [
             'name' => $term->name,
             'description' => $term->description,
-            'imageSourceUrl' => z_taxonomy_image_url($term->term_id)
+            'imageSourceUrl' => z_taxonomy_image_url($term->term_id),
+            'slug' => $term->slug,
+            'url' => get_term_link($term->term_id),
         ];
     }, $ingredients);
-    $ingredients = json_encode($ingredients);
 
-    $categories = get_the_terms($product_id, 'product_cat');
-    $categoriesData = getTermData($categories);
-    $categoryNames = $categoriesData[0];
-    $categoryLinks = $categoriesData[1];
+    // Merge category data and ingredient data
+    $combinedCategoryData = array_merge($categoryData, $ingredientData);
 
+    // Use other parts of the code as before
     $tags = get_the_terms($product_id, 'product_tag');
-    $tagsData = getTermData($tags);
-    $tagNames = $tagsData[0];
-    $tagLinks = $tagsData[1];
+    $tagData = getTermData($tags);
 
     $favourites = get_the_terms($product_id, 'favourite');
-    $favouritesData = getTermData($favourites);
-    $favouriteNames = $favouritesData[0];
-    $favouriteLinks = $favouritesData[1];
+    $favouriteData = getTermData($favourites);
 
     $occassions = get_the_terms($product_id, 'occasion');
-    $occassionsData = getTermData($occassions);
-    $occassionNames = $occassionsData[0];
-    $occassionLinks = $occassionsData[1];
-
+    $occassionData = getTermData($occassions);
 
     $shopBys = get_the_terms($product_id, 'shop-by');
-    $shopBysData = getTermData($shopBys);
-    $shopByNames = $shopBysData[0];
-    $shopByLinks = $shopBysData[1];
+    $shopByData = getTermData($shopBys);
 
     $types = get_the_terms($product_id, 'product-type');
-    $typesData = getTermData($types);
-    $typeNames = $typesData[0];
-    $typeLinks = $typesData[1];
+    $typeData = getTermData($types);
+
     $product_type = $product->get_type();
+
+    $jsonData = [
+        'categories' => $combinedCategoryData,
+        'tags' => $tagData,
+        'favourites' => $favouriteData,
+        'occassions' => $occassionData,
+        'shopBys' => $shopByData,
+        'types' => $typeData,
+    ];
+
+    $json = json_encode($jsonData);
 
 
     // Get variations if the product is a variable product
@@ -462,7 +489,7 @@ function getProductDataForTypeSense($product)
         'name' => $product->get_name(),
         'permalink' => get_permalink($product->get_id()),
         'slug' => $product->get_slug(),
-        'seoFullHead' => $fullHead,
+        'seoFullHead' => $seo_head,
         'thumbnail' => empty($thumbnail) ? '' : $thumbnail,
         'sku' => $product->get_sku(),
         'price' => floatval($product->get_price()),
@@ -477,19 +504,12 @@ function getProductDataForTypeSense($product)
         'totalSales' => $product->get_total_sales(),
         'galleryImages' => json_encode($product_gallery),
         'addons' => $addons,
-        'ingredients' => $ingredients,
-        'categoryNames' => $categoryNames,
-        'categoryLinks' => $categoryLinks,
-        'tagNames' => $tagNames,
-        'tagLinks' => $tagLinks,
-        'favouriteNames' => $favouriteNames,
-        'favouriteLinks' => $favouriteLinks,
-        'occassionNames' => $occassionNames,
-        'occassionLinks' => $occassionLinks,
-        'shopByNames' => $shopByNames,
-        'shopByLinks' => $shopByLinks,
-        'typeNames' => $typeNames,
-        'typeLinks' => $typeLinks,
+        'product_categories' => $categoryData,
+        'tags' => $tags,
+        'favourites' => $favouriteData,
+        'occassions' => $occassionData,
+        'shopBys' => $shopByData,
+        'types' => $typeData,
         'productType' => $product_type,
         // Add product type
         'variations' => $variations_data,
@@ -497,6 +517,7 @@ function getProductDataForTypeSense($product)
         'crossSellData' => $cross_sell_data,
         'upsellData' => $upsell_data,
         'additionalTabs' => $formatted_additional_tabs,
+        'seo' => $seo_head,
     ];
 
     return $product_data;
@@ -939,11 +960,7 @@ function products_to_typesense()
                 'name' => $collection_product,
                 'fields' => [
                     ['name' => 'id', 'type' => 'string', 'facet' => true],
-                    [
-                        'name' => 'productId',
-                        'type' => 'string',
-                        'facet' => true,
-                    ],
+                    ['name' => 'productId','type' => 'string','facet' => true,],
                     ['name' => 'description', 'type' => 'string'],
                     ['name' => 'shortDescription', 'type' => 'string'],
                     ['name' => 'name', 'type' => 'string'],
@@ -964,19 +981,6 @@ function products_to_typesense()
                     ['name' => 'totalSales', 'type' => 'int64'],
                     ['name' => 'galleryImages', 'type' => 'string'],
                     ['name' => 'addons', 'type' => 'string'],
-                    ['name' => 'ingredients', 'type' => 'string'],
-                    ['name' => 'categoryNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'categoryLinks', 'type' => 'string[]'],
-                    ['name' => 'tagNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'tagLinks', 'type' => 'string[]'],
-                    ['name' => 'favouriteNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'favouriteLinks', 'type' => 'string[]'],
-                    ['name' => 'occassionNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'occassionLinks', 'type' => 'string[]'],
-                    ['name' => 'shopByNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'shopByLinks', 'type' => 'string[]'],
-                    ['name' => 'typeNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'typeLinks', 'type' => 'string[]'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
                     ['name' => 'variations', 'type' => 'string[]', 'facet' => true],
 
@@ -1003,6 +1007,7 @@ function products_to_typesense()
             console.log('Error block executed'); // Log a message to the browser console
             document.getElementById('error_message').innerHTML = '$error_message';
         </script>";
+        echo "Error adding products to Typesense: " . $e->getMessage() . "\n";
     }
 
 
