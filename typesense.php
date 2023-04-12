@@ -37,6 +37,8 @@ add_action('wp_ajax_get_typesense_collections', 'get_typesense_collections');
 add_action('wp_ajax_save_typesense_api_key', 'save_typesense_api_key');
 add_action('wp_update_nav_menu', 'update_typesense_document_on_menu_update', 10, 2);
 add_action('edited_term', 'update_typesense_document_on_taxonomy_edit', 10, 3);
+add_action('updated_option', 'site_info_update', 10, 3);
+
 
 function enqueue_typesense_product_indexer_scripts()
 {
@@ -205,7 +207,7 @@ function indexData() {
     var data = {
         'action': 'index_data_to_typesense',
         'api_key': apiKey,
-        'collection_name': 'products',
+        'collection_name': 'site_info',
 
     };
     document.getElementById("wrapper-id").style.display = "none";
@@ -1157,5 +1159,30 @@ function update_typesense_document_on_taxonomy_edit($term_id, $tt_id, $taxonomy)
         $client->collections[$collection_taxonomy]->documents[strval($term->term_id)]->update($document);
     } catch (Exception $e) {
         error_log("Error updating term '{$term->name}' in Typesense: " . $e->getMessage());
+    }
+}
+
+// Function to be called when an option is updated
+function site_info_update($option_name, $old_value, $new_value) {
+    // Array of target General Settings options
+    $target_settings = array(
+        'blogname',
+        'blogdescription',
+        'siteurl',
+        'home',
+        'admin_email',
+        'users_can_register',
+        'default_role',
+        'timezone_string',
+        'date_format',
+        'time_format',
+        'start_of_week',
+        'WPLANG',
+        'woocommerce_demo_store',
+    );
+
+    // Check if the updated option is in the array of target settings
+    if (in_array($option_name, $target_settings)) {
+        site_info_index_to_typesense();
     }
 }
