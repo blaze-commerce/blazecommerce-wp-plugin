@@ -492,7 +492,9 @@ function getProductDataForTypeSense($product)
         'seoFullHead' => $seo_head,
         'thumbnail' => empty($thumbnail) ? '' : $thumbnail,
         'sku' => $product->get_sku(),
-        'price' => floatval($product->get_price()),
+        'price' => [
+        sprintf("%s: %.2f", get_woocommerce_currency(), floatval($product->get_price())) // Format price as string
+        ],
         'regularPrice' => floatval($product->get_regular_price()),
         'salePrice' => floatval($product->get_sale_price()),
         'onSale' => $product->is_on_sale(),
@@ -519,7 +521,7 @@ function getProductDataForTypeSense($product)
         'additionalTabs' => $formatted_additional_tabs,
         'seo' => $seo_head,
     ];
-
+    $product_data['price'] = json_encode($product_data['price']);
     return $product_data;
 }
 
@@ -969,7 +971,7 @@ function products_to_typesense()
                     ['name' => 'seoFullHead', 'type' => 'string'],
                     ['name' => 'thumbnail', 'type' => 'string'],
                     ['name' => 'sku', 'type' => 'string'],
-                    ['name' => 'price', 'type' => 'float'],
+                    ['name' => 'price', 'type' => 'string[]'],
                     ['name' => 'regularPrice', 'type' => 'float'],
                     ['name' => 'salePrice', 'type' => 'float'],
                     ['name' => 'onSale', 'type' => 'bool'],
@@ -983,9 +985,9 @@ function products_to_typesense()
                     ['name' => 'addons', 'type' => 'string'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
                     ['name' => 'variations', 'type' => 'string[]', 'facet' => true],
-
                 ],
                 'default_sorting_field' => 'updatedAt',
+                'enable_nested_fields' => true
             ]
         );
 
@@ -1047,8 +1049,6 @@ function update_product_in_typesense($product_id)
     }
 
 }
-
-
 function update_typesense_document_on_menu_update($menu_id, $menu_data)
 {
     $typesense_private_key = get_option('typesense_api_key');
