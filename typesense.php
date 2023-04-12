@@ -527,6 +527,80 @@ function getProductDataForTypeSense($product)
     return $product_data;
 }
 
+function products_to_typesense(){
+    //Product indexing
+    $typesense_private_key = get_option('typesense_api_key');
+    $client = getTypeSenseClient($typesense_private_key);
+
+    // Fetch the store ID from the saved options
+    $wooless_site_id = get_option('store_id');
+    $collection_product = 'product-' . $wooless_site_id;
+    try {
+        $client = getTypeSenseClient($typesense_private_key);
+        try {
+            $client->collections[$collection_product]->delete();
+        } catch (Exception $e) {
+            // Don't error out if the collection was not found
+        }
+        $client->collections->create(
+            [
+                'name' => $collection_product,
+                'fields' => [
+                    ['name' => 'id', 'type' => 'string', 'facet' => true],
+                    ['name' => 'productId','type' => 'string','facet' => true,],
+                    ['name' => 'description', 'type' => 'string'],
+                    ['name' => 'shortDescription', 'type' => 'string'],
+                    ['name' => 'name', 'type' => 'string'],
+                    ['name' => 'permalink', 'type' => 'string'],
+                    ['name' => 'slug', 'type' => 'string', 'facet' => true],
+                    ['name' => 'seoFullHead', 'type' => 'string'],
+                    ['name' => 'thumbnail', 'type' => 'string'],
+                    ['name' => 'sku', 'type' => 'string'],
+                    ['name' => 'price', 'type' => 'string[]'],
+                    ['name' => 'regularPrice', 'type' => 'float'],
+                    ['name' => 'salePrice', 'type' => 'float'],
+                    ['name' => 'onSale', 'type' => 'bool'],
+                    ['name' => 'stockQuantity', 'type' => 'int64'],
+                    ['name' => 'stockStatus', 'type' => 'string'],
+                    ['name' => 'updatedAt', 'type' => 'int64'],
+                    ['name' => 'createdAt', 'type' => 'int64'],
+                    ['name' => 'isFeatured', 'type' => 'bool'],
+                    ['name' => 'totalSales', 'type' => 'int64'],
+                    ['name' => 'galleryImages', 'type' => 'string'],
+                    ['name' => 'addons', 'type' => 'string'],
+                    ['name' => 'productType', 'type' => 'string', 'facet' => true],
+                    ['name' => 'variations', 'type' => 'string[]', 'facet' => true],
+                ],
+                'default_sorting_field' => 'updatedAt',
+                'enable_nested_fields' => true
+            ]
+        );
+
+        // Fetch products from WooCommerce
+        $products = wc_get_products(['status' => 'publish', 'limit' => -1]);
+
+        // Index products in Typesense
+        foreach ($products as $product) {
+            // Index the product data
+            $product_data = getProductDataForTypeSense($product);
+            $client->collections[$collection_product]->documents->create($product_data);
+        }
+
+        echo "Products indexed successfully.";
+    } catch (Exception $e) {
+        $error_message = "Error: " . $e->getMessage();
+        echo $error_message; // Print the error message for debugging purposes
+        echo "<script>
+            console.log('Error block executed'); // Log a message to the browser console
+            document.getElementById('error_message').innerHTML = '$error_message';
+        </script>";
+        echo "Error adding products to Typesense: " . $e->getMessage() . "\n";
+    }
+
+
+    wp_die();
+} 
+
 function menu_index_to_typesense()
 {
     $typesense_private_key = get_option('typesense_api_key');
@@ -943,80 +1017,7 @@ function site_info_index_to_typesense()
     }
 
 }
-function products_to_typesense()
-{
-    //Product indexing
-    $typesense_private_key = get_option('typesense_api_key');
-    $client = getTypeSenseClient($typesense_private_key);
-
-    // Fetch the store ID from the saved options
-    $wooless_site_id = get_option('store_id');
-    $collection_product = 'product-' . $wooless_site_id;
-    try {
-        $client = getTypeSenseClient($typesense_private_key);
-        try {
-            $client->collections[$collection_product]->delete();
-        } catch (Exception $e) {
-            // Don't error out if the collection was not found
-        }
-        $client->collections->create(
-            [
-                'name' => $collection_product,
-                'fields' => [
-                    ['name' => 'id', 'type' => 'string', 'facet' => true],
-                    ['name' => 'productId','type' => 'string','facet' => true,],
-                    ['name' => 'description', 'type' => 'string'],
-                    ['name' => 'shortDescription', 'type' => 'string'],
-                    ['name' => 'name', 'type' => 'string'],
-                    ['name' => 'permalink', 'type' => 'string'],
-                    ['name' => 'slug', 'type' => 'string', 'facet' => true],
-                    ['name' => 'seoFullHead', 'type' => 'string'],
-                    ['name' => 'thumbnail', 'type' => 'string'],
-                    ['name' => 'sku', 'type' => 'string'],
-                    ['name' => 'price', 'type' => 'string[]'],
-                    ['name' => 'regularPrice', 'type' => 'float'],
-                    ['name' => 'salePrice', 'type' => 'float'],
-                    ['name' => 'onSale', 'type' => 'bool'],
-                    ['name' => 'stockQuantity', 'type' => 'int64'],
-                    ['name' => 'stockStatus', 'type' => 'string'],
-                    ['name' => 'updatedAt', 'type' => 'int64'],
-                    ['name' => 'createdAt', 'type' => 'int64'],
-                    ['name' => 'isFeatured', 'type' => 'bool'],
-                    ['name' => 'totalSales', 'type' => 'int64'],
-                    ['name' => 'galleryImages', 'type' => 'string'],
-                    ['name' => 'addons', 'type' => 'string'],
-                    ['name' => 'productType', 'type' => 'string', 'facet' => true],
-                    ['name' => 'variations', 'type' => 'string[]', 'facet' => true],
-                ],
-                'default_sorting_field' => 'updatedAt',
-                'enable_nested_fields' => true
-            ]
-        );
-
-        // Fetch products from WooCommerce
-        $products = wc_get_products(['status' => 'publish', 'limit' => -1]);
-
-        // Index products in Typesense
-        foreach ($products as $product) {
-            // Index the product data
-            $product_data = getProductDataForTypeSense($product);
-            $client->collections[$collection_product]->documents->create($product_data);
-        }
-
-        echo "Products indexed successfully.";
-    } catch (Exception $e) {
-        $error_message = "Error: " . $e->getMessage();
-        echo $error_message; // Print the error message for debugging purposes
-        echo "<script>
-            console.log('Error block executed'); // Log a message to the browser console
-            document.getElementById('error_message').innerHTML = '$error_message';
-        </script>";
-        echo "Error adding products to Typesense: " . $e->getMessage() . "\n";
-    }
-
-
-    wp_die();
-} // Add the action hook
+// Add the action hook
 
 function index_data_to_typesense()
 {
