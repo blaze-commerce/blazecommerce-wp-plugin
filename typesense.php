@@ -865,45 +865,45 @@ function site_info_index_to_typesense()
         $payment_methods_string = implode(', ', $payment_methods);
 
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'PaymentMethods',
+            'name' => 'Payment_methods',
             'value' => $payment_methods_string,
             'updated_at' => $updatedAt,
         ]);
 
 
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'SiteTitle',
+            'name' => 'Site_title',
             'value' => $SiteTitle,
             'updated_at' => $updatedAt,
         ]);
 
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'SiteTagline',
+            'name' => 'Site_tagline',
             'value' => $SiteTagline,
             'updated_at' => $updatedAt,
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'site logo',
+            'name' => 'site_logo',
             'value' => $logo_url,
             'updated_at' => $logo_updated_at,
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Store Notice',
+            'name' => 'Store_notice',
             'value' => $store_notice,
             'updated_at' => intval($store_notice_updated_at),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Time format',
+            'name' => 'Time_format',
             'value' => $time_format,
             'updated_at' => intval($current_unix_timestamp),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Search Engine',
+            'name' => 'Search_engine',
             'value' => $search_engine,
             'updated_at' => intval($search_engine_last_updated),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Site ID',
+            'name' => 'Site_ID',
             'value' => $site_id_string,
             'updated_at' => intval($search_engine_last_updated),
         ]);
@@ -923,17 +923,17 @@ function site_info_index_to_typesense()
             'updated_at' => intval($language_last_updated),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Time Zone',
+            'name' => 'Time_zone',
             'value' => $timezone,
             'updated_at' => intval($wp_timezone_last_updated),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Date format',
+            'name' => 'Date_format',
             'value' => $date_format,
             'updated_at' => intval($date_format_last_updated),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'favicon',
+            'name' => 'fav_icon',
             'value' => $favicon_url,
             'updated_at' => intval($store_notice_updated_at),
         ]);
