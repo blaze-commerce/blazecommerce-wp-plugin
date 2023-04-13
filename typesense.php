@@ -37,6 +37,8 @@ add_action('wp_ajax_get_typesense_collections', 'get_typesense_collections');
 add_action('wp_ajax_save_typesense_api_key', 'save_typesense_api_key');
 add_action('wp_update_nav_menu', 'update_typesense_document_on_menu_update', 10, 2);
 add_action('edited_term', 'update_typesense_document_on_taxonomy_edit', 10, 3);
+add_action('updated_option', 'site_info_update', 10, 3);
+
 
 function enqueue_typesense_product_indexer_scripts()
 {
@@ -86,162 +88,163 @@ function typesense_product_indexer_page()
     echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap">';
     $private_key_master = get_option('private_key_master', '');
     ?>
-    <div class="indexer_page">
-        <h1>Typesense Product Indexer</h1>
-        <div id="wrapper-id" class="message-wrapper">
-            <div class="message-image">
-                <img src="<?php echo plugins_url('blazeWooless/assets/frontend/images/Shape.png'); ?>" alt="" srcset="">
-            </div>
-            <div class="wooless_message">
-                <div class="message_success">Success</div>
-                <div id="message"></div>
-            </div>
+<div class="indexer_page">
+    <h1>Typesense Product Indexer</h1>
+    <div id="wrapper-id" class="message-wrapper">
+        <div class="message-image">
+            <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/Shape.png'); ?>" alt="" srcset="">
         </div>
-        <div class="wrapper">
-            <label class="api_label" for="api_key">API Private Key: </label>
-            <div class="input-wrapper">
-                <input class="input_p" type="password" id="api_key" name="api_key"
-                    value="<?php echo esc_attr($private_key_master); ?>" />
-                <div class="error-icon" id="error_id" style="display: none;">
-                    <img src="<?php echo plugins_url('blazeWooless/assets/frontend/images/error.png'); ?>" alt="" srcset="">
-                    <div id="error_message"></div>
-                </div>
-            </div>
-            <input type="checkbox" id="show_api_key" onclick="toggleApiKeyVisibility()">
-            <label class="checkbox_Label">Show API Key</label>
-        </div>
-        <div class="item_wrapper_indexer_page">
-            <button id="index_products" onclick="indexData()" disabled>Manual Sync
-            </button>
-            <button id="check_api_key" onclick="checkApiKey()">Save</button>
-            <div id="jsdecoded" style="margin-top: 10px;"></div>
-            <div id="phpdecoded" style="margin-top: 10px;"></div>
+        <div class="wooless_message">
+            <div class="message_success">Success</div>
+            <div id="message"></div>
         </div>
     </div>
+    <div class="wrapper">
+        <label class="api_label" for="api_key">API Private Key: </label>
+        <div class="input-wrapper">
+            <input class="input_p" type="password" id="api_key" name="api_key"
+                value="<?php echo esc_attr($private_key_master); ?>" />
+            <div class="error-icon" id="error_id" style="display: none;">
+                <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/error.png'); ?>" alt=""
+                    srcset="">
+                <div id="error_message"></div>
+            </div>
+        </div>
+        <input type="checkbox" id="show_api_key" onclick="toggleApiKeyVisibility()">
+        <label class="checkbox_Label">Show API Key</label>
+    </div>
+    <div class="item_wrapper_indexer_page">
+        <button id="index_products" onclick="indexData()" disabled>Manual Sync
+        </button>
+        <button id="check_api_key" onclick="checkApiKey()">Save</button>
+        <div id="jsdecoded" style="margin-top: 10px;"></div>
+        <div id="phpdecoded" style="margin-top: 10px;"></div>
+    </div>
+</div>
 
-    <script>
-        function toggleApiKeyVisibility() {
-            var apiKeyInput = document.getElementById("api_key");
-            var showApiKeyCheckbox = document.getElementById("show_api_key");
+<script>
+function toggleApiKeyVisibility() {
+    var apiKeyInput = document.getElementById("api_key");
+    var showApiKeyCheckbox = document.getElementById("show_api_key");
 
-            if (showApiKeyCheckbox.checked) {
-                apiKeyInput.type = "text";
-            } else {
-                apiKeyInput.type = "password";
-            }
-        }
+    if (showApiKeyCheckbox.checked) {
+        apiKeyInput.type = "text";
+    } else {
+        apiKeyInput.type = "password";
+    }
+}
 
-        function decodeAndSaveApiKey(apiKey) {
-            var decodedApiKey = atob(apiKey);
-            var trimmedApiKey = decodedApiKey.split(':');
-            var typesensePrivateKey = trimmedApiKey[0];
-            var woolessSiteId = trimmedApiKey[1];
+function decodeAndSaveApiKey(apiKey) {
+    var decodedApiKey = atob(apiKey);
+    var trimmedApiKey = decodedApiKey.split(':');
+    var typesensePrivateKey = trimmedApiKey[0];
+    var woolessSiteId = trimmedApiKey[1];
 
-            // Display API key and store ID for testing purposes
-            //document.getElementById("jsdecoded").innerHTML = 'Typesense Private Key: ' + typesensePrivateKey +
-            //  '<br> Store ID: ' +
-            //woolessSiteId;
+    // Display API key and store ID for testing purposes
+    //document.getElementById("jsdecoded").innerHTML = 'Typesense Private Key: ' + typesensePrivateKey +
+    //  '<br> Store ID: ' +
+    //woolessSiteId;
 
-            // Save the API key, store ID, and private key
-            jQuery.post(ajaxurl, {
-                'action': 'save_typesense_api_key',
-                'api_key': apiKey, // Add the private key in the request
-                'typesense_api_key': typesensePrivateKey,
-                'store_id': woolessSiteId,
-            }, function (save_response) {
-                setTimeout(function () {
-                    document.getElementById("message").textContent += ' - ' + save_response;
-                }, 1000);
-            });
+    // Save the API key, store ID, and private key
+    jQuery.post(ajaxurl, {
+        'action': 'save_typesense_api_key',
+        'api_key': apiKey, // Add the private key in the request
+        'typesense_api_key': typesensePrivateKey,
+        'store_id': woolessSiteId,
+    }, function(save_response) {
+        setTimeout(function() {
+            document.getElementById("message").textContent += ' - ' + save_response;
+        }, 1000);
+    });
 
-        }
+}
 
-        function checkApiKey() {
-            var apiKey = document.getElementById("api_key").value;
-            var data = {
-                'action': 'get_typesense_collections',
-                'api_key': apiKey,
-            };
+function checkApiKey() {
+    var apiKey = document.getElementById("api_key").value;
+    var data = {
+        'action': 'get_typesense_collections',
+        'api_key': apiKey,
+    };
+    document.getElementById("wrapper-id").style.display = "none";
+    document.getElementById("index_products").disabled = true;
+    document.getElementById("check_api_key").disabled = true;
+    document.getElementById("check_api_key").style.cursor = "no-drop";
+    document.getElementById("index_products").style.cursor = "no-drop";
+    jQuery.post(ajaxurl, data, function(response) {
+        console.log(response);
+        var parsedResponse = JSON.parse(response);
+        if (parsedResponse.status === "success") {
+            //alert(parsedResponse.message);
+
+            // Log the collection data
+            console.log("Collection data:", parsedResponse.collection);
+            // Decode and save the API key
+            decodeAndSaveApiKey(apiKey);
+            indexData();
+            document.getElementById("index_products").disabled = false;
             document.getElementById("wrapper-id").style.display = "none";
+            document.getElementById("error_id").style.display = "none";
+            document.getElementById("index_products").style.cursor = "pointer";
+        } else {
+            //alert("Invalid API key. There was an error connecting to Typesense.");
+            var errorMessage = "Invalid API key.";
+            document.getElementById("error_message").textContent = errorMessage;
             document.getElementById("index_products").disabled = true;
-            document.getElementById("check_api_key").disabled = true;
-            document.getElementById("check_api_key").style.cursor = "no-drop";
-            document.getElementById("index_products").style.cursor = "no-drop";
-            jQuery.post(ajaxurl, data, function (response) {
-                console.log(response);
-                var parsedResponse = JSON.parse(response);
-                if (parsedResponse.status === "success") {
-                    //alert(parsedResponse.message);
+            document.getElementById("error_id").style.display = "flex";
+            document.getElementById("index_products").disabled = false;
+            document.getElementById("check_api_key").disabled = false;
+            document.getElementById("check_api_key").style.cursor = "pointer";
+            document.getElementById("index_products").style.cursor = "pointer";
 
-                    // Log the collection data
-                    console.log("Collection data:", parsedResponse.collection);
-                    // Decode and save the API key
-                    decodeAndSaveApiKey(apiKey);
-                    indexData();
-                    document.getElementById("index_products").disabled = false;
-                    document.getElementById("wrapper-id").style.display = "none";
-                    document.getElementById("error_id").style.display = "none";
-                    document.getElementById("index_products").style.cursor = "pointer";
-                } else {
-                    //alert("Invalid API key. There was an error connecting to Typesense.");
-                    var errorMessage = "Invalid API key.";
-                    document.getElementById("error_message").textContent = errorMessage;
-                    document.getElementById("index_products").disabled = true;
-                    document.getElementById("error_id").style.display = "flex";
-                    document.getElementById("index_products").disabled = false;
+        }
+    });
+}
+
+
+
+function indexData() {
+    var apiKey = document.getElementById("api_key").value;
+    var data = {
+        'action': 'index_data_to_typesense',
+        'api_key': apiKey,
+        'collection_name': 'site_info',
+
+    };
+    document.getElementById("wrapper-id").style.display = "none";
+    document.getElementById("message").textContent = "Indexing Data...";
+    document.getElementById("check_api_key").textContent = "Indexing Data...";
+    document.getElementById("index_products").disabled = true;
+    document.getElementById("check_api_key").disabled = true;
+    document.getElementById("check_api_key").style.cursor = "no-drop";
+    document.getElementById("index_products").style.display = "none";
+    jQuery.post(ajaxurl, data, function(response) {
+        document.getElementById("message").textContent = response;
+        data.collection_name = 'taxonomy';
+        jQuery.post(ajaxurl, data, function(response) {
+            data.collection_name = 'menu';
+            jQuery.post(ajaxurl, data, function(response) {
+                data.collection_name = 'site_info';
+                jQuery.post(ajaxurl, data, function(response) {
+                    document.getElementById("message").textContent = response;
                     document.getElementById("check_api_key").disabled = false;
-                    document.getElementById("check_api_key").style.cursor = "pointer";
-                    document.getElementById("index_products").style.cursor = "pointer";
-
-                }
-            });
-        }
-
-
-
-        function indexData() {
-            var apiKey = document.getElementById("api_key").value;
-            var data = {
-                'action': 'index_data_to_typesense',
-                'api_key': apiKey,
-                'collection_name': 'products',
-
-            };
-            document.getElementById("wrapper-id").style.display = "none";
-            document.getElementById("message").textContent = "Indexing Data...";
-            document.getElementById("check_api_key").textContent = "Indexing Data...";
-            document.getElementById("index_products").disabled = true;
-            document.getElementById("check_api_key").disabled = true;
-            document.getElementById("check_api_key").style.cursor = "no-drop";
-            document.getElementById("index_products").style.display = "none";
-            jQuery.post(ajaxurl, data, function (response) {
-                document.getElementById("message").textContent = response;
-                data.collection_name = 'taxonomy';
-                jQuery.post(ajaxurl, data, function (response) {
-                    data.collection_name = 'menu';
-                    jQuery.post(ajaxurl, data, function (response) {
-                        data.collection_name = 'site_info';
-                        jQuery.post(ajaxurl, data, function (response) {
-                            document.getElementById("message").textContent = response;
-                            document.getElementById("check_api_key").disabled = false;
-                            document.getElementById("check_api_key").textContent =
-                                "Save";
-                            document.getElementById("index_products").style.display =
-                                "flex";
-                            document.getElementById("check_api_key").style.cursor =
-                                "pointer";
-                            document.getElementById("wrapper-id").style.display = "flex";
-                        });
-                    });
+                    document.getElementById("check_api_key").textContent =
+                        "Save";
+                    document.getElementById("index_products").style.display =
+                        "flex";
+                    document.getElementById("check_api_key").style.cursor =
+                        "pointer";
+                    document.getElementById("wrapper-id").style.display = "flex";
                 });
             });
-        }
-        // Enable or disable the 'Index Products' button based on the saved API key
-        if (document.getElementById("api_key").value !== "") {
-            document.getElementById("index_products").disabled = false;
-        }
-    </script>
-    <?php
+        });
+    });
+}
+// Enable or disable the 'Index Products' button based on the saved API key
+if (document.getElementById("api_key").value !== "") {
+    document.getElementById("index_products").disabled = false;
+}
+</script>
+<?php
 }
 
 function save_typesense_api_key()
@@ -312,17 +315,19 @@ function get_typesense_collections()
 
 function getTermData($taxonomyTerms)
 {
-    $termNames = [];
-    $termLinks = [];
+    $termData = [];
     if (!empty($taxonomyTerms)) {
         foreach ($taxonomyTerms as $term) {
-            $termNames[] = $term->name;
-            $termLinks[] = get_term_link($term->term_id);
+            $termData[] = [
+                'name' => $term->name,
+                'url' => get_term_link($term->term_id),
+            ];
         }
     }
 
-    return [$termNames, $termLinks];
+    return $termData;
 }
+
 
 function getProductDataForTypeSense($product)
 {
@@ -342,53 +347,77 @@ function getProductDataForTypeSense($product)
     $meta = YoastSEO()->meta->for_post($product_id);
     $fullHead = wp_gql_seo_get_full_head($meta);
 
+     $seo_head = '';
+    if (is_plugin_active('wordpress-seo/wp-seo.php')) {
+        include_once ABSPATH . 'wp-admin/includes/plugin.php';
+        $prev_post = $GLOBALS['post'];
+        $GLOBALS['post'] = get_post($product->get_id());
+
+        $wpseo_frontend = WPSEO_Frontend::get_instance();
+        $title = $wpseo_frontend->get_content_title();
+        $metadesc = $wpseo_frontend->get_meta_description();
+
+        $canonical = WPSEO_Meta::get_value('canonical');
+        $canonical = $canonical ? $canonical : get_permalink($product->get_id());
+
+        $seo_head = "<title>$title</title>";
+        $seo_head .= "<meta name='description' content='$metadesc' />";
+        $seo_head .= "<link rel='canonical' href='$canonical' />";
+
+        $GLOBALS['post'] = $prev_post;
+    }
+
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
 
     $thumbnail = get_the_post_thumbnail_url($product_id);
     $stockQuantity = $product->get_stock_quantity();
 
+    $categories = get_the_terms($product_id, 'product_cat');
+    $categoryData = getTermData($categories);
+
     $ingredients = get_the_terms($product_id, 'product_ingredients');
-    $ingredients = array_map(function ($term) {
+    $ingredientData = array_map(function ($term) {
         return [
             'name' => $term->name,
             'description' => $term->description,
-            'imageSourceUrl' => z_taxonomy_image_url($term->term_id)
+            'imageSourceUrl' => z_taxonomy_image_url($term->term_id),
+            'slug' => $term->slug,
+            'url' => get_term_link($term->term_id),
         ];
     }, $ingredients);
-    $ingredients = json_encode($ingredients);
 
-    $categories = get_the_terms($product_id, 'product_cat');
-    $categoriesData = getTermData($categories);
-    $categoryNames = $categoriesData[0];
-    $categoryLinks = $categoriesData[1];
+    // Merge category data and ingredient data
+    $combinedCategoryData = array_merge($categoryData, $ingredientData);
 
+    // Use other parts of the code as before
     $tags = get_the_terms($product_id, 'product_tag');
-    $tagsData = getTermData($tags);
-    $tagNames = $tagsData[0];
-    $tagLinks = $tagsData[1];
+    $tagData = getTermData($tags);
 
     $favourites = get_the_terms($product_id, 'favourite');
-    $favouritesData = getTermData($favourites);
-    $favouriteNames = $favouritesData[0];
-    $favouriteLinks = $favouritesData[1];
+    $favouriteData = getTermData($favourites);
 
     $occassions = get_the_terms($product_id, 'occasion');
-    $occassionsData = getTermData($occassions);
-    $occassionNames = $occassionsData[0];
-    $occassionLinks = $occassionsData[1];
-
+    $occassionData = getTermData($occassions);
 
     $shopBys = get_the_terms($product_id, 'shop-by');
-    $shopBysData = getTermData($shopBys);
-    $shopByNames = $shopBysData[0];
-    $shopByLinks = $shopBysData[1];
+    $shopByData = getTermData($shopBys);
 
     $types = get_the_terms($product_id, 'product-type');
-    $typesData = getTermData($types);
-    $typeNames = $typesData[0];
-    $typeLinks = $typesData[1];
+    $typeData = getTermData($types);
+
     $product_type = $product->get_type();
+
+    $jsonData = [
+        'categories' => $combinedCategoryData,
+        'tags' => $tagData,
+        'favourites' => $favouriteData,
+        'occassions' => $occassionData,
+        'shopBys' => $shopByData,
+        'types' => $typeData,
+    ];
+
+    $json = json_encode($jsonData);
 
 
     // Get variations if the product is a variable product
@@ -462,10 +491,12 @@ function getProductDataForTypeSense($product)
         'name' => $product->get_name(),
         'permalink' => get_permalink($product->get_id()),
         'slug' => $product->get_slug(),
-        'seoFullHead' => $fullHead,
+        'seoFullHead' => $seo_head,
         'thumbnail' => empty($thumbnail) ? '' : $thumbnail,
         'sku' => $product->get_sku(),
-        'price' => floatval($product->get_price()),
+        'price' => [
+        sprintf("%s: %.2f", get_woocommerce_currency(), floatval($product->get_price())) // Format price as string
+        ],
         'regularPrice' => floatval($product->get_regular_price()),
         'salePrice' => floatval($product->get_sale_price()),
         'onSale' => $product->is_on_sale(),
@@ -477,19 +508,12 @@ function getProductDataForTypeSense($product)
         'totalSales' => $product->get_total_sales(),
         'galleryImages' => json_encode($product_gallery),
         'addons' => $addons,
-        'ingredients' => $ingredients,
-        'categoryNames' => $categoryNames,
-        'categoryLinks' => $categoryLinks,
-        'tagNames' => $tagNames,
-        'tagLinks' => $tagLinks,
-        'favouriteNames' => $favouriteNames,
-        'favouriteLinks' => $favouriteLinks,
-        'occassionNames' => $occassionNames,
-        'occassionLinks' => $occassionLinks,
-        'shopByNames' => $shopByNames,
-        'shopByLinks' => $shopByLinks,
-        'typeNames' => $typeNames,
-        'typeLinks' => $typeLinks,
+        'product_categories' => $categoryData,
+        'tags' => $tags,
+        'favourites' => $favouriteData,
+        'occassions' => $occassionData,
+        'shopBys' => $shopByData,
+        'types' => $typeData,
         'productType' => $product_type,
         // Add product type
         'variations' => $variations_data,
@@ -497,10 +521,85 @@ function getProductDataForTypeSense($product)
         'crossSellData' => $cross_sell_data,
         'upsellData' => $upsell_data,
         'additionalTabs' => $formatted_additional_tabs,
+        'seo' => $seo_head,
     ];
-
+    $product_data['price'] = json_encode($product_data['price']);
     return $product_data;
 }
+
+function products_to_typesense(){
+    //Product indexing
+    $typesense_private_key = get_option('typesense_api_key');
+    $client = getTypeSenseClient($typesense_private_key);
+
+    // Fetch the store ID from the saved options
+    $wooless_site_id = get_option('store_id');
+    $collection_product = 'product-' . $wooless_site_id;
+    try {
+        $client = getTypeSenseClient($typesense_private_key);
+        try {
+            $client->collections[$collection_product]->delete();
+        } catch (Exception $e) {
+            // Don't error out if the collection was not found
+        }
+        $client->collections->create(
+            [
+                'name' => $collection_product,
+                'fields' => [
+                    ['name' => 'id', 'type' => 'string', 'facet' => true],
+                    ['name' => 'productId','type' => 'string','facet' => true,],
+                    ['name' => 'description', 'type' => 'string'],
+                    ['name' => 'shortDescription', 'type' => 'string'],
+                    ['name' => 'name', 'type' => 'string'],
+                    ['name' => 'permalink', 'type' => 'string'],
+                    ['name' => 'slug', 'type' => 'string', 'facet' => true],
+                    ['name' => 'seoFullHead', 'type' => 'string'],
+                    ['name' => 'thumbnail', 'type' => 'string'],
+                    ['name' => 'sku', 'type' => 'string'],
+                    ['name' => 'price', 'type' => 'string[]'],
+                    ['name' => 'regularPrice', 'type' => 'float'],
+                    ['name' => 'salePrice', 'type' => 'float'],
+                    ['name' => 'onSale', 'type' => 'bool'],
+                    ['name' => 'stockQuantity', 'type' => 'int64'],
+                    ['name' => 'stockStatus', 'type' => 'string'],
+                    ['name' => 'updatedAt', 'type' => 'int64'],
+                    ['name' => 'createdAt', 'type' => 'int64'],
+                    ['name' => 'isFeatured', 'type' => 'bool'],
+                    ['name' => 'totalSales', 'type' => 'int64'],
+                    ['name' => 'galleryImages', 'type' => 'string'],
+                    ['name' => 'addons', 'type' => 'string'],
+                    ['name' => 'productType', 'type' => 'string', 'facet' => true],
+                    ['name' => 'variations', 'type' => 'string[]', 'facet' => true],
+                ],
+                'default_sorting_field' => 'updatedAt',
+                'enable_nested_fields' => true
+            ]
+        );
+
+        // Fetch products from WooCommerce
+        $products = wc_get_products(['status' => 'publish', 'limit' => -1]);
+
+        // Index products in Typesense
+        foreach ($products as $product) {
+            // Index the product data
+            $product_data = getProductDataForTypeSense($product);
+            $client->collections[$collection_product]->documents->create($product_data);
+        }
+
+        echo "Products indexed successfully.";
+    } catch (Exception $e) {
+        $error_message = "Error: " . $e->getMessage();
+        echo $error_message; // Print the error message for debugging purposes
+        echo "<script>
+            console.log('Error block executed'); // Log a message to the browser console
+            document.getElementById('error_message').innerHTML = '$error_message';
+        </script>";
+        echo "Error adding products to Typesense: " . $e->getMessage() . "\n";
+    }
+
+
+    wp_die();
+} 
 
 function menu_index_to_typesense()
 {
@@ -825,41 +924,60 @@ function site_info_index_to_typesense()
         add_action('update_option_date_format', 'my_date_format_updated_callback', 10, 3);
         $date_format = get_option('date_format');
         $date_format_last_updated = get_option('date_format_last_updated', time());
+        
+        // Get available payment gateways
+        $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+        $payment_methods = [];
+        
+        if ( ! empty( $available_gateways ) ) {
+            foreach ( $available_gateways as $gateway ) {
+                $payment_methods[] = $gateway->get_title() . ' (ID: ' . $gateway->id . ')';
+            }
+        }
+        
+        // Convert payment methods array to a string
+        $payment_methods_string = implode(', ', $payment_methods);
+
+        $client->collections[$collection_site_info]->documents->create([
+            'name' => 'Payment_methods',
+            'value' => $payment_methods_string,
+            'updated_at' => $updatedAt,
+        ]);
 
 
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'SiteTitle',
+            'name' => 'Site_title',
             'value' => $SiteTitle,
             'updated_at' => $updatedAt,
         ]);
 
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'SiteTagline',
+            'name' => 'Site_tagline',
             'value' => $SiteTagline,
             'updated_at' => $updatedAt,
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'site logo',
+            'name' => 'site_logo',
             'value' => $logo_url,
             'updated_at' => $logo_updated_at,
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Store Notice',
+            'name' => 'Store_notice',
             'value' => $store_notice,
             'updated_at' => intval($store_notice_updated_at),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Time format',
+            'name' => 'Time_format',
             'value' => $time_format,
             'updated_at' => intval($current_unix_timestamp),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Search Engine',
+            'name' => 'Search_engine',
             'value' => $search_engine,
             'updated_at' => intval($search_engine_last_updated),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Site ID',
+            'name' => 'Site_ID',
             'value' => $site_id_string,
             'updated_at' => intval($search_engine_last_updated),
         ]);
@@ -879,17 +997,17 @@ function site_info_index_to_typesense()
             'updated_at' => intval($language_last_updated),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Time Zone',
+            'name' => 'Time_zone',
             'value' => $timezone,
             'updated_at' => intval($wp_timezone_last_updated),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Date format',
+            'name' => 'Date_format',
             'value' => $date_format,
             'updated_at' => intval($date_format_last_updated),
         ]);
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'favicon',
+            'name' => 'fav_icon',
             'value' => $favicon_url,
             'updated_at' => intval($store_notice_updated_at),
         ]);
@@ -899,96 +1017,7 @@ function site_info_index_to_typesense()
     }
 
 }
-function products_to_typesense()
-{
-    //Product indexing
-    $typesense_private_key = get_option('typesense_api_key');
-    $client = getTypeSenseClient($typesense_private_key);
-
-    // Fetch the store ID from the saved options
-    $wooless_site_id = get_option('store_id');
-    $collection_product = 'product-' . $wooless_site_id;
-    try {
-        $client = getTypeSenseClient($typesense_private_key);
-        try {
-            $client->collections[$collection_product]->delete();
-        } catch (Exception $e) {
-            // Don't error out if the collection was not found
-        }
-        $client->collections->create(
-            [
-                'name' => $collection_product,
-                'fields' => [
-                    ['name' => 'id', 'type' => 'string', 'facet' => true],
-                    [
-                        'name' => 'productId',
-                        'type' => 'string',
-                        'facet' => true,
-                    ],
-                    ['name' => 'description', 'type' => 'string'],
-                    ['name' => 'shortDescription', 'type' => 'string'],
-                    ['name' => 'name', 'type' => 'string'],
-                    ['name' => 'permalink', 'type' => 'string'],
-                    ['name' => 'slug', 'type' => 'string', 'facet' => true],
-                    ['name' => 'seoFullHead', 'type' => 'string'],
-                    ['name' => 'thumbnail', 'type' => 'string'],
-                    ['name' => 'sku', 'type' => 'string'],
-                    ['name' => 'price', 'type' => 'float'],
-                    ['name' => 'regularPrice', 'type' => 'float'],
-                    ['name' => 'salePrice', 'type' => 'float'],
-                    ['name' => 'onSale', 'type' => 'bool'],
-                    ['name' => 'stockQuantity', 'type' => 'int64'],
-                    ['name' => 'stockStatus', 'type' => 'string'],
-                    ['name' => 'updatedAt', 'type' => 'int64'],
-                    ['name' => 'createdAt', 'type' => 'int64'],
-                    ['name' => 'isFeatured', 'type' => 'bool'],
-                    ['name' => 'totalSales', 'type' => 'int64'],
-                    ['name' => 'galleryImages', 'type' => 'string'],
-                    ['name' => 'addons', 'type' => 'string'],
-                    ['name' => 'ingredients', 'type' => 'string'],
-                    ['name' => 'categoryNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'categoryLinks', 'type' => 'string[]'],
-                    ['name' => 'tagNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'tagLinks', 'type' => 'string[]'],
-                    ['name' => 'favouriteNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'favouriteLinks', 'type' => 'string[]'],
-                    ['name' => 'occassionNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'occassionLinks', 'type' => 'string[]'],
-                    ['name' => 'shopByNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'shopByLinks', 'type' => 'string[]'],
-                    ['name' => 'typeNames', 'type' => 'string[]', 'facet' => true],
-                    ['name' => 'typeLinks', 'type' => 'string[]'],
-                    ['name' => 'productType', 'type' => 'string', 'facet' => true],
-                    ['name' => 'variations', 'type' => 'string[]', 'facet' => true],
-
-                ],
-                'default_sorting_field' => 'updatedAt',
-            ]
-        );
-
-        // Fetch products from WooCommerce
-        $products = wc_get_products(['status' => 'publish', 'limit' => -1]);
-
-        // Index products in Typesense
-        foreach ($products as $product) {
-            // Index the product data
-            $product_data = getProductDataForTypeSense($product);
-            $client->collections[$collection_product]->documents->create($product_data);
-        }
-
-        echo "Products indexed successfully.";
-    } catch (Exception $e) {
-        $error_message = "Error: " . $e->getMessage();
-        echo $error_message; // Print the error message for debugging purposes
-        echo "<script>
-            console.log('Error block executed'); // Log a message to the browser console
-            document.getElementById('error_message').innerHTML = '$error_message';
-        </script>";
-    }
-
-
-    wp_die();
-} // Add the action hook
+// Add the action hook
 
 function index_data_to_typesense()
 {
@@ -1023,8 +1052,6 @@ function update_product_in_typesense($product_id)
     }
 
 }
-
-
 function update_typesense_document_on_menu_update($menu_id, $menu_data)
 {
     $typesense_private_key = get_option('typesense_api_key');
@@ -1133,5 +1160,30 @@ function update_typesense_document_on_taxonomy_edit($term_id, $tt_id, $taxonomy)
         $client->collections[$collection_taxonomy]->documents[strval($term->term_id)]->update($document);
     } catch (Exception $e) {
         error_log("Error updating term '{$term->name}' in Typesense: " . $e->getMessage());
+    }
+}
+
+// Function to be called when an option is updated
+function site_info_update($option_name, $old_value, $new_value) {
+    // Array of target General Settings options
+    $target_settings = array(
+        'blogname',
+        'blogdescription',
+        'siteurl',
+        'home',
+        'admin_email',
+        'users_can_register',
+        'default_role',
+        'timezone_string',
+        'date_format',
+        'time_format',
+        'start_of_week',
+        'WPLANG',
+        'woocommerce_demo_store',
+    );
+
+    // Check if the updated option is in the array of target settings
+    if (in_array($option_name, $target_settings)) {
+        site_info_index_to_typesense();
     }
 }
