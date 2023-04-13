@@ -40,6 +40,7 @@ add_action('edited_term', 'update_typesense_document_on_taxonomy_edit', 10, 3);
 add_action('updated_option', 'site_info_update', 10, 3);
 add_action('woocommerce_new_product', 'bwl_on_product_save', 10, 2);
 add_action('woocommerce_update_product', 'bwl_on_product_save', 10, 2);
+add_action('woocommerce_order_status_changed', 'bwl_on_order_status_changed', 10, 4);
 
 
 function enqueue_typesense_product_indexer_scripts()
@@ -1059,7 +1060,14 @@ function site_info_index_to_typesense()
     }
 
 }
-// Add the action hook
+
+function getTypeSenseCollection() {
+    // Fetch the store ID from the saved options
+    $wooless_site_id = get_option('store_id');
+    // Build the collection name
+    $collection = 'product-' . $wooless_site_id;
+    return $collection;
+}
 
 function index_data_to_typesense()
 {
@@ -1104,6 +1112,38 @@ function bwl_on_product_save($product_id, $wc_product)
     // Setting the variable in memory so that we can use this later for checking
     $bwl_previous_product_id = $product_id;
 }
+function bwl_on_checkout_update_order_meta($order_id, $data)
+{
+    // Get the order object
+    $order = wc_get_order($order_id);
+
+    // Get the items in the order
+    $items = $order->get_items();
+
+    // Loop through each item and update the corresponding product in Typesense
+    foreach ($items as $item) {
+        $product_id = $item->get_product_id();
+        $wc_product = wc_get_product($product_id);
+
+        if ($wc_product->get_status() == 'publish') {
+            try {
+                $typesense_private_key = get_option('typesense_api_key');
+                $client = getTypeSenseClient($typesense_private_key);
+
+                $document_data = getProductDataForTypeSense($wc_product);
+
+                $collection_name = getTypeSenseCollection();
+
+                $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+            } catch (Exception $e) {
+                error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
+            }
+        }
+    }
+}
+
+add_action('woocommerce_checkout_update_order_meta', 'bwl_on_checkout_update_order_meta', 10, 2);
+
 function update_typesense_document_on_menu_update($menu_id, $menu_data)
 {
     $typesense_private_key = get_option('typesense_api_key');
@@ -1237,5 +1277,37 @@ function site_info_update($option_name, $old_value, $new_value) {
     // Check if the updated option is in the array of target settings
     if (in_array($option_name, $target_settings)) {
         site_info_index_to_typesense();
+    }
+}
+
+
+
+function bwl_on_order_status_changed($order_id, $old_status, $new_status, $order)
+{
+    if ($new_status === 'completed' || $new_status === 'processing' || $new_status === 'cancelled') {
+        // Get the items in the order
+        $items = $order->get_items();
+
+        // Loop through each item and update the corresponding product in Typesense
+        foreach ($items as $item) {
+            $product_id = $item->get_product_id();
+            $wc_product = wc_get_product($product_id);
+
+            if ($wc_product->get_status() == 'publish') {
+                try {
+                    $typesense_private_key = get_option('typesense_api_key');
+                    $client = getTypeSenseClient($typesense_private_key);
+
+                    $document_data = getProductDataForTypeSense($wc_product);
+
+                    // Use the bwlGetProductCollectionName function for the collection_name value
+                    $collection_name = getTypeSenseCollection();
+
+                    $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+                } catch (Exception $e) {
+                    error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
+                }
+            }
+        }
     }
 }
