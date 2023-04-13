@@ -1279,35 +1279,3 @@ function site_info_update($option_name, $old_value, $new_value) {
         site_info_index_to_typesense();
     }
 }
-
-
-
-function bwl_on_order_status_changed($order_id, $old_status, $new_status, $order)
-{
-    if ($new_status === 'completed' || $new_status === 'processing' || $new_status === 'cancelled') {
-        // Get the items in the order
-        $items = $order->get_items();
-
-        // Loop through each item and update the corresponding product in Typesense
-        foreach ($items as $item) {
-            $product_id = $item->get_product_id();
-            $wc_product = wc_get_product($product_id);
-
-            if ($wc_product->get_status() == 'publish') {
-                try {
-                    $typesense_private_key = get_option('typesense_api_key');
-                    $client = getTypeSenseClient($typesense_private_key);
-
-                    $document_data = getProductDataForTypeSense($wc_product);
-
-                    // Use the bwlGetProductCollectionName function for the collection_name value
-                    $collection_name = getTypeSenseCollection();
-
-                    $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
-                } catch (Exception $e) {
-                    error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
-                }
-            }
-        }
-    }
-}
