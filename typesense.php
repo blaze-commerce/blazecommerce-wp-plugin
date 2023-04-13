@@ -3,7 +3,7 @@
 Plugin Name: Blaze Typesense Wooless
 Plugin URI: https://www.blaze.online
 Description: A plugin that integrates with Typesense server.
-Version: 1.1
+Version: 1.2
 Author: Blaze Online
 Author URI: https://www.blaze.online
 */
@@ -38,6 +38,8 @@ add_action('wp_ajax_save_typesense_api_key', 'save_typesense_api_key');
 add_action('wp_update_nav_menu', 'update_typesense_document_on_menu_update', 10, 2);
 add_action('edited_term', 'update_typesense_document_on_taxonomy_edit', 10, 3);
 add_action('updated_option', 'site_info_update', 10, 3);
+add_action('woocommerce_new_product', 'bwl_on_product_save', 10, 2);
+add_action('woocommerce_update_product', 'bwl_on_product_save', 10, 2);
 
 
 function enqueue_typesense_product_indexer_scripts()
@@ -207,7 +209,7 @@ function indexData() {
     var data = {
         'action': 'index_data_to_typesense',
         'api_key': apiKey,
-        'collection_name': 'site_info',
+        'collection_name': 'products',
 
     };
     document.getElementById("wrapper-id").style.display = "none";
@@ -495,7 +497,7 @@ function getProductDataForTypeSense($product)
         'thumbnail' => empty($thumbnail) ? '' : $thumbnail,
         'sku' => $product->get_sku(),
         'price' => [
-        sprintf("%s: %.2f", get_woocommerce_currency(), floatval($product->get_price())) // Format price as string
+            sprintf("%s: %.2f", get_woocommerce_currency(), floatval($product->get_price())) // Format price as string
         ],
         'regularPrice' => floatval($product->get_regular_price()),
         'salePrice' => floatval($product->get_sale_price()),
@@ -523,7 +525,6 @@ function getProductDataForTypeSense($product)
         'additionalTabs' => $formatted_additional_tabs,
         'seo' => $seo_head,
     ];
-    $product_data['price'] = json_encode($product_data['price']);
     return $product_data;
 }
 
@@ -569,7 +570,6 @@ function products_to_typesense(){
                     ['name' => 'galleryImages', 'type' => 'string'],
                     ['name' => 'addons', 'type' => 'string'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
-                    ['name' => 'variations', 'type' => 'string[]', 'facet' => true],
                 ],
                 'default_sorting_field' => 'updatedAt',
                 'enable_nested_fields' => true
@@ -938,6 +938,48 @@ function site_info_index_to_typesense()
         // Convert payment methods array to a string
         $payment_methods_string = implode(', ', $payment_methods);
 
+
+        if (!function_exists('get_plugins')) {
+            require_once(ABSPATH . 'wp-admin/includes/plugin.php');
+        }
+
+        // Get all installed plugins
+        $plugins = get_plugins();
+
+        // List known review plugins (customize this list as needed)
+        $known_review_plugins = [
+            'wp-review/wp-review.php' => 'WP Review',
+            'wp-product-review-lite/wp-product-review-lite.php' => 'WP Product Review Lite',
+            'site-reviews/site-reviews.php' => 'Site Reviews',
+            'yet-another-stars-rating/yet-another-stars-rating.php' => 'Yasr - Yet Another Stars Rating',
+            'wp-customer-reviews/wp-customer-reviews.php' => 'WP Customer Reviews',
+            'kk-star-ratings/index.php' => 'Kk Star Ratings',
+            'reviews-for-woocommerce/reviews-for-woocommerce.php' => 'REVIEWS.io WooCommerce Plugin'
+        ];
+
+        // Initialize variable to store review plugin name
+        $review_plugin_name = null;
+
+        // Loop through installed plugins and check for known review plugins
+        foreach ($known_review_plugins as $plugin_file => $plugin_name) {
+            if (isset($plugins[$plugin_file]) && is_plugin_active($plugin_file)) {
+                // Found the review plugin
+                $review_plugin_name = $plugin_name;
+                break; // Break out of the loop
+            }
+        }
+
+        // Cast the review_plugin_name variable to a string
+        $review_plugin_name = (string) $review_plugin_name;
+
+
+        $client->collections[$collection_site_info]->documents->create([
+            'name' => 'reviews_plugin',
+            'value' => $review_plugin_name,
+            'updated_at' => $updatedAt,
+        ]);
+
+
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'Payment_methods',
             'value' => $payment_methods_string,
@@ -1036,21 +1078,31 @@ function index_data_to_typesense()
     wp_die();
 }
 // Function to update the product in Typesense when its metadata is updated in WooCommerce
-function update_product_in_typesense($product_id)
+function bwl_on_product_save($product_id, $wc_product)
 {
-    // Check if the product is published before updating
-    if (get_post_status($product_id) == 'publish') {
-        try {
-            $client = getTypeSenseClient();
-            $wc_product = wc_get_product($product_id);
-            $document_data = getProductDataForTypeSense($wc_product);
+    // Creating global variable so that this function only runs once if product id is exactly equal to product id
+    global $bwl_previous_product_id;
+    if ($bwl_previous_product_id === $product_id) {
+        // Check if the product is published before updating typesense data
+        if ($wc_product->get_status() == 'publish') {
+            try {
+                $typesense_private_key = get_option('typesense_api_key'); // Get the API key
+                $client = getTypeSenseClient($typesense_private_key); // Pass the API key as an argument
 
-            $client->collections['products']->documents[strval($product_id)]->update($document_data);
-        } catch (Exception $e) {
-            error_log("Error updating product in Typesense: " . $e->getMessage());
+                $document_data = getProductDataForTypeSense($wc_product);
+
+                // Fetch the store ID and build the collection name
+                $wooless_site_id = get_option('store_id');
+                $collection_name = 'product-' . $wooless_site_id;
+
+                $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+            } catch (Exception $e) {
+                error_log("Error updating product in Typesense: " . $e->getMessage());
+            }
         }
     }
-
+    // Setting the variable in memory so that we can use this later for checking
+    $bwl_previous_product_id = $product_id;
 }
 function update_typesense_document_on_menu_update($menu_id, $menu_data)
 {
