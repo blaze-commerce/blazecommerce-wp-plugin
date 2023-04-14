@@ -208,7 +208,7 @@ function indexData() {
     var data = {
         'action': 'index_data_to_typesense',
         'api_key': apiKey,
-        'collection_name': 'products',
+        'collection_name': 'site_info',
 
     };
     document.getElementById("wrapper-id").style.display = "none";
@@ -934,8 +934,8 @@ function site_info_index_to_typesense()
             }
         }
         
-        // Convert payment methods array to a string
-        $payment_methods_string = implode(', ', $payment_methods);
+        // Convert payment methods array to a JSON string
+        $payment_methods_json = json_encode($payment_methods);
 
 
         if (!function_exists('get_plugins')) {
@@ -971,6 +971,15 @@ function site_info_index_to_typesense()
         // Cast the review_plugin_name variable to a string
         $review_plugin_name = (string) $review_plugin_name;
 
+            $permalink_structure = get_option('permalink_structure');
+
+        // Add the permalink structure to Typesense
+        $client->collections[$collection_site_info]->documents->create([
+            'name' => 'permalink_structure',
+            'value' => $permalink_structure,
+            'updated_at' => time(),
+        ]);
+
 
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'reviews_plugin',
@@ -981,7 +990,7 @@ function site_info_index_to_typesense()
 
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'Payment_methods',
-            'value' => $payment_methods_string,
+            'value' => $payment_methods_json,
             'updated_at' => $updatedAt,
         ]);
 
