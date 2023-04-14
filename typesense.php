@@ -28,8 +28,6 @@ function getTypeSenseClient($typesense_private_key)
     return $client;
 }
 
-
-
 add_action('admin_enqueue_scripts', 'enqueue_typesense_product_indexer_scripts');
 add_action('admin_menu', 'add_typesense_product_indexer_menu');
 add_action('wp_ajax_index_data_to_typesense', 'index_data_to_typesense');
@@ -1277,5 +1275,35 @@ function site_info_update($option_name, $old_value, $new_value) {
     // Check if the updated option is in the array of target settings
     if (in_array($option_name, $target_settings)) {
         site_info_index_to_typesense();
+    }
+}
+
+function bwl_on_order_status_changed($order_id, $old_status, $new_status, $order)
+{
+    if ($new_status === 'completed' || $new_status === 'processing' || $new_status === 'cancelled' || $new_status === 'refunded') {
+        // Get the items in the order
+        $items = $order->get_items();
+
+        // Loop through each item and update the corresponding product in Typesense
+        foreach ($items as $item) {
+            $product_id = $item->get_product_id();
+            $wc_product = wc_get_product($product_id);
+
+            if ($wc_product->get_status() == 'publish') {
+                try {
+                    $typesense_private_key = get_option('typesense_api_key');
+                    $client = getTypeSenseClient($typesense_private_key);
+
+                    $document_data = getProductDataForTypeSense($wc_product);
+
+                    // Use the bwlGetProductCollectionName function for the collection_name value
+                    $collection_name = getTypeSenseCollection();
+
+                    $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+                } catch (Exception $e) {
+                    error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
+                }
+            }
+        }
     }
 }
