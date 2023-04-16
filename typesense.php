@@ -329,7 +329,6 @@ function getTermData($taxonomyTerms)
     return $termData;
 }
 
-
 function getProductDataForTypeSense($product)
 {
     // Format product data for indexing
@@ -937,41 +936,57 @@ function site_info_index_to_typesense()
         // Convert payment methods array to a JSON string
         $payment_methods_json = json_encode($payment_methods);
 
+ 
+        global $wpdb;
 
-        if (!function_exists('get_plugins')) {
-            require_once(ABSPATH . 'wp-admin/includes/plugin.php');
-        }
+        // Fetch the 'active_plugins' option from the WordPress options table
+        $active_plugins_serialized = $wpdb->get_var("SELECT option_value FROM " . $wpdb->options . " WHERE option_name = 'active_plugins'");
+        $active_plugins = unserialize($active_plugins_serialized);
 
-        // Get all installed plugins
-        $plugins = get_plugins();
-
-        // List known review plugins (customize this list as needed)
-        $known_review_plugins = [
-            'wp-review/wp-review.php' => 'WP Review',
-            'wp-product-review-lite/wp-product-review-lite.php' => 'WP Product Review Lite',
-            'site-reviews/site-reviews.php' => 'Site Reviews',
-            'yet-another-stars-rating/yet-another-stars-rating.php' => 'Yasr - Yet Another Stars Rating',
-            'wp-customer-reviews/wp-customer-reviews.php' => 'WP Customer Reviews',
-            'kk-star-ratings/index.php' => 'Kk Star Ratings',
-            'reviews-for-woocommerce/reviews-for-woocommerce.php' => 'REVIEWS.io WooCommerce Plugin'
+        // List of known review plugin slugs
+        $review_plugin_slugs = [
+            'reviewscouk-for-woocommerce',
+            'wp-review',
+            'wp-product-review-lite',
+            'all-in-one-schemaorg-rich-snippets',
+            'site-reviews',
+            'ultimate-reviews',
+            'taqyeem',
+            'author-hreview',
+            'rich-reviews',
+            'customer-reviews-for-woocommerce',
+            'reviewer',
+            'yelp-widget-pro',
+            'testimonials-widget',
+            'google-reviews-widget',
+            'reviewer-plugin',
+            'wp-customer-reviews',
+            'starcat-reviews',
+            'trustpilot-reviews',
+            'tripadvisor-reviews',
+            'facebook-reviews-pro',
+            'wp-reviews',
+            'multi-rating-pro'
         ];
-
-        // Initialize variable to store review plugin name
-        $review_plugin_name = null;
-
-        // Loop through installed plugins and check for known review plugins
-        foreach ($known_review_plugins as $plugin_file => $plugin_name) {
-            if (isset($plugins[$plugin_file]) && is_plugin_active($plugin_file)) {
-                // Found the review plugin
-                $review_plugin_name = $plugin_name;
-                break; // Break out of the loop
+        // Filter the active plugins by the known review plugin slugs
+        $filtered_plugins = array_filter($active_plugins, function ($plugin) use ($review_plugin_slugs) {
+            foreach ($review_plugin_slugs as $slug) {
+                if (strpos($plugin, $slug) !== false) {
+                    return true;
+                }
             }
-        }
+            return false;
+        });
 
-        // Cast the review_plugin_name variable to a string
-        $review_plugin_name = (string) $review_plugin_name;
+        // Extract the plugin directory names
+        $filtered_plugin_directories = array_map(function ($plugin) {
+            return dirname($plugin);
+        }, $filtered_plugins);
 
-            $permalink_structure = get_option('permalink_structure');
+        // Convert the filtered plugin directory names array to a string
+        $filtered_plugin_directories_string = implode(', ', $filtered_plugin_directories);
+
+        $permalink_structure = get_option('permalink_structure');
 
         // Add the permalink structure to Typesense
         $client->collections[$collection_site_info]->documents->create([
@@ -983,7 +998,7 @@ function site_info_index_to_typesense()
 
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'reviews_plugin',
-            'value' => $review_plugin_name,
+            'value' =>  $filtered_plugin_directories_string,
             'updated_at' => $updatedAt,
         ]);
 
