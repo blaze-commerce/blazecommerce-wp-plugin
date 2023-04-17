@@ -123,6 +123,8 @@ function typesense_product_indexer_page()
     </div>
 </div>
 
+
+
 <script>
 function toggleApiKeyVisibility() {
     var apiKeyInput = document.getElementById("api_key");
@@ -240,6 +242,10 @@ function indexData() {
         });
     });
 }
+
+
+
+
 // Enable or disable the 'Index Products' button based on the saved API key
 if (document.getElementById("api_key").value !== "") {
     document.getElementById("index_products").disabled = false;
@@ -1017,6 +1023,7 @@ function site_info_index_to_typesense()
             'tag' => '/' . $tag_base . '/%tagname%',
             'base' => $base_permalink_structure . '/%postname%',
             'posts' => '/blog/%postname%',
+            'pages' => $base_permalink_structure . '/%pagename%',
         ];
 
         // Convert the permalink structure to a JSON-encoded string
