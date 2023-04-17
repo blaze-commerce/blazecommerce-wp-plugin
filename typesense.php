@@ -208,7 +208,7 @@ function indexData() {
     var data = {
         'action': 'index_data_to_typesense',
         'api_key': apiKey,
-        'collection_name': 'site_info',
+        'collection_name': 'products',
 
     };
     document.getElementById("wrapper-id").style.display = "none";
@@ -339,8 +339,10 @@ function getProductDataForTypeSense($product)
     $attachment_ids = $product->get_gallery_image_ids();
     $product_gallery = array_map(function ($attachment_id) {
         return [
+            'id' => $attachment_id,
+            'title' => $attachment->post_title,
             'altText' => get_post_meta($attachment_id, '_wp_attachment_image_alt', true),
-            'url' => wp_get_attachment_url($attachment_id)
+            'src' => wp_get_attachment_url($attachment_id)
         ];
     }, $attachment_ids);
 
@@ -370,7 +372,16 @@ function getProductDataForTypeSense($product)
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
 
-    $thumbnail = get_the_post_thumbnail_url($product_id);
+    //$thumbnail = get_the_post_thumbnail_url($product_id);
+    $thumbnail_id = get_post_thumbnail_id($product_id);
+    $attachment = get_post($thumbnail_id);
+
+    $thumbnail = [
+        'id' => $thumbnail_id,
+        'title' => $attachment->post_title,
+        'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+        'src' => get_the_post_thumbnail_url($product_id),
+    ];
     $stockQuantity = $product->get_stock_quantity();
 
     $categories = get_the_terms($product_id, 'product_cat');
@@ -492,7 +503,7 @@ function getProductDataForTypeSense($product)
         'permalink' => get_permalink($product->get_id()),
         'slug' => $product->get_slug(),
         'seoFullHead' => $seo_head,
-        'thumbnail' => empty($thumbnail) ? '' : $thumbnail,
+        'thumbnail' => empty($thumbnail) ? '' : json_encode($thumbnail),
         'sku' => $product->get_sku(),
         'price' => [
             sprintf("%s: %.2f", get_woocommerce_currency(), floatval($product->get_price())) // Format price as string
@@ -986,7 +997,30 @@ function site_info_index_to_typesense()
         // Convert the filtered plugin directory names array to a string
         $filtered_plugin_directories_string = implode(', ', $filtered_plugin_directories);
 
-        $permalink_structure = get_option('permalink_structure');
+        // Get the permalink structure from WordPress
+        $permalink_structure = get_option('woocommerce_permalinks');
+        $product_base = isset($permalink_structure['product_base']) ? $permalink_structure['product_base'] : '';
+
+        // If the product base does not start with a slash, add one
+        if ($product_base && $product_base[0] !== '/') {
+            $product_base = '/' . $product_base;
+        }
+
+        $category_base = get_option('category_base') ?: 'category';
+        $tag_base = get_option('tag_base') ?: 'tag';
+        $base_permalink_structure = get_option('permalink_structure');
+
+        // Assemble the permalink structure JSON object
+        $permalink_structure = [
+            'product' => $product_base . '/%postname%',
+            'category' => '/' . $category_base . '/%categoryname%',
+            'tag' => '/' . $tag_base . '/%tagname%',
+            'base' => $base_permalink_structure . '/%postname%',
+            'posts' => '/blog/%postname%',
+        ];
+
+        // Convert the permalink structure to a JSON-encoded string
+        $permalink_structure = json_encode($permalink_structure);
 
         // Add the permalink structure to Typesense
         $client->collections[$collection_site_info]->documents->create([
