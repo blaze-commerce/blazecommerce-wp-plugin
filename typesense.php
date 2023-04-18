@@ -3,7 +3,7 @@
 Plugin Name: Blaze Typesense Wooless
 Plugin URI: https://www.blaze.online
 Description: A plugin that integrates with Typesense server.
-Version: 1.1
+Version: 1.2
 Author: Blaze Online
 Author URI: https://www.blaze.online
 */
@@ -28,8 +28,6 @@ function getTypeSenseClient($typesense_private_key)
     return $client;
 }
 
-
-
 add_action('admin_enqueue_scripts', 'enqueue_typesense_product_indexer_scripts');
 add_action('admin_menu', 'add_typesense_product_indexer_menu');
 add_action('wp_ajax_index_data_to_typesense', 'index_data_to_typesense');
@@ -38,6 +36,9 @@ add_action('wp_ajax_save_typesense_api_key', 'save_typesense_api_key');
 add_action('wp_update_nav_menu', 'update_typesense_document_on_menu_update', 10, 2);
 add_action('edited_term', 'update_typesense_document_on_taxonomy_edit', 10, 3);
 add_action('updated_option', 'site_info_update', 10, 3);
+add_action('woocommerce_new_product', 'bwl_on_product_save', 10, 2);
+add_action('woocommerce_update_product', 'bwl_on_product_save', 10, 2);
+add_action('woocommerce_order_status_changed', 'bwl_on_order_status_changed', 10, 4);
 
 
 function enqueue_typesense_product_indexer_scripts()
@@ -121,6 +122,8 @@ function typesense_product_indexer_page()
         <div id="phpdecoded" style="margin-top: 10px;"></div>
     </div>
 </div>
+
+
 
 <script>
 function toggleApiKeyVisibility() {
@@ -207,7 +210,7 @@ function indexData() {
     var data = {
         'action': 'index_data_to_typesense',
         'api_key': apiKey,
-        'collection_name': 'site_info',
+        'collection_name': 'products',
 
     };
     document.getElementById("wrapper-id").style.display = "none";
@@ -239,6 +242,10 @@ function indexData() {
         });
     });
 }
+
+
+
+
 // Enable or disable the 'Index Products' button based on the saved API key
 if (document.getElementById("api_key").value !== "") {
     document.getElementById("index_products").disabled = false;
@@ -328,7 +335,6 @@ function getTermData($taxonomyTerms)
     return $termData;
 }
 
-
 function getProductDataForTypeSense($product)
 {
     // Format product data for indexing
@@ -339,8 +345,10 @@ function getProductDataForTypeSense($product)
     $attachment_ids = $product->get_gallery_image_ids();
     $product_gallery = array_map(function ($attachment_id) {
         return [
+            'id' => $attachment_id,
+            'title' => $attachment->post_title,
             'altText' => get_post_meta($attachment_id, '_wp_attachment_image_alt', true),
-            'url' => wp_get_attachment_url($attachment_id)
+            'src' => wp_get_attachment_url($attachment_id)
         ];
     }, $attachment_ids);
 
@@ -370,7 +378,16 @@ function getProductDataForTypeSense($product)
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
 
-    $thumbnail = get_the_post_thumbnail_url($product_id);
+    //$thumbnail = get_the_post_thumbnail_url($product_id);
+    $thumbnail_id = get_post_thumbnail_id($product_id);
+    $attachment = get_post($thumbnail_id);
+
+    $thumbnail = [
+        'id' => $thumbnail_id,
+        'title' => $attachment->post_title,
+        'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+        'src' => get_the_post_thumbnail_url($product_id),
+    ];
     $stockQuantity = $product->get_stock_quantity();
 
     $categories = get_the_terms($product_id, 'product_cat');
@@ -483,6 +500,7 @@ function getProductDataForTypeSense($product)
     }
 
 
+    
     $product_data = [
         'id' => strval($product->get_id()),
         'productId' => strval($product->get_id()),
@@ -492,10 +510,11 @@ function getProductDataForTypeSense($product)
         'permalink' => get_permalink($product->get_id()),
         'slug' => $product->get_slug(),
         'seoFullHead' => $seo_head,
-        'thumbnail' => empty($thumbnail) ? '' : $thumbnail,
+        'thumbnail' => empty($thumbnail) ? '' : json_encode($thumbnail),
         'sku' => $product->get_sku(),
         'price' => [
-        sprintf("%s: %.2f", get_woocommerce_currency(), floatval($product->get_price())) // Format price as string
+            'currency' => get_woocommerce_currency(),
+            'value' => floatval($product->get_price()),
         ],
         'regularPrice' => floatval($product->get_regular_price()),
         'salePrice' => floatval($product->get_sale_price()),
@@ -523,7 +542,6 @@ function getProductDataForTypeSense($product)
         'additionalTabs' => $formatted_additional_tabs,
         'seo' => $seo_head,
     ];
-    $product_data['price'] = json_encode($product_data['price']);
     return $product_data;
 }
 
@@ -556,7 +574,7 @@ function products_to_typesense(){
                     ['name' => 'seoFullHead', 'type' => 'string'],
                     ['name' => 'thumbnail', 'type' => 'string'],
                     ['name' => 'sku', 'type' => 'string'],
-                    ['name' => 'price', 'type' => 'string[]'],
+                    ['name' => 'price', 'type' => 'object'],
                     ['name' => 'regularPrice', 'type' => 'float'],
                     ['name' => 'salePrice', 'type' => 'float'],
                     ['name' => 'onSale', 'type' => 'bool'],
@@ -569,7 +587,6 @@ function products_to_typesense(){
                     ['name' => 'galleryImages', 'type' => 'string'],
                     ['name' => 'addons', 'type' => 'string'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
-                    ['name' => 'variations', 'type' => 'string[]', 'facet' => true],
                 ],
                 'default_sorting_field' => 'updatedAt',
                 'enable_nested_fields' => true
@@ -935,12 +952,103 @@ function site_info_index_to_typesense()
             }
         }
         
-        // Convert payment methods array to a string
-        $payment_methods_string = implode(', ', $payment_methods);
+        // Convert payment methods array to a JSON string
+        $payment_methods_json = json_encode($payment_methods);
+
+ 
+        global $wpdb;
+
+        // Fetch the 'active_plugins' option from the WordPress options table
+        $active_plugins_serialized = $wpdb->get_var("SELECT option_value FROM " . $wpdb->options . " WHERE option_name = 'active_plugins'");
+        $active_plugins = unserialize($active_plugins_serialized);
+
+        // List of known review plugin slugs
+        $review_plugin_slugs = [
+            'reviewscouk-for-woocommerce',
+            'wp-review',
+            'wp-product-review-lite',
+            'all-in-one-schemaorg-rich-snippets',
+            'site-reviews',
+            'ultimate-reviews',
+            'taqyeem',
+            'author-hreview',
+            'rich-reviews',
+            'customer-reviews-for-woocommerce',
+            'reviewer',
+            'yelp-widget-pro',
+            'testimonials-widget',
+            'google-reviews-widget',
+            'reviewer-plugin',
+            'wp-customer-reviews',
+            'starcat-reviews',
+            'trustpilot-reviews',
+            'tripadvisor-reviews',
+            'facebook-reviews-pro',
+            'wp-reviews',
+            'multi-rating-pro'
+        ];
+        // Filter the active plugins by the known review plugin slugs
+        $filtered_plugins = array_filter($active_plugins, function ($plugin) use ($review_plugin_slugs) {
+            foreach ($review_plugin_slugs as $slug) {
+                if (strpos($plugin, $slug) !== false) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        // Extract the plugin directory names
+        $filtered_plugin_directories = array_map(function ($plugin) {
+            return dirname($plugin);
+        }, $filtered_plugins);
+
+        // Convert the filtered plugin directory names array to a string
+        $filtered_plugin_directories_string = implode(', ', $filtered_plugin_directories);
+
+        // Get the permalink structure from WordPress
+        $permalink_structure = get_option('woocommerce_permalinks');
+        $product_base = isset($permalink_structure['product_base']) ? $permalink_structure['product_base'] : '';
+
+        // If the product base does not start with a slash, add one
+        if ($product_base && $product_base[0] !== '/') {
+            $product_base = '/' . $product_base;
+        }
+
+        $category_base = get_option('category_base') ?: 'category';
+        $tag_base = get_option('tag_base') ?: 'tag';
+        $base_permalink_structure = get_option('permalink_structure');
+
+        // Assemble the permalink structure JSON object
+        $permalink_structure = [
+            'product' => $product_base . '/%postname%',
+            'category' => '/' . $category_base . '/%categoryname%',
+            'tag' => '/' . $tag_base . '/%tagname%',
+            'base' => $base_permalink_structure . '/%postname%',
+            'posts' => '/blog/%postname%',
+            'pages' => $base_permalink_structure . '/%pagename%',
+        ];
+
+        // Convert the permalink structure to a JSON-encoded string
+        $permalink_structure = json_encode($permalink_structure);
+
+        // Add the permalink structure to Typesense
+        $client->collections[$collection_site_info]->documents->create([
+            'name' => 'permalink_structure',
+            'value' => $permalink_structure,
+            'updated_at' => time(),
+        ]);
+
+
+        $client->collections[$collection_site_info]->documents->create([
+            'name' => 'reviews_plugin',
+            'value' =>  $filtered_plugin_directories_string,
+            'updated_at' => $updatedAt,
+        ]);
+
 
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'Payment_methods',
-            'value' => $payment_methods_string,
+            'value' => $payment_methods_json,
             'updated_at' => $updatedAt,
         ]);
 
@@ -1017,7 +1125,14 @@ function site_info_index_to_typesense()
     }
 
 }
-// Add the action hook
+
+function getTypeSenseCollection() {
+    // Fetch the store ID from the saved options
+    $wooless_site_id = get_option('store_id');
+    // Build the collection name
+    $collection = 'product-' . $wooless_site_id;
+    return $collection;
+}
 
 function index_data_to_typesense()
 {
@@ -1036,22 +1151,64 @@ function index_data_to_typesense()
     wp_die();
 }
 // Function to update the product in Typesense when its metadata is updated in WooCommerce
-function update_product_in_typesense($product_id)
+function bwl_on_product_save($product_id, $wc_product)
 {
-    // Check if the product is published before updating
-    if (get_post_status($product_id) == 'publish') {
-        try {
-            $client = getTypeSenseClient();
-            $wc_product = wc_get_product($product_id);
-            $document_data = getProductDataForTypeSense($wc_product);
+    // Creating global variable so that this function only runs once if product id is exactly equal to product id
+    global $bwl_previous_product_id;
+    if ($bwl_previous_product_id === $product_id) {
+        // Check if the product is published before updating typesense data
+        if ($wc_product->get_status() == 'publish') {
+            try {
+                $typesense_private_key = get_option('typesense_api_key'); // Get the API key
+                $client = getTypeSenseClient($typesense_private_key); // Pass the API key as an argument
 
-            $client->collections['products']->documents[strval($product_id)]->update($document_data);
-        } catch (Exception $e) {
-            error_log("Error updating product in Typesense: " . $e->getMessage());
+                $document_data = getProductDataForTypeSense($wc_product);
+
+                // Fetch the store ID and build the collection name
+                $wooless_site_id = get_option('store_id');
+                $collection_name = 'product-' . $wooless_site_id;
+
+                $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+            } catch (Exception $e) {
+                error_log("Error updating product in Typesense: " . $e->getMessage());
+            }
         }
     }
-
+    // Setting the variable in memory so that we can use this later for checking
+    $bwl_previous_product_id = $product_id;
 }
+function bwl_on_checkout_update_order_meta($order_id, $data)
+{
+    // Get the order object
+    $order = wc_get_order($order_id);
+
+    // Get the items in the order
+    $items = $order->get_items();
+
+    // Loop through each item and update the corresponding product in Typesense
+    foreach ($items as $item) {
+        $product_id = $item->get_product_id();
+        $wc_product = wc_get_product($product_id);
+
+        if ($wc_product->get_status() == 'publish') {
+            try {
+                $typesense_private_key = get_option('typesense_api_key');
+                $client = getTypeSenseClient($typesense_private_key);
+
+                $document_data = getProductDataForTypeSense($wc_product);
+
+                $collection_name = getTypeSenseCollection();
+
+                $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+            } catch (Exception $e) {
+                error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
+            }
+        }
+    }
+}
+
+add_action('woocommerce_checkout_update_order_meta', 'bwl_on_checkout_update_order_meta', 10, 2);
+
 function update_typesense_document_on_menu_update($menu_id, $menu_data)
 {
     $typesense_private_key = get_option('typesense_api_key');
@@ -1185,5 +1342,35 @@ function site_info_update($option_name, $old_value, $new_value) {
     // Check if the updated option is in the array of target settings
     if (in_array($option_name, $target_settings)) {
         site_info_index_to_typesense();
+    }
+}
+
+function bwl_on_order_status_changed($order_id, $old_status, $new_status, $order)
+{
+    if ($new_status === 'completed' || $new_status === 'processing' || $new_status === 'cancelled' || $new_status === 'refunded') {
+        // Get the items in the order
+        $items = $order->get_items();
+
+        // Loop through each item and update the corresponding product in Typesense
+        foreach ($items as $item) {
+            $product_id = $item->get_product_id();
+            $wc_product = wc_get_product($product_id);
+
+            if ($wc_product->get_status() == 'publish') {
+                try {
+                    $typesense_private_key = get_option('typesense_api_key');
+                    $client = getTypeSenseClient($typesense_private_key);
+
+                    $document_data = getProductDataForTypeSense($wc_product);
+
+                    // Use the bwlGetProductCollectionName function for the collection_name value
+                    $collection_name = getTypeSenseCollection();
+
+                    $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+                } catch (Exception $e) {
+                    error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
+                }
+            }
+        }
     }
 }
