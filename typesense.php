@@ -282,8 +282,6 @@ function save_typesense_api_key()
     wp_die();
 }
 
-
-
 function get_typesense_collections()
 {
     if (isset($_POST['api_key'])) {
@@ -334,6 +332,33 @@ function getTermData($taxonomyTerms)
 
     return $termData;
 }
+
+function getProductTaxonomies($product) {
+    $taxonomies_data = [];
+    $taxonomies = get_object_taxonomies('product');
+
+    foreach ($taxonomies as $taxonomy) {
+        // Exclude taxonomies based on their names
+        if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|product_visibility)/', $taxonomy)) {
+            continue;
+        }
+
+        $product_terms = get_the_terms($product->get_id(), $taxonomy);
+
+        if (!empty($product_terms) && !is_wp_error($product_terms)) {
+            foreach ($product_terms as $product_term) {
+                $taxonomies_data[] = [
+                    'name' => $product_term->name,
+                    'url' => get_term_link($product_term->term_id),
+                    'type' => $taxonomy,
+                ];
+            }
+        }
+    }
+
+    return $taxonomies_data;
+}
+
 
 function getProductDataForTypeSense($product)
 {
@@ -403,39 +428,8 @@ function getProductDataForTypeSense($product)
             'url' => get_term_link($term->term_id),
         ];
     }, $ingredients);
-
-    // Merge category data and ingredient data
-    $combinedCategoryData = array_merge($categoryData, $ingredientData);
-
-    // Use other parts of the code as before
-    $tags = get_the_terms($product_id, 'product_tag');
-    $tagData = getTermData($tags);
-
-    $favourites = get_the_terms($product_id, 'favourite');
-    $favouriteData = getTermData($favourites);
-
-    $occassions = get_the_terms($product_id, 'occasion');
-    $occassionData = getTermData($occassions);
-
-    $shopBys = get_the_terms($product_id, 'shop-by');
-    $shopByData = getTermData($shopBys);
-
-    $types = get_the_terms($product_id, 'product-type');
-    $typeData = getTermData($types);
-
+    
     $product_type = $product->get_type();
-
-    $jsonData = [
-        'categories' => $combinedCategoryData,
-        'tags' => $tagData,
-        'favourites' => $favouriteData,
-        'occassions' => $occassionData,
-        'shopBys' => $shopByData,
-        'types' => $typeData,
-    ];
-
-    $json = json_encode($jsonData);
-
 
     // Get variations if the product is a variable product
     $variations_data = [];
@@ -498,8 +492,7 @@ function getProductDataForTypeSense($product)
             );
         }
     }
-
-
+    $taxonomies = getProductTaxonomies($product);
     
     $product_data = [
         'id' => strval($product->get_id()),
@@ -527,12 +520,7 @@ function getProductDataForTypeSense($product)
         'totalSales' => $product->get_total_sales(),
         'galleryImages' => json_encode($product_gallery),
         'addons' => $addons,
-        'product_categories' => $categoryData,
-        'tags' => $tags,
-        'favourites' => $favouriteData,
-        'occassions' => $occassionData,
-        'shopBys' => $shopByData,
-        'types' => $typeData,
+        'taxonomies' => $taxonomies,
         'productType' => $product_type,
         // Add product type
         'variations' => $variations_data,
@@ -586,7 +574,8 @@ function products_to_typesense(){
                     ['name' => 'totalSales', 'type' => 'int64'],
                     ['name' => 'galleryImages', 'type' => 'string'],
                     ['name' => 'addons', 'type' => 'string'],
-                    ['name' => 'productType', 'type' => 'string', 'facet' => true],
+                    //['name' => 'productType', 'type' => 'string', 'facet' => true],
+                    ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
                 ],
                 'default_sorting_field' => 'updatedAt',
                 'enable_nested_fields' => true
@@ -1061,7 +1050,7 @@ function site_info_index_to_typesense()
         $updated_at = time(); // Use the current time as the updated_at value
         
         $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Stock_display_format',
+            'name' => 'stock_display_format',
             'value' => $stock_display_format,
             'updated_at' => $updated_at,
         ]);
