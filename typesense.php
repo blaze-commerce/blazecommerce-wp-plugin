@@ -500,6 +500,7 @@ function getProductDataForTypeSense($product)
     }
 
 
+    
     $product_data = [
         'id' => strval($product->get_id()),
         'productId' => strval($product->get_id()),
@@ -512,7 +513,12 @@ function getProductDataForTypeSense($product)
         'thumbnail' => empty($thumbnail) ? '' : json_encode($thumbnail),
         'sku' => $product->get_sku(),
         'price' => [
+<<<<<<< HEAD
             sprintf("%s: %.2f", get_woocommerce_currency(), floatval($product->get_price())) // Format price as string
+=======
+            'currency' => get_woocommerce_currency(),
+            'value' => floatval($product->get_price()),
+>>>>>>> 6e94fcbcfe4c75f95e67b543aea3f4c4a02ff1e1
         ],
         'regularPrice' => floatval($product->get_regular_price()),
         'salePrice' => floatval($product->get_sale_price()),
@@ -572,7 +578,11 @@ function products_to_typesense(){
                     ['name' => 'seoFullHead', 'type' => 'string'],
                     ['name' => 'thumbnail', 'type' => 'string'],
                     ['name' => 'sku', 'type' => 'string'],
+<<<<<<< HEAD
                     ['name' => 'price', 'type' => 'string[]'],
+=======
+                    ['name' => 'price', 'type' => 'object'],
+>>>>>>> 6e94fcbcfe4c75f95e67b543aea3f4c4a02ff1e1
                     ['name' => 'regularPrice', 'type' => 'float'],
                     ['name' => 'salePrice', 'type' => 'float'],
                     ['name' => 'onSale', 'type' => 'bool'],
