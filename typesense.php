@@ -1042,14 +1042,14 @@ function site_info_index_to_typesense()
             // Determine the stock display format based on the 'woocommerce_stock_format' option
             switch ($stock_format) {
                 case 'always':
-                    $stock_display_format = 'Always show quantity remaining in stock e.g. "12 in stock"';
+                    $stock_display_format = 'always';
                     break;
                 case 'never':
-                    $stock_display_format = 'Never show quantity remaining in stock';
+                    $stock_display_format = 'never';
                     break;
                 case 'low_amount':
                 default:
-                    $stock_display_format = 'Only show quantity remaining in stock when low e.g. "Only 2 left in stock"';
+                    $stock_display_format = 'low_amount';
                     break;
             }
         }
