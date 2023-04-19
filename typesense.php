@@ -294,7 +294,7 @@ function get_typesense_collections()
         $wooless_site_id = $trimmed_api_key[1];
 
         $client = getTypeSenseClient($typesense_private_key);
- 
+
 
         try {
             $collection_name = 'product-' . $wooless_site_id;
@@ -513,12 +513,8 @@ function getProductDataForTypeSense($product)
         'thumbnail' => empty($thumbnail) ? '' : json_encode($thumbnail),
         'sku' => $product->get_sku(),
         'price' => [
-<<<<<<< HEAD
-            sprintf("%s: %.2f", get_woocommerce_currency(), floatval($product->get_price())) // Format price as string
-=======
             'currency' => get_woocommerce_currency(),
             'value' => floatval($product->get_price()),
->>>>>>> 6e94fcbcfe4c75f95e67b543aea3f4c4a02ff1e1
         ],
         'regularPrice' => floatval($product->get_regular_price()),
         'salePrice' => floatval($product->get_sale_price()),
@@ -578,11 +574,7 @@ function products_to_typesense(){
                     ['name' => 'seoFullHead', 'type' => 'string'],
                     ['name' => 'thumbnail', 'type' => 'string'],
                     ['name' => 'sku', 'type' => 'string'],
-<<<<<<< HEAD
-                    ['name' => 'price', 'type' => 'string[]'],
-=======
                     ['name' => 'price', 'type' => 'object'],
->>>>>>> 6e94fcbcfe4c75f95e67b543aea3f4c4a02ff1e1
                     ['name' => 'regularPrice', 'type' => 'float'],
                     ['name' => 'salePrice', 'type' => 'float'],
                     ['name' => 'onSale', 'type' => 'bool'],
@@ -749,8 +741,8 @@ function taxonmy_index_to_typesense()
 
         // Fetch terms for all taxonomies except those starting with 'ef_'
         foreach ($taxonomies as $taxonomy) {
-        // Skip taxonomies starting with 'ef_', 'elementor', 'pa_', 'nav_', or 'ml-'
-        if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|product_visibility)/', $taxonomy)) {
+            // Skip taxonomies starting with 'ef_'
+            if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|product_visibility)/', $taxonomy)) {
                 continue;
             }
 
@@ -1038,6 +1030,41 @@ function site_info_index_to_typesense()
 
         // Convert the permalink structure to a JSON-encoded string
         $permalink_structure = json_encode($permalink_structure);
+        
+        // Get WooCommerce stock settings
+        $manage_stock = get_option('woocommerce_manage_stock'); // 'yes' or 'no'
+        $stock_format = get_option('woocommerce_stock_format'); // 'always', 'never', or 'low_amount'
+
+        // If stock management is disabled, the stock display format will be empty
+        if ($manage_stock === 'no') {
+            $stock_display_format = '';
+        } else {
+            // Determine the stock display format based on the 'woocommerce_stock_format' option
+            switch ($stock_format) {
+                case 'always':
+                    $stock_display_format = 'Always show quantity remaining in stock e.g. "12 in stock"';
+                    break;
+                case 'never':
+                    $stock_display_format = 'Never show quantity remaining in stock';
+                    break;
+                case 'low_amount':
+                default:
+                    $stock_display_format = 'Only show quantity remaining in stock when low e.g. "Only 2 left in stock"';
+                    break;
+            }
+        }
+
+        // Now, $stock_display_format contains the stock display format setting from WooCommerce
+
+        // Send the stock display format value to Typesense
+        $document_id = 'stock_display_format_setting'; // Set an appropriate document ID
+        $updated_at = time(); // Use the current time as the updated_at value
+        
+        $client->collections[$collection_site_info]->documents->create([
+            'name' => 'Stock_display_format',
+            'value' => $stock_display_format,
+            'updated_at' => $updated_at,
+        ]);
 
         // Add the permalink structure to Typesense
         $client->collections[$collection_site_info]->documents->create([
