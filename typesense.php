@@ -511,8 +511,7 @@ function getProductDataForTypeSense($product)
         'thumbnail' => $thumbnail,
         'sku' => $product->get_sku(),
         'price' => [
-            'amount' => (float) $product->get_price(),
-            'currency' => $currency
+            $currency => (float) $product->get_price()
         ],
         'regularPrice' => floatval($product->get_regular_price()),
         'salePrice' => floatval($product->get_sale_price()),
