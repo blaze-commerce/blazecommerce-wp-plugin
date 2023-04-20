@@ -369,6 +369,7 @@ function getProductDataForTypeSense($product)
     $addons = json_encode(get_product_addons($product_id, false));
     $attachment_ids = $product->get_gallery_image_ids();
     $product_gallery = array_map(function ($attachment_id) {
+        $attachment = get_post($attachment_id);
         return [
             'id' => $attachment_id,
             'title' => $attachment->post_title,
@@ -376,6 +377,7 @@ function getProductDataForTypeSense($product)
             'src' => wp_get_attachment_url($attachment_id)
         ];
     }, $attachment_ids);
+
 
     $meta = YoastSEO()->meta->for_post($product_id);
     $fullHead = wp_gql_seo_get_full_head($meta);
@@ -403,16 +405,19 @@ function getProductDataForTypeSense($product)
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
 
-    //$thumbnail = get_the_post_thumbnail_url($product_id);
+    // Get the thumbnail
     $thumbnail_id = get_post_thumbnail_id($product_id);
     $attachment = get_post($thumbnail_id);
 
     $thumbnail = [
-        'id' => $thumbnail_id,
-        'title' => $attachment->post_title,
-        'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
-        'src' => get_the_post_thumbnail_url($product_id),
+        [
+            'id' => $thumbnail_id,
+            'title' => $attachment->post_title,
+            'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+            'src' => get_the_post_thumbnail_url($product_id),
+        ]
     ];
+    
     $stockQuantity = $product->get_stock_quantity();
 
     $categories = get_the_terms($product_id, 'product_cat');
@@ -493,7 +498,7 @@ function getProductDataForTypeSense($product)
         }
     }
     $taxonomies = getProductTaxonomies($product);
-    
+    $currency = get_option('woocommerce_currency');
     $product_data = [
         'id' => strval($product->get_id()),
         'productId' => strval($product->get_id()),
@@ -503,11 +508,11 @@ function getProductDataForTypeSense($product)
         'permalink' => get_permalink($product->get_id()),
         'slug' => $product->get_slug(),
         'seoFullHead' => $seo_head,
-        'thumbnail' => empty($thumbnail) ? '' : json_encode($thumbnail),
+        'thumbnail' => $thumbnail,
         'sku' => $product->get_sku(),
         'price' => [
-            'currency' => get_woocommerce_currency(),
-            'value' => floatval($product->get_price()),
+            'amount' => (float) $product->get_price(),
+            'currency' => $currency
         ],
         'regularPrice' => floatval($product->get_regular_price()),
         'salePrice' => floatval($product->get_sale_price()),
@@ -518,7 +523,7 @@ function getProductDataForTypeSense($product)
         'createdAt' => strtotime($product->get_date_created()),
         'isFeatured' => $product->get_featured(),
         'totalSales' => $product->get_total_sales(),
-        'galleryImages' => json_encode($product_gallery),
+        'galleryImages' => $product_gallery,
         'addons' => $addons,
         'taxonomies' => $taxonomies,
         'productType' => $product_type,
@@ -560,9 +565,12 @@ function products_to_typesense(){
                     ['name' => 'permalink', 'type' => 'string'],
                     ['name' => 'slug', 'type' => 'string', 'facet' => true],
                     ['name' => 'seoFullHead', 'type' => 'string'],
-                    ['name' => 'thumbnail', 'type' => 'string'],
+                    //['name' => 'thumbnail', 'type' => 'object'],
                     ['name' => 'sku', 'type' => 'string'],
-                    ['name' => 'price', 'type' => 'object'],
+                    ['name' => 'price', 'type' => 'object', 'fields' => [
+                        ['name' => 'amount', 'type' => 'float'],
+                        ['name' => 'currency', 'type' => 'string'],
+                    ]],
                     ['name' => 'regularPrice', 'type' => 'float'],
                     ['name' => 'salePrice', 'type' => 'float'],
                     ['name' => 'onSale', 'type' => 'bool'],
@@ -572,9 +580,9 @@ function products_to_typesense(){
                     ['name' => 'createdAt', 'type' => 'int64'],
                     ['name' => 'isFeatured', 'type' => 'bool'],
                     ['name' => 'totalSales', 'type' => 'int64'],
-                    ['name' => 'galleryImages', 'type' => 'string'],
+                    //['name' => 'galleryImages', 'type' => 'object[]'],
                     ['name' => 'addons', 'type' => 'string'],
-                    //['name' => 'productType', 'type' => 'string', 'facet' => true],
+                    ['name' => 'productType', 'type' => 'string', 'facet' => true],
                     ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
                 ],
                 'default_sorting_field' => 'updatedAt',
@@ -589,9 +597,11 @@ function products_to_typesense(){
         foreach ($products as $product) {
             // Index the product data
             $product_data = getProductDataForTypeSense($product);
+           
             $client->collections[$collection_product]->documents->create($product_data);
         }
-
+         error_log(print_r($product_data, true));
+        echo "Product indexed successfully: {$product->get_id()}\n";
         echo "Products indexed successfully.";
     } catch (Exception $e) {
         $error_message = "Error: " . $e->getMessage();
