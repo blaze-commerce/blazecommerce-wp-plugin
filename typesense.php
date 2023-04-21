@@ -40,11 +40,6 @@ add_action('woocommerce_new_product', 'bwl_on_product_save', 10, 2);
 add_action('woocommerce_update_product', 'bwl_on_product_save', 10, 2);
 add_action('woocommerce_order_status_changed', 'bwl_on_order_status_changed', 10, 4);
 
-add_action('updated_option', 'site_info_update', 10, 3);
-add_action('woocommerce_new_product', 'bwl_on_product_save', 10, 2);
-add_action('woocommerce_update_product', 'bwl_on_product_save', 10, 2);
-add_action('woocommerce_order_status_changed', 'bwl_on_order_status_changed', 10, 4);
-
 
 function enqueue_typesense_product_indexer_scripts()
 {
@@ -335,7 +330,7 @@ function getTermData($taxonomyTerms)
         }
     }
 
-    return [$termNames, $termLinks];
+    return $termData;
 }
 
 function getProductTaxonomies($product) {
@@ -362,6 +357,18 @@ function getProductTaxonomies($product) {
     }
 
     return $taxonomies_data;
+}
+function recompileAddonsData($product_id) {
+	$addons = get_product_addons($product_id, false);
+	foreach($addons as $key => $addon) {
+		foreach($addon['options'] as $option_key => $option){
+			// label_slug
+			$addons[$key]['options'][$option_key]['label_slug'] = sanitize_title($option['label']);
+			// field_name
+			$addons[$key]['options'][$option_key]['field_name'] = 'addon-'.sanitize_title($addon['field-name']);
+		}
+	}
+	return $addons;
 }
 
 
