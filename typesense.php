@@ -511,6 +511,48 @@ function getProductDataForTypeSense($product)
     }
     $taxonomies = getProductTaxonomies($product);
     $currency = get_option('woocommerce_currency');
+    
+//   $attributes = [];
+
+//     foreach ($product->get_attributes() as $attribute) {
+//         try {
+//             $options = $attribute->get_options();
+
+//             if (is_array($options) && !empty($options)) {
+//                 $options = array_map('strval', $options);
+
+//                 $attributes[] = [
+//                     'id' => strval($attribute->get_id()),
+//                     'name' => $attribute->get_name(),
+//                     'position' => $attribute->get_position(),
+//                     'visible' => $attribute->get_visible(),
+//                     'variation' => $attribute->get_variation(),
+//                     'options' => $options,
+//                 ];
+//             } else {
+//                 error_log("Warning: Empty or non-array options for attribute of product ID: {$product->get_id()}");
+//             }
+//         } catch (Exception $e) {
+//             error_log("Error processing attribute for product ID: {$product->get_id()}. Message: " . $e->getMessage());
+//         }
+//     }
+
+//     // Add error logging to the shipping part
+//     $shipping = [];
+//     try {
+//         $shipping = [
+//             'weight' => $product->get_weight(),
+//             'dimensions' => [
+//                 'length' => $product->get_length(),
+//                 'width' => $product->get_width(),
+//                 'height' => $product->get_height(),
+//             ],
+//         ];
+//     } catch (Exception $e) {
+//         error_log("Error processing shipping for product ID: {$product->get_id()}. Message: " . $e->getMessage());
+//     }
+
+
     $product_data = [
         'id' => strval($product->get_id()),
         'productId' => strval($product->get_id()),
@@ -545,6 +587,8 @@ function getProductDataForTypeSense($product)
         'upsellData' => $upsell_data,
         'additionalTabs' => $formatted_additional_tabs,
         'seo' => $seo_head,
+        // 'attributes' => $attributes,
+        // 'additional_information_shipping' => $shipping,
     ];
     return $product_data;
 }
@@ -594,39 +638,84 @@ function products_to_typesense(){
                     //['name' => 'galleryImages', 'type' => 'object[]'],
                     ['name' => 'addons', 'type' => 'string'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
-                    ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
+                    // ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
+                    // ['name' => 'attributes', 'type' => 'object[]', 'facet' => true],
+                    // ['name' => 'additional_information_shipping', 'type' => 'object', 'fields' => [
+                    //     ['name' => 'weight', 'type' => 'float'],
+                    //     ['name' => 'dimensions', 'type' => 'object', 'fields' => [
+                    //         ['name' => 'length', 'type' => 'float'],
+                    //         ['name' => 'width', 'type' => 'float'],
+                    //         ['name' => 'height', 'type' => 'float'],
+                    //     ]],
+                    // ]],
                 ],
                 'default_sorting_field' => 'updatedAt',
                 'enable_nested_fields' => true
             ]
         );
+    
+    // Set initial values for pagination and batch size
+    $finished = false;
+    $page = 1;
+    $batch_size = 100; // Adjust the batch size depending on your server's capacity
+    $imported_products_count = 0;
 
-        // Fetch products from WooCommerce
-        $products = wc_get_products(['status' => 'publish', 'limit' => -1]);
+    while (!$finished) {
+        $products = wc_get_products(['status' => 'publish', 'limit' => $batch_size, 'page' => $page]);
 
-        // Index products in Typesense
-        foreach ($products as $product) {
-            // Index the product data
-            $product_data = getProductDataForTypeSense($product);
-           
-            $client->collections[$collection_product]->documents->create($product_data);
+        if (empty($products)) {
+            $finished = true;
+            continue;
         }
-         error_log(print_r($product_data, true));
-        echo "Product indexed successfully: {$product->get_id()}\n";
-        echo "Products indexed successfully.";
-    } catch (Exception $e) {
-        $error_message = "Error: " . $e->getMessage();
-        echo $error_message; // Print the error message for debugging purposes
-        echo "<script>
-            console.log('Error block executed'); // Log a message to the browser console
-            document.getElementById('error_message').innerHTML = '$error_message';
-        </script>";
-        echo "Error adding products to Typesense: " . $e->getMessage() . "\n";
+
+        $products_batch = [];
+
+        // Prepare products for indexing in Typesense
+        foreach ($products as $product) {
+            // Get the product data
+            $product_data = getProductDataForTypeSense($product);
+
+            if (!$product_data) {
+                error_log("Skipping product ID: " . $product->get_id());
+                continue; // Skip this product if no product data is found
+            }
+
+            $products_batch[] = $product_data;
+
+            // Free memory
+            unset($product_data);
+        }
+
+        // Log the number of products in the batch
+        error_log("Batch size: " . count($products_batch));
+
+        // Increment the page number
+        $page++;
+
+        // Import products to Typesense
+        try {
+            $client->collections[$collection_product]->documents->import($products_batch);
+            $imported_products_count += count($products_batch); // Increment the count of imported products
+        } catch (Exception $e) {
+            error_log("Error importing products to Typesense: " . $e->getMessage());
+        }
     }
 
+    // After the while loop, print the number of imported products
+    echo "Imported products count: " . $imported_products_count . "\n";
 
     wp_die();
-} 
+} catch (Exception $e) {
+    $error_message = "Error: " . $e->getMessage();
+    echo $error_message; // Print the error message for debugging purposes
+    echo "<script>
+        console.log('Error block executed'); // Log a message to the browser console
+        document.getElementById('error_message').innerHTML = '$error_message';
+    </script>";
+    echo "Error creating collection: " . $e->getMessage() . "\n";
+}
+
+}
 
 function menu_index_to_typesense()
 {
