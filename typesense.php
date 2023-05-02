@@ -333,7 +333,8 @@ function getTermData($taxonomyTerms)
     return $termData;
 }
 
-function getProductTaxonomies($product) {
+function getProductTaxonomies($product)
+{
     $taxonomies_data = [];
     $taxonomies = get_object_taxonomies('product');
 
@@ -358,17 +359,18 @@ function getProductTaxonomies($product) {
 
     return $taxonomies_data;
 }
-function recompileAddonsData($product_id) {
-	$addons = get_product_addons($product_id, false);
-	foreach($addons as $key => $addon) {
-		foreach($addon['options'] as $option_key => $option){
-			// label_slug
-			$addons[$key]['options'][$option_key]['label_slug'] = sanitize_title($option['label']);
-			// field_name
-			$addons[$key]['options'][$option_key]['field_name'] = 'addon-'.sanitize_title($addon['field-name']);
-		}
-	}
-	return $addons;
+function recompileAddonsData($product_id)
+{
+    $addons = get_product_addons($product_id, false);
+    foreach ($addons as $key => $addon) {
+        foreach ($addon['options'] as $option_key => $option) {
+            // label_slug
+            $addons[$key]['options'][$option_key]['label_slug'] = sanitize_title($option['label']);
+            // field_name
+            $addons[$key]['options'][$option_key]['field_name'] = 'addon-' . sanitize_title($addon['field-name']);
+        }
+    }
+    return $addons;
 }
 
 
@@ -394,7 +396,7 @@ function getProductDataForTypeSense($product)
     $meta = YoastSEO()->meta->for_post($product_id);
     $fullHead = wp_gql_seo_get_full_head($meta);
 
-     $seo_head = '';
+    $seo_head = '';
     if (is_plugin_active('wordpress-seo/wp-seo.php')) {
         include_once ABSPATH . 'wp-admin/includes/plugin.php';
         $prev_post = $GLOBALS['post'];
@@ -422,14 +424,12 @@ function getProductDataForTypeSense($product)
     $attachment = get_post($thumbnail_id);
 
     $thumbnail = [
-        [
-            'id' => $thumbnail_id,
-            'title' => $attachment->post_title,
-            'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
-            'src' => get_the_post_thumbnail_url($product_id),
-        ]
+        'id' => $thumbnail_id,
+        'title' => $attachment->post_title,
+        'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+        'src' => get_the_post_thumbnail_url($product_id),
     ];
-    
+
     $stockQuantity = $product->get_stock_quantity();
 
     $categories = get_the_terms($product_id, 'product_cat');
@@ -445,7 +445,7 @@ function getProductDataForTypeSense($product)
             'url' => get_term_link($term->term_id),
         ];
     }, $ingredients);
-    
+
     $product_type = $product->get_type();
 
     // Get variations if the product is a variable product
@@ -511,46 +511,6 @@ function getProductDataForTypeSense($product)
     }
     $taxonomies = getProductTaxonomies($product);
     $currency = get_option('woocommerce_currency');
-    
-//   $attributes = [];
-
-//     foreach ($product->get_attributes() as $attribute) {
-//         try {
-//             $options = $attribute->get_options();
-
-//             if (is_array($options) && !empty($options)) {
-//                 $options = array_map('strval', $options);
-
-//                 $attributes[] = [
-//                     'id' => strval($attribute->get_id()),
-//                     'name' => $attribute->get_name(),
-//                     'position' => $attribute->get_position(),
-//                     'visible' => $attribute->get_visible(),
-//                     'variation' => $attribute->get_variation(),
-//                     'options' => $options,
-//                 ];
-//             } else {
-//                 error_log("Warning: Empty or non-array options for attribute of product ID: {$product->get_id()}");
-//             }
-//         } catch (Exception $e) {
-//             error_log("Error processing attribute for product ID: {$product->get_id()}. Message: " . $e->getMessage());
-//         }
-//     }
-
-//     // Add error logging to the shipping part
-//     $shipping = [];
-//     try {
-//         $shipping = [
-//             'weight' => $product->get_weight(),
-//             'dimensions' => [
-//                 'length' => $product->get_length(),
-//                 'width' => $product->get_width(),
-//                 'height' => $product->get_height(),
-//             ],
-//         ];
-//     } catch (Exception $e) {
-//         error_log("Error processing shipping for product ID: {$product->get_id()}. Message: " . $e->getMessage());
-//     }
 
 
     $product_data = [
@@ -593,7 +553,8 @@ function getProductDataForTypeSense($product)
     return $product_data;
 }
 
-function products_to_typesense(){
+function products_to_typesense()
+{
     //Product indexing
     $typesense_private_key = get_option('typesense_api_key');
     $client = getTypeSenseClient($typesense_private_key);
@@ -613,19 +574,27 @@ function products_to_typesense(){
                 'name' => $collection_product,
                 'fields' => [
                     ['name' => 'id', 'type' => 'string', 'facet' => true],
-                    ['name' => 'productId','type' => 'string','facet' => true,],
+                    [
+                        'name' => 'productId',
+                        'type' => 'string',
+                        'facet' => true,
+                    ],
                     ['name' => 'description', 'type' => 'string'],
                     ['name' => 'shortDescription', 'type' => 'string'],
                     ['name' => 'name', 'type' => 'string'],
                     ['name' => 'permalink', 'type' => 'string'],
                     ['name' => 'slug', 'type' => 'string', 'facet' => true],
                     ['name' => 'seoFullHead', 'type' => 'string'],
-                    //['name' => 'thumbnail', 'type' => 'object'],
+                    //['name' => 'thumbnail', 'type' => 'string'],
                     ['name' => 'sku', 'type' => 'string'],
-                    ['name' => 'price', 'type' => 'object', 'fields' => [
-                        ['name' => 'amount', 'type' => 'float'],
-                        ['name' => 'currency', 'type' => 'string'],
-                    ]],
+                    [
+                        'name' => 'price',
+                        'type' => 'object',
+                        'fields' => [
+                            ['name' => 'amount', 'type' => 'float'],
+                            ['name' => 'currency', 'type' => 'string'],
+                        ]
+                    ],
                     ['name' => 'regularPrice', 'type' => 'float'],
                     ['name' => 'salePrice', 'type' => 'float'],
                     ['name' => 'onSale', 'type' => 'bool'],
@@ -653,67 +622,67 @@ function products_to_typesense(){
                 'enable_nested_fields' => true
             ]
         );
-    
-    // Set initial values for pagination and batch size
-    $finished = false;
-    $page = 1;
-    $batch_size = 100; // Adjust the batch size depending on your server's capacity
-    $imported_products_count = 0;
 
-    while (!$finished) {
-        $products = wc_get_products(['status' => 'publish', 'limit' => $batch_size, 'page' => $page]);
+        // Set initial values for pagination and batch size
+        $finished = false;
+        $page = 1;
+        $batch_size = 100; // Adjust the batch size depending on your server's capacity
+        $imported_products_count = 0;
 
-        if (empty($products)) {
-            $finished = true;
-            continue;
-        }
+        while (!$finished) {
+            $products = wc_get_products(['status' => 'publish', 'limit' => $batch_size, 'page' => $page]);
 
-        $products_batch = [];
-
-        // Prepare products for indexing in Typesense
-        foreach ($products as $product) {
-            // Get the product data
-            $product_data = getProductDataForTypeSense($product);
-
-            if (!$product_data) {
-                error_log("Skipping product ID: " . $product->get_id());
-                continue; // Skip this product if no product data is found
+            if (empty($products)) {
+                $finished = true;
+                continue;
             }
 
-            $products_batch[] = $product_data;
+            $products_batch = [];
 
-            // Free memory
-            unset($product_data);
+            // Prepare products for indexing in Typesense
+            foreach ($products as $product) {
+                // Get the product data
+                $product_data = getProductDataForTypeSense($product);
+
+                if (!$product_data) {
+                    error_log("Skipping product ID: " . $product->get_id());
+                    continue; // Skip this product if no product data is found
+                }
+
+                $products_batch[] = $product_data;
+
+                // Free memory
+                unset($product_data);
+            }
+
+            // Log the number of products in the batch
+            error_log("Batch size: " . count($products_batch));
+
+            // Increment the page number
+            $page++;
+
+            // Import products to Typesense
+            try {
+                $client->collections[$collection_product]->documents->import($products_batch);
+                $imported_products_count += count($products_batch); // Increment the count of imported products
+            } catch (Exception $e) {
+                error_log("Error importing products to Typesense: " . $e->getMessage());
+            }
         }
 
-        // Log the number of products in the batch
-        error_log("Batch size: " . count($products_batch));
+        // After the while loop, print the number of imported products
+        echo "Imported products count: " . $imported_products_count . "\n";
 
-        // Increment the page number
-        $page++;
-
-        // Import products to Typesense
-        try {
-            $client->collections[$collection_product]->documents->import($products_batch);
-            $imported_products_count += count($products_batch); // Increment the count of imported products
-        } catch (Exception $e) {
-            error_log("Error importing products to Typesense: " . $e->getMessage());
-        }
-    }
-
-    // After the while loop, print the number of imported products
-    echo "Imported products count: " . $imported_products_count . "\n";
-
-    wp_die();
-} catch (Exception $e) {
-    $error_message = "Error: " . $e->getMessage();
-    echo $error_message; // Print the error message for debugging purposes
-    echo "<script>
+        wp_die();
+    } catch (Exception $e) {
+        $error_message = "Error: " . $e->getMessage();
+        echo $error_message; // Print the error message for debugging purposes
+        echo "<script>
         console.log('Error block executed'); // Log a message to the browser console
         document.getElementById('error_message').innerHTML = '$error_message';
     </script>";
-    echo "Error creating collection: " . $e->getMessage() . "\n";
-}
+        echo "Error creating collection: " . $e->getMessage() . "\n";
+    }
 
 }
 
@@ -1040,21 +1009,21 @@ function site_info_index_to_typesense()
         add_action('update_option_date_format', 'my_date_format_updated_callback', 10, 3);
         $date_format = get_option('date_format');
         $date_format_last_updated = get_option('date_format_last_updated', time());
-        
+
         // Get available payment gateways
         $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
         $payment_methods = [];
-        
-        if ( ! empty( $available_gateways ) ) {
-            foreach ( $available_gateways as $gateway ) {
+
+        if (!empty($available_gateways)) {
+            foreach ($available_gateways as $gateway) {
                 $payment_methods[] = $gateway->get_title() . ' (ID: ' . $gateway->id . ')';
             }
         }
-        
+
         // Convert payment methods array to a JSON string
         $payment_methods_json = json_encode($payment_methods);
 
- 
+
         global $wpdb;
 
         // Fetch the 'active_plugins' option from the WordPress options table
@@ -1129,7 +1098,7 @@ function site_info_index_to_typesense()
 
         // Convert the permalink structure to a JSON-encoded string
         $permalink_structure = json_encode($permalink_structure);
-        
+
         // Get WooCommerce stock settings
         $manage_stock = get_option('woocommerce_manage_stock'); // 'yes' or 'no'
         $stock_format = get_option('woocommerce_stock_format'); // 'always', 'never', or 'low_amount'
@@ -1158,7 +1127,7 @@ function site_info_index_to_typesense()
         // Send the stock display format value to Typesense
         $document_id = 'stock_display_format_setting'; // Set an appropriate document ID
         $updated_at = time(); // Use the current time as the updated_at value
-        
+
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'stock_display_format',
             'value' => $stock_display_format,
@@ -1175,7 +1144,7 @@ function site_info_index_to_typesense()
 
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'reviews_plugin',
-            'value' =>  $filtered_plugin_directories_string,
+            'value' => $filtered_plugin_directories_string,
             'updated_at' => $updatedAt,
         ]);
 
@@ -1260,7 +1229,8 @@ function site_info_index_to_typesense()
 
 }
 
-function getTypeSenseCollection() {
+function getTypeSenseCollection()
+{
     // Fetch the store ID from the saved options
     $wooless_site_id = get_option('store_id');
     // Build the collection name
@@ -1455,7 +1425,8 @@ function update_typesense_document_on_taxonomy_edit($term_id, $tt_id, $taxonomy)
 }
 
 // Function to be called when an option is updated
-function site_info_update($option_name, $old_value, $new_value) {
+function site_info_update($option_name, $old_value, $new_value)
+{
     // Array of target General Settings options
     $target_settings = array(
         'blogname',
