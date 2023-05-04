@@ -240,7 +240,7 @@ function typesense_product_indexer_page()
             var data = {
                 'action': 'index_data_to_typesense',
                 'api_key': apiKey,
-                'collection_name': 'taxonomy',
+                'collection_name': 'products',
 
             };
             document.getElementById("wrapper-id").style.display = "none";
@@ -464,7 +464,7 @@ function getProductTaxonomies($product)
 
     foreach ($taxonomies as $taxonomy) {
         // Exclude taxonomies based on their names
-        if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|product_visibility)/', $taxonomy)) {
+        if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|product_visibility|translation_priority|wpcode_)/', $taxonomy)) {
             continue;
         }
 
@@ -476,6 +476,9 @@ function getProductTaxonomies($product)
                     'name' => $product_term->name,
                     'url' => get_term_link($product_term->term_id),
                     'type' => $taxonomy,
+                    'slug' => $product_term->slug,
+                    'nameAndType' => $product_term->name . '|' . $taxonomy,
+
                 ];
             }
         }
@@ -749,7 +752,7 @@ function products_to_typesense()
                     //['name' => 'galleryImages', 'type' => 'object[]'],
                     ['name' => 'addons', 'type' => 'string'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
-                    // ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
+                    ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
                     // ['name' => 'attributes', 'type' => 'object[]', 'facet' => true],
                     // ['name' => 'additional_information_shipping', 'type' => 'object', 'fields' => [
                     //     ['name' => 'weight', 'type' => 'float'],
