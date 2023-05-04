@@ -119,183 +119,183 @@ function typesense_product_indexer_page()
     echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap">';
     $private_key_master = get_option('private_key_master', '');
     ?>
-<div class="indexer_page">
-    <h1>Typesense Product Indexer</h1>
-    <div id="wrapper-id" class="message-wrapper">
-        <div class="message-image">
-            <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/Shape.png'); ?>" alt="" srcset="">
-        </div>
-        <div class="wooless_message">
-            <div class="message_success">Success</div>
-            <div id="message"></div>
-        </div>
-    </div>
-    <div class="wrapper">
-        <label class="api_label" for="api_key">API Private Key: </label>
-        <div class="input-wrapper">
-            <input class="input_p" type="password" id="api_key" name="api_key"
-                value="<?php echo esc_attr($private_key_master); ?>" />
-            <div class="error-icon" id="error_id" style="display: none;">
-                <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/error.png'); ?>" alt=""
-                    srcset="">
-                <div id="error_message"></div>
+    <div class="indexer_page">
+        <h1>Typesense Product Indexer</h1>
+        <div id="wrapper-id" class="message-wrapper">
+            <div class="message-image">
+                <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/Shape.png'); ?>" alt="" srcset="">
+            </div>
+            <div class="wooless_message">
+                <div class="message_success">Success</div>
+                <div id="message"></div>
             </div>
         </div>
-        <input type="checkbox" id="show_api_key" onclick="toggleApiKeyVisibility()">
-        <label class="checkbox_Label">Show API Key</label>
+        <div class="wrapper">
+            <label class="api_label" for="api_key">API Private Key: </label>
+            <div class="input-wrapper">
+                <input class="input_p" type="password" id="api_key" name="api_key"
+                    value="<?php echo esc_attr($private_key_master); ?>" />
+                <div class="error-icon" id="error_id" style="display: none;">
+                    <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/error.png'); ?>" alt=""
+                        srcset="">
+                    <div id="error_message"></div>
+                </div>
+            </div>
+            <input type="checkbox" id="show_api_key" onclick="toggleApiKeyVisibility()">
+            <label class="checkbox_Label">Show API Key</label>
+        </div>
+        <div class="item_wrapper_indexer_page">
+            <button id="index_products" onclick="indexData()" disabled>Manual Sync
+            </button>
+            <button id="check_api_key" onclick="checkApiKey()">Save</button>
+            <div id="jsdecoded" style="margin-top: 10px;"></div>
+            <div id="phpdecoded" style="margin-top: 10px;"></div>
+        </div>
     </div>
-    <div class="item_wrapper_indexer_page">
-        <button id="index_products" onclick="indexData()" disabled>Manual Sync
-        </button>
-        <button id="check_api_key" onclick="checkApiKey()">Save</button>
-        <div id="jsdecoded" style="margin-top: 10px;"></div>
-        <div id="phpdecoded" style="margin-top: 10px;"></div>
-    </div>
-</div>
 
 
 
-<script>
-function toggleApiKeyVisibility() {
-    var apiKeyInput = document.getElementById("api_key");
-    var showApiKeyCheckbox = document.getElementById("show_api_key");
+    <script>
+        function toggleApiKeyVisibility() {
+            var apiKeyInput = document.getElementById("api_key");
+            var showApiKeyCheckbox = document.getElementById("show_api_key");
 
-    if (showApiKeyCheckbox.checked) {
-        apiKeyInput.type = "text";
-    } else {
-        apiKeyInput.type = "password";
-    }
-}
+            if (showApiKeyCheckbox.checked) {
+                apiKeyInput.type = "text";
+            } else {
+                apiKeyInput.type = "password";
+            }
+        }
 
-function decodeAndSaveApiKey(apiKey) {
-    var decodedApiKey = atob(apiKey);
-    var trimmedApiKey = decodedApiKey.split(':');
-    var typesensePrivateKey = trimmedApiKey[0];
-    var woolessSiteId = trimmedApiKey[1];
+        function decodeAndSaveApiKey(apiKey) {
+            var decodedApiKey = atob(apiKey);
+            var trimmedApiKey = decodedApiKey.split(':');
+            var typesensePrivateKey = trimmedApiKey[0];
+            var woolessSiteId = trimmedApiKey[1];
 
-    // Display API key and store ID for testing purposes
-    //document.getElementById("jsdecoded").innerHTML = 'Typesense Private Key: ' + typesensePrivateKey +
-    //  '<br> Store ID: ' +
-    //woolessSiteId;
+            // Display API key and store ID for testing purposes
+            //document.getElementById("jsdecoded").innerHTML = 'Typesense Private Key: ' + typesensePrivateKey +
+            //  '<br> Store ID: ' +
+            //woolessSiteId;
 
-    // Save the API key, store ID, and private key
-    jQuery.post(ajaxurl, {
-        'action': 'save_typesense_api_key',
-        'api_key': apiKey, // Add the private key in the request
-        'typesense_api_key': typesensePrivateKey,
-        'store_id': woolessSiteId,
-    }, function(save_response) {
-        setTimeout(function() {
-            document.getElementById("message").textContent += ' - ' + save_response;
-        }, 1000);
-    });
-
-}
-
-function checkApiKey() {
-    var apiKey = document.getElementById("api_key").value;
-    var data = {
-        'action': 'get_typesense_collections',
-        'api_key': apiKey,
-    };
-    document.getElementById("wrapper-id").style.display = "none";
-    document.getElementById("index_products").disabled = true;
-    document.getElementById("check_api_key").disabled = true;
-    document.getElementById("check_api_key").style.cursor = "no-drop";
-    document.getElementById("index_products").style.cursor = "no-drop";
-    jQuery.post(ajaxurl, data, function(response) {
-        console.log(response);
-        var parsedResponse = JSON.parse(response);
-        if (parsedResponse.status === "success") {
-            //alert(parsedResponse.message);
-
-            // Log the collection data
-            console.log("Collection data:", parsedResponse.collection);
-            // Decode and save the API key
-            decodeAndSaveApiKey(apiKey);
-            indexData();
-            document.getElementById("index_products").disabled = false;
-            document.getElementById("wrapper-id").style.display = "none";
-            document.getElementById("error_id").style.display = "none";
-            document.getElementById("index_products").style.cursor = "pointer";
-        } else {
-            //alert("Invalid API key. There was an error connecting to Typesense.");
-            var errorMessage = "Invalid API key.";
-            document.getElementById("error_message").textContent = errorMessage;
-            document.getElementById("index_products").disabled = true;
-            document.getElementById("error_id").style.display = "flex";
-            document.getElementById("index_products").disabled = false;
-            document.getElementById("check_api_key").disabled = false;
-            document.getElementById("check_api_key").style.cursor = "pointer";
-            document.getElementById("index_products").style.cursor = "pointer";
+            // Save the API key, store ID, and private key
+            jQuery.post(ajaxurl, {
+                'action': 'save_typesense_api_key',
+                'api_key': apiKey, // Add the private key in the request
+                'typesense_api_key': typesensePrivateKey,
+                'store_id': woolessSiteId,
+            }, function (save_response) {
+                setTimeout(function () {
+                    document.getElementById("message").textContent += ' - ' + save_response;
+                }, 1000);
+            });
 
         }
-    });
-}
 
+        function checkApiKey() {
+            var apiKey = document.getElementById("api_key").value;
+            var data = {
+                'action': 'get_typesense_collections',
+                'api_key': apiKey,
+            };
+            document.getElementById("wrapper-id").style.display = "none";
+            document.getElementById("index_products").disabled = true;
+            document.getElementById("check_api_key").disabled = true;
+            document.getElementById("check_api_key").style.cursor = "no-drop";
+            document.getElementById("index_products").style.cursor = "no-drop";
+            jQuery.post(ajaxurl, data, function (response) {
+                console.log(response);
+                var parsedResponse = JSON.parse(response);
+                if (parsedResponse.status === "success") {
+                    //alert(parsedResponse.message);
 
-
-function indexData() {
-    var apiKey = document.getElementById("api_key").value;
-    var data = {
-        'action': 'index_data_to_typesense',
-        'api_key': apiKey,
-        'collection_name': 'products',
-
-    };
-    document.getElementById("wrapper-id").style.display = "none";
-    document.getElementById("message").textContent = "Indexing Data...";
-    document.getElementById("check_api_key").textContent = "Indexing Data...";
-    document.getElementById("index_products").disabled = true;
-    document.getElementById("check_api_key").disabled = true;
-    document.getElementById("check_api_key").style.cursor = "no-drop";
-    document.getElementById("index_products").style.display = "none";
-    jQuery.post(ajaxurl, data, function(response) {
-        document.getElementById("message").textContent = response;
-        data.collection_name = 'taxonomy';
-        jQuery.post(ajaxurl, data, function(response) {
-            data.collection_name = 'menu';
-            jQuery.post(ajaxurl, data, function(response) {
-                data.collection_name = 'site_info';
-                jQuery.post(ajaxurl, data, function(response) {
-                    document.getElementById("message").textContent = response;
+                    // Log the collection data
+                    console.log("Collection data:", parsedResponse.collection);
+                    // Decode and save the API key
+                    decodeAndSaveApiKey(apiKey);
+                    indexData();
+                    document.getElementById("index_products").disabled = false;
+                    document.getElementById("wrapper-id").style.display = "none";
+                    document.getElementById("error_id").style.display = "none";
+                    document.getElementById("index_products").style.cursor = "pointer";
+                } else {
+                    //alert("Invalid API key. There was an error connecting to Typesense.");
+                    var errorMessage = "Invalid API key.";
+                    document.getElementById("error_message").textContent = errorMessage;
+                    document.getElementById("index_products").disabled = true;
+                    document.getElementById("error_id").style.display = "flex";
+                    document.getElementById("index_products").disabled = false;
                     document.getElementById("check_api_key").disabled = false;
-                    document.getElementById("check_api_key").textContent =
-                        "Save";
-                    document.getElementById("index_products").style.display =
-                        "flex";
-                    document.getElementById("check_api_key").style.cursor =
-                        "pointer";
-                    document.getElementById("wrapper-id").style.display = "flex";
+                    document.getElementById("check_api_key").style.cursor = "pointer";
+                    document.getElementById("index_products").style.cursor = "pointer";
+
+                }
+            });
+        }
+
+
+
+        function indexData() {
+            var apiKey = document.getElementById("api_key").value;
+            var data = {
+                'action': 'index_data_to_typesense',
+                'api_key': apiKey,
+                'collection_name': 'products',
+
+            };
+            document.getElementById("wrapper-id").style.display = "none";
+            document.getElementById("message").textContent = "Indexing Data...";
+            document.getElementById("check_api_key").textContent = "Indexing Data...";
+            document.getElementById("index_products").disabled = true;
+            document.getElementById("check_api_key").disabled = true;
+            document.getElementById("check_api_key").style.cursor = "no-drop";
+            document.getElementById("index_products").style.display = "none";
+            jQuery.post(ajaxurl, data, function (response) {
+                document.getElementById("message").textContent = response;
+                data.collection_name = 'taxonomy';
+                jQuery.post(ajaxurl, data, function (response) {
+                    data.collection_name = 'menu';
+                    jQuery.post(ajaxurl, data, function (response) {
+                        data.collection_name = 'site_info';
+                        jQuery.post(ajaxurl, data, function (response) {
+                            document.getElementById("message").textContent = response;
+                            document.getElementById("check_api_key").disabled = false;
+                            document.getElementById("check_api_key").textContent =
+                                "Save";
+                            document.getElementById("index_products").style.display =
+                                "flex";
+                            document.getElementById("check_api_key").style.cursor =
+                                "pointer";
+                            document.getElementById("wrapper-id").style.display = "flex";
+                        });
+                    });
                 });
             });
-        });
-    });
-}
-// Enable or disable the 'Index Products' button based on the saved API key
-if (document.getElementById("api_key").value !== "") {
-    document.getElementById("index_products").disabled = false;
-}
-</script>
-<?php
+        }
+        // Enable or disable the 'Index Products' button based on the saved API key
+        if (document.getElementById("api_key").value !== "") {
+            document.getElementById("index_products").disabled = false;
+        }
+    </script>
+    <?php
 }
 function typesense_homepage_page()
 {
     // Your code for the homepage submenu page
     ?>
-<div class="wrap">
-    <h1>
-        <?php _e('Homepage Settings', 'typesense'); ?>
-    </h1>
-    <form method="post" action="options.php">
-        <?php
+    <div class="wrap">
+        <h1>
+            <?php _e('Homepage Settings', 'typesense'); ?>
+        </h1>
+        <form method="post" action="options.php">
+            <?php
             settings_fields('typesense_homepage_settings');
             do_settings_sections('typesense_homepage_settings');
             submit_button('Save Settings');
             ?>
-    </form>
-</div>
-<?php
+        </form>
+    </div>
+    <?php
 }
 function typesense_register_homepage_settings()
 {
@@ -333,40 +333,40 @@ function typesense_homepage_banner_image_callback()
     $options = get_option('typesense_homepage_settings');
     $image_url = isset($options['typesense_homepage_banner_image']) ? $options['typesense_homepage_banner_image'] : '';
     ?>
-<input type="text" name="typesense_homepage_settings[typesense_homepage_banner_image]"
-    id="typesense_homepage_banner_image" value="<?php echo esc_attr($image_url); ?>">
-<input type="button" id="typesense_homepage_banner_image_button" class="button"
-    value="<?php _e('Upload Image', 'typesense'); ?>">
-<script>
-jQuery(document).ready(function($) {
-    var custom_uploader;
+    <input type="text" name="typesense_homepage_settings[typesense_homepage_banner_image]"
+        id="typesense_homepage_banner_image" value="<?php echo esc_attr($image_url); ?>">
+    <input type="button" id="typesense_homepage_banner_image_button" class="button"
+        value="<?php _e('Upload Image', 'typesense'); ?>">
+    <script>
+        jQuery(document).ready(function ($) {
+            var custom_uploader;
 
-    $('#typesense_homepage_banner_image_button').click(function(e) {
-        e.preventDefault();
+            $('#typesense_homepage_banner_image_button').click(function (e) {
+                e.preventDefault();
 
-        if (custom_uploader) {
-            custom_uploader.open();
-            return;
-        }
+                if (custom_uploader) {
+                    custom_uploader.open();
+                    return;
+                }
 
-        custom_uploader = wp.media.frames.file_frame = wp.media({
-            title: '<?php _e('Choose Image', 'typesense'); ?>',
-            button: {
-                text: '<?php _e('Choose Image', 'typesense'); ?>'
-            },
-            multiple: false
+                custom_uploader = wp.media.frames.file_frame = wp.media({
+                    title: '<?php _e('Choose Image', 'typesense'); ?>',
+                    button: {
+                        text: '<?php _e('Choose Image', 'typesense'); ?>'
+                    },
+                    multiple: false
+                });
+
+                custom_uploader.on('select', function () {
+                    var attachment = custom_uploader.state().get('selection').first().toJSON();
+                    $('#typesense_homepage_banner_image').val(attachment.url);
+                });
+
+                custom_uploader.open();
+            });
         });
-
-        custom_uploader.on('select', function() {
-            var attachment = custom_uploader.state().get('selection').first().toJSON();
-            $('#typesense_homepage_banner_image').val(attachment.url);
-        });
-
-        custom_uploader.open();
-    });
-});
-</script>
-<?php
+    </script>
+    <?php
 }
 
 // Add
@@ -712,7 +712,7 @@ function products_to_typesense()
                     ],
                     ['name' => 'description', 'type' => 'string'],
                     ['name' => 'shortDescription', 'type' => 'string'],
-                    ['name' => 'name', 'type' => 'string'],
+                    ['name' => 'name', 'type' => 'string', 'facet' => true],
                     ['name' => 'permalink', 'type' => 'string'],
                     ['name' => 'slug', 'type' => 'string', 'facet' => true],
                     ['name' => 'seoFullHead', 'type' => 'string'],
@@ -771,7 +771,7 @@ function products_to_typesense()
         // Set initial values for pagination and batch size
         $finished = false;
         $page = 1;
-        $batch_size = 100; // Adjust the batch size depending on your server's capacity
+        $batch_size = 10; // Adjust the batch size depending on your server's capacity
         $imported_products_count = 0;
 
         while (!$finished) {
