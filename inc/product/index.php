@@ -306,7 +306,7 @@ function products_to_typesense()
                         'name' => 'salePrice',
                         'type' => 'object',
                         'fields' => [
-                            ['name' => 'amount', 'type' => 'float'],
+                            ['name' => 'amount', 'type' => 'float', 'sort' => true],
                             ['name' => 'currency', 'type' => 'string'],
                         ]
                     ],
