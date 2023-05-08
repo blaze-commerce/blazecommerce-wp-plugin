@@ -1,5 +1,23 @@
 <?php
 
+function bwlGetThumbnail($thumbnail_id, $page_id)
+{
+    // Initialize empty Thumbnail
+    $thumbnail = [];
+    if(!empty($thumbnail_id)) {
+        $attachment = get_post($thumbnail_id);
+
+        $thumbnail = [
+            'id' => $thumbnail_id,
+            'title' => is_object($attachment) ? $attachment->post_title : '',
+            'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+            'src' => get_the_post_thumbnail_url($page_id),
+        ];
+    }
+
+    return $thumbnail;
+}
+
 function page_index_to_typesense()
 {
     $typesense_private_key = get_option('typesense_api_key');
@@ -25,11 +43,11 @@ function page_index_to_typesense()
             'fields' => [
                 ['name' => 'name', 'type' => 'string'],
                 ['name' => 'slug', 'type' => 'string', 'facet' => true],
-                //['name' => 'seoFullHead', 'type' => 'string'],
+                ['name' => 'seoFullHead', 'type' => 'string'],
                 ['name' => 'permalink', 'type' => 'string'],
                 ['name' => 'type', 'type' => 'string', 'facet' => true],
-                ['name' => 'thumbnail', 'type' => 'string'],
-                ['name' => 'taxonomies', 'type' => 'string'],
+                ['name' => 'thumbnail', 'type' => 'object', "optional" =>  true],
+                ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, "optional" =>  true],
                 ['name' => 'updatedAt', 'type' => 'int64'],
                 ['name' => 'createdAt', 'type' => 'int64'],
             ],
@@ -78,38 +96,32 @@ function page_index_to_typesense()
         if ($query->have_posts()) {
             while ($query->have_posts()) {
                 $query->the_post();
-
-                $taxonomies_data = getPostTaxonomies(get_the_ID(), get_post_type());
+                $page_id = get_the_ID();
+                $taxonomies_data = getPostTaxonomies($page_id, get_post_type());
 
                 // Debug code
-                echo "Post ID: " . get_the_ID() . "\n";
+                echo "Post ID: " . $page_id . "\n";
                 echo "Post type: " . get_post_type() . "\n";
                 echo "Taxonomies data: " . json_encode($taxonomies_data) . "\n\n";
 
 
                 $yoastMeta = YoastSEO()->meta->for_term($term->term_id);
                 $termHead = is_object($yoastMeta) ? $yoastMeta->get_head() : '';
-                $termHeadString = is_string($termHead) ? $termHead : (isset($termHead->html) ? $termHead->html : '');
-
-                $selFullHead = is_string($termHead) ? $termHead : $termHead->html;
+                $selFullHead = is_string($termHead) ? $termHead : (isset($termHead->html) ? $termHead->html : '');
 
                 $thumbnail_id = get_post_thumbnail_id();
-                $attachment = get_post($thumbnail_id);
+                $thumbnail = bwlGetThumbnail($thumbnail_id, $page_id);
 
-                $thumbnail = [
-                    'id' => $thumbnail_id,
-                    'title' => is_object($attachment) ? $attachment->post_title : '',
-                    'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
-                    'src' => get_the_post_thumbnail_url(),
-                ];
+
                 $document = [
+                    'id' => (string) $page_id,
                     'slug' => get_post_field('post_name'),
                     'name' => get_the_title(),
                     'seoFullHead' => $selFullHead,
                     'type' => get_post_type(),
                     'permalink' => get_permalink(),
-                    'thumbnail' => json_encode($thumbnail),
-                    'taxonomies' => json_encode($taxonomies_data),
+                    'taxonomies' => $taxonomies_data,
+                    'thumbnail' => $thumbnail,
                     'updatedAt' => (int) strtotime(get_the_modified_date('c')),
                     'createdAt' => (int) strtotime(get_the_date('c')),
                 ];
