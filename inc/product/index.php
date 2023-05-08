@@ -290,7 +290,7 @@ function products_to_typesense()
                         'name' => 'price',
                         'type' => 'object',
                         'fields' => [
-                            ['name' => 'amount', 'type' => 'float'],
+                            ['name' => 'amount', 'type' => 'float', 'sort' => true],
                             ['name' => 'currency', 'type' => 'string'],
                         ]
                     ],
@@ -315,7 +315,7 @@ function products_to_typesense()
                     ['name' => 'stockStatus', 'type' => 'string'],
                     ['name' => 'updatedAt', 'type' => 'int64'],
                     ['name' => 'createdAt', 'type' => 'int64'],
-                    ['name' => 'isFeatured', 'type' => 'bool'],
+                    ['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
                     ['name' => 'totalSales', 'type' => 'int64'],
                     //['name' => 'galleryImages', 'type' => 'object[]'],
                     ['name' => 'addons', 'type' => 'string'],
