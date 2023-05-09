@@ -74,7 +74,7 @@ function typesense_enqueue_styles($hook)
     }
 
     // Register and enqueue your stylesheet
-    wp_register_style('typesense_admin_styles', plugin_dir_url(__FILE__) . 'assets/frontend/style.css', array(), '1.0.0');
+    wp_register_style('typesense_admin_styles', plugin_dir_url(__FILE__) . 'assets/css/style.css', array(), '1.0.0');
     wp_enqueue_style('typesense_admin_styles');
 }
 
@@ -129,7 +129,7 @@ function typesense_product_indexer_page()
     <h1>Typesense Product Indexer</h1>
     <div id="wrapper-id" class="message-wrapper">
         <div class="message-image">
-            <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/Shape.png'); ?>" alt="" srcset="">
+            <img src="<?php echo plugins_url('blaze-wooless/assets/images/Shape.png'); ?>" alt="" srcset="">
         </div>
         <div class="wooless_message">
             <div class="message_success">Success</div>
@@ -142,7 +142,7 @@ function typesense_product_indexer_page()
             <input class="input_p" type="password" id="api_key" name="api_key"
                 value="<?php echo esc_attr($private_key_master); ?>" />
             <div class="error-icon" id="error_id" style="display: none;">
-                <img src="<?php echo plugins_url('blaze-wooless/assets/frontend/images/error.png'); ?>" alt=""
+                <img src="<?php echo plugins_url('blaze-wooless/assets/images/error.png'); ?>" alt=""
                     srcset="">
                 <div id="error_message"></div>
             </div>
