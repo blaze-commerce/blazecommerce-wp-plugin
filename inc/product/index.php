@@ -53,19 +53,6 @@ function getProductTaxonomies($product)
 
     return $taxonomies_data;
 }
-function recompileAddonsData($product_id)
-{
-    $addons = get_product_addons($product_id, false);
-    foreach ($addons as $key => $addon) {
-        foreach ($addon['options'] as $option_key => $option) {
-            // label_slug
-            $addons[$key]['options'][$option_key]['label_slug'] = sanitize_title($option['label']);
-            // field_name
-            $addons[$key]['options'][$option_key]['field_name'] = 'addon-' . sanitize_title($addon['field-name']);
-        }
-    }
-    return $addons;
-}
 
 
 
@@ -75,7 +62,6 @@ function getProductDataForTypeSense($product)
     $product_id = $product->get_id();
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
-    $addons = json_encode(recompileAddonsData($product_id));
     $attachment_ids = $product->get_gallery_image_ids();
     $product_gallery = array_map(function ($attachment_id) {
         $attachment = get_post($attachment_id);
@@ -236,7 +222,6 @@ function getProductDataForTypeSense($product)
         'isFeatured' => $product->get_featured(),
         'totalSales' => $product->get_total_sales(),
         'galleryImages' => $product_gallery,
-        'addons' => $addons,
         'taxonomies' => $taxonomies,
         'productType' => $product_type,
         // Add product type
@@ -244,12 +229,12 @@ function getProductDataForTypeSense($product)
         // Add variations data
         'crossSellData' => $cross_sell_data,
         'upsellData' => $upsell_data,
-        'additionalTabs' => $formatted_additional_tabs,
+        'additionalTabs' => apply_filters( 'wooless_product_tabs', array(), $product_id ),
         'seo' => $seo_head,
         // 'attributes' => $attributes,
         // 'additional_information_shipping' => $shipping,
     ];
-    return $product_data;
+    return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id );
 }
 
 function products_to_typesense()
