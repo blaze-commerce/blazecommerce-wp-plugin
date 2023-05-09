@@ -40,7 +40,7 @@ function taxonmy_index_to_typesense()
         // Fetch terms for all taxonomies except those starting with 'ef_'
         foreach ($taxonomies as $taxonomy) {
             // Skip taxonomies starting with 'ef_'
-            if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|product_visibility|translation_priority|wpcode_)/', $taxonomy)) {
+            if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy)) {
                 continue;
             }
 
