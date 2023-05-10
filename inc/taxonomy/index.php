@@ -90,9 +90,14 @@ function taxonmy_index_to_typesense()
                     }
                     $yoastMeta = YoastSEO()->meta->for_term($term->term_id);
                     $termHead = is_object($yoastMeta) ? $yoastMeta->get_head() : '';
-                    $termHeadString = is_string($termHead) ? $termHead : (isset($termHead->html) ? $termHead->html : '');
-
-                    $selFullHead = is_string($termHead) ? $termHead : $termHead->html;
+                    $selFullHead = is_string($termHead) ? $termHead : (isset($termHead->html) ? $termHead->html : '');
+					
+					/**
+					 * set gb product ingredient image to banneThumbnail. 
+					 */
+					if($taxonomy == 'product_ingredients' && function_exists('z_taxonomy_image_url')) {
+						$bannerThumbnail = z_taxonomy_image_url($term->term_id);
+					}
 
                     // Prepare the data to be indexed
                     $document = [
@@ -103,10 +108,11 @@ function taxonmy_index_to_typesense()
                         'permalink' => get_term_link($term),
                         'seoFullHead' => $selFullHead,
                         'updatedAt' => $latest_modified_date ? (int) strtotime($latest_modified_date) : 0,
-                        'bannerThumbnail' => $bannerThumbnail,
+                        'bannerThumbnail' => (string)$bannerThumbnail,
                         'bannerText' => $bannerText,
 
                     ];
+					
                     // Index the term data in Typesense
                     try {
                         $client->collections[$collection_taxonomy]->documents->create($document);

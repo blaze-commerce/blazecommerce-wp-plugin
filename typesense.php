@@ -122,6 +122,7 @@ function add_typesense_product_indexer_menu()
 }
 function typesense_product_indexer_page()
 {
+	$wooless_site_id = get_option('store_id');
     echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap">';
     $private_key_master = get_option('private_key_master', '');
     ?>
@@ -151,7 +152,7 @@ function typesense_product_indexer_page()
         <label class="checkbox_Label">Show API Key</label>
     </div>
     <div class="item_wrapper_indexer_page">
-        <button id="index_products" onclick="indexData()" disabled>Manual Sync
+        <button id="index_products" onclick="indexData()" store-id="<?php echo $wooless_site_id; ?>" disabled>Manual Sync
         </button>
         <button id="check_api_key" onclick="checkApiKey()">Save</button>
         <div id="jsdecoded" style="margin-top: 10px;"></div>
@@ -321,6 +322,13 @@ function typesense_register_homepage_settings()
         'typesense_homepage_banner_settings_callback',
         'typesense_homepage_settings'
     );
+    // Add the popular categories settings section
+    add_settings_section(
+        'typesense_homepage_popular_categories_settings',
+        __('Popular Categories Settings', 'typesense'),
+        'typesense_homepage_popular_categories_settings_callback',
+        'typesense_homepage_settings'
+    );
 
     // Add other settings sections here
 }
@@ -377,7 +385,7 @@ function typesense_homepage_banner_settings_callback()
 }
 
 function typesense_homepage_banner_image_callback()
-{ 
+{
     $options = get_option('typesense_homepage_settings');
     $image_url = isset($options['typesense_homepage_banner_image']) ? $options['typesense_homepage_banner_image'] : '';
     ?>
@@ -456,7 +464,117 @@ function typesense_homepage_button_link_callback()
     id="typesense_homepage_button_link" value="<?php echo esc_attr($button_link); ?>">
 <?php
 }
+function typesense_homepage_popular_categories_settings_callback()
+{
+    // Add the settings fields for the popular categories
+    add_settings_field(
+        'typesense_homepage_popular_categories',
+        __('Categories', 'typesense'),
+        'typesense_homepage_popular_categories_callback',
+        'typesense_homepage_settings',
+        'typesense_homepage_popular_categories_settings'
+    );
+}
 
+function typesense_homepage_popular_categories_callback()
+{
+    $options = get_option('typesense_homepage_settings');
+    $categories = isset($options['typesense_homepage_popular_categories']) ? $options['typesense_homepage_popular_categories'] : '';
+    ?>
+<div id="popular-categories-container">
+    <input type="hidden" name="typesense_homepage_settings[typesense_homepage_popular_categories]"
+        id="typesense_homepage_popular_categories" value="<?php echo esc_attr(json_encode($categories)); ?>">
+</div>
+<input type="button" id="add-popular-category" class="button" value="<?php _e('Add Category', 'typesense'); ?>">
+<script>
+jQuery(document).ready(function($) {
+    var categories = <?php echo json_encode($categories); ?>;
+    var container = $('#popular-categories-container');
+
+    function addCategory(category) {
+        var categoryElem = $('<div class="popular-category"></div>');
+        var imageInput = $('<input type="text" class="popular-category-image" placeholder="Image URL">');
+        var titleInput = $('<input type="text" class="popular-category-title" placeholder="Title">');
+        var linkInput = $('<input type="text" class="popular-category-link" placeholder="Link">');
+        var deleteButton = $('<button class="button popular-category-delete">Delete</button>');
+
+        imageInput.val(category.image);
+        titleInput.val(category.title);
+        linkInput.val(category.link);
+
+        categoryElem.append(imageInput);
+        categoryElem.append(titleInput);
+        categoryElem.append(linkInput);
+        categoryElem.append(deleteButton);
+        container.append(categoryElem);
+    }
+
+    function updateCategoriesInput() {
+        var categories = [];
+        $('.popular-category').each(function() {
+            var category = {
+                image: $(this).find('.popular-category-image').val(),
+                title: $(this).find('.popular-category-title').val(),
+                link: $(this).find('.popular-category-link').val()
+            };
+            categories.push(category);
+        });
+        $('#typesense_homepage_popular_categories').val(JSON.stringify(categories));
+    }
+
+    if (categories) {
+        categories.forEach(function(category) {
+            addCategory(category);
+
+        });
+
+        // Make the categories sortable
+        container.sortable({
+            update: function(event, ui) {
+                updateCategoriesInput();
+            }
+        });
+    }
+
+    // Add a new category when the "Add Category" button is clicked
+    $('#add-popular-category').on('click', function() {
+        var categoryCount = $('.popular-category').length;
+        if (categoryCount < 10) {
+            var emptyCategory = {
+                image: '',
+                title: '',
+                link: ''
+            };
+            addCategory(emptyCategory);
+        } else {
+            alert('You can only add up to 10 categories.');
+        }
+    });
+
+    // Delete a category when the "Delete" button is clicked
+    container.on('click', '.popular-category-delete', function() {
+        $(this).closest('.popular-category').remove();
+        updateCategoriesInput();
+    });
+
+    // Update the categories input whenever a category field is changed
+    container.on('change', '.popular-category-image, .popular-category-title, .popular-category-link',
+        function() {
+            updateCategoriesInput();
+        });
+});
+</script>
+<?php
+}
+
+function typesense_enqueue_scripts()
+{
+    wp_enqueue_script('jquery-ui-sortable');
+}
+
+add_action('admin_enqueue_scripts', 'typesense_enqueue_scripts');
+$options = get_option('typesense_homepage_settings');
+$popular_categories = json_decode($options['typesense_homepage_popular_categories'], true);
 
 
 function typesense_site_message_page()
