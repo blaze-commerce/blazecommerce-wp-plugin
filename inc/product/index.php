@@ -74,30 +74,6 @@ function getProductDataForTypeSense($product)
         ];
     }, $attachment_ids);
 
-
-    $meta = YoastSEO()->meta->for_post($product_id);
-    $fullHead = wp_gql_seo_get_full_head($meta);
-
-    $seo_head = '';
-    if (is_plugin_active('wordpress-seo/wp-seo.php')) {
-        include_once ABSPATH . 'wp-admin/includes/plugin.php';
-        $prev_post = $GLOBALS['post'];
-        $GLOBALS['post'] = get_post($product->get_id());
-
-        $wpseo_frontend = WPSEO_Frontend::get_instance();
-        $title = $wpseo_frontend->get_content_title();
-        $metadesc = $wpseo_frontend->get_meta_description();
-
-        $canonical = WPSEO_Meta::get_value('canonical');
-        $canonical = $canonical ? $canonical : get_permalink($product->get_id());
-
-        $seo_head = "<title>$title</title>";
-        $seo_head .= "<meta name='description' content='$metadesc' />";
-        $seo_head .= "<link rel='canonical' href='$canonical' />";
-
-        $GLOBALS['post'] = $prev_post;
-    }
-
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
 
@@ -113,20 +89,6 @@ function getProductDataForTypeSense($product)
     ];
 
     $stockQuantity = $product->get_stock_quantity();
-
-    $categories = get_the_terms($product_id, 'product_cat');
-    $categoryData = getTermData($categories);
-
-    $ingredients = get_the_terms($product_id, 'product_ingredients');
-    $ingredientData = array_map(function ($term) {
-        return [
-            'name' => $term->name,
-            'description' => $term->description,
-            'imageSourceUrl' => z_taxonomy_image_url($term->term_id),
-            'slug' => $term->slug,
-            'url' => get_term_link($term->term_id),
-        ];
-    }, $ingredients);
 
     $product_type = $product->get_type();
 
@@ -194,7 +156,6 @@ function getProductDataForTypeSense($product)
     $taxonomies = getProductTaxonomies($product);
     $currency = get_option('woocommerce_currency');
 
-
     $product_data = [
         'id' => strval($product->get_id()),
         'productId' => strval($product->get_id()),
@@ -203,7 +164,6 @@ function getProductDataForTypeSense($product)
         'name' => $product->get_name(),
         'permalink' => get_permalink($product->get_id()),
         'slug' => $product->get_slug(),
-        'seoFullHead' => $fullHead,
         'thumbnail' => $thumbnail,
         'sku' => $product->get_sku(),
         'price' => [
