@@ -297,7 +297,7 @@ function products_to_typesense()
                     ['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
                     ['name' => 'totalSales', 'type' => 'int64'],
                     //['name' => 'galleryImages', 'type' => 'object[]'],
-                    ['name' => 'addons', 'type' => 'string'],
+                    // ['name' => 'addons', 'type' => 'string'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
                     ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
                     // ['name' => 'attributes', 'type' => 'object[]', 'facet' => true],
