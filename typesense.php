@@ -17,7 +17,6 @@ require_once plugin_dir_path(__FILE__) . 'inc/site-info/index.php';
 function register_compatibilities() {
     // Compatibility
     require_once plugin_dir_path(__FILE__) . 'compatibility/woocommerce/product-addons.php';
-    require_once plugin_dir_path(__FILE__) . 'compatibility/woocommerce/product-tabs.php';
     require_once plugin_dir_path(__FILE__) . 'compatibility/woocommerce/custom-product-tabs-for-woocommerce.php';
     require_once plugin_dir_path(__FILE__) . 'compatibility/yoast-seo.php';
 }

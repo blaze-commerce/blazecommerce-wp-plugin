@@ -230,8 +230,7 @@ function getProductDataForTypeSense($product)
         // Add variations data
         'crossSellData' => $cross_sell_data,
         'upsellData' => $upsell_data,
-        'additionalTabs' => apply_filters( 'wooless_product_tabs', array(), $product_id ),
-        'seo' => $seo_head,
+        'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id ),
         // 'attributes' => $attributes,
         // 'additional_information_shipping' => $shipping,
     ];
