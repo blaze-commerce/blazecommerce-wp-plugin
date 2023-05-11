@@ -1,4 +1,5 @@
 <?php
+
 function getTypeSenseCollection()
 {
     // Fetch the store ID from the saved options
@@ -31,7 +32,7 @@ function getProductTaxonomies($product)
 
     foreach ($taxonomies as $taxonomy) {
         // Exclude taxonomies based on their names
-        if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|product_visibility|translation_priority|wpcode_)/', $taxonomy)) {
+        if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy)) {
             continue;
         }
 
@@ -274,24 +275,17 @@ function products_to_typesense()
                     [
                         'name' => 'price',
                         'type' => 'object',
-                        'fields' => [
-                            ['name' => 'amount', 'type' => 'float'],
-                            ['name' => 'currency', 'type' => 'string'],
-                        ]
+                        "facet" => true
                     ],
                     [
                         'name' => 'regularPrice',
                         'type' => 'object',
-                        'fields' => [
-                            ['name' => 'amount', 'type' => 'float'],
-                            ['name' => 'currency', 'type' => 'string'],
-                        ]
                     ],
                     [
                         'name' => 'salePrice',
                         'type' => 'object',
                         'fields' => [
-                            ['name' => 'amount', 'type' => 'float'],
+                            ['name' => 'amount', 'type' => 'float', 'sort' => true],
                             ['name' => 'currency', 'type' => 'string'],
                         ]
                     ],
@@ -300,7 +294,7 @@ function products_to_typesense()
                     ['name' => 'stockStatus', 'type' => 'string'],
                     ['name' => 'updatedAt', 'type' => 'int64'],
                     ['name' => 'createdAt', 'type' => 'int64'],
-                    ['name' => 'isFeatured', 'type' => 'bool'],
+                    ['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
                     ['name' => 'totalSales', 'type' => 'int64'],
                     //['name' => 'galleryImages', 'type' => 'object[]'],
                     ['name' => 'addons', 'type' => 'string'],
