@@ -190,11 +190,11 @@ function getProductDataForTypeSense($product)
         // Add variations data
         'crossSellData' => $cross_sell_data,
         'upsellData' => $upsell_data,
-        'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id ),
+        'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
         // 'attributes' => $attributes,
         // 'additional_information_shipping' => $shipping,
     ];
-    return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id );
+    return apply_filters('blaze_wooless_product_data_for_typesense', $product_data, $product_id);
 }
 
 function products_to_typesense()
@@ -225,7 +225,7 @@ function products_to_typesense()
                     ],
                     ['name' => 'description', 'type' => 'string'],
                     ['name' => 'shortDescription', 'type' => 'string'],
-                    ['name' => 'name', 'type' => 'string', 'facet' => true],
+                    ['name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true],
                     ['name' => 'permalink', 'type' => 'string'],
                     ['name' => 'slug', 'type' => 'string', 'facet' => true],
                     ['name' => 'seoFullHead', 'type' => 'string'],
