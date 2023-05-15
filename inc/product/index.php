@@ -1,4 +1,5 @@
 <?php
+
 function getTypeSenseCollection()
 {
     // Fetch the store ID from the saved options
@@ -31,7 +32,7 @@ function getProductTaxonomies($product)
 
     foreach ($taxonomies as $taxonomy) {
         // Exclude taxonomies based on their names
-        if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|product_visibility|translation_priority|wpcode_)/', $taxonomy)) {
+        if (preg_match('/^(ef_|elementor|pa_|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy)) {
             continue;
         }
 
@@ -53,19 +54,6 @@ function getProductTaxonomies($product)
 
     return $taxonomies_data;
 }
-function recompileAddonsData($product_id)
-{
-    $addons = get_product_addons($product_id, false);
-    foreach ($addons as $key => $addon) {
-        foreach ($addon['options'] as $option_key => $option) {
-            // label_slug
-            $addons[$key]['options'][$option_key]['label_slug'] = sanitize_title($option['label']);
-            // field_name
-            $addons[$key]['options'][$option_key]['field_name'] = 'addon-' . sanitize_title($addon['field-name']);
-        }
-    }
-    return $addons;
-}
 
 
 
@@ -75,7 +63,6 @@ function getProductDataForTypeSense($product)
     $product_id = $product->get_id();
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
-    $addons = json_encode(recompileAddonsData($product_id));
     $attachment_ids = $product->get_gallery_image_ids();
     $product_gallery = array_map(function ($attachment_id) {
         $attachment = get_post($attachment_id);
@@ -86,30 +73,6 @@ function getProductDataForTypeSense($product)
             'src' => wp_get_attachment_url($attachment_id)
         ];
     }, $attachment_ids);
-
-
-    $meta = YoastSEO()->meta->for_post($product_id);
-    $fullHead = wp_gql_seo_get_full_head($meta);
-
-    $seo_head = '';
-    if (is_plugin_active('wordpress-seo/wp-seo.php')) {
-        include_once ABSPATH . 'wp-admin/includes/plugin.php';
-        $prev_post = $GLOBALS['post'];
-        $GLOBALS['post'] = get_post($product->get_id());
-
-        $wpseo_frontend = WPSEO_Frontend::get_instance();
-        $title = $wpseo_frontend->get_content_title();
-        $metadesc = $wpseo_frontend->get_meta_description();
-
-        $canonical = WPSEO_Meta::get_value('canonical');
-        $canonical = $canonical ? $canonical : get_permalink($product->get_id());
-
-        $seo_head = "<title>$title</title>";
-        $seo_head .= "<meta name='description' content='$metadesc' />";
-        $seo_head .= "<link rel='canonical' href='$canonical' />";
-
-        $GLOBALS['post'] = $prev_post;
-    }
 
     $shortDescription = $product->get_short_description();
     $description = $product->get_description();
@@ -126,20 +89,6 @@ function getProductDataForTypeSense($product)
     ];
 
     $stockQuantity = $product->get_stock_quantity();
-
-    $categories = get_the_terms($product_id, 'product_cat');
-    $categoryData = getTermData($categories);
-
-    $ingredients = get_the_terms($product_id, 'product_ingredients');
-    $ingredientData = array_map(function ($term) {
-        return [
-            'name' => $term->name,
-            'description' => $term->description,
-            'imageSourceUrl' => z_taxonomy_image_url($term->term_id),
-            'slug' => $term->slug,
-            'url' => get_term_link($term->term_id),
-        ];
-    }, $ingredients);
 
     $product_type = $product->get_type();
 
@@ -207,7 +156,6 @@ function getProductDataForTypeSense($product)
     $taxonomies = getProductTaxonomies($product);
     $currency = get_option('woocommerce_currency');
 
-
     $product_data = [
         'id' => strval($product->get_id()),
         'productId' => strval($product->get_id()),
@@ -216,7 +164,6 @@ function getProductDataForTypeSense($product)
         'name' => $product->get_name(),
         'permalink' => get_permalink($product->get_id()),
         'slug' => $product->get_slug(),
-        'seoFullHead' => $fullHead,
         'thumbnail' => $thumbnail,
         'sku' => $product->get_sku(),
         'price' => [
@@ -236,7 +183,6 @@ function getProductDataForTypeSense($product)
         'isFeatured' => $product->get_featured(),
         'totalSales' => $product->get_total_sales(),
         'galleryImages' => $product_gallery,
-        'addons' => $addons,
         'taxonomies' => $taxonomies,
         'productType' => $product_type,
         // Add product type
@@ -244,12 +190,11 @@ function getProductDataForTypeSense($product)
         // Add variations data
         'crossSellData' => $cross_sell_data,
         'upsellData' => $upsell_data,
-        'additionalTabs' => $formatted_additional_tabs,
-        'seo' => $seo_head,
+        'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id ),
         // 'attributes' => $attributes,
         // 'additional_information_shipping' => $shipping,
     ];
-    return $product_data;
+    return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id );
 }
 
 function products_to_typesense()
@@ -289,24 +234,17 @@ function products_to_typesense()
                     [
                         'name' => 'price',
                         'type' => 'object',
-                        'fields' => [
-                            ['name' => 'amount', 'type' => 'float'],
-                            ['name' => 'currency', 'type' => 'string'],
-                        ]
+                        "facet" => true
                     ],
                     [
                         'name' => 'regularPrice',
                         'type' => 'object',
-                        'fields' => [
-                            ['name' => 'amount', 'type' => 'float'],
-                            ['name' => 'currency', 'type' => 'string'],
-                        ]
                     ],
                     [
                         'name' => 'salePrice',
                         'type' => 'object',
                         'fields' => [
-                            ['name' => 'amount', 'type' => 'float'],
+                            ['name' => 'amount', 'type' => 'float', 'sort' => true],
                             ['name' => 'currency', 'type' => 'string'],
                         ]
                     ],
@@ -315,10 +253,10 @@ function products_to_typesense()
                     ['name' => 'stockStatus', 'type' => 'string'],
                     ['name' => 'updatedAt', 'type' => 'int64'],
                     ['name' => 'createdAt', 'type' => 'int64'],
-                    ['name' => 'isFeatured', 'type' => 'bool'],
+                    ['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
                     ['name' => 'totalSales', 'type' => 'int64'],
                     //['name' => 'galleryImages', 'type' => 'object[]'],
-                    ['name' => 'addons', 'type' => 'string'],
+                    // ['name' => 'addons', 'type' => 'string'],
                     ['name' => 'productType', 'type' => 'string', 'facet' => true],
                     ['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true],
                     // ['name' => 'attributes', 'type' => 'object[]', 'facet' => true],
