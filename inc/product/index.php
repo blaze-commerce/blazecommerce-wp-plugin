@@ -378,14 +378,12 @@ function bwl_on_product_save($product_id, $wc_product)
             try {
                 $typesense_private_key = get_option('typesense_api_key'); // Get the API key
                 $client = getTypeSenseClient($typesense_private_key); // Pass the API key as an argument
-
                 $document_data = getProductDataForTypeSense($wc_product);
-
-                // Fetch the store ID and build the collection name
-                $wooless_site_id = get_option('store_id');
-                $collection_name = 'product-' . $wooless_site_id;
-
+                // Use the bwlGetProductCollectionName function for the collection_name value
+                $collection_name = getTypeSenseCollection();
                 $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+
+                do_action('ts_product_update', $product_id, $wc_product);
             } catch (Exception $e) {
                 error_log("Error updating product in Typesense: " . $e->getMessage());
             }
