@@ -359,6 +359,7 @@ function bwl_on_order_status_changed($order_id, $old_status, $new_status, $order
                     $collection_name = getTypeSenseCollection();
 
                     $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+                    do_action('ts_product_update', $product_id, $wc_product);
                 } catch (Exception $e) {
                     error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
                 }
@@ -415,6 +416,7 @@ function bwl_on_checkout_update_order_meta($order_id, $data)
                 $collection_name = getTypeSenseCollection();
 
                 $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+                do_action('ts_product_update', $product_id, $wc_product);
             } catch (Exception $e) {
                 error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
             }
