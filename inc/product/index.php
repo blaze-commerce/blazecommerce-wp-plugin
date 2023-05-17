@@ -156,6 +156,16 @@ function getProductDataForTypeSense($product)
     $taxonomies = getProductTaxonomies($product);
     $currency = get_option('woocommerce_currency');
 
+    $default_price = [
+        $currency => floatval($product->get_price())
+    ];
+    $default_regular_price = [
+        $currency => floatval($product->get_regular_price())
+    ];
+    $default_sale_price = [
+        $currency => floatval($product->get_sale_price())
+    ];
+
     $product_data = [
         'id' => strval($product->get_id()),
         'productId' => strval($product->get_id()),
@@ -166,15 +176,9 @@ function getProductDataForTypeSense($product)
         'slug' => $product->get_slug(),
         'thumbnail' => $thumbnail,
         'sku' => $product->get_sku(),
-        'price' => [
-            $currency => floatval($product->get_price())
-        ],
-        'regularPrice' => [
-            $currency => floatval($product->get_regular_price())
-        ],
-        'salePrice' => [
-            $currency => floatval($product->get_sale_price())
-        ],
+        'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
+        'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
+        'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
         'onSale' => $product->is_on_sale(),
         'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
         'stockStatus' => $product->get_stock_status(),
