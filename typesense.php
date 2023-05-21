@@ -13,7 +13,7 @@ require_once plugin_dir_path(__FILE__) . 'inc/menu/index.php';
 require_once plugin_dir_path(__FILE__) . 'inc/taxonomy/index.php';
 require_once plugin_dir_path(__FILE__) . 'inc/pages/index.php';
 require_once plugin_dir_path(__FILE__) . 'inc/site-info/index.php';
-require_once plugin_dir_path(__FILE__) . 'views/class-homepage-setting.php';
+require_once plugin_dir_path(__FILE__) . 'views/homepage-setting.php';
 
 
 function register_compatibilities()
