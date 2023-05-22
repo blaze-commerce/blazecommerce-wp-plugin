@@ -27,8 +27,8 @@ function site_info_index_to_typesense()
                     'type' => 'string',
                 ],
                 [
-                    'name' => 'value',
-                    'type' => 'string',
+                    'name' => '.*',
+                    'type' => 'string*',
                 ],
                 [
                     'name' => 'updated_at',
@@ -280,16 +280,20 @@ function site_info_index_to_typesense()
             'value' => $SiteTagline,
             'updated_at' => $updatedAt,
         ]);
-        $client->collections[$collection_site_info]->documents->create([
-            'name' => 'site_logo',
-            'value' => $logo_url,
-            'updated_at' => $logo_updated_at,
-        ]);
-        $client->collections[$collection_site_info]->documents->create([
-            'name' => 'Store_notice',
-            'value' => $store_notice,
-            'updated_at' => intval($store_notice_updated_at),
-        ]);
+        if (!empty($logo_url)) {
+            $client->collections[$collection_site_info]->documents->create([
+                'name' => 'site_logo',
+                'value' => $logo_url,
+                'updated_at' => $logo_updated_at,
+            ]);
+        }
+        if (!empty($store_notice)) {
+            $client->collections[$collection_site_info]->documents->create([
+                'name' => 'Store_notice',
+                'value' => $store_notice,
+                'updated_at' => intval($store_notice_updated_at),
+            ]);
+        }
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'Time_format',
             'value' => $time_format,
@@ -335,6 +339,53 @@ function site_info_index_to_typesense()
             'value' => $favicon_url,
             'updated_at' => intval($store_notice_updated_at),
         ]);
+
+        $homepage_data = apply_filters('blaze_wooless_additional_homepage_info', array());
+        foreach ($homepage_data as $key => $value) {
+            if (empty($value)) {
+                continue;
+            }
+
+            // If it's 'popular_categories', decode it from a JSON string
+            if ($key == 'popular_categories') {
+                $value = json_decode($value, true);
+            }
+            var_dump($value);
+
+            $client->collections[$collection_site_info]->documents->create([
+                'name' => $key,
+                'value' => (string) $value,
+                'updated_at' => time(),
+            ]);
+        }
+
+
+        $site_messages_data = apply_filters('blaze_wooless_additional_site_info_message', array());
+        foreach ($site_messages_data as $key => $value) {
+            if (empty($value)) {
+                continue;
+            }
+
+            $client->collections[$collection_site_info]->documents->create([
+                'name' => $key,
+                'value' => $value,
+                'updated_at' => time(),
+            ]);
+        }
+
+        $additional_data = apply_filters('blaze_wooless_additional_site_info', array());
+        foreach ($additional_data as $key => $value) {
+            if (empty($value)) {
+                continue;
+            }
+
+            $client->collections[$collection_site_info]->documents->create([
+                'name' => $key,
+                'value' => $value,
+                'updated_at' => time(),
+            ]);
+        }
+
         echo "Site info added successfully!";
     } catch (Exception $e) {
         echo $e->getMessage();
