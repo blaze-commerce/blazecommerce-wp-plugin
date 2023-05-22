@@ -350,10 +350,6 @@ function site_info_index_to_typesense()
             if ($key == 'popular_categories') {
                 $value = json_decode($value, true);
             }
-<<<<<<< HEAD
-=======
-            var_dump($value);
->>>>>>> c29a353357d95119100fb85b725eaf759ca006da
 
             $client->collections[$collection_site_info]->documents->create([
                 'name' => $key,
