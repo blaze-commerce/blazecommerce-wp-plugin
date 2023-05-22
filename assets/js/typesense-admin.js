@@ -10,3 +10,22 @@ jQuery(document).ready(function ($) {
     });
   });
 });
+
+
+jQuery(document).ready(function($) {
+    $(".region-checkbox").each(function() {
+        var textField = $(this).closest('div').find(".region-message");
+        if(!$(this).is(":checked")) {
+            textField.hide();
+        }
+    });
+    
+    $(".region-checkbox").change(function() {
+        var textField = $(this).closest('div').find(".region-message");
+        if($(this).is(":checked")) {
+            textField.show();
+        } else {
+            textField.hide();
+        }
+    });
+});

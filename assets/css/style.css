@@ -172,3 +172,7 @@ div#error_message {
     color: #717D96;
     padding-left: 6px;
 }
+
+.region_message label {
+    margin-right: 20px;
+}
