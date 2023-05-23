@@ -236,7 +236,7 @@ function typesense_product_indexer_page()
             var data = {
                 'action': 'index_data_to_typesense',
                 'api_key': apiKey,
-                'collection_name': 'site_info',
+                'collection_name': 'products',
 
             };
             document.getElementById("wrapper-id").style.display = "none";
@@ -285,7 +285,6 @@ function typesense_product_indexer_page()
 
 function add_typesense_product_indexer_menu()
 {
-
     $menu_slug = 'typesense-product-indexer';
 
     add_menu_page(
@@ -297,6 +296,13 @@ function add_typesense_product_indexer_menu()
         'dashicons-admin-generic'
     );
 
+    // Create the submenus using the action
+    do_action('bwl_setting_menu', $menu_slug);
+
+    // Remove the default 'Wooless' submenu page
+    remove_submenu_page($menu_slug, $menu_slug);
+
+    // Add the "Setting" subpage last so it appears at the end
     add_submenu_page(
         $menu_slug,
         'Setting',
@@ -305,9 +311,14 @@ function add_typesense_product_indexer_menu()
         $menu_slug,
         'typesense_product_indexer_page'
     );
-
-    do_action('bwl_setting_menu', $menu_slug);
 }
+
+
+function my_admin_theme_style()
+{
+    wp_enqueue_style('my-admin-theme', plugins_url('blaze-wooless/assets/css/style.css', __FILE__));
+}
+add_action('admin_enqueue_scripts', 'my_admin_theme_style');
 
 
 
