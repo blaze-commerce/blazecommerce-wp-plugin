@@ -221,11 +221,14 @@ function typesense_homepage_popular_categories_callback()
     </div>
 
     <input type="button" id="add-popular-category" class="button" value="<?php _e('Add Category', 'typesense'); ?>">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.10.2/Sortable.min.js"></script>
 
     <script>
         jQuery(document).ready(function ($) {
             var categories = <?php echo json_encode($popular_categories); ?> || []; // default to an empty array if null
             var container = $('#popular-categories-container');
+            // Extract the native DOM element
+            var containerElement = document.getElementById('popular-categories-container');
 
             if (Array.isArray(categories)) { // check if categories is an array
                 categories.forEach(function (category) {
@@ -233,7 +236,6 @@ function typesense_homepage_popular_categories_callback()
                 });
             }
 
-            // Handle the "Add Category" button click
             $('#add-popular-category').click(function () {
                 addCategory({
                     image: '',
@@ -242,9 +244,9 @@ function typesense_homepage_popular_categories_callback()
                 });
             });
 
-            // Function to add a new category to the field
             function addCategory(category) {
-                var categoryElem = $('<div class="popular-category"></div>');
+                var categoryElem = $('<div class="popular-category" id="' + category.id + '" data-category-id="' +
+                    category.id + '"></div>');
                 var imageInput = $(
                     '<input id="popular-category-image-id" type="text" class="popular-category-image" name="typesense_homepage_settings[popular_categories][image][]" placeholder="Image URL" value="' +
                     category.image + '">');
@@ -270,7 +272,6 @@ function typesense_homepage_popular_categories_callback()
                 container.append(categoryElem);
             }
 
-            // Handle the "Delete Category" button click
             $(document).on('click', '.delete-popular-category', function () {
                 $(this).closest('.popular-category').remove();
             });
@@ -280,12 +281,12 @@ function typesense_homepage_popular_categories_callback()
             $(document).on('click', '.upload_image_button', function (e) {
                 e.preventDefault();
                 var inputField = $(this).prev();
-                //If the uploader object has already been created, reopen the dialog
+
                 if (custom_uploader) {
                     custom_uploader.open();
                     return;
                 }
-                //Extend the wp.media object
+
                 custom_uploader = wp.media.frames.file_frame = wp.media({
                     title: 'Choose Image',
                     button: {
@@ -294,19 +295,64 @@ function typesense_homepage_popular_categories_callback()
                     multiple: false
                 });
 
-                //When a file is selected, grab the URL and set it as the text field's value
                 custom_uploader.on('select', function () {
                     var attachment = custom_uploader.state().get('selection').first().toJSON();
-                    $('.popular-category-image').val(attachment.url);
+                    inputField.val(attachment.url);
                 });
-                //Open the uploader dialog
+
                 custom_uploader.open();
+            });
+
+            var containerElement = container[0];
+            // Initialize Sortable on your container
+            var sortable = Sortable.create(containerElement, {
+                animation: 150, // ms, animation speed moving items when sorting, `0` — without animation
+                draggable: ".popular-category", // Specifies which items inside the element should be draggable
+                // ... other options ...
+                onEnd: function (evt) {
+                    // TODO: Call your function to save the new order here
+                    var itemEl = evt.item; // dragged HTMLElement
+                    var newIndex = evt.newIndex; // New index within parent
+
+                    // Create an array of category IDs in their new order
+                    var newOrder = [];
+                    $('.popular-category').each(function () {
+                        var id = $(this).data('category-id');
+                        newOrder.push(id);
+                    });
+
+                    // Send new order to server
+                    $.ajax({
+                        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                        type: 'POST',
+                        data: {
+                            action: 'save_category_order', // This should be the same as the action in your add_action() function
+                            order: newOrder
+                        },
+                        success: function (response) {
+                            console.log(response);
+                        },
+                        error: function (errorThrown) {
+                            console.log(errorThrown);
+                        }
+                    });
+                }
             });
         });
     </script>
     <?php
 }
+function save_category_order()
+{
+    $new_order = $_POST['order'];
 
+    // Handle new order here.
+    // This will depend on how you're storing the data in your database.
+
+    wp_die(); // this is required to terminate immediately and return a proper response
+}
+
+add_action('wp_ajax_save_category_order', 'save_category_order');
 
 
 function typesense_render_popular_categories_field()
@@ -346,6 +392,7 @@ function typesense_enqueue_scripts()
     wp_enqueue_script('jquery-ui-sortable');
     wp_enqueue_script('jquery');
     wp_enqueue_media();
+    wp_enqueue_style('jquery-ui', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css');
 }
 
 
@@ -393,11 +440,6 @@ if (!class_exists('Blaze_Wooless_Homepage_Settings_Compatibility')) {
 
             return $additional_settings;
         }
-
-
-
-
-
 
     }
 
