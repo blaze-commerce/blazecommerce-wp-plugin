@@ -176,3 +176,7 @@ div#error_message {
 .region_message label {
     margin-right: 20px;
 }
+
+#toplevel_page_typesense-product-indexer .wp-first-item {
+    display: none;
+}
