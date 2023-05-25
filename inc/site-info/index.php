@@ -241,6 +241,25 @@ function site_info_index_to_typesense()
         $document_id = 'stock_display_format_setting'; // Set an appropriate document ID
         $updated_at = time(); // Use the current time as the updated_at value
 
+
+
+        // Prepare the product attributes
+        $product_attributes = [
+            ["name" => "size", "type" => "select"],
+            ["name" => "color", "type" => "swatch"],
+            ["name" => "style", "type" => "image"]
+        ];
+
+        // Convert the attributes to a JSON string
+        $product_attributes_json = json_encode($product_attributes);
+
+
+        $client->collections[$collection_site_info]->documents->create([
+            'name' => 'product_attributes',
+            'value' => $product_attributes_json,
+            'updated_at' => time(),
+        ]);
+
         $client->collections[$collection_site_info]->documents->create([
             'name' => 'stock_display_format',
             'value' => $stock_display_format,
