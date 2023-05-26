@@ -13,11 +13,18 @@ require_once plugin_dir_path(__FILE__) . 'inc/menu/index.php';
 require_once plugin_dir_path(__FILE__) . 'inc/taxonomy/index.php';
 require_once plugin_dir_path(__FILE__) . 'inc/pages/index.php';
 require_once plugin_dir_path(__FILE__) . 'inc/site-info/index.php';
+require_once plugin_dir_path(__FILE__) . 'views/homepage-setting.php';
+require_once plugin_dir_path(__FILE__) . 'views/site-message-setting.php';
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 24f8a19821f6aa3f7dd2fc3d66515be30447b2a4
 function register_compatibilities()
 {
     // Compatibility
     require_once plugin_dir_path(__FILE__) . 'compatibility/woocommerce/product-addons.php';
+    require_once plugin_dir_path(__FILE__) . 'compatibility/woocommerce/woocommerce-price-based-on-country.php';
     require_once plugin_dir_path(__FILE__) . 'compatibility/woocommerce/custom-product-tabs-for-woocommerce.php';
     require_once plugin_dir_path(__FILE__) . 'compatibility/yoast-seo.php';
 }
@@ -91,49 +98,28 @@ function typesense_enqueue_styles($hook)
 
 add_action('admin_enqueue_scripts', 'typesense_enqueue_styles');
 
-function add_typesense_product_indexer_menu()
+
+function my_admin_enqueue_scripts($hook)
 {
-    $menu_slug = 'typesense-product-indexer';
+    if ($hook == 'wooless_page_typesense-product-indexer-site-message') {
+        wp_enqueue_style('my_admin-style', plugins_url('assets/css/style.css', __FILE__));
+        wp_enqueue_script('my_admin-script', plugins_url('assets/js/typesense-admin.js', __FILE__), array('jquery'), '1.0', true);
+    }
+}
+function homepage_enqueue_scripts($hook)
+{
 
-    add_menu_page(
-        'Wooless',
-        'Wooless',
-        'manage_options',
-        $menu_slug,
-        'typesense_product_indexer_page',
-        'dashicons-admin-generic'
-    );
-
-    add_submenu_page(
-        $menu_slug,
-        'Setting',
-        'Setting',
-        'manage_options',
-        $menu_slug,
-        'typesense_product_indexer_page'
-    );
-
-    add_submenu_page(
-        $menu_slug,
-        'Homepage',
-        'Homepage',
-        'manage_options',
-        $menu_slug . '-homepage',
-        'typesense_homepage_page'
-    );
-
-    add_submenu_page(
-        $menu_slug,
-        'Site Message',
-        'Site Message',
-        'manage_options',
-        $menu_slug . '-site-message',
-        'typesense_site_message_page'
-    );
+    if ($hook == 'wooless_page_typesense-product-indexer-homepage') {
+        wp_enqueue_style('my_admin-style', plugins_url('assets/css/style.css', __FILE__));
+        wp_enqueue_script('my_admin-script', plugins_url('assets/js/typesense-admin.js', __FILE__), array('jquery'), '1.0', true);
+    }
 }
 function typesense_product_indexer_page()
 {
+<<<<<<< HEAD
     $wooless_site_id = get_option('store_id');
+=======
+>>>>>>> 24f8a19821f6aa3f7dd2fc3d66515be30447b2a4
     echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap">';
     $private_key_master = get_option('private_key_master', '');
     ?>
@@ -162,8 +148,12 @@ function typesense_product_indexer_page()
             <label class="checkbox_Label">Show API Key</label>
         </div>
         <div class="item_wrapper_indexer_page">
+<<<<<<< HEAD
             <button id="index_products" onclick="indexData()" store-id="<?php echo $wooless_site_id; ?>" disabled>Manual
                 Sync
+=======
+            <button id="index_products" onclick="indexData()" disabled>Manual Sync
+>>>>>>> 24f8a19821f6aa3f7dd2fc3d66515be30447b2a4
             </button>
             <button id="check_api_key" onclick="checkApiKey()">Save</button>
             <div id="jsdecoded" style="margin-top: 10px;"></div>
@@ -303,6 +293,7 @@ function typesense_product_indexer_page()
         }
     </script>
     <?php
+<<<<<<< HEAD
 }
 function typesense_homepage_page()
 {
@@ -342,59 +333,30 @@ function typesense_register_homepage_settings()
     );
 
     // Add other settings sections here
+=======
+>>>>>>> 24f8a19821f6aa3f7dd2fc3d66515be30447b2a4
 }
 
-add_action('admin_init', 'typesense_register_homepage_settings');
-
-function typesense_homepage_banner_settings_callback()
+function add_typesense_product_indexer_menu()
 {
-    // Add the settings fields for the homepage banner
-    add_settings_field(
-        'typesense_homepage_banner_image',
-        __('Image', 'typesense'),
-        'typesense_homepage_banner_image_callback',
-        'typesense_homepage_settings',
-        'typesense_homepage_banner_settings'
+    $menu_slug = 'typesense-product-indexer';
+
+    add_menu_page(
+        'Wooless',
+        'Wooless',
+        'manage_options',
+        $menu_slug,
+        'typesense_product_indexer_page',
+        'dashicons-admin-generic'
     );
 
-    // Primary Message field
-    add_settings_field(
-        'typesense_homepage_primary_message',
-        __('Primary Message', 'typesense'),
-        'typesense_homepage_primary_message_callback',
-        'typesense_homepage_settings',
-        'typesense_homepage_banner_settings'
-    );
+    // Create the submenus using the action
+    do_action('bwl_setting_menu', $menu_slug);
 
-    // Secondary Message field
-    add_settings_field(
-        'typesense_homepage_secondary_message',
-        __('Secondary Message', 'typesense'),
-        'typesense_homepage_secondary_message_callback',
-        'typesense_homepage_settings',
-        'typesense_homepage_banner_settings'
-    );
+    // Remove the default 'Wooless' submenu page
+    remove_submenu_page($menu_slug, $menu_slug);
 
-    // Button Text field
-    add_settings_field(
-        'typesense_homepage_button_text',
-        __('Button Text', 'typesense'),
-        'typesense_homepage_button_text_callback',
-        'typesense_homepage_settings',
-        'typesense_homepage_banner_settings'
-    );
-
-    // Button Link field
-    add_settings_field(
-        'typesense_homepage_button_link',
-        __('Button Link', 'typesense'),
-        'typesense_homepage_button_link_callback',
-        'typesense_homepage_settings',
-        'typesense_homepage_banner_settings'
-    );
-
-}
-
+<<<<<<< HEAD
 function typesense_homepage_banner_image_callback()
 {
     $options = get_option('typesense_homepage_settings');
@@ -577,22 +539,27 @@ function typesense_homepage_popular_categories_callback()
     </script>
     <?php
 }
-
-function typesense_enqueue_scripts()
-{
-    wp_enqueue_script('jquery-ui-sortable');
+=======
+    // Add the "Setting" subpage last so it appears at the end
+    add_submenu_page(
+        $menu_slug,
+        'Setting',
+        'Setting',
+        'manage_options',
+        $menu_slug,
+        'typesense_product_indexer_page'
+    );
 }
 
-add_action('admin_enqueue_scripts', 'typesense_enqueue_scripts');
-$options = get_option('typesense_homepage_settings');
-$popular_categories = json_decode($options['typesense_homepage_popular_categories'], true);
+>>>>>>> 24f8a19821f6aa3f7dd2fc3d66515be30447b2a4
 
-
-function typesense_site_message_page()
+function my_admin_theme_style()
 {
-    // Your code for the site message submenu page
-    echo '<h1>Site Message</h1>';
+    wp_enqueue_style('my-admin-theme', plugins_url('blaze-wooless/assets/css/style.css', __FILE__));
 }
+add_action('admin_enqueue_scripts', 'my_admin_theme_style');
+
+
 
 function save_typesense_api_key()
 {

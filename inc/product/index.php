@@ -156,6 +156,16 @@ function getProductDataForTypeSense($product)
     $taxonomies = getProductTaxonomies($product);
     $currency = get_option('woocommerce_currency');
 
+    $default_price = [
+        $currency => floatval($product->get_price())
+    ];
+    $default_regular_price = [
+        $currency => floatval($product->get_regular_price())
+    ];
+    $default_sale_price = [
+        $currency => floatval($product->get_sale_price())
+    ];
+
     $product_data = [
         'id' => strval($product->get_id()),
         'productId' => strval($product->get_id()),
@@ -166,15 +176,9 @@ function getProductDataForTypeSense($product)
         'slug' => $product->get_slug(),
         'thumbnail' => $thumbnail,
         'sku' => $product->get_sku(),
-        'price' => [
-            $currency => floatval($product->get_price())
-        ],
-        'regularPrice' => [
-            $currency => floatval($product->get_regular_price())
-        ],
-        'salePrice' => [
-            $currency => floatval($product->get_sale_price())
-        ],
+        'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
+        'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
+        'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
         'onSale' => $product->is_on_sale(),
         'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
         'stockStatus' => $product->get_stock_status(),
@@ -190,11 +194,11 @@ function getProductDataForTypeSense($product)
         // Add variations data
         'crossSellData' => $cross_sell_data,
         'upsellData' => $upsell_data,
-        'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id ),
+        'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
         // 'attributes' => $attributes,
         // 'additional_information_shipping' => $shipping,
     ];
-    return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id );
+    return apply_filters('blaze_wooless_product_data_for_typesense', $product_data, $product_id);
 }
 
 function products_to_typesense()
@@ -225,7 +229,7 @@ function products_to_typesense()
                     ],
                     ['name' => 'description', 'type' => 'string'],
                     ['name' => 'shortDescription', 'type' => 'string'],
-                    ['name' => 'name', 'type' => 'string', 'facet' => true],
+                    ['name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true],
                     ['name' => 'permalink', 'type' => 'string'],
                     ['name' => 'slug', 'type' => 'string', 'facet' => true],
                     ['name' => 'seoFullHead', 'type' => 'string'],
@@ -359,6 +363,7 @@ function bwl_on_order_status_changed($order_id, $old_status, $new_status, $order
                     $collection_name = getTypeSenseCollection();
 
                     $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+                    do_action('ts_product_update', $product_id, $wc_product);
                 } catch (Exception $e) {
                     error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
                 }
@@ -378,14 +383,12 @@ function bwl_on_product_save($product_id, $wc_product)
             try {
                 $typesense_private_key = get_option('typesense_api_key'); // Get the API key
                 $client = getTypeSenseClient($typesense_private_key); // Pass the API key as an argument
-
                 $document_data = getProductDataForTypeSense($wc_product);
-
-                // Fetch the store ID and build the collection name
-                $wooless_site_id = get_option('store_id');
-                $collection_name = 'product-' . $wooless_site_id;
-
+                // Use the bwlGetProductCollectionName function for the collection_name value
+                $collection_name = getTypeSenseCollection();
                 $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+
+                do_action('ts_product_update', $product_id, $wc_product);
             } catch (Exception $e) {
                 error_log("Error updating product in Typesense: " . $e->getMessage());
             }
@@ -417,6 +420,7 @@ function bwl_on_checkout_update_order_meta($order_id, $data)
                 $collection_name = getTypeSenseCollection();
 
                 $client->collections[$collection_name]->documents[strval($product_id)]->update($document_data);
+                do_action('ts_product_update', $product_id, $wc_product);
             } catch (Exception $e) {
                 error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
             }
