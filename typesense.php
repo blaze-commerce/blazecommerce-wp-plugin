@@ -8,6 +8,7 @@ Author: Blaze Online
 Author URI: https://www.blaze.online
 */
 require 'inc/vendor/autoload.php';
+require_once plugin_dir_path(__FILE__) . 'lib/regional-data-helper.php';
 require_once plugin_dir_path(__FILE__) . 'inc/product/index.php';
 require_once plugin_dir_path(__FILE__) . 'inc/menu/index.php';
 require_once plugin_dir_path(__FILE__) . 'inc/taxonomy/index.php';
