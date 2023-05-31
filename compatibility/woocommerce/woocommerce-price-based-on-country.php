@@ -2,11 +2,6 @@
 if ( !class_exists( 'Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibility' ) ) {
     class Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibility {
         private static $instance = null;
-        protected $currency_country_map = array(
-            "AUD" => 'AU',
-            "NZD" => 'NZ',
-            "USD" => 'US',
-        );
 
         public static function get_instance()
         {
@@ -46,24 +41,19 @@ if ( !class_exists( 'Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibil
         {
             $additional_settings['is_multicurrency'] = 'yes';
 
-            $currencies = array();
+            $currencies = $additional_settings['regional_data'];
 
-            $site_currency = get_woocommerce_currency();
-            $currencies[] = array(
-                'country' => $this->currency_country_map[ $site_currency ],
-                'currency' => $site_currency,
-            );
-
-            $other_currencies = array_map( function( $zone ) {
-                return array(
+            $other_currencies = array_reduce( WCPBC_Pricing_Zones::get_zones(), function( $carry, $zone ) {
+                $carry[] = array(
                     'country' => array_values( $zone->get_countries() )[0],
                     'currency' => $zone->get_currency(),
                 );
-            }, WCPBC_Pricing_Zones::get_zones() );
+                return $carry;
+            }, array() );
 
             $currencies = array_merge( $currencies, $other_currencies );
 
-            $additional_settings['multicurrency_data'] = json_encode( array_values( $currencies ) );
+            $additional_settings['regional_data'] = $currencies;
 
             return $additional_settings;
         }

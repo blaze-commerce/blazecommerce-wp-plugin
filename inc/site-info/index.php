@@ -391,10 +391,24 @@ function site_info_index_to_typesense()
             ]);
         }
 
-        $additional_data = apply_filters('blaze_wooless_additional_site_info', array());
+        $initial_additional_data = array();
+
+        $site_currency = get_woocommerce_currency();
+        $default_region = array(
+            'country' => RegionalDataHelper::$currency_country_map[ $site_currency ],
+            'currency' => $site_currency,
+            'default' => true,
+        );
+        $initial_additional_data['regional_data'] = array( $default_region );
+
+        $additional_data = apply_filters('blaze_wooless_additional_site_info', $initial_additional_data);
         foreach ($additional_data as $key => $value) {
             if (empty($value)) {
                 continue;
+            }
+
+            if ( is_array( $value ) ) {
+                $value = json_encode( $value );
             }
 
             $client->collections[$collection_site_info]->documents->create([
