@@ -3,16 +3,13 @@
 // Indexes the navigation menus to Typesense
 function menu_index_to_typesense()
 {
-    $typesense_private_key = get_option('typesense_api_key');
-    $client = getTypeSenseClient($typesense_private_key);
-
     // Fetch the store ID from the saved options
     $wooless_site_id = get_option('store_id');
     $collection_menu = 'menu-' . $wooless_site_id;
     //Menu indexing
     try {
         // Initialize the Typesense client
-        $client = getTypeSenseClient($typesense_private_key);
+        $client = Blaze_Wooless_Typesense::get_instance()->client();
         // Delete the existing 'menu' collection (if it exists)
         try {
             $client->collections[$collection_menu]->delete();
