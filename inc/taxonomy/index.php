@@ -1,16 +1,13 @@
 <?php
 function taxonmy_index_to_typesense()
 {
-    $typesense_private_key = get_option('typesense_api_key');
-    $client = getTypeSenseClient($typesense_private_key);
-
     // Fetch the store ID from the saved options
     $wooless_site_id = get_option('store_id');
     $collection_taxonomy = 'taxonomy-' . $wooless_site_id;
     //indexing taxonmy terms
     try {
         // Initialize the Typesense client
-        $client = getTypeSenseClient($typesense_private_key);
+        $client = Blaze_Wooless_Typesense::get_instance()->client();
 
         // Delete the existing 'TaxonomyTerms-gb' collection (if it exists)
         try {
