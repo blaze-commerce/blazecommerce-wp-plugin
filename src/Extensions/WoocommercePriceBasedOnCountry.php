@@ -1,6 +1,9 @@
 <?php
-if ( !class_exists( 'Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibility' ) ) {
-    class Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibility {
+
+namespace BlazeWooless\Extensions;
+
+class WoocommercePriceBasedOnCountry 
+    {
         private static $instance = null;
 
         public static function get_instance()
@@ -22,7 +25,7 @@ if ( !class_exists( 'Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibil
 
         public function add_multicurrency_prices( $product_data, $product_id )
         {
-            foreach ( WCPBC_Pricing_Zones::get_zones() as $zone ) {
+            foreach ( \WCPBC_Pricing_Zones::get_zones() as $zone ) {
                 $currency = $zone->get_currency();
                 if ( isset( $product_data["price"] ) && !isset( $product_data["price"][ $currency ] ) ) {
                     $product_data["price"][ $currency ] = floatval($zone->get_exchange_rate_price_by_post( $product_id, '_price' ));
@@ -43,7 +46,7 @@ if ( !class_exists( 'Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibil
 
             $currencies = $additional_settings['regional_data'];
 
-            $other_currencies = array_reduce( WCPBC_Pricing_Zones::get_zones(), function( $carry, $zone ) {
+            $other_currencies = array_reduce( \WCPBC_Pricing_Zones::get_zones(), function( $carry, $zone ) {
                 $carry[] = array(
                     'country' => array_values( $zone->get_countries() )[0],
                     'currency' => $zone->get_currency(),
@@ -58,6 +61,3 @@ if ( !class_exists( 'Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibil
             return $additional_settings;
         }
     }
-
-    Blaze_Wooless_Woocommerce_Price_Based_On_Country_Compatibility::get_instance();
-}

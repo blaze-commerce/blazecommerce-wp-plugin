@@ -1,7 +1,9 @@
 <?php
 
+use BlazeWooless\Settings\GeneralSettings;
+
 function bw_get_general_settings( $key = false ) {
-    return Blaze_Wooless_General_Settings::get_instance()->get_option( $key );
+    return GeneralSettings::get_instance()->get_option( $key );
 }
 
 function bw_get_decoded_api_data( $api_key = false ) {
