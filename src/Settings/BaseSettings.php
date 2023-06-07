@@ -1,6 +1,8 @@
 <?php
 
-class Blaze_Wooless_Base_Settings {
+namespace BlazeWooless\Settings;
+
+class BaseSettings {
     public $option_key;
     public $section_key;
     public $page_label;
@@ -12,6 +14,8 @@ class Blaze_Wooless_Base_Settings {
         $this->page_label = $page_label;
 
         $this->register_hooks();
+        
+        add_action( 'admin_init', array( $this, 'init' ), 10, 1 );
     }
 
     public function init()

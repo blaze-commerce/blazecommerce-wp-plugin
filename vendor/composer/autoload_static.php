@@ -56,6 +56,10 @@ class ComposerStaticInitf6e8a1f5fedf9f8744e1c449ae9ca57a
         array (
             'Clue\\StreamFilter\\' => 18,
         ),
+        'B' => 
+        array (
+            'BlazeWooless\\' => 13,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
@@ -93,8 +97,8 @@ class ComposerStaticInitf6e8a1f5fedf9f8744e1c449ae9ca57a
         ),
         'Psr\\Http\\Message\\' => 
         array (
-            0 => __DIR__ . '/..' . '/psr/http-message/src',
-            1 => __DIR__ . '/..' . '/psr/http-factory/src',
+            0 => __DIR__ . '/..' . '/psr/http-factory/src',
+            1 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
         'Psr\\Http\\Client\\' => 
         array (
@@ -118,8 +122,8 @@ class ComposerStaticInitf6e8a1f5fedf9f8744e1c449ae9ca57a
         ),
         'Http\\Message\\' => 
         array (
-            0 => __DIR__ . '/..' . '/php-http/message-factory/src',
-            1 => __DIR__ . '/..' . '/php-http/message/src',
+            0 => __DIR__ . '/..' . '/php-http/message/src',
+            1 => __DIR__ . '/..' . '/php-http/message-factory/src',
         ),
         'Http\\Discovery\\' => 
         array (
@@ -140,6 +144,10 @@ class ComposerStaticInitf6e8a1f5fedf9f8744e1c449ae9ca57a
         'Clue\\StreamFilter\\' => 
         array (
             0 => __DIR__ . '/..' . '/clue/stream-filter/src',
+        ),
+        'BlazeWooless\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/src',
         ),
     );
 

@@ -398,7 +398,10 @@ function typesense_enqueue_scripts()
 
 $options = get_option('typesense_homepage_settings');
 
-$popular_categories = json_decode(wp_unslash($options['typesense_homepage_popular_categories']), true);
+$popular_categories = array();
+if (isset($options['typesense_homepage_popular_categories'])) {
+    $popular_categories = json_decode(wp_unslash($options['typesense_homepage_popular_categories']), true);
+}
 
 
 if (!class_exists('Blaze_Wooless_Homepage_Settings_Compatibility')) {
