@@ -9,58 +9,16 @@
             <?php
                 $active_tab = "general";
                 if (isset($_GET["tab"])) {
-                    if ($_GET["tab"] == "product") {
-                        $active_tab = "product";
-                        settings_fields("product");
-                    }
+                    $active_tab = $_GET["tab"];
                 }
             ?>
             <nav class="nav-tab-wrapper">
-                <a href="http://wooless.local/wp-admin/admin.php?page=wooless-settings&tab=general" class="nav-tab <?php echo $active_tab == 'general' ? 'nav-tab-active' : ''; ?>">General</a>
-                <a href="http://wooless.local/wp-admin/admin.php?page=wooless-settings&tab=product" class="nav-tab <?php echo $active_tab == 'product' ? 'nav-tab-active' : ''; ?>">Product Page</a>
+                <?php do_action( 'blaze_wooless_settings_navtab', $active_tab ) ?>
             </nav>
 
             <?php
-                if( $active_tab == 'product' ) { 
-                    settings_fields( 'wooless_settings_product_page_options' ); 
-                    do_settings_sections( 'wooless_settings_product_page_options' ); 
-                } else { 
-                    settings_fields( 'wooless_general_settings_options' ); 
-                    do_settings_sections( 'wooless_general_settings_options' );
-
-                    if ( $api_key !== null && $api_key !== '' ) :
-                    ?>
-                        <a href="#" id="sync-product-link">Sync Products</a><br />
-                        <a href="#" id="sync-taxonomies-link">Sync Taxonomies</a><br />
-                        <a href="#" id="sync-menus-link">Sync Menus</a><br />
-                        <a href="#" id="sync-pages-link">Sync Pages</a><br />
-                        <a href="#" id="sync-site-info-link">Sync Site Info</a><br />
-                        <a href="#" id="sync-all-link">Sync All</a>
-                        <div id="sync-results-container"></div>
-                    <?php
-                    endif;
-                }
-
-                // var_dump(Blaze_Wooless_Typesense::get_instance()->test_connection()); exit;
-                // $namespace = Aelia\WC\PricesByCountry\WC_Aelia_Prices_By_Country::get_wc_namespace();
-                // $class = '\\Aelia\\WC\\PricesByCountry\\' . $namespace . '\PricingManager';
-                // $pricing_manager = $class::Instance();
-                // $product_price_by_country = $pricing_manager->get_product_prices_by_country(24);
-                // $regions = Aelia\WC\PricesByCountry\WC_Aelia_Prices_By_Country::settings()->get_regions();
-                // $productData = array(
-                //     'name' => 'Polo',
-                //     'regularPrice' => array(),
-                // );
-                // foreach ( $product_price_by_country as $region_id => $region) {
-                //     $current_region = $regions[$region_id];
-                //     $current_country = $regions[$region_id]['region_name'];
-                //     foreach($GLOBALS['woocommerce-prices-by-country']->enabled_currencies() as $currency) {
-                //         // TODO: add currency switcher and map to correct currency
-                //         $productData['regularPrice'][$current_country] = $region[$currency]['regular_price'];
-                //         $productData['salePrice'][$current_country] = $region[$currency]['sale_price'];
-                //     }
-                // }
-                // var_dump($productData); exit;
+                do_action( 'blaze_wooless_render_settings_tab', $active_tab );
+                do_action( 'blaze_wooless_render_settings_tab_footer', $active_tab );
             ?>
 
             <?php

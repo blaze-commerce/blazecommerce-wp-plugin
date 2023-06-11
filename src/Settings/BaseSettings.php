@@ -6,6 +6,7 @@ class BaseSettings {
     public $option_key;
     public $section_key;
     public $page_label;
+    public $tab_key;
 
     public function __construct( $option_key, $section_key, $page_label )
     {
@@ -16,6 +17,9 @@ class BaseSettings {
         $this->register_hooks();
         
         add_action( 'admin_init', array( $this, 'init' ), 10, 1 );
+        add_action( 'blaze_wooless_settings_navtab', array( $this, 'register_settings_navtab' ), 10, 1 );
+        add_action( 'blaze_wooless_render_settings_tab', array( $this, 'render_settings_tab' ), 10, 1 );
+        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'render_settings_footer_tab' ), 10, 1 );
     }
 
     public function init()
@@ -118,6 +122,17 @@ class BaseSettings {
         echo $html;
     }
 
+    public function field_callback_multiselect( $args ) {
+        $values = $this->get_option( $args['id'] );
+        $html = '<select name="' . $this->option_key . '['. $args['id'] .'][]" class="wooless-multiple-select" multiple="multiple" data-placeholder="' . $args['placeholder'] . '">';
+        foreach ( $args['options'] as $key => $label) {
+            $html .= '<option value="' . $key . '" ' . (in_array($key, $values) ? 'selected' : '') .'>' . $label . '</option>';
+        }
+        $html .= '</select>'; 
+        $html .= $this->render_field_description( $args ); 
+        echo $html;
+    }
+
     public function render_field_description( $args, $inline = false )
     {
         if ( isset( $args['description'] ) ) {
@@ -130,4 +145,30 @@ class BaseSettings {
 
         return '';
     }
+
+    public function register_settings_navtab( $active_tab )
+    {
+        echo sprintf(
+            '<a href="/wp-admin/admin.php?page=wooless-settings&tab=%s" class="nav-tab %s">%s</a>',
+            $this->tab_key,
+            $active_tab == $this->tab_key ? 'nav-tab-active' : '',
+            $this->page_label
+        );
+    }
+
+    public function render_settings_tab( $active_tab )
+    {
+        if ( $active_tab === $this->tab_key ) {
+            settings_fields( $this->option_key ); 
+            do_settings_sections( $this->option_key );
+        }
+    }
+
+    public function render_settings_footer_tab( $active_tab ) {
+        if ( $active_tab !== $this->tab_key ) return;
+
+        $this->footer_callback();
+    }
+
+    public function footer_callback() {}
 }

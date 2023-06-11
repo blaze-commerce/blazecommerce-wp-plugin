@@ -7,6 +7,7 @@ use BlazeWooless\TypesenseClient;
 class ProductPageSettings extends BaseSettings 
 {
     private static $instance = null;
+    public $tab_key = 'product';
 
     public static function get_instance()
     {

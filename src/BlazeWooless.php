@@ -20,10 +20,8 @@ class BlazeWooless
 
     public function init()
     {
-        // var_dump('blaze wooless'); exit;
         // add_action('ts_product_update', array( $this, 'revalidate_frontend_path' ), 10, 1);
         // add_action('next_js_revalidation_event', array( $this, 'do_next_js_revalidation_event' ), 10, 2);
-        // add_action( 'admin_init', array( $this, 'register_settings' ), 10, 1 );
         add_action( 'init', array( $this, 'register_extensions' ) );
         add_action('wp_update_nav_menu', array( Menu::get_instance(), 'update_typesense_document_on_menu_update' ), 10, 2);
         add_action('edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3);
@@ -40,6 +38,7 @@ class BlazeWooless
     {
         $settings = array(
             '\\BlazeWooless\\Settings\\GeneralSettings',
+            '\\BlazeWooless\\Settings\\RegionalSettings',
             '\\BlazeWooless\\Settings\\ProductPageSettings',
         );
 
@@ -56,6 +55,7 @@ class BlazeWooless
             '\\BlazeWooless\\Extensions\\CustomProductTabsForWoocommerce',
             '\\BlazeWooless\\Extensions\\JudgeMe',
             '\\BlazeWooless\\Extensions\\ProductAddons',
+            '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
             '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
             '\\BlazeWooless\\Extensions\\YoastSEO',
         );
