@@ -7,11 +7,12 @@ use BlazeWooless\TypesenseClient;
 class GeneralSettings extends BaseSettings {
     private static $instance = null;
     public $tab_key = 'general';
+    public $page_label = 'General';
 
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_general_settings_options', 'wooless_general_settings_section', 'General' );
+            self::$instance = new self( 'wooless_general_settings_options' );
         }
 
         return self::$instance;
@@ -49,25 +50,30 @@ class GeneralSettings extends BaseSettings {
     public function settings()
     {
         return array(
-            array(
-                'id' => 'environment',
-                'label' => 'Environment',
-                'type' => 'select',
-                'args' => array(
-                    'description' => 'Select which environment to use.',
-                    'options' => array(
-                        'test' => 'Test',
-                        'live' => 'Live',
+            'wooless_general_settings_section' => array(
+                'label' => 'General Settings',
+                'options' => array(
+                    array(
+                        'id' => 'environment',
+                        'label' => 'Environment',
+                        'type' => 'select',
+                        'args' => array(
+                            'description' => 'Select which environment to use.',
+                            'options' => array(
+                                'test' => 'Test',
+                                'live' => 'Live',
+                            ),
+                        ),
                     ),
-                ),
-            ),
-            array(
-                'id' => 'api_key',
-                'label' => 'API Key',
-                'type' => 'password',
-                'args' => array(
-                    'description' => 'API Key generated from the wooless admin portal.'
-                ),
+                    array(
+                        'id' => 'api_key',
+                        'label' => 'API Key',
+                        'type' => 'password',
+                        'args' => array(
+                            'description' => 'API Key generated from the wooless admin portal.'
+                        ),
+                    ),
+                )
             ),
         );
     }

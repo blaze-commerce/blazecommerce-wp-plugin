@@ -4,15 +4,12 @@ namespace BlazeWooless\Settings;
 
 class BaseSettings {
     public $option_key;
-    public $section_key;
     public $page_label;
     public $tab_key;
 
-    public function __construct( $option_key, $section_key, $page_label )
+    public function __construct( $option_key )
     {
         $this->option_key = $option_key;
-        $this->section_key = $section_key;
-        $this->page_label = $page_label;
 
         $this->register_hooks();
         
@@ -28,27 +25,29 @@ class BaseSettings {
             add_option( $this->option_key );
         }
 
-        add_settings_section(
-            $this->section_key,
-            $this->page_label,
-            array( $this, 'section_callback' ),
-            $this->option_key,
-        );
-
-        foreach ( $this->settings() as $setting ) {
-            add_settings_field(	
-                $setting['id'],
-                $setting['label'],
-                array( $this, 'field_callback_' . $setting['type'] ),
+        foreach ( $this->settings() as $section_key => $section ) {
+            add_settings_section(
+                $section_key,
+                $section['label'],
+                null,
                 $this->option_key,
-                $this->section_key,
-                array_merge(
-                    $setting['args'],
-                    array(
-                        'id' => $setting['id'],
-                    ),
-                ),
             );
+
+            foreach ($section['options'] as $setting) {
+                add_settings_field(	
+                    $setting['id'],
+                    $setting['label'],
+                    array( $this, 'field_callback_' . $setting['type'] ),
+                    $this->option_key,
+                    $section_key,
+                    array_merge(
+                        $setting['args'],
+                        array(
+                            'id' => $setting['id'],
+                        ),
+                    ),
+                );
+            }
         }
 
         register_setting(

@@ -30,6 +30,8 @@ class BlazeWooless
 
         $this->register_settings();
         
+        $this->register_features();
+        
         Ajax::get_instance();
         Woocommerce::get_instance();
     }
@@ -46,6 +48,17 @@ class BlazeWooless
             // Instantiating the settings will register an admin_init hook to add the configuration
             // See here BlazeWooless\Settings\BaseSEttings.php @ line 18
             $setting::get_instance();
+        }
+    }
+
+    public function register_features()
+    {
+        $features = array(
+            '\\BlazeWooless\\Features\\AttributeSettings',
+        );
+
+        foreach ( $features as $feature ) {
+            $feature::get_instance();
         }
     }
 

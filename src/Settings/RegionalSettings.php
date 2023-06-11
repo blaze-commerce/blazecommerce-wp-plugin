@@ -7,6 +7,7 @@ use BlazeWooless\TypesenseClient;
 class RegionalSettings extends BaseSettings {
     private static $instance = null;
     public $tab_key = 'regions';
+    public $page_label = 'Regional Settings';
 
     public static function get_instance()
     {
@@ -49,13 +50,18 @@ class RegionalSettings extends BaseSettings {
     public function settings()
     {
         return array(
-            array(
-                'id' => 'regions',
-                'label' => 'Regions',
-                'type' => 'multiselect',
-                'args' => array(
-                    'options' => \WC()->countries->get_allowed_countries(),
-                    'placeholder' => 'Select countries',
+            'wooless_regional_settings_section' => array(
+                'label' => 'Regional Data',
+                'options' => array(
+                    array(
+                        'id' => 'regions',
+                        'label' => 'Regions',
+                        'type' => 'multiselect',
+                        'args' => array(
+                            'options' => \WC()->countries->get_allowed_countries(),
+                            'placeholder' => 'Select countries',
+                        ),
+                    ),
                 ),
             ),
         );
