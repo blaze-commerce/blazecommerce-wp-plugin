@@ -145,7 +145,10 @@ class CalculateShipping
             );
         }, $available_methods['rates'] );
 
-        $response = new \WP_REST_Response( $rates );
+        $response = new \WP_REST_Response( array(
+            'subtotal' => WC()->cart->subtotal,
+            'rates' => $rates,
+        ) );
 
         // Add a custom status code
         $response->set_status( 201 );

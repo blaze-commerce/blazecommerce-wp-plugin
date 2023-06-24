@@ -76,11 +76,16 @@ class AttributeSettings
 
     public function add_available_product_attribute( $product_data, $product_id )
     {
+        ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
         $product = wc_get_product($product_id);
         $product_type = $product->get_type();
 
         if ( $product_type === 'variable' ) {
             $attributes = $product->get_attributes();
+
+            // var_dump($attributes); exit;
 
             $generated_attributes = array();
 
@@ -89,14 +94,31 @@ class AttributeSettings
                     'name' => $key,
                     'options' => $attribute->get_options(),
                 );
+                if ( $attribute->is_taxonomy() ) {
+                    $options = array_reduce( $attribute->get_terms(), function( $carry, $term ) {
+                        $carry[$term->slug] = $term->name;
+                        return $carry;
+                    }, array() );
+                } else {
+                    $options = array_reduce( $attribute->get_options(), function( $carry, $option ) {
+                        $carry[$option] = ucfirst($option);
+                        return $carry;
+                    }, array() );
+                }
+
+                $attribute_to_register['options'] = $options;
+
                 if ( $attr = $attribute->get_taxonomy_object() ) {
                     $attribute_to_register['label'] = $attr->attribute_label;
+                    // var_dump(implode( ', ',  )); exit;
                 } else {
                     $attribute_to_register['label'] = $attribute->get_name();
                 }
 
                 $generated_attributes[] = $attribute_to_register;
             }
+
+            // exit;
 
             $product_data['attributes'] = $generated_attributes;
         }
@@ -124,7 +146,7 @@ class AttributeSettings
                 'args' => array(
                     'options' => array(
                         'select' => 'Select',
-                        'image' => 'Image',
+                        'boxed' => 'Boxed',
                         'swatch' => 'Swatch',
                     ),
                 ),

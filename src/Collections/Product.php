@@ -165,6 +165,18 @@ class Product extends BaseCollection
 
         $product_type = $product->get_type();
 
+        $currency = get_option('woocommerce_currency');
+
+        $default_price = [
+            $currency => floatval($product->get_price())
+        ];
+        $default_regular_price = [
+            $currency => floatval($product->get_regular_price())
+        ];
+        $default_sale_price = [
+            $currency => floatval($product->get_sale_price())
+        ];
+
         // Get variations if the product is a variable product
         $variations_data = [];
         if ($product_type === 'variable') {
@@ -172,16 +184,32 @@ class Product extends BaseCollection
             $variations = $variable_product->get_available_variations();
             foreach ($variations as $variation) {
                 $variation_obj = wc_get_product($variation['variation_id']);
+
+                $variant_thumbnail_id = get_post_thumbnail_id($variation['variation_id']);
+                $variant_attachment = get_post($variant_thumbnail_id);
+
                 $variations_data[] = [
                     'variationId' => $variation['variation_id'],
                     'attributes' => $variation['attributes'],
-                    'price' => floatval($variation_obj->get_price()),
-                    'regularPrice' => floatval($variation_obj->get_regular_price()),
-                    'salePrice' => floatval($variation_obj->get_sale_price()),
+                    'price' => array(
+                        $currency => floatval($variation_obj->get_price()),
+                    ),
+                    'regularPrice' => array(
+                        $currency => floatval($variation_obj->get_regular_price()),
+                    ),
+                    'salePrice' => array(
+                        $currency => floatval($variation_obj->get_sale_price()),
+                    ),
                     'stockQuantity' => empty($variation_obj->get_stock_quantity()) ? 0 : $variation_obj->get_stock_quantity(),
                     'stockStatus' => $variation_obj->get_stock_status(),
                     'onSale' => $variation_obj->is_on_sale(),
                     'sku' => $variation_obj->get_sku(),
+                    'image' => [
+                        'id' => $variant_thumbnail_id,
+                        'title' => $variant_attachment->post_title,
+                        'altText' => get_post_meta($variant_thumbnail_id, '_wp_attachment_image_alt', true),
+                        'src' => get_the_post_thumbnail_url($variation['variation_id']),
+                    ],
                 ];
             }
         }
@@ -227,17 +255,6 @@ class Product extends BaseCollection
             }
         }
         $taxonomies = $this->get_taxonomies( $product );
-        $currency = get_option('woocommerce_currency');
-
-        $default_price = [
-            $currency => floatval($product->get_price())
-        ];
-        $default_regular_price = [
-            $currency => floatval($product->get_regular_price())
-        ];
-        $default_sale_price = [
-            $currency => floatval($product->get_sale_price())
-        ];
 
         $product_data = [
             'id' => strval($product->get_id()),
