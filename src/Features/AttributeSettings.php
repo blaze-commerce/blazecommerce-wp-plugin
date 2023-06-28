@@ -85,14 +85,14 @@ class AttributeSettings
 
             foreach ($attributes as $key => $attribute) {
                 $attribute_to_register = array(
-                    'name' => $key,
+                    'slug' => $key,
                     'options' => $attribute->get_options(),
                 );
 
                 if ($attribute->is_taxonomy()) {
                     $options = array_map(function ($term) {
                         return [
-                            'name' => $term->name,
+                            'label' => $term->name,
                             'slug' => $term->slug,
                             'term_id' => $term->term_id,
 							'value' => $term->name,
@@ -101,7 +101,7 @@ class AttributeSettings
                 } else {
                     $options = array_map(function ($option) {
                         return [
-                            'name' => $option,
+                            'label' => $option,
                             'slug' => $option,
                             'term_id' => 0,
 							'value' => $option
@@ -119,7 +119,6 @@ class AttributeSettings
 
                 $generated_attributes[] = apply_filters('blaze_wooless_product_attribute_for_typesense', $attribute_to_register, $attribute);
             }
-
             $product_data['attributes'] = $generated_attributes;
         }
 

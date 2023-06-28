@@ -58,7 +58,7 @@ class WoocommerceVariationSwatches
     public function get_option_value($type, $term_id, $option)
     {
         // default value will be the option name 
-        $value = $option['name'];
+        $value = $option['label'];
         if(!empty($term_id)) {
             switch ($type) {
                 case "color":
@@ -70,14 +70,14 @@ class WoocommerceVariationSwatches
                     break;
                 case "button":
                     //TODO supply correct value
-                    $value = $option['name'];
+                    $value = $option['label'];
                     break;
                 case "radio":
                     //TODO supply correct value
-                    $value = $option['name'];
+                    $value = $option['label'];
                     break;
                 default:
-                    $value = $option['name'];
+                    $value = $option['label'];
             }
         }
 
