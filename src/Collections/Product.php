@@ -179,7 +179,6 @@ class Product extends BaseCollection
 
         // Get variations if the product is a variable product
         $variations_data = $default_attributes = [];
-        $attributes = $product->get_variation_attributes();
         if ($product_type === 'variable') {
             $variations = $product->get_available_variations();
             foreach ($variations as $variation) {
@@ -287,11 +286,9 @@ class Product extends BaseCollection
             'variations' => $variations_data,
             // Add variations data
             'crossSellData' => $cross_sell_data,
-            'attributes' => $attributes,
             'defaultAttributes' => $default_attributes,
             'upsellData' => $upsell_data,
             'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
-            // 'attributes' => $attributes,
             // 'additional_information_shipping' => $shipping,
         ];
         return apply_filters('blaze_wooless_product_data_for_typesense', $product_data, $product_id);
