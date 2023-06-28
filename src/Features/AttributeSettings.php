@@ -88,18 +88,25 @@ class AttributeSettings
                     'name' => $key,
                     'options' => $attribute->get_options(),
                 );
+
                 if ($attribute->is_taxonomy()) {
-                    $options = array_reduce($attribute->get_terms(), function ($carry, $term) {
-                        $carry['name'] = $term->name;
-                        $carry['slug'] = $term->slug;
-                        return $carry;
-                    }, array());
+                    $options = array_map(function ($term) {
+                        return [
+                            'name' => $term->name,
+                            'slug' => $term->slug,
+                            'term_id' => $term->term_id,
+							'value' => $term->name,
+                        ];
+                    }, $attribute->get_terms());
                 } else {
-                    $options = array_reduce($attribute->get_options(), function ($carry, $option) {
-						$carry['name'] = $option;
-                        $carry['slug'] = $option;
-                        return $carry;
-                    }, array());
+                    $options = array_map(function ($option) {
+                        return [
+                            'name' => $option,
+                            'slug' => $option,
+                            'term_id' => 0,
+							'value' => $option
+                        ];
+                    }, $attribute->get_options());
                 }
 
                 $attribute_to_register['options'] = $options;
