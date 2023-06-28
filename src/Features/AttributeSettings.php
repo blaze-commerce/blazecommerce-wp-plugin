@@ -119,6 +119,7 @@ class AttributeSettings
 
                 $generated_attributes[] = apply_filters('blaze_wooless_product_attribute_for_typesense', $attribute_to_register, $attribute);
             }
+            $product_data['defaultAttributes'] = $product->get_default_attributes();
             $product_data['attributes'] = $generated_attributes;
         }
 

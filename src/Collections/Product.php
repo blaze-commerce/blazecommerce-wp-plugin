@@ -211,8 +211,6 @@ class Product extends BaseCollection
                     ],
                 ];
             }
-
-            $default_attributes = $product->get_default_attributes();
         }
 
         $cross_sell_ids = $product->get_cross_sell_ids();
@@ -286,7 +284,6 @@ class Product extends BaseCollection
             'variations' => $variations_data,
             // Add variations data
             'crossSellData' => $cross_sell_data,
-            'defaultAttributes' => $default_attributes,
             'upsellData' => $upsell_data,
             'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
             // 'additional_information_shipping' => $shipping,
