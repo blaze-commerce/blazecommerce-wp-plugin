@@ -1,3 +1,53 @@
 #sync-results-container {
     margin-top: 10px;
 }
+
+.blaze-wooless-layout-editor {
+    display: flex;
+    background-color: #1e2327;
+}
+.blaze-wooless-draggable-block {
+    background: white;
+    padding: 10px;
+    border: 1px solid #ccc;
+    cursor: grab;
+}
+.blaze-wooless-draggable-panel h2 {
+    background: transparent;
+    margin: 0;
+    padding: 20px 20px;
+    color: #fff;
+    height: 25px;
+    display: flex;
+    align-items: center;
+}
+.blaze-wooless-draggable-block.disabled {
+    opacity: 0.5;
+}
+.blaze-wooless-draggable-panel {
+    width: 350px;
+}
+.blaze-wooless-draggable-panel-container {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccc;
+}
+.blaze-wooless-draggabbe-canvas {
+    background: white;
+    width: 100%;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border-bottom: 1px solid #ccc;
+    align-items: stretch;
+}
+
+.blaze-wooless-draggabbe-canvas .blaze-wooless-draggable-block {
+    display: flex;
+    width: auto !important;
+}
+.blaze-wooless-draggabbe-canvas .blaze-wooless-draggable-block .remove {
+    margin-left: auto;
+    cursor: pointer;
+}

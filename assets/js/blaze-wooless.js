@@ -132,7 +132,91 @@
       // if ( jQuery().chosen ) {
       //   $(document.body).find( '.wooless-multiple-select' ).chosen();
       // }
+
+      this.initializeDragabbleContents();
     },
+
+    disableDroppedElement: function(element) {
+      var droppedElement = $(element);
+      var blockId = droppedElement.data('block_id');
+      var blockType = droppedElement.data('block_type');
+      var blockElement = $('.blaze-wooless-draggable-panel').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+
+      if (blockType === 'static') {
+        blockElement.draggable('disable');
+        blockElement.addClass('disabled');
+      }
+    },
+
+    addRemoveButtonToDroppedElement: function(element) {
+      var droppedElement = $(element);
+      var blockId = droppedElement.data('block_id');
+      var blockElement = $('.blaze-wooless-draggable-panel').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+
+      if (droppedElement.find('.remove').length === 0) {
+        var removeButton = $( '<span class="remove">✕</span>' );
+        removeButton.on('click', function() {
+          droppedElement.remove();
+          blockElement.draggable('enable');
+          blockElement.removeClass('disabled');
+          blazeWooless.generateSaveData();
+        });
+        droppedElement.append(removeButton)
+      }
+    },
+
+    initializeDragabbleContents: function() {
+      $('.blaze-wooless-draggable-block').draggable({
+        connectToSortable: ".blaze-wooless-draggabbe-canvas",
+        opacity: 0.7,
+        helper: "clone",
+      });
+      $('.blaze-wooless-draggabbe-canvas').droppable({
+        accept: ".blaze-wooless-draggable-block",
+        drop: function( event, ui ) {
+          blazeWooless.disableDroppedElement(ui.helper);
+          blazeWooless.addRemoveButtonToDroppedElement(ui.helper);
+        },
+      });
+      $('.blaze-wooless-draggabbe-canvas').sortable({
+        stop: function(e, ui) {
+          blazeWooless.generateSaveData();
+        }
+      });
+
+      this.loadInitialData();
+    },
+
+    generateSaveData: function() {
+      const data = $.map($('.blaze-wooless-draggabbe-canvas').find('.blaze-wooless-draggable-block'), function(el) {
+        var $el = $(el);
+        var blockType = $el.data('block_type');
+        var blockId = $el.data('block_id');
+        var index = $el.index();
+        return {
+          position: index,
+          blockType: blockType,
+          blockId: blockId,
+        };
+      })
+
+      $('input[name="homepage_layout"]').val(JSON.stringify(data));
+    },
+    loadInitialData: function() {
+      var datas = JSON.parse($('input[name="homepage_layout"]').val());
+      datas.forEach(function(element) {
+        $('.blaze-wooless-draggable-block[data-block_id="' + element.blockId + '"]').clone().appendTo('.blaze-wooless-draggabbe-canvas');
+      });
+      $('.blaze-wooless-draggabbe-canvas').sortable( "refresh" );
+      datas.forEach(function(element) {
+        if (element.blockType === 'static') {
+          var blockElement = $('.blaze-wooless-draggabbe-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + element.blockId + '"]')
+          blazeWooless.disableDroppedElement(blockElement);
+          blazeWooless.addRemoveButtonToDroppedElement(blockElement);
+        }
+      });
+      console.log(datas);
+    }
   }
 
   $(document).ready(function() {
