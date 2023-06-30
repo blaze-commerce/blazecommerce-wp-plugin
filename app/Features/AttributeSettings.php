@@ -76,9 +76,6 @@ class AttributeSettings
 
     public function add_available_product_attribute( $product_data, $product_id )
     {
-        ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
         $product = wc_get_product($product_id);
         $product_type = $product->get_type();
 

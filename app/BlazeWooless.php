@@ -56,6 +56,7 @@ class BlazeWooless
         $features = array(
             '\\BlazeWooless\\Features\\AttributeSettings',
             '\\BlazeWooless\\Features\\CalculateShipping',
+            '\\BlazeWooless\\Features\\DraggableContent',
         );
 
         foreach ( $features as $feature ) {
