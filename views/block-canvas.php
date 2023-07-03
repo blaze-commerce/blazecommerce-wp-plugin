@@ -1,2 +1,2 @@
-<div class="blaze-wooless-draggabbe-canvas">
+<div class="blaze-wooless-draggable-canvas">
 </div>

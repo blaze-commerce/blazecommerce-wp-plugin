@@ -6,7 +6,7 @@
     display: flex;
     background-color: #1e2327;
 }
-.blaze-wooless-draggable-block {
+.blaze-wooless-draggable-block .content {
     background: white;
     padding: 10px;
     border: 1px solid #ccc;
@@ -32,7 +32,7 @@
     background: #fff;
     border: 1px solid #ccc;
 }
-.blaze-wooless-draggabbe-canvas {
+.blaze-wooless-draggable-canvas {
     background: white;
     width: 100%;
     padding: 10px;
@@ -43,11 +43,63 @@
     align-items: stretch;
 }
 
-.blaze-wooless-draggabbe-canvas .blaze-wooless-draggable-block {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block {
     display: flex;
     width: auto !important;
+    flex-wrap: wrap;
 }
-.blaze-wooless-draggabbe-canvas .blaze-wooless-draggable-block .remove {
+
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block .content {
+    width: 100%;
+    display: flex;
+}
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block .remove {
     margin-left: auto;
     cursor: pointer;
+}
+
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block span.caret-status {
+    margin-left: auto;
+    cursor: pointer;
+}
+
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block span.caret-status:before {
+    content: "\f140";
+}
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block.open span.caret-status:before {
+    content: "\f142";
+}
+
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block .configuration {
+    display: none;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+    background-color: #fff;
+}
+
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block.open .configuration {
+    display: block;
+}
+
+.blaze-wooless-draggable-block .configuration .footer {
+    width: 100%;
+    display: flex;
+    justify-content: end;
+    gap: 5px;
+}
+
+.blaze-wooless-draggable-block .configuration .row-item {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    position: relative;
+    background-color: #fff;
+}
+
+.blaze-wooless-draggable-block .configuration .row-item .remove {
+    position: absolute;
+    top: 5px;
+    right: 10px;
 }
