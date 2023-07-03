@@ -10,6 +10,8 @@
     "dev": "webpack --config webpack.config.js --mode=development --watch"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^1.9.5",
+    "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-redux": "^8.1.1",
@@ -18,6 +20,7 @@
   "devDependencies": {
     "@babel/core": "^7.22.5",
     "@babel/preset-env": "^7.22.5",
+    "@babel/preset-flow": "^7.22.5",
     "@babel/preset-react": "^7.22.5",
     "@types/react": "^18.2.14",
     "@types/react-dom": "^18.2.6",

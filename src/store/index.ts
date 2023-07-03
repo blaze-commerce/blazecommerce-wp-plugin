@@ -1,19 +1,15 @@
-import { createStore } from 'redux';
-import { combineReducers } from 'redux';
-import { contentsReducer, hydrateContentsReducer } from './reducers/contents';
+import { configureStore } from '@reduxjs/toolkit';
+// import { contentsReducer } from './reducers/contents';
+import counterReducer from './reducers/counterSlice';
+import blockReducer from './reducers/blockSlice';
 
-export type ApplicationState = {
-  contents: ReturnType<typeof contentsReducer>;
-}
-
-const rootReducer = combineReducers({
-  contents: contentsReducer
+export const store = configureStore({
+  reducer: {
+    counter: counterReducer,
+    blocks: blockReducer,
+  }
 });
 
-export const initStore = (initialState?: Partial<ApplicationState>) => ({
-  contents: hydrateContentsReducer(initialState?.contents)
-})
+export type RootState = ReturnType<typeof store.getState>
 
-const store = createStore(rootReducer);
-
-export default store;
+export type AppDispatch = typeof store.dispatch;
