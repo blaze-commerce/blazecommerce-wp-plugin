@@ -153,6 +153,9 @@ class AttributeSettings
 
     public function save_settings( $options )
     {
+        if ( !is_array( $options )) {
+            $options = array();
+        }
         $attributes = array_filter( $options, function( $option, $key ) {
             return str_starts_with( $key, 'attribute_' );
         }, ARRAY_FILTER_USE_BOTH);

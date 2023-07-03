@@ -12,7 +12,6 @@ class TypesenseClient
     private $host = null;
     public $store_id = null;
     private $client = null;
-    public $collections = array();
 
     public static function get_instance()
     {
@@ -27,17 +26,15 @@ class TypesenseClient
     {
         $decoded_api = bw_get_decoded_api_data( $settings['api_key'] );
         $this->api_key = $decoded_api['private_key'];
-        $this->store_id = $decoded_api['store_id'];            
-
-        $client = $this->get_client( $this->api_key, $settings['environment']);
+        $this->store_id = $decoded_api['store_id'];
+        
+        try {
+            $client = $this->get_client( $this->api_key, $settings['environment']);
+        } catch (\Throwable $th) {
+            $client = null;
+        }
 
         $this->client = $client;
-
-        $this->collections = array(
-            'menu' => 'menu-' . $this->store_id,
-            'site_info' => 'site_info-' . $this->store_id,
-            'product' => 'product-' . $this->store_id,
-        );
 
         // ajax endpoints
         // add_action( 'wp_ajax_blaze_wooless_test_connection', array( $this, 'blaze_wooless_test_connection' ) );

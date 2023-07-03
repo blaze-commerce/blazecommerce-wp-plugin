@@ -71,7 +71,7 @@ class BlazeWooless
             '\\BlazeWooless\\Extensions\\JudgeMe',
             '\\BlazeWooless\\Extensions\\ProductAddons',
             '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
-            '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
+            // '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
             '\\BlazeWooless\\Extensions\\YoastSEO',
         );
 
