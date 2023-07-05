@@ -1,4 +1,23 @@
 (function ($) {
+  var blockConfig = {
+    banner: {
+      blockId: 'banner',
+      blockType: 'single',
+      configurations: [
+        {
+          type: 'repeater',
+          fields: [
+            { name: 'banner-image', type: 'text' },
+            { name: 'banner-title', type: 'text' },
+            { name: 'banner-subtitle', type: 'text' },
+            { name: 'banner-cta-url', type: 'text' },
+            { name: 'banner-cta-text', type: 'text' },
+          ]
+        }
+      ]
+    }
+  }
+
   var blazeWooless = {
     syncResultsContainer: '#sync-results-container',
     syncProductLink: '#sync-product-link',
@@ -259,7 +278,7 @@
   function configurationTemplate(blockId) {
     switch (blockId) {
       case "banner":
-        return bannerConfigTemplate();
+        return repeaterTemplate();
       default:
         return '';
     }
@@ -274,7 +293,7 @@
     }
   }
 
-  function bannerConfigTemplate() {
+  function repeaterTemplate() {
     return `
       <div class="items">
       </div>

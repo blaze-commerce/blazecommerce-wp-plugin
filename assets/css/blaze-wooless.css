@@ -75,7 +75,6 @@
     width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
-    margin-bottom: 10px;
     background-color: #fff;
 }
 
@@ -102,4 +101,8 @@
     position: absolute;
     top: 5px;
     right: 10px;
+}
+
+.blaze-wooless-draggable-block .input-wrapper {
+    margin-bottom: 10px;
 }

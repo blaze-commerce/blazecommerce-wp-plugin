@@ -27,18 +27,40 @@ class WoocommerceAeliaCurrencySwitcher
 
     public function add_multicurrency_prices( $product_data, $product_id )
     {
-        // foreach ( \WCPBC_Pricing_Zones::get_zones() as $zone ) {
-        //     $currency = $zone->get_currency();
-        //     if ( isset( $product_data["price"] ) && !isset( $product_data["price"][ $currency ] ) ) {
-        //         $product_data["price"][ $currency ] = floatval($zone->get_exchange_rate_price_by_post( $product_id, '_price' ));
-        //     }
-        //     if ( isset( $product_data["regularPrice"] ) && !isset( $product_data["regularPrice"][ $currency ] ) ) {
-        //         $product_data["regularPrice"][ $currency ] = floatval($zone->get_exchange_rate_price_by_post( $product_id, '_regular_price' ));
-        //     }
-        //     if ( isset( $product_data["salePrice"] ) && !isset( $product_data["salePrice"][ $currency ] ) ) {
-        //         $product_data["salePrice"][ $currency ] = floatval($zone->get_exchange_rate_price_by_post( $product_id, '_sale_price' ));
-        //     }
-        // }
+        $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+
+        $regular_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices($product_id);
+        $product_data["regularPrice"] = $regular_prices;
+
+        $sale_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_sale_prices($product_id);
+        $product_data["salePrice"] = $sale_prices;
+
+        foreach ($available_currencies as $currency => $value) {
+            $converted_prices = array();
+            if (! isset( $product_data['regularPrice'][ $currency ]) || ! isset( $product_data['salePrice'][ $currency ]) ) {
+                $product = wc_get_product( $product_id );
+                $converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
+                $converted_prices = array(
+                    'regular_price' => $converted_product->get_regular_price(),
+                    'sale_price' => $converted_product->get_sale_price(),
+                );
+            }
+
+            if ( ! isset( $product_data['regularPrice'][ $currency ]) ) {
+                $product_data['regularPrice'][ $currency ] = $converted_prices['regular_price'];
+            }
+
+            if ( ! isset( $product_data['salePrice'][ $currency ]) ) {
+                $product_data['salePrice'][ $currency ] = $converted_prices['sale_price'];
+            }
+
+            if ( ! isset( $product_data['price'][ $currency ]) ) {
+                $_sale_price = $product_data['salePrice'][ $currency ];
+                $_regular_price = $product_data['regularPrice'][ $currency ];
+                $product_data['price'][ $currency ] = !empty( $_sale_price ) ? $_sale_price : $_regular_price;
+            }
+        }
+
         return $product_data;
     }
 
