@@ -32,7 +32,7 @@
     background: #fff;
     border: 1px solid #ccc;
 }
-.blaze-wooless-draggable-canvas {
+.blaze-wooless-draggable-canvas-container {
     background: white;
     width: 100%;
     padding: 10px;
@@ -105,4 +105,9 @@
 
 .blaze-wooless-draggable-block .input-wrapper {
     margin-bottom: 10px;
+}
+
+/* Region Selector */
+#region_selector {
+    margin-bottom: 20px;
 }
