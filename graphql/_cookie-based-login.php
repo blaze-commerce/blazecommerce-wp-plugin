@@ -70,3 +70,32 @@ add_filter('graphql_response_headers_to_send', function ($headers) {
 
     return $headers;
 }, 20);
+
+
+/**
+ * Adds GraphQl Logout Mutation.
+ * This will logout the currently logged in user
+ */
+add_action('graphql_register_types', function () {
+    register_graphql_mutation(
+        'logout',
+        array(
+            'inputFields'         => array(),
+            'outputFields'        => array(
+                'status' => array(
+                    'type'        => 'String',
+                    'description' => 'Logout operation status',
+                    'resolve'     => function( $payload ) {
+                        return $payload['status'];
+                    },
+                ),
+            ),
+            'mutateAndGetPayload' => function() {
+                // Logout and destroy session.
+                wp_logout();
+
+                return array( 'status' => 'SUCCESS' );
+            },
+        )
+    );
+});
