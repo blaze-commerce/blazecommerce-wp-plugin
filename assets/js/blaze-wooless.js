@@ -1,20 +1,54 @@
 (function ($) {
-  var blockConfig = {
+  var fields = {
     banner: {
-      blockId: 'banner',
-      blockType: 'single',
-      configurations: [
-        {
-          type: 'repeater',
-          fields: [
-            { name: 'banner-image', type: 'text' },
-            { name: 'banner-title', type: 'text' },
-            { name: 'banner-subtitle', type: 'text' },
-            { name: 'banner-cta-url', type: 'text' },
-            { name: 'banner-cta-text', type: 'text' },
-          ]
-        }
-      ]
+      bannerImage: {
+        label: 'Image',
+        name: 'banner-image', 
+      },
+      bannerTitle: {
+        label: 'Title',
+        name: 'banner-title', 
+      },
+      bannerSubtitle: {
+        label: 'Subtitle',
+        name: 'banner-subtitle', 
+      },
+      bannerCTAUrl: {
+        label: 'Call to action URL',
+        name: 'banner-cta-url', 
+      },
+      bannerCTAText: {
+        label: 'Call to action text',
+        name: 'banner-cta-text', 
+      },
+    },
+    companies: {
+      image: {
+        label: 'Image',
+        name: 'company-image', 
+      },
+      redirectUrl: {
+        label: 'Redirect URL',
+        name: 'company-redirect-url', 
+      },
+      name: {
+        label: 'Name',
+        name: 'company-name', 
+      },
+    },
+    testimonials: {
+      text: {
+        label: 'Text',
+        name: 'testimony-text', 
+      },
+      authorName: {
+        label: 'Author Name',
+        name: 'testimony-author-name', 
+      },
+      authorPosition: {
+        label: 'Author Position',
+        name: 'testimony-author-position', 
+      },
     }
   }
 
@@ -195,25 +229,16 @@
       var droppedElement = $(element);
       var blockId = droppedElement.data('block_id');
       var blockMetaData = droppedElement.data('block_metadata');
-      console.log('blockMetaData', blockMetaData);
       var blockElement = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
       
-      console.log(blockMetaData);
       if (blockElement.find('.configuration').length > 0) {
         return;
       }
       var caretState = $('<span class="caret-status dashicons"></span>')
       blockElement.find('.content').append(caretState)
 
-      var configContent = $('<div class="configuration">' + configurationTemplate(blockId) + '</div>');
+      var configContent = configurationTemplate(blockId);
 
-      if (blockId === 'banner') {
-        configContent.find('.items').sortable({
-          stop: function(e, ui) {
-            generateMetaDataFromElement(ui.item)
-          }
-        });
-      }
       blockElement.append(configContent);
 
       loadConfigData(blockId);
@@ -229,10 +254,10 @@
         accept: ".blaze-wooless-draggable-block",
         drop: function( event, ui ) {
           blazeWooless.disableDroppedElement(ui.helper);
-          // blazeWooless.addRemoveButtonToDroppedElement(ui.helper);
           blazeWooless.addCollapsedConfig(ui.helper);
         },
       });
+
       $('.blaze-wooless-draggable-canvas').sortable({
         stop: function(e, ui) {
           blazeWooless.generateSaveData();
@@ -279,7 +304,6 @@
           var blockElement = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + element.blockId + '"]')
           blockElement.data('block_metadata', element.metaData)
           blazeWooless.disableDroppedElement(blockElement);
-          // blazeWooless.addRemoveButtonToDroppedElement(blockElement);
           blazeWooless.addCollapsedConfig(blockElement);
         }
       });
@@ -290,16 +314,15 @@
   function configurationTemplate(blockId) {
     switch (blockId) {
       case "banner":
-        return repeaterTemplate();
-      default:
-        return '';
-    }
-  }
-
-  function loadConfigData(blockId) {
-    switch (blockId) {
-      case "banner":
-        return loadBannerConfigData();
+      case "testimonials":
+      case "companies":
+        var configContent = $('<div class="configuration">' + repeaterTemplate() + '</div>');
+        configContent.find('.items').sortable({
+          stop: function(e, ui) {
+            generateMetaDataFromElement(ui.item)
+          }
+        });
+        return configContent;
       default:
         return '';
     }
@@ -346,24 +369,60 @@
     element.find('.configuration .items').append(itemEl);
   }
 
-  function loadBannerConfigData() {
-    var element = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="banner"]');
+  function rowItemTemplate(blockId, data = false) {
+    var generatedFields = [];
+    var defaultData = {};
+    var initialFieldValues = {};
+    for (var key in fields[blockId]) {
+      var label = fields[blockId][key].label;
+      var name = fields[blockId][key].name;
+      generatedFields.push('<div class="input-wrapper"><label>'+label+'</label>: <input type="text" class="'+name+'" /></div>');
+
+      initialFieldValues[key] = '';
+    }
+    if (!data) {
+      data = initialFieldValues;
+    }
+    var itemEl = $('<div class="row-item"><span class="remove">✕</span>'+generatedFields.join('')+'</div>')
+
+    countries.forEach(function(country) {
+      defaultData[country] = data;
+    });
+
+
+    itemEl.data('row-data', defaultData)
+    return itemEl;
+  }
+
+  function addRowItem(blockId) {
+    if (typeof fields[blockId] === 'undefined') return '';
+
+    var element = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+
+    var itemEl = rowItemTemplate(blockId);
+    element.find('.configuration .items').append(itemEl);
+  }
+
+  function loadConfigData(blockId) {
+    var element = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="'+blockId+'"]');
     var metaData = element.data('block_metadata');
-    console.log(loadBannerConfigData, metaData);
+    var selectedCountry = $('select#region_selector').val();
 
     if (metaData && metaData.length > 0) {
       metaData.forEach(function(data) {
-        var itemEl = $(bannerRowItemTemplate());
-        itemEl.find('input.banner-image').val(data.bannerImage);
-        itemEl.find('input.banner-title').val(data.bannerTitle);
-        itemEl.find('input.banner-subtitle').val(data.bannerSubtitle);
-        itemEl.find('input.banner-cta-url').val(data.bannerCTAUrl);
-        itemEl.find('input.banner-cta-text').val(data.bannerCTAText);
+        console.log(data);
+        var itemEl = rowItemTemplate(blockId);
+        itemEl.data('row-data', data);
 
-        element.find('.configuration .items').append(itemEl)
+        for (var key in fields[blockId]) {
+          var name = fields[blockId][key].name;
+          itemEl.find('input.' + name).val(data[selectedCountry][key]);
+        }
+
+        element.find('.configuration .items').append(itemEl);
       })
     } else {
-      addBannerRowItem();
+      addRowItem(blockId);
     }
   }
 
@@ -387,41 +446,32 @@
 
   function generateRowItemsData(itemsElement) {
     var selectedCountry = $('select#region_selector').val();
+    var blockId = itemsElement.closest('.blaze-wooless-draggable-block').data('block_id')
 
     const data = $.map(itemsElement.find('.row-item'), function(item) {
       var itemEl = $(item);
       var rowData = itemEl.data('row-data');
-      console.log(rowData, 'rowData');
-      var bannerImage = itemEl.find('input.banner-image').val();
-      var bannerTitle = itemEl.find('input.banner-title').val();
-      var bannerSubtitle = itemEl.find('input.banner-subtitle').val();
-      var bannerCTAUrl = itemEl.find('input.banner-cta-url').val();
-      var bannerCTAText = itemEl.find('input.banner-cta-text').val();
+      var _data = {};
+      for (var key in fields[blockId]) {
+        var name = fields[blockId][key].name;
+        console.log('input.' + name);
+        _data[key] = itemEl.find('input.' + name).val();
+      }
 
-      var bannerData = {
-        bannerImage: bannerImage,
-        bannerTitle: bannerTitle,
-        bannerSubtitle: bannerSubtitle,
-        bannerCTAUrl: bannerCTAUrl,
-        bannerCTAText: bannerCTAText,
-      };
+      console.log(_data);
+      // var bannerImage = itemEl.find('input.banner-image').val();
+      // var bannerTitle = itemEl.find('input.banner-title').val();
+      // var bannerSubtitle = itemEl.find('input.banner-subtitle').val();
+      // var bannerCTAUrl = itemEl.find('input.banner-cta-url').val();
+      // var bannerCTAText = itemEl.find('input.banner-cta-text').val();
 
-      rowData[selectedCountry] = bannerData;
+      rowData[selectedCountry] = _data;
 
-      // var results = countries.reduce(function(carry, country) {
-      //   carry[country] = bannerData;
-      //   return carry;
-      // }, {});
 
       itemEl.data('row-data', rowData)
 
       return rowData;
     });
-
-    // var results = countries.reduce(function(carry, country) {
-    //   carry[country] = data;
-    //   return carry;
-    // }, {});
 
     return data;
   }
@@ -439,7 +489,8 @@
     });
 
     $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .add-item', function(e) {
-      addBannerRowItem();
+      var blockId = $(this).closest('.blaze-wooless-draggable-block').data('block_id');
+      addRowItem(blockId);
     });
 
     $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .row-item .remove', function(e) {
@@ -465,8 +516,10 @@
 
     $(document.body).on('change', 'select#region_selector', function(e) {
       var selectedRegion = e.target.value;
+      console.log('selectedRegion', selectedRegion);
       $.each($('.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block'), function(index, block) {
         console.log(block, 'block');
+        var blockId = $(block).data('block_id');
         var items = $(block).find('.configuration .items .row-item');
         if (items.length === 0) {
           return;
@@ -475,20 +528,14 @@
         $.each(items, function(i, item) {
           var itemEl = $(item)
           var rowData = itemEl.data('row-data');
-          itemEl.find('input.banner-image').val(rowData[selectedRegion].bannerImage);
-          itemEl.find('input.banner-title').val(rowData[selectedRegion].bannerTitle);
-          itemEl.find('input.banner-subtitle').val(rowData[selectedRegion].bannerSubtitle);
-          itemEl.find('input.banner-cta-url').val(rowData[selectedRegion].bannerCTAUrl);
-          itemEl.find('input.banner-cta-text').val(rowData[selectedRegion].bannerCTAText);
+          if (rowData && rowData[selectedRegion]) {
+            for (var key in fields[blockId]) {
+              var name = fields[blockId][key].name;
+              itemEl.find('input.' + name).val(rowData[selectedRegion][key]);
+            }
+          }
         })
       })
-      
-      // console.log(this, e.target.value);
-      // var bannerImage = itemEl.find('input.banner-image').val();
-      // var bannerTitle = itemEl.find('input.banner-title').val();
-      // var bannerSubtitle = itemEl.find('input.banner-subtitle').val();
-      // var bannerCTAUrl = itemEl.find('input.banner-cta-url').val();
-      // var bannerCTAText = itemEl.find('input.banner-cta-text').val();
     });
   });
 })(jQuery);
