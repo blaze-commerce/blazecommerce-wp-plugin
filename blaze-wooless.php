@@ -22,6 +22,7 @@ require_once plugin_dir_path(__FILE__) . 'lib/setting-helper.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/site-info/index.php';
 // require_once plugin_dir_path(__FILE__) . 'views/homepage-setting.php';
 // require_once plugin_dir_path(__FILE__) . 'views/site-message-setting.php';
+require_once plugin_dir_path(__FILE__) . 'graphql/index.php';
 
 // Initialize plugin
 \BlazeWooless\BlazeWooless::get_instance()->init();
