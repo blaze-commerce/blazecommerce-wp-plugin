@@ -30,10 +30,10 @@ require_once plugin_dir_path(__FILE__) . 'graphql/index.php';
 add_action('init', 'create_custom_jwt_secret_key');
 
 function create_custom_jwt_secret_key() {
-    $auth_key = wp_salt('auth');
     $jwt_key = get_option('wooless_custom_jwt_secret_key');
 
     if(!$jwt_key) {
+        $auth_key = wp_salt('auth');
         add_option( 'wooless_custom_jwt_secret_key', $auth_key );
     }
 }
