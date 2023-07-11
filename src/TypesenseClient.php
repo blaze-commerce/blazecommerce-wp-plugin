@@ -56,7 +56,7 @@ class TypesenseClient
     {
         $this->host = 'gq6r7nsikma359hep-1.a1.typesense.net';
         if ( $environment === 'live' ) {
-            $this->host = 'dky8huxwbpm16zrcp-1.a1.typesense.net';
+            $this->host = 'd5qgrfvxs1ouw48lp.a1.typesense.net';
         }
         return new Client([
             'api_key' => $api_key,
