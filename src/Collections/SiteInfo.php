@@ -1,6 +1,8 @@
 <?php
 namespace BlazeWooless\Collections;
 
+use BlazeWooless\Settings\RegionalSettings;
+
 class SiteInfo extends BaseCollection
 {
     private static $instance = null;
@@ -203,12 +205,18 @@ class SiteInfo extends BaseCollection
             $initial_additional_data = array();
     
             $site_currency = get_woocommerce_currency();
-            $default_region = array(
-                'country' => \RegionalDataHelper::$currency_country_map[ $site_currency ],
+            $currencies = array(
+                'countries' => \RegionalDataHelper::$currency_country_map[ $site_currency ],
                 'currency' => $site_currency,
+                'symbol' => html_entity_decode(get_woocommerce_currency_symbol( $site_currency )),
+                'symbolPosition'  => get_option( 'woocommerce_currency_pos' ),
+                'thousandSeparator' => get_option( 'woocommerce_price_thousand_sep' ),
+                'decimalSeparator'  => get_option( 'woocommerce_price_decimal_sep' ),
+                'precision' => wc_get_price_decimals(),
                 'default' => true,
             );
-            $initial_additional_data['regional_data'] = array( $default_region );
+            $initial_additional_data['currencies'] = array( $currencies );
+            $initial_additional_data['regions'] = RegionalSettings::get_selected_regions();
     
             $additional_data = apply_filters('blaze_wooless_additional_site_info', $initial_additional_data);
             foreach ($additional_data as $key => $value) {
@@ -358,7 +366,7 @@ class SiteInfo extends BaseCollection
 
         return array(
             'name' => 'site_logo',
-            'value' => $logo_image[0] ?: '',
+            'value' => $logo_image ? $logo_image[0] : '',
             'updated_at' => $logo_updated_at,
         );
     }

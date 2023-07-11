@@ -9,14 +9,14 @@ class Product extends BaseCollection
 
     public static function get_instance()
     {
-        if ( self::$instance === null ) {
+        if (self::$instance === null) {
             self::$instance = new self();
         }
 
         return self::$instance;
     }
 
-    function index_to_typesense()
+    public function index_to_typesense()
     {
         //Product indexing
 
@@ -45,10 +45,10 @@ class Product extends BaseCollection
                         array( 'name' => 'sku', 'type' => 'string' ),
                         array( 'name' => 'price', 'type' => 'object', "facet" => true ),
                         array( 'name' => 'regularPrice', 'type' => 'object' ),
-                        array( 
-                            'name' => 'salePrice', 
+                        array(
+                            'name' => 'salePrice',
                             'type' => 'object',
-                            'fields' => array( 
+                            'fields' => array(
                                 array( 'name' => 'amount', 'type' => 'float', 'sort' => true ),
                                 array( 'name' => 'currency', 'type' => 'string' ),
                              )
@@ -75,7 +75,7 @@ class Product extends BaseCollection
             $imported_products_count = 0;
 
             while (!$finished) {
-                $products = \wc_get_products( array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page ) );
+                $products = \wc_get_products(array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page ));
 
                 if (empty($products)) {
                     $finished = true;
@@ -85,12 +85,12 @@ class Product extends BaseCollection
                 $products_batch = array();
 
                 // Prepare products for indexing in Typesense
-                foreach ( $products as $product ) {
+                foreach ($products as $product) {
                     // Get the product data
-                    $product_data = $this->generate_typesense_data( $product );
+                    $product_data = $this->generate_typesense_data($product);
 
-                    if ( !$product_data ) {
-                        error_log( "Skipping product ID: " . $product->get_id() );
+                    if (!$product_data) {
+                        error_log("Skipping product ID: " . $product->get_id());
                         continue; // Skip this product if no product data is found
                     }
 
@@ -101,16 +101,16 @@ class Product extends BaseCollection
                 }
 
                 // Log the number of products in the batch
-                error_log( "Batch size: " . count( $products_batch ) );
+                error_log("Batch size: " . count($products_batch));
 
                 // Increment the page number
                 $page++;
 
                 // Import products to Typesense
                 try {
-                    $result = $this->import( $products_batch );
-                    $imported_products_count += count( $products_batch ); // Increment the count of imported products
-                } catch ( \Exception $e ) {
+                    $result = $this->import($products_batch);
+                    $imported_products_count += count($products_batch); // Increment the count of imported products
+                } catch (\Exception $e) {
                     error_log("Error importing products to Typesense: " . $e->getMessage());
                 }
             }
@@ -119,7 +119,7 @@ class Product extends BaseCollection
             echo "Imported products count: " . $imported_products_count . "\n";
 
             wp_die();
-        } catch ( \Exception $e ) {
+        } catch (\Exception $e) {
             $error_message = "Error: " . $e->getMessage();
             echo $error_message; // Print the error message for debugging purposes
             echo "<script>
@@ -130,7 +130,7 @@ class Product extends BaseCollection
         }
     }
 
-    public function generate_typesense_data( $product )
+    public function generate_typesense_data($product)
     {
         // Format product data for indexing
         $product_id = $product->get_id();
@@ -165,23 +165,50 @@ class Product extends BaseCollection
 
         $product_type = $product->get_type();
 
+        $currency = get_option('woocommerce_currency');
+
+        $default_price = [
+            $currency => floatval($product->get_price())
+        ];
+        $default_regular_price = [
+            $currency => floatval($product->get_regular_price())
+        ];
+        $default_sale_price = [
+            $currency => floatval($product->get_sale_price())
+        ];
+
         // Get variations if the product is a variable product
-        $variations_data = [];
+        $variations_data = $default_attributes = [];
         if ($product_type === 'variable') {
-            $variable_product = wc_get_product($product->get_id());
-            $variations = $variable_product->get_available_variations();
+            $variations = $product->get_available_variations();
             foreach ($variations as $variation) {
                 $variation_obj = wc_get_product($variation['variation_id']);
+
+                $variant_thumbnail_id = get_post_thumbnail_id($variation['variation_id']);
+                $variant_attachment = get_post($variant_thumbnail_id);
+
                 $variations_data[] = [
                     'variationId' => $variation['variation_id'],
                     'attributes' => $variation['attributes'],
-                    'price' => floatval($variation_obj->get_price()),
-                    'regularPrice' => floatval($variation_obj->get_regular_price()),
-                    'salePrice' => floatval($variation_obj->get_sale_price()),
+                    'price' => array(
+                        $currency => floatval($variation_obj->get_price()),
+                    ),
+                    'regularPrice' => array(
+                        $currency => floatval($variation_obj->get_regular_price()),
+                    ),
+                    'salePrice' => array(
+                        $currency => floatval($variation_obj->get_sale_price()),
+                    ),
                     'stockQuantity' => empty($variation_obj->get_stock_quantity()) ? 0 : $variation_obj->get_stock_quantity(),
                     'stockStatus' => $variation_obj->get_stock_status(),
                     'onSale' => $variation_obj->is_on_sale(),
                     'sku' => $variation_obj->get_sku(),
+                    'image' => [
+                        'id' => $variant_thumbnail_id,
+                        'title' => $variant_attachment->post_title,
+                        'altText' => get_post_meta($variant_thumbnail_id, '_wp_attachment_image_alt', true),
+                        'src' => get_the_post_thumbnail_url($variation['variation_id']),
+                    ],
                 ];
             }
         }
@@ -227,17 +254,8 @@ class Product extends BaseCollection
             }
         }
         $taxonomies = $this->get_taxonomies( $product );
-        $currency = get_option('woocommerce_currency');
 
-        $default_price = [
-            $currency => floatval($product->get_price())
-        ];
-        $default_regular_price = [
-            $currency => floatval($product->get_regular_price())
-        ];
-        $default_sale_price = [
-            $currency => floatval($product->get_sale_price())
-        ];
+
 
         $product_data = [
             'id' => strval($product->get_id()),
@@ -249,9 +267,9 @@ class Product extends BaseCollection
             'slug' => $product->get_slug(),
             'thumbnail' => $thumbnail,
             'sku' => $product->get_sku(),
-            'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
-            'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
-            'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
+            'price' => apply_filters('wooless_product_price', $default_price, $product_id),
+            'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
+            'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
             'onSale' => $product->is_on_sale(),
             'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
             'stockStatus' => $product->get_stock_status(),
@@ -268,13 +286,12 @@ class Product extends BaseCollection
             'crossSellData' => $cross_sell_data,
             'upsellData' => $upsell_data,
             'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
-            // 'attributes' => $attributes,
             // 'additional_information_shipping' => $shipping,
         ];
         return apply_filters('blaze_wooless_product_data_for_typesense', $product_data, $product_id);
     }
 
-    public function get_taxonomies( $product )
+    public function get_taxonomies($product)
     {
         $taxonomies_data = [];
         $taxonomies = get_object_taxonomies('product');

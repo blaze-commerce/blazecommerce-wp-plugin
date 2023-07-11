@@ -20,10 +20,8 @@ class BlazeWooless
 
     public function init()
     {
-        // var_dump('blaze wooless'); exit;
         // add_action('ts_product_update', array( $this, 'revalidate_frontend_path' ), 10, 1);
         // add_action('next_js_revalidation_event', array( $this, 'do_next_js_revalidation_event' ), 10, 2);
-        // add_action( 'admin_init', array( $this, 'register_settings' ), 10, 1 );
         add_action( 'init', array( $this, 'register_extensions' ) );
         add_action('wp_update_nav_menu', array( Menu::get_instance(), 'update_typesense_document_on_menu_update' ), 10, 2);
         add_action('edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3);
@@ -31,6 +29,8 @@ class BlazeWooless
         TypesenseClient::get_instance();
 
         $this->register_settings();
+        
+        $this->register_features();
         
         Ajax::get_instance();
         Woocommerce::get_instance();
@@ -40,6 +40,7 @@ class BlazeWooless
     {
         $settings = array(
             '\\BlazeWooless\\Settings\\GeneralSettings',
+            '\\BlazeWooless\\Settings\\RegionalSettings',
             '\\BlazeWooless\\Settings\\ProductPageSettings',
         );
 
@@ -50,14 +51,28 @@ class BlazeWooless
         }
     }
 
+    public function register_features()
+    {
+        $features = array(
+            '\\BlazeWooless\\Features\\AttributeSettings',
+            '\\BlazeWooless\\Features\\CalculateShipping',
+        );
+
+        foreach ( $features as $feature ) {
+            $feature::get_instance();
+        }
+    }
+
     public function register_extensions()
     {
         $extensions = array(
             '\\BlazeWooless\\Extensions\\CustomProductTabsForWoocommerce',
             '\\BlazeWooless\\Extensions\\JudgeMe',
             '\\BlazeWooless\\Extensions\\ProductAddons',
+            '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
             '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
             '\\BlazeWooless\\Extensions\\YoastSEO',
+            '\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
         );
 
         foreach ( $extensions as $extension ) {

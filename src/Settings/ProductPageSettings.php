@@ -2,16 +2,19 @@
 
 namespace BlazeWooless\Settings;
 
+use BlazeWooless\Features\AttributeSettings;
 use BlazeWooless\TypesenseClient;
 
 class ProductPageSettings extends BaseSettings 
 {
     private static $instance = null;
+    public $tab_key = 'product';
+    public $page_label = 'Product Page';
 
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_settings_product_page_options', 'wooless_settings_product_page_section', 'Product Page' );
+            self::$instance = new self( 'wooless_settings_product_page_options' );
         }
 
         return self::$instance;
@@ -31,24 +34,31 @@ class ProductPageSettings extends BaseSettings
 
     public function settings()
     {
-        return array(
-            array(
-                'id' => 'privacy_policy',
-                'label' => 'Privacy Policy',
-                'type' => 'textarea',
-                'args' => array(
-                    'description' => 'Set the privacy policy content.',
-                ),
-            ),
-            array(
-                'id' => 'returns_policy',
-                'label' => 'Returns Policy',
-                'type' => 'textarea',
-                'args' => array(
-                    'description' => 'Set the returns policy content.'
-                ),
+        $product_page_settings = array(
+            'wooless_settings_product_page_section' => array(
+                'label' => 'Product Page',
+                'options' => array(
+                    array(
+                        'id' => 'privacy_policy',
+                        'label' => 'Privacy Policy',
+                        'type' => 'textarea',
+                        'args' => array(
+                            'description' => 'Set the privacy policy content.',
+                        ),
+                    ),
+                    array(
+                        'id' => 'returns_policy',
+                        'label' => 'Returns Policy',
+                        'type' => 'textarea',
+                        'args' => array(
+                            'description' => 'Set the returns policy content.'
+                        ),
+                    ),
+                )
             ),
         );
+
+        return apply_filters( 'blaze_wooless_product_page_settings', $product_page_settings );
     }
 
     public function section_callback() {
@@ -69,6 +79,8 @@ class ProductPageSettings extends BaseSettings
             'value' => $options['returns_policy'],
             'updated_at' => time(),
         ]);
+
+        do_action( 'blaze_wooless_save_product_page_settings', $options );
     }
 
     public function register_hooks()

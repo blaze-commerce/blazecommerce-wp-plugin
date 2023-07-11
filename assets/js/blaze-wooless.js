@@ -126,6 +126,12 @@
 
     init: function() {
       this.registerEvents();
+
+      $(document.body).find( '.wooless-multiple-select' ).chosen();
+
+      // if ( jQuery().chosen ) {
+      //   $(document.body).find( '.wooless-multiple-select' ).chosen();
+      // }
     },
   }
 

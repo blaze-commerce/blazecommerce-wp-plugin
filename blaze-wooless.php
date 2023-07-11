@@ -56,11 +56,29 @@ function typesense_enqueue_google_fonts($hook)
     }
 
     // Register and enqueue the 'Poppins' Google Font
-    wp_register_style('google-font-poppins', 'https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,500;1,400&display=swap', array(), null);
+    wp_register_style('google-font-poppins', 'https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,500;1,400&display=swap', array( 'chosen' ), null);
     wp_enqueue_style('google-font-poppins');
 
-    wp_enqueue_style( 'blaze-wooless-admin-style', plugins_url( 'assets/css/blaze-wooless.css',  __FILE__ ), null, '1.0' );
+    wp_register_style(
+        'chosen',
+        '//cdnjs.cloudflare.com/ajax/libs/chosen/1.1.0/chosen.min.css',
+        array(),
+        null,
+        'all',
+    );
+    wp_enqueue_style('chosen');
+
+    wp_enqueue_style( 'blaze-wooless-admin-style', plugins_url( 'assets/css/blaze-woozless.css',  __FILE__ ), null, '1.0' );
     wp_enqueue_script( 'blaze-wooless-admin-script', plugins_url( 'assets/js/blaze-wooless.js', __FILE__ ), array( 'jquery' ), '1.0', true );
+
+    wp_register_script(
+        'chosen',
+        '//cdnjs.cloudflare.com/ajax/libs/chosen/1.1.0/chosen.jquery.min.js',
+        array('jquery'),
+        null,
+        true,
+    );
+    wp_enqueue_script('chosen');
 }
 
 add_action('admin_enqueue_scripts', 'typesense_enqueue_google_fonts');
