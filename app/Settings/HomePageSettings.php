@@ -50,7 +50,7 @@ class HomePageSettings extends BaseSettings {
 
     public function register_hooks()
     {
-        add_action( 'before_draggable_layout_editor_end', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
     }
 
     public function footer_callback()
@@ -60,9 +60,11 @@ class HomePageSettings extends BaseSettings {
 
     public function default_draggable_data()
     {
+        if (empty($_GET['tab']) || $this->tab_key !== $_GET['tab']) return;
+
         $hompage_layout = get_option('blaze_wooless_homepage_layout', '');
         ?>
-            <input type="hidden" name="homepage_layout" value='<?php echo json_encode($hompage_layout) ?>'/>
+            <input type="hidden" id="draggable_result" name="homepage_layout" value='<?php echo json_encode($hompage_layout) ?>'/>
         <?php
     }
 }

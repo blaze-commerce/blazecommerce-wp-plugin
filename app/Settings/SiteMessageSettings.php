@@ -12,7 +12,7 @@ class SiteMessageSettings extends BaseSettings {
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_homepage_settings_options' );
+            self::$instance = new self( 'wooless_sitemessage_settings_options' );
         }
 
         return self::$instance;
@@ -21,7 +21,7 @@ class SiteMessageSettings extends BaseSettings {
     public function settings_callback( $options )
     {
         $site_message = array();
-        if (isset($_POST['homepage_layout'])) {
+        if (isset($_POST['site_message'])) {
             $site_message = json_decode( stripslashes($_POST['site_message']), true );
         }
 
@@ -29,7 +29,7 @@ class SiteMessageSettings extends BaseSettings {
             update_option('blaze_wooless_site_message', $site_message);
 
             TypesenseClient::get_instance()->site_info()->upsert([
-                'id' => '1000003',
+                'id' => '1000004',
                 'name' => 'site_message',
                 'value' => json_encode($site_message),
                 'updated_at' => time(),
@@ -50,7 +50,7 @@ class SiteMessageSettings extends BaseSettings {
 
     public function register_hooks()
     {
-        add_action( 'before_draggable_layout_editor_end', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
     }
 
     public function footer_callback()
@@ -60,9 +60,11 @@ class SiteMessageSettings extends BaseSettings {
 
     public function default_draggable_data()
     {
-        $hompage_layout = get_option('blaze_wooless_site_message', '');
+        if (empty($_GET['tab']) || $this->tab_key !== $_GET['tab']) return;
+
+        $site_message = get_option('blaze_wooless_site_message', '');
         ?>
-            <input type="hidden" name="site_message" value='<?php echo json_encode($hompage_layout) ?>'/>
+            <input type="hidden" id="draggable_result" name="site_message" value='<?php echo json_encode($site_message) ?>'/>
         <?php
     }
 }

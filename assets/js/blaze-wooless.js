@@ -366,12 +366,15 @@
 
       console.log(data);
 
-      $('input[name="homepage_layout"]').val(JSON.stringify(data));
+      $('input#draggable_result').val(JSON.stringify(data));
     },
     loadInitialData: function() {
       var datas = [];
-      if ($('input[name="homepage_layout"]').length > 0) {
-        datas = JSON.parse($('input[name="homepage_layout"]').val());
+      if ($('input#draggable_result').length > 0) {
+        datas = JSON.parse($('input#draggable_result').val());
+      }
+      if (!Array.isArray(datas)) {
+        datas = [];
       }
       $('.blaze-wooless-draggable-canvas').sortable( "refresh" );
       datas.forEach(function(element) {
