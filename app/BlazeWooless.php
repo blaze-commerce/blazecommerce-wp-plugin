@@ -42,6 +42,8 @@ class BlazeWooless
             '\\BlazeWooless\\Settings\\GeneralSettings',
             '\\BlazeWooless\\Settings\\RegionalSettings',
             '\\BlazeWooless\\Settings\\ProductPageSettings',
+            '\\BlazeWooless\\Settings\\HomePageSettings',
+            '\\BlazeWooless\\Settings\\SiteMessageSettings',
         );
 
         foreach ( $settings as $setting ) {

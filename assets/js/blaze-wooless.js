@@ -3,12 +3,12 @@
   var BLOCK_TYPE_MULTIPLE = 'multiple';
 
   var commonImageLink = {
-    imageURL: {
-      label: 'Image URL',
+    imageUrl: {
+      label: 'Image Url',
       name: 'image-url', 
     },
-    redirectURL: {
-      label: 'Redirect URL',
+    redirectUrl: {
+      label: 'Redirect Url',
       name: 'redirect-url', 
     },
     title: {
@@ -32,7 +32,7 @@
         name: 'banner-subtitle', 
       },
       bannerCTAUrl: {
-        label: 'Call to action URL',
+        label: 'Call to action Url',
         name: 'banner-cta-url', 
       },
       bannerCTAText: {
@@ -46,7 +46,7 @@
         name: 'company-image', 
       },
       redirectUrl: {
-        label: 'Redirect URL',
+        label: 'Redirect Url',
         name: 'company-redirect-url', 
       },
       name: {
@@ -76,8 +76,8 @@
         label: 'Text',
         name: 'list-text', 
       },
-      redirectURL: {
-        label: 'Redirect URL',
+      redirectUrl: {
+        label: 'Redirect Url',
         name: 'list-redirect-url', 
       },
     }
@@ -101,18 +101,18 @@
         label: 'Text',
         name: 'cta-text',
       },
-      redirectURL: {
-        label: 'Redirect URL',
+      redirectUrl: {
+        label: 'Redirect Url',
         name: 'cta-redirect-url',
       }
     },
     singleImage: {
       imageUrl: {
-        label: 'Image URL',
+        label: 'Image Url',
         name: 'image-url',
       },
-      redirectURL: {
-        label: 'Redirect URL',
+      redirectUrl: {
+        label: 'Redirect Url',
         name: 'redirect-url',
       },
       redirectType: {
@@ -429,7 +429,7 @@
       <div class="input-wrapper"><label>Image</label>: <input type="text" class="banner-image" /></div>
       <div class="input-wrapper"><label>Title</label>: <input type="text" class="banner-title" /></div>
       <div class="input-wrapper"><label>Subtite</label>: <input type="text" class="banner-subtitle" /></div>
-      <div class="input-wrapper"><label>Call to action URL</label>: <input type="text" class="banner-cta-url" /></div>
+      <div class="input-wrapper"><label>Call to action Url</label>: <input type="text" class="banner-cta-url" /></div>
       <div class="input-wrapper"><label>Call to action text</label>: <input type="text" class="banner-cta-text" /></div>
     </div>
     `;

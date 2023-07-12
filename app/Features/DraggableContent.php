@@ -19,8 +19,6 @@ class DraggableContent
     public function __construct()
     {
         add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_dragable_content' ), 10, 2 );
-        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'footer' ) );
-        
         add_action( 'before_wooless_draggable_canvas', array( $this, 'content_region_selector' ) );
     }
 
@@ -38,13 +36,6 @@ class DraggableContent
 
     //     return $product_page_settings;
     // }
-
-    public function footer( $active_tab )
-    {
-        if ( $active_tab !== 'product' ) return;
-
-        require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/draggable-content.php';
-    }
 
     public function content_region_selector()
     {

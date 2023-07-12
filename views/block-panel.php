@@ -1,5 +1,4 @@
 <div class="blaze-wooless-draggable-panel">
-    <h2>Blocks</h2>
     <div class="blaze-wooless-draggable-panel-container">
         <h4>Single Blocks</h4>
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="banner"><div class="content">Hero Banner</div></div>

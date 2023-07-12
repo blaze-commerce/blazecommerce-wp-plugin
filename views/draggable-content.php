@@ -5,5 +5,6 @@
 <div class="blaze-wooless-layout-editor">
     <?php require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/block-panel.php'; ?>
     <?php require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/block-canvas.php'; ?> 
-    <input type="hidden" name="homepage_layout" value='<?php echo json_encode($hompage_layout) ?>'/>
+    
+    <?php do_action( 'before_draggable_layout_editor_end' ) ?>
 </div>
