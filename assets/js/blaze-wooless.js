@@ -1,5 +1,23 @@
 (function ($) {
-  var fields = {
+  var BLOCK_TYPE_SINGLE = 'single';
+  var BLOCK_TYPE_MULTIPLE = 'multiple';
+
+  var commonImageLink = {
+    imageURL: {
+      label: 'Image URL',
+      name: 'image-url', 
+    },
+    redirectURL: {
+      label: 'Redirect URL',
+      name: 'redirect-url', 
+    },
+    title: {
+      label: 'Title',
+      name: 'title', 
+    },
+  };
+
+  var repeaterFields = {
     banner: {
       bannerImage: {
         label: 'Image',
@@ -22,7 +40,7 @@
         name: 'banner-cta-text', 
       },
     },
-    companies: {
+    clients: {
       image: {
         label: 'Image',
         name: 'company-image', 
@@ -49,8 +67,62 @@
         label: 'Author Position',
         name: 'testimony-author-position', 
       },
+    },
+    categories: commonImageLink,
+    products: commonImageLink,
+    blogPosts: commonImageLink,
+    list: {
+      text: {
+        label: 'Text',
+        name: 'list-text', 
+      },
+      redirectURL: {
+        label: 'Redirect URL',
+        name: 'list-redirect-url', 
+      },
     }
   }
+
+  var dynamicConfigFields = {
+    paragraph: {
+      text: {
+        label: 'Text',
+        name: 'paragraph-text',
+      }
+    },
+    menu: {
+      menuId: {
+        label: 'Menu ID',
+        name: 'menu-id',
+      }
+    },
+    callToAction: {
+      text: {
+        label: 'Text',
+        name: 'cta-text',
+      },
+      redirectURL: {
+        label: 'Redirect URL',
+        name: 'cta-redirect-url',
+      }
+    },
+    singleImage: {
+      imageUrl: {
+        label: 'Image URL',
+        name: 'image-url',
+      },
+      redirectURL: {
+        label: 'Redirect URL',
+        name: 'redirect-url',
+      },
+      redirectType: {
+        label: 'Redirect type',
+        name: 'redirect-type',
+      },
+    }
+  }
+
+  var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);
 
   var countries = [];
   if ($( 'input#available-countries').length > 0) {
@@ -201,7 +273,7 @@
       var blockType = droppedElement.data('block_type');
       var blockElement = $('.blaze-wooless-draggable-panel').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
 
-      if (blockType === 'static') {
+      if (blockType === BLOCK_TYPE_SINGLE) {
         blockElement.draggable('disable');
         blockElement.addClass('disabled');
       }
@@ -226,22 +298,23 @@
     
 
     addCollapsedConfig: function(element) {
-      var droppedElement = $(element);
-      var blockId = droppedElement.data('block_id');
-      var blockMetaData = droppedElement.data('block_metadata');
-      var blockElement = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+      var blockElement = $(element);
+      var blockId = blockElement.data('block_id');
+      // var blockElement = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
       
       if (blockElement.find('.configuration').length > 0) {
         return;
       }
       var caretState = $('<span class="caret-status dashicons"></span>')
-      blockElement.find('.content').append(caretState)
+      if (  blockElement.find('.content .caret-status').length == 0 ) {
+        blockElement.find('.content').append(caretState)
+      }
 
       var configContent = configurationTemplate(blockId);
 
       blockElement.append(configContent);
 
-      loadConfigData(blockId);
+      loadConfigData(blockElement, blockId);
     },
 
     initializeDragabbleContents: function() {
@@ -249,28 +322,30 @@
         connectToSortable: ".blaze-wooless-draggable-canvas",
         opacity: 0.7,
         helper: "clone",
+        stop: function (event, ui) {
+          console.log('stop', event);
+        }
       });
       $('.blaze-wooless-draggable-canvas').droppable({
         accept: ".blaze-wooless-draggable-block",
         drop: function( event, ui ) {
           blazeWooless.disableDroppedElement(ui.helper);
+          console.log(ui);
           blazeWooless.addCollapsedConfig(ui.helper);
         },
       });
 
       $('.blaze-wooless-draggable-canvas').sortable({
         stop: function(e, ui) {
-          blazeWooless.generateSaveData();
+          console.log('sortable stop');
+          // blazeWooless.generateSaveData();
+          generateMetaDataFromElement(ui.item);
+          $('.blaze-wooless-draggable-canvas').sortable( "refresh" );
         }
       });
 
       this.loadInitialData();
-
-      $('.blaze-wooless-draggable-canvas').sortable({
-        stop: function(e, ui) {
-          blazeWooless.generateSaveData();
-        }
-      });
+      $('.blaze-wooless-draggable-canvas').sortable( "refresh" );
     },
 
     generateSaveData: function() {
@@ -280,6 +355,7 @@
         var blockId = $el.data('block_id');
         var metaData = $el.data('block_metadata');
         var index = $el.index();
+        console.log(blockId, metaData, $el);
         return {
           position: index,
           blockType: blockType,
@@ -288,6 +364,8 @@
         };
       })
 
+      console.log(data);
+
       $('input[name="homepage_layout"]').val(JSON.stringify(data));
     },
     loadInitialData: function() {
@@ -295,48 +373,53 @@
       if ($('input[name="homepage_layout"]').length > 0) {
         datas = JSON.parse($('input[name="homepage_layout"]').val());
       }
-      datas.forEach(function(element) {
-        $('.blaze-wooless-draggable-block[data-block_id="' + element.blockId + '"]').clone().appendTo('.blaze-wooless-draggable-canvas');
-      });
       $('.blaze-wooless-draggable-canvas').sortable( "refresh" );
       datas.forEach(function(element) {
-        if (element.blockType === 'static') {
-          var blockElement = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + element.blockId + '"]')
-          blockElement.data('block_metadata', element.metaData)
+        var blockElement = $('.blaze-wooless-draggable-block[data-block_id="' + element.blockId + '"]').first().clone();
+        blockElement.data('block_metadata', element.metaData)
+        if (element.blockType === BLOCK_TYPE_SINGLE) {
           blazeWooless.disableDroppedElement(blockElement);
-          blazeWooless.addCollapsedConfig(blockElement);
         }
+
+        blazeWooless.addCollapsedConfig(blockElement);
+
+        blockElement.appendTo('.blaze-wooless-draggable-canvas');
       });
       console.log(datas);
     }
   }
 
   function configurationTemplate(blockId) {
-    switch (blockId) {
-      case "banner":
-      case "testimonials":
-      case "companies":
-        var configContent = $('<div class="configuration">' + repeaterTemplate() + '</div>');
-        configContent.find('.items').sortable({
-          stop: function(e, ui) {
-            generateMetaDataFromElement(ui.item)
-          }
-        });
-        return configContent;
-      default:
-        return '';
+    if (REPEATER_FIELD_KEYS.includes(blockId)) {
+      var configContent = $('<div class="configuration">' + repeaterTemplate() + '</div>');
+      configContent.find('.items').sortable({
+        stop: function(e, ui) {
+          generateMetaDataFromElement(ui.item)
+        }
+      });
+      return configContent;
+    } else {
+      var configContent = $('<div class="configuration">' + footerTemplate() + '</div>');
+      return configContent;
     }
   }
 
   function repeaterTemplate() {
-    return `
-      <div class="items">
-      </div>
-      <div class="footer">
-        <button class="button button-primary add-item">Add Item</button>
-        <button class="button button-danger delete-block">Delete</button>
-      </div>
-    `;
+    var template = ['<div class="items"></div>'];
+    template.push(footerTemplate({ hasAddItemButton: true }));
+    return template.join('');
+  }
+
+  function footerTemplate(config = {}) {
+    var template = [];
+    template.push('<div class="footer">');
+    if (config.hasAddItemButton) {
+      template.push('<button class="button button-primary add-item">Add Item</button>');
+    }
+    template.push('<button class="button button-danger delete-block">Delete</button>');
+    template.push('</div>');
+
+    return template.join('');
   }
 
   function bannerRowItemTemplate() {
@@ -352,30 +435,13 @@
     `;
   }
 
-  function addBannerRowItem() {
-    var element = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="banner"]');
-    var itemEl = $(bannerRowItemTemplate());
-    var defaultData = {};
-    countries.forEach(function(country) {
-      defaultData[country] = {
-        bannerImage: '',
-        bannerTitle: '',
-        bannerSubtitle: '',
-        bannerCTAUrl: '',
-        bannerCTAText: '',
-      };
-    });
-    itemEl.data('row-data', defaultData)
-    element.find('.configuration .items').append(itemEl);
-  }
-
   function rowItemTemplate(blockId, data = false) {
     var generatedFields = [];
     var defaultData = {};
     var initialFieldValues = {};
-    for (var key in fields[blockId]) {
-      var label = fields[blockId][key].label;
-      var name = fields[blockId][key].name;
+    for (var key in repeaterFields[blockId]) {
+      var label = repeaterFields[blockId][key].label;
+      var name = repeaterFields[blockId][key].name;
       generatedFields.push('<div class="input-wrapper"><label>'+label+'</label>: <input type="text" class="'+name+'" /></div>');
 
       initialFieldValues[key] = '';
@@ -389,84 +455,115 @@
       defaultData[country] = data;
     });
 
-
     itemEl.data('row-data', defaultData)
     return itemEl;
   }
 
-  function addRowItem(blockId) {
-    if (typeof fields[blockId] === 'undefined') return '';
-
-    var element = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+  function addRowItem(element, blockId) {
+    if (typeof repeaterFields[blockId] === 'undefined') return '';
 
     var itemEl = rowItemTemplate(blockId);
     element.find('.configuration .items').append(itemEl);
   }
 
-  function loadConfigData(blockId) {
-    var element = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="'+blockId+'"]');
+  function dynamicConfigRowTemplate(blockId) {
+    var generatedFields = [];
+    var initialFieldValues = {};
+    for (var key in dynamicConfigFields[blockId]) {
+      var label = dynamicConfigFields[blockId][key].label;
+      var name = dynamicConfigFields[blockId][key].name;
+      generatedFields.push('<div class="input-wrapper"><label>'+label+'</label>: <input type="text" class="'+name+'" /></div>');
+
+      initialFieldValues[key] = '';
+    }
+    var itemEl = $('<div class="row-item">' + generatedFields.join('') + '</div>');
+    return itemEl;
+  }
+
+  function addConfigFields(element, blockId, metaData = false) {
+    if (typeof dynamicConfigFields[blockId] === 'undefined') return '';
+
+    var itemEl = dynamicConfigRowTemplate(blockId);
+
+    element.data('block_metadata', metaData)
+    
+    element.find('.configuration').prepend(itemEl);
+  }
+
+  function loadConfigData(element, blockId) {
     var metaData = element.data('block_metadata');
-    var selectedCountry = $('select#region_selector').val();
+    var blockType = element.data('block_type');
+    var selectedCountry = $('select#region_selector').val()
 
-    if (metaData && metaData.length > 0) {
-      metaData.forEach(function(data) {
-        console.log(data);
-        var itemEl = rowItemTemplate(blockId);
-        itemEl.data('row-data', data);
+    if (REPEATER_FIELD_KEYS.includes(blockId)) {
+      if (metaData && metaData.length > 0) {
+        metaData.forEach(function(data) {
+          var itemEl = rowItemTemplate(blockId);
+          itemEl.data('row-data', data);
+  
+          for (var key in repeaterFields[blockId]) {
+            var name = repeaterFields[blockId][key].name;
+            itemEl.find('input.' + name).val(data[selectedCountry][key]);
+          }
+  
+          element.find('.configuration .items').append(itemEl);
+        })
+      } else {
+        addRowItem(element, blockId);
+      }
+    } else if (blockType == BLOCK_TYPE_MULTIPLE) {
+      if (typeof metaData !== 'undefined') {
+        var itemEl = dynamicConfigRowTemplate(blockId);
 
-        for (var key in fields[blockId]) {
-          var name = fields[blockId][key].name;
-          itemEl.find('input.' + name).val(data[selectedCountry][key]);
+        for (var key in dynamicConfigFields[blockId]) {
+          var name = dynamicConfigFields[blockId][key].name;
+          itemEl.find('input.' + name).val(metaData[selectedCountry] ? metaData[selectedCountry][key] : '');
         }
 
-        element.find('.configuration .items').append(itemEl);
-      })
-    } else {
-      addRowItem(blockId);
+        itemEl.insertBefore(element.find('.configuration .footer'));
+      } else {
+        addConfigFields(element, blockId, metaData);
+      }
     }
   }
 
   function generateMetaDataFromElement(element) {
     var el = $(element)
     var elementBlock = el.closest('.blaze-wooless-draggable-block');
-    var items = elementBlock.find('.items');
+    var blockType = elementBlock.data('block_type');
+    var blockId = elementBlock.data('block_id');
+    var data = {};
 
-    const data = generateRowItemsData(items);
+    if (REPEATER_FIELD_KEYS.includes(blockId)) {
+      var items = elementBlock.find('.items');
+      data = generateRowItemsData(elementBlock, items);
+    } else if (blockType == BLOCK_TYPE_MULTIPLE) {
+      data = generateDynamicConfigData(elementBlock);
+    }
 
-    console.log(data, 'data');
-
+    console.log(elementBlock);
+    console.log(data);
     elementBlock.data('block_metadata', data);
+
+    console.log('generateMetaDataFromElement');
     
     blazeWooless.generateSaveData();
   }
 
-  function generateByCountry() {
-    
-  }
-
-  function generateRowItemsData(itemsElement) {
+  function generateRowItemsData(element, itemsElement) {
     var selectedCountry = $('select#region_selector').val();
-    var blockId = itemsElement.closest('.blaze-wooless-draggable-block').data('block_id')
+    var blockId = element.data('block_id')
 
     const data = $.map(itemsElement.find('.row-item'), function(item) {
       var itemEl = $(item);
       var rowData = itemEl.data('row-data');
       var _data = {};
-      for (var key in fields[blockId]) {
-        var name = fields[blockId][key].name;
-        console.log('input.' + name);
+      for (var key in repeaterFields[blockId]) {
+        var name = repeaterFields[blockId][key].name;
         _data[key] = itemEl.find('input.' + name).val();
       }
 
-      console.log(_data);
-      // var bannerImage = itemEl.find('input.banner-image').val();
-      // var bannerTitle = itemEl.find('input.banner-title').val();
-      // var bannerSubtitle = itemEl.find('input.banner-subtitle').val();
-      // var bannerCTAUrl = itemEl.find('input.banner-cta-url').val();
-      // var bannerCTAText = itemEl.find('input.banner-cta-text').val();
-
       rowData[selectedCountry] = _data;
-
 
       itemEl.data('row-data', rowData)
 
@@ -474,6 +571,33 @@
     });
 
     return data;
+  }
+
+  function generateDynamicConfigData(element) {
+    var selectedCountry = $('select#region_selector').val();
+    var blockId = element.data('block_id')
+    var blockMetadata = element.data('block_metadata')
+
+    var _data = {};
+    var initialFieldValue = {};
+    for (var key in dynamicConfigFields[blockId]) {
+      var name = dynamicConfigFields[blockId][key].name;
+      console.log('input.' + name);
+      _data[key] = element.find('input.' + name).val();
+      initialFieldValue[key] = '';
+    }
+
+    if (!blockMetadata) {
+      blockMetadata = {};
+      countries.forEach(function(country) {
+        blockMetadata[country] = initialFieldValue;
+      });
+    }
+    
+    blockMetadata[selectedCountry] = _data;
+    console.log('generateDynamicConfigData', blockMetadata);
+    
+    return blockMetadata;
   }
 
   $(document).ready(function() {
@@ -489,8 +613,9 @@
     });
 
     $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .add-item', function(e) {
-      var blockId = $(this).closest('.blaze-wooless-draggable-block').data('block_id');
-      addRowItem(blockId);
+      var element = $(this).closest('.blaze-wooless-draggable-block')
+      var blockId = element.data('block_id');
+      addRowItem(element, blockId);
     });
 
     $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .row-item .remove', function(e) {
@@ -520,22 +645,36 @@
       $.each($('.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block'), function(index, block) {
         console.log(block, 'block');
         var blockId = $(block).data('block_id');
-        var items = $(block).find('.configuration .items .row-item');
-        if (items.length === 0) {
-          return;
-        }
-        console.log(items, 'items');
-        $.each(items, function(i, item) {
-          var itemEl = $(item)
-          var rowData = itemEl.data('row-data');
-          if (rowData && rowData[selectedRegion]) {
-            for (var key in fields[blockId]) {
-              var name = fields[blockId][key].name;
-              itemEl.find('input.' + name).val(rowData[selectedRegion][key]);
+        var blockType = $(block).data('block_type');
+
+        if (REPEATER_FIELD_KEYS.includes(blockId)) {
+          var items = $(block).find('.configuration .items .row-item');
+          if (items.length === 0) {
+            return;
+          }
+          console.log(items, 'items');
+          $.each(items, function(i, item) {
+            var itemEl = $(item)
+            var rowData = itemEl.data('row-data');
+            if (rowData && rowData[selectedRegion]) {
+              for (var key in repeaterFields[blockId]) {
+                var name = repeaterFields[blockId][key].name;
+                itemEl.find('input.' + name).val(rowData[selectedRegion][key]);
+              }
+            }
+          });
+        } else if (blockType === BLOCK_TYPE_MULTIPLE) {
+          var itemEl = $(block).find('.configuration .row-item');
+          var metaData = $(block).data('block_metadata');
+          if (metaData && metaData[selectedRegion]) {
+            for (var key in dynamicConfigFields[blockId]) {
+              var name = dynamicConfigFields[blockId][key].name;
+              itemEl.find('input.' + name).val(metaData[selectedRegion][key]);
             }
           }
-        })
-      })
+        }
+        
+      });
     });
   });
 })(jQuery);

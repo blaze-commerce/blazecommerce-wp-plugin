@@ -43,6 +43,10 @@
     align-items: stretch;
 }
 
+.blaze-wooless-draggable-canvas {
+    height: 100%;
+}
+
 .blaze-wooless-draggable-canvas .blaze-wooless-draggable-block {
     display: flex;
     width: auto !important;
@@ -89,7 +93,7 @@
     gap: 5px;
 }
 
-.blaze-wooless-draggable-block .configuration .row-item {
+.blaze-wooless-draggable-block .configuration .items .row-item {
     margin-bottom: 15px;
     padding: 10px;
     border: 1px solid #ccc;
