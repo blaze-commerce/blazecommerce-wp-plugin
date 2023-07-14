@@ -10,7 +10,8 @@
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="blogPosts"><div class="content">Recent Blog Posts</div></div>
 
         <h4>Multiple Blocks</h4>
-        <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="paragraph"><div class="content">Paragraph</div></div>
+        <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="text"><div class="content">Text</div></div>
+        <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="textarea"><div class="content">Text Area</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="callToAction"><div class="content">Call to action</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="singleImage"><div class="content">Single Image</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="multipleImage"><div class="content">Multiple Image</div></div>

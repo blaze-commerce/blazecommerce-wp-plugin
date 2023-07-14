@@ -84,10 +84,25 @@
   }
 
   var dynamicConfigFields = {
-    paragraph: {
+    text: {
+      classes: {
+        label: 'Classes',
+        name: 'text-classes',
+      },
       text: {
-        label: 'Text',
-        name: 'paragraph-text',
+        label: 'Content',
+        name: 'text-content',
+      }
+    },
+    textarea: {
+      classes: {
+        label: 'Classes',
+        name: 'text-classes',
+      },
+      text: {
+        label: 'Content',
+        name: 'text-content',
+        fieldType: 'textarea'
       }
     },
     menu: {
@@ -425,19 +440,6 @@
     return template.join('');
   }
 
-  function bannerRowItemTemplate() {
-    return `
-    <div class="row-item">
-      <span class="remove">✕</span>
-      <div class="input-wrapper"><label>Image</label>: <input type="text" class="banner-image" /></div>
-      <div class="input-wrapper"><label>Title</label>: <input type="text" class="banner-title" /></div>
-      <div class="input-wrapper"><label>Subtite</label>: <input type="text" class="banner-subtitle" /></div>
-      <div class="input-wrapper"><label>Call to action Url</label>: <input type="text" class="banner-cta-url" /></div>
-      <div class="input-wrapper"><label>Call to action text</label>: <input type="text" class="banner-cta-text" /></div>
-    </div>
-    `;
-  }
-
   function rowItemTemplate(blockId, data = false) {
     var generatedFields = [];
     var defaultData = {};
@@ -445,7 +447,8 @@
     for (var key in repeaterFields[blockId]) {
       var label = repeaterFields[blockId][key].label;
       var name = repeaterFields[blockId][key].name;
-      generatedFields.push('<div class="input-wrapper"><label>'+label+'</label>: <input type="text" class="'+name+'" /></div>');
+      var fieldType = repeaterFields[blockId][key].fieldType;
+      generatedFields.push('<div class="input-wrapper"><label>'+label+'</label>: ' + getFormField(name, fieldType) + '</div>');
 
       initialFieldValues[key] = '';
     }
@@ -475,12 +478,27 @@
     for (var key in dynamicConfigFields[blockId]) {
       var label = dynamicConfigFields[blockId][key].label;
       var name = dynamicConfigFields[blockId][key].name;
-      generatedFields.push('<div class="input-wrapper"><label>'+label+'</label>: <input type="text" class="'+name+'" /></div>');
+      var fieldType = dynamicConfigFields[blockId][key].fieldType;
+      generatedFields.push('<div class="input-wrapper"><label>'+label+'</label>: ' + getFormField(name, fieldType) + '</div>');
 
       initialFieldValues[key] = '';
     }
     var itemEl = $('<div class="row-item">' + generatedFields.join('') + '</div>');
     return itemEl;
+  }
+
+  function getFormField(name, fieldType) {
+    var field;
+    switch (fieldType) {
+      case 'textarea':
+        field = '<textarea class="input '+name+'"></textarea>'
+        break;
+      default:
+        field = '<input type="text" class="input '+name+'" />'
+        break;
+    }
+
+    return field;
   }
 
   function addConfigFields(element, blockId, metaData = false) {
@@ -496,7 +514,7 @@
   function loadConfigData(element, blockId) {
     var metaData = element.data('block_metadata');
     var blockType = element.data('block_type');
-    var selectedCountry = $('select#region_selector').val()
+    var selectedCountry = $('select#region_selector').val();
 
     if (REPEATER_FIELD_KEYS.includes(blockId)) {
       if (metaData && metaData.length > 0) {
@@ -506,7 +524,7 @@
   
           for (var key in repeaterFields[blockId]) {
             var name = repeaterFields[blockId][key].name;
-            itemEl.find('input.' + name).val(data[selectedCountry][key]);
+            itemEl.find('.input.' + name).val(data[selectedCountry][key]);
           }
   
           element.find('.configuration .items').append(itemEl);
@@ -520,7 +538,7 @@
 
         for (var key in dynamicConfigFields[blockId]) {
           var name = dynamicConfigFields[blockId][key].name;
-          itemEl.find('input.' + name).val(metaData[selectedCountry] ? metaData[selectedCountry][key] : '');
+          itemEl.find('.input.' + name).val(metaData[selectedCountry] ? metaData[selectedCountry][key] : '');
         }
 
         itemEl.insertBefore(element.find('.configuration .footer'));
@@ -563,7 +581,7 @@
       var _data = {};
       for (var key in repeaterFields[blockId]) {
         var name = repeaterFields[blockId][key].name;
-        _data[key] = itemEl.find('input.' + name).val();
+        _data[key] = itemEl.find('.input.' + name).val();
       }
 
       rowData[selectedCountry] = _data;
@@ -585,8 +603,8 @@
     var initialFieldValue = {};
     for (var key in dynamicConfigFields[blockId]) {
       var name = dynamicConfigFields[blockId][key].name;
-      console.log('input.' + name);
-      _data[key] = element.find('input.' + name).val();
+      console.log('.input.' + name);
+      _data[key] = element.find('.input.' + name).val();
       initialFieldValue[key] = '';
     }
 
@@ -638,7 +656,7 @@
       blazeWooless.generateSaveData();
     });
 
-    $(document.body).on('blur', '.blaze-wooless-draggable-block .row-item input', function() {
+    $(document.body).on('blur', '.blaze-wooless-draggable-block .row-item .input', function() {
       generateMetaDataFromElement(this)
     });
 
@@ -662,7 +680,7 @@
             if (rowData && rowData[selectedRegion]) {
               for (var key in repeaterFields[blockId]) {
                 var name = repeaterFields[blockId][key].name;
-                itemEl.find('input.' + name).val(rowData[selectedRegion][key]);
+                itemEl.find('.input.' + name).val(rowData[selectedRegion][key]);
               }
             }
           });
@@ -672,7 +690,7 @@
           if (metaData && metaData[selectedRegion]) {
             for (var key in dynamicConfigFields[blockId]) {
               var name = dynamicConfigFields[blockId][key].name;
-              itemEl.find('input.' + name).val(metaData[selectedRegion][key]);
+              itemEl.find('.input.' + name).val(metaData[selectedRegion][key]);
             }
           }
         }

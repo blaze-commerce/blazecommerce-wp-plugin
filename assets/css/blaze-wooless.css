@@ -111,6 +111,13 @@
     margin-bottom: 10px;
 }
 
+.blaze-wooless-draggable-block .input-wrapper label {
+    font-weight: bold;
+}
+.blaze-wooless-draggable-block .input-wrapper .input {
+    width: 100%;
+}
+
 /* Region Selector */
 #region_selector {
     margin-bottom: 20px;
