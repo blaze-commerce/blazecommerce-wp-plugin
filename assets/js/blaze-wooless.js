@@ -19,30 +19,30 @@
 
   var repeaterFields = {
     banner: {
-      bannerImage: {
-        label: 'Image',
+      image: {
+        label: 'Image Url',
         name: 'banner-image', 
       },
-      bannerTitle: {
+      title: {
         label: 'Title',
         name: 'banner-title', 
       },
-      bannerSubtitle: {
+      subtitle: {
         label: 'Subtitle',
         name: 'banner-subtitle', 
       },
-      bannerCTAUrl: {
+      CTAUrl: {
         label: 'Call to action Url',
         name: 'banner-cta-url', 
       },
-      bannerCTAText: {
+      CTAText: {
         label: 'Call to action text',
         name: 'banner-cta-text', 
       },
     },
     clients: {
       image: {
-        label: 'Image',
+        label: 'Image Url',
         name: 'company-image', 
       },
       redirectUrl: {
@@ -55,10 +55,6 @@
       },
     },
     testimonials: {
-      text: {
-        label: 'Text',
-        name: 'testimony-text', 
-      },
       authorName: {
         label: 'Author Name',
         name: 'testimony-author-name', 
@@ -67,9 +63,14 @@
         label: 'Author Position',
         name: 'testimony-author-position', 
       },
+      text: {
+        label: 'Text',
+        name: 'testimony-text', 
+        fieldType: 'textarea',
+      },
     },
     categories: commonImageLink,
-    products: commonImageLink,
+    cardGroup: commonImageLink,
     blogPosts: commonImageLink,
     list: {
       text: {
@@ -112,6 +113,10 @@
       }
     },
     callToAction: {
+      classes: {
+        label: 'Classes',
+        name: 'text-classes',
+      },
       text: {
         label: 'Text',
         name: 'cta-text',
@@ -122,6 +127,10 @@
       }
     },
     singleImage: {
+      classes: {
+        label: 'Classes',
+        name: 'image-classes',
+      },
       imageUrl: {
         label: 'Image Url',
         name: 'image-url',
@@ -134,7 +143,13 @@
         label: 'Redirect type',
         name: 'redirect-type',
       },
-    }
+    },
+    products: {
+      productId: {
+        label: 'Product Id',
+        name: 'list-text', 
+      }
+    },
   }
 
   var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);
@@ -532,7 +547,7 @@
       } else {
         addRowItem(element, blockId);
       }
-    } else if (blockType == BLOCK_TYPE_MULTIPLE) {
+    } else {
       if (typeof metaData !== 'undefined') {
         var itemEl = dynamicConfigRowTemplate(blockId);
 
@@ -558,7 +573,7 @@
     if (REPEATER_FIELD_KEYS.includes(blockId)) {
       var items = elementBlock.find('.items');
       data = generateRowItemsData(elementBlock, items);
-    } else if (blockType == BLOCK_TYPE_MULTIPLE) {
+    } else {
       data = generateDynamicConfigData(elementBlock);
     }
 
@@ -684,7 +699,7 @@
               }
             }
           });
-        } else if (blockType === BLOCK_TYPE_MULTIPLE) {
+        } else {
           var itemEl = $(block).find('.configuration .row-item');
           var metaData = $(block).data('block_metadata');
           if (metaData && metaData[selectedRegion]) {

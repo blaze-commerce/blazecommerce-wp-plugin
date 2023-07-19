@@ -44,6 +44,11 @@ class BlazeWooless
             '\\BlazeWooless\\Settings\\ProductPageSettings',
             '\\BlazeWooless\\Settings\\HomePageSettings',
             '\\BlazeWooless\\Settings\\SiteMessageSettings',
+            '\\BlazeWooless\\Settings\\FooterBeforeSettings',
+            '\\BlazeWooless\\Settings\\FooterOneSettings',
+            '\\BlazeWooless\\Settings\\FooterTwoSettings',
+            '\\BlazeWooless\\Settings\\FooterThreeSettings',
+            '\\BlazeWooless\\Settings\\FooterAfterSettings',
         );
 
         foreach ( $settings as $setting ) {

@@ -4,15 +4,15 @@ namespace BlazeWooless\Settings;
 
 use BlazeWooless\TypesenseClient;
 
-class SiteMessageSettings extends BaseSettings {
+class FooterAfterSettings extends BaseSettings {
     private static $instance = null;
-    public $tab_key = 'sitemessage';
-    public $page_label = 'Site Message';
+    public $tab_key = 'footer_after';
+    public $page_label = 'Footer After';
 
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_sitemessage_settings_options' );
+            self::$instance = new self( 'wooless_footer_after_settings_options' );
         }
 
         return self::$instance;
@@ -20,18 +20,18 @@ class SiteMessageSettings extends BaseSettings {
     
     public function settings_callback( $options )
     {
-        $site_message = array();
-        if (isset($_POST['site_message'])) {
-            $site_message = json_decode( stripslashes($_POST['site_message']), true );
+        $footer_content_after = array();
+        if (isset($_POST['footer_content_after'])) {
+            $footer_content_after = json_decode( stripslashes($_POST['footer_content_after']), true );
         }
 
-        if (is_array($site_message)) {
-            update_option('blaze_wooless_site_message', $site_message);
+        if (is_array($footer_content_after)) {
+            update_option('blaze_wooless_footer_after_content', $footer_content_after);
 
             TypesenseClient::get_instance()->site_info()->upsert([
-                'id' => '1000004',
-                'name' => 'site_message',
-                'value' => json_encode($site_message),
+                'id' => '1000009',
+                'name' => 'footer_content_after',
+                'value' => json_encode($footer_content_after),
                 'updated_at' => time(),
             ]);
         }
@@ -62,11 +62,11 @@ class SiteMessageSettings extends BaseSettings {
     {
         if (empty($_GET['tab']) || $this->tab_key !== $_GET['tab']) return;
 
-        $site_message = get_option('blaze_wooless_site_message', '');
+        $footer_content = get_option('blaze_wooless_footer_after_content', '');
         ?>
-            <input type="hidden" id="draggable_result" name="site_message" value='<?php echo json_encode($site_message) ?>'/>
+            <input type="hidden" id="draggable_result" name="footer_content_after" value='<?php echo json_encode($footer_content) ?>'/>
         <?php
     }
 }
 
-SiteMessageSettings::get_instance();
+FooterAfterSettings::get_instance();

@@ -1,14 +1,5 @@
 <div class="blaze-wooless-draggable-panel">
     <div class="blaze-wooless-draggable-panel-container">
-        <h4>Single Blocks</h4>
-        <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="banner"><div class="content">Hero Banner</div></div>
-        <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="clients"><div class="content">Clients</div></div>
-        <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="testimonials"><div class="content">Testimonials</div></div>
-        <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="newsletter"><div class="content">Newsletter</div></div>
-        <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="products"><div class="content">Featured Products</div></div>
-        <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="blogPosts"><div class="content">Recent Blog Posts</div></div>
-        
-        <h4>Multiple Blocks</h4>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="text"><div class="content">Text</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="textarea"><div class="content">Text Area</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="callToAction"><div class="content">Call to action</div></div>
