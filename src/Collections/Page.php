@@ -76,7 +76,7 @@ class Page extends BaseCollection
                         'name' => get_the_title(),
                         'seoFullHead' => $selFullHead,
                         'type' => get_post_type(),
-                        'permalink' => get_permalink(),
+                        'permalink' => wp_make_link_relative( get_permalink() ),
                         'taxonomies' => $taxonomies_data,
                         'thumbnail' => $thumbnail,
                         'updatedAt' => (int) strtotime(get_the_modified_date('c')),
