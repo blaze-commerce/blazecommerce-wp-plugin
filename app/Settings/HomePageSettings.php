@@ -51,6 +51,7 @@ class HomePageSettings extends BaseSettings {
     public function register_hooks()
     {
         add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_homepage_data' ), 10, 2 );
     }
 
     public function footer_callback()
@@ -62,10 +63,21 @@ class HomePageSettings extends BaseSettings {
     {
         if (empty($_GET['tab']) || $this->tab_key !== $_GET['tab']) return;
 
-        $hompage_layout = get_option('blaze_wooless_homepage_layout', '');
+        $homepage_layout = get_option('blaze_wooless_homepage_layout', '');
         ?>
-            <input type="hidden" id="draggable_result" name="homepage_layout" value='<?php echo json_encode($hompage_layout) ?>'/>
+            <input type="hidden" id="draggable_result" name="homepage_layout" value='<?php echo json_encode($homepage_layout) ?>'/>
         <?php
+    }
+
+    public function add_homepage_data()
+    {
+        $homepage_layout = get_option('blaze_wooless_homepage_layout', '');
+        TypesenseClient::get_instance()->site_info()->upsert([
+            'id' => '1000003',
+            'name' => 'homepage_layout',
+            'value' => json_encode($homepage_layout),
+            'updated_at' => time(),
+        ]);
     }
 }
 

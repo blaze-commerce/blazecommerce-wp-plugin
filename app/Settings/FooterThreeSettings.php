@@ -51,6 +51,7 @@ class FooterThreeSettings extends BaseSettings {
     public function register_hooks()
     {
         add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_footer_three_data' ), 10, 2 );
     }
 
     public function footer_callback()
@@ -66,6 +67,17 @@ class FooterThreeSettings extends BaseSettings {
         ?>
             <input type="hidden" id="draggable_result" name="footer_content_3" value='<?php echo json_encode($footer_content) ?>'/>
         <?php
+    }
+
+    public function add_footer_three_data()
+    {
+        $footer_content_3 = get_option('blaze_wooless_footer_3_content', '');
+        TypesenseClient::get_instance()->site_info()->upsert([
+            'id' => '1000007',
+            'name' => 'footer_content_3',
+            'value' => json_encode($footer_content_3),
+            'updated_at' => time(),
+        ]);
     }
 }
 

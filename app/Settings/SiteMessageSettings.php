@@ -51,6 +51,7 @@ class SiteMessageSettings extends BaseSettings {
     public function register_hooks()
     {
         add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_site_settings_data' ), 10, 2 );
     }
 
     public function footer_callback()
@@ -66,6 +67,17 @@ class SiteMessageSettings extends BaseSettings {
         ?>
             <input type="hidden" id="draggable_result" name="site_message" value='<?php echo json_encode($site_message) ?>'/>
         <?php
+    }
+
+    public function add_site_settings_data()
+    {
+        $site_message = get_option('blaze_wooless_site_message', '');
+        TypesenseClient::get_instance()->site_info()->upsert([
+            'id' => '1000004',
+            'name' => 'site_message',
+            'value' => json_encode($site_message),
+            'updated_at' => time(),
+        ]);
     }
 }
 

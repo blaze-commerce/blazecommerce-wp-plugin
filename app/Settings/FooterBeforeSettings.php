@@ -51,6 +51,7 @@ class FooterBeforeSettings extends BaseSettings {
     public function register_hooks()
     {
         add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_footer_before_data' ), 10, 2 );
     }
 
     public function footer_callback()
@@ -66,6 +67,17 @@ class FooterBeforeSettings extends BaseSettings {
         ?>
             <input type="hidden" id="draggable_result" name="footer_content_before" value='<?php echo json_encode($footer_content) ?>'/>
         <?php
+    }
+
+    public function add_footer_before_data()
+    {
+        $footer_content_before = get_option('blaze_wooless_footer_before_content', '');
+        TypesenseClient::get_instance()->site_info()->upsert([
+            'id' => '1000005',
+            'name' => 'footer_content_before',
+            'value' => json_encode($footer_content_before),
+            'updated_at' => time(),
+        ]);
     }
 }
 
