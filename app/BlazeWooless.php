@@ -80,6 +80,7 @@ class BlazeWooless
             '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
             // '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
             '\\BlazeWooless\\Extensions\\YoastSEO',
+            '\\BlazeWooless\\Extensions\\GraphQL',
         );
 
         foreach ( $extensions as $extension ) {
