@@ -64,6 +64,7 @@ class BlazeWooless
             '\\BlazeWooless\\Features\\AttributeSettings',
             '\\BlazeWooless\\Features\\CalculateShipping',
             '\\BlazeWooless\\Features\\DraggableContent',
+            '\\BlazeWooless\\Features\\LoadCartFromSession',
         );
 
         foreach ( $features as $feature ) {
