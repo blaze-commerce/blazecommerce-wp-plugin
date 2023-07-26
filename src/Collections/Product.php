@@ -71,7 +71,7 @@ class Product extends BaseCollection
             // Set initial values for pagination and batch size
             $finished = false;
             $page = 1;
-            $batch_size = 100; // Adjust the batch size depending on your server's capacity
+            $batch_size = apply_filters('wooless_product_import_batch_size', 20); // Adjust the batch size depending on your server's capacity
             $imported_products_count = 0;
 
             while (!$finished) {
