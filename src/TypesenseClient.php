@@ -58,6 +58,13 @@ class TypesenseClient
         if ( $environment === 'live' ) {
             $this->host = 'd5qgrfvxs1ouw48lp.a1.typesense.net';
         }
+
+		/**
+		 * No api key then no client should be created
+		 */
+		if(empty($api_key)) {
+			return null;
+		}
         return new Client([
             'api_key' => $api_key,
             'nodes' => [
