@@ -52,22 +52,16 @@ class Woocommerce
     // Function to update the product in Typesense when its metadata is updated in WooCommerce
     public function on_product_save($product_id, $wc_product)
     {
-        // Creating global variable so that this function only runs once if product id is exactly equal to product id
-        global $bwl_previous_product_id;
-        if ($bwl_previous_product_id === $product_id) {
-            // Check if the product is published before updating typesense data
-            if ($wc_product->get_status() == 'publish') {
-                try {
-                    $document_data = Product::get_instance()->generate_typesense_data( $wc_product );
-                    Product::get_instance()->update( strval($product_id), $document_data );
-                    do_action('ts_product_update', $product_id, $wc_product);
-                } catch (\Exception $e) {
-                    error_log("Error updating product in Typesense: " . $e->getMessage());
-                }
-            }
-        }
-        // Setting the variable in memory so that we can use this later for checking
-        $bwl_previous_product_id = $product_id;
+		// Check if the product is published before updating typesense data
+		if ($wc_product->get_status() == 'publish') {
+			try {
+				$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
+				Product::get_instance()->update( strval($product_id), $document_data );
+				do_action('ts_product_update', $product_id, $wc_product);
+			} catch (\Exception $e) {
+				error_log("Error updating product in Typesense: " . $e->getMessage());
+			}
+		}
     }
 
     public function on_checkout_update_order_meta($order_id, $data)
