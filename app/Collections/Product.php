@@ -179,7 +179,6 @@ class Product extends BaseCollection
 
         // Get variations if the product is a variable product
         $variations_data = $default_attributes = [];
-        $attributes = $product->get_variation_attributes();
         if ($product_type === 'variable') {
             $variations = $product->get_available_variations();
             foreach ($variations as $variation) {

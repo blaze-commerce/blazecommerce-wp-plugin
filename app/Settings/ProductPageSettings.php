@@ -27,6 +27,12 @@ class ProductPageSettings extends BaseSettings
         } catch (\Throwable $th) {
             
         }
+
+        $homepage_layout = json_decode( stripslashes($_POST['homepage_layout']), true );
+
+        if (is_array($homepage_layout)) {
+            update_option('blaze_wooless_homepage_layout', $homepage_layout);
+        }
         
 
         return $options;

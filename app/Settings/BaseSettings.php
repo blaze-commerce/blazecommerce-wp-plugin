@@ -63,9 +63,13 @@ class BaseSettings {
         do_settings_sections( $this->option_key ); 
     }
 
-    public function get_option( $field_id = false )
+    public function get_option( $field_id = false, $default = false )
     {
-        $options = get_option( $this->option_key, false );
+        $options = get_option( $this->option_key, $default );
+
+        if ($options === "") {
+            $options = $default;
+        }
 
         if ( ! $field_id ) return $options;
 
@@ -122,7 +126,7 @@ class BaseSettings {
     }
 
     public function field_callback_multiselect( $args ) {
-        $values = $this->get_option( $args['id'] );
+        $values = $this->get_option( $args['id'] ) ?: array();
         $html = '<select name="' . $this->option_key . '['. $args['id'] .'][]" class="wooless-multiple-select" multiple="multiple" data-placeholder="' . $args['placeholder'] . '">';
         foreach ( $args['options'] as $key => $label) {
             $html .= '<option value="' . $key . '" ' . (in_array($key, $values) ? 'selected' : '') .'>' . $label . '</option>';

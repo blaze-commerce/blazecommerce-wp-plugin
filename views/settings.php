@@ -189,8 +189,8 @@ function indexData() {
     });
 }
 // Enable or disable the 'Index Products' button based on the saved API key
-if (document.getElementById("api_key").value !== "") {
-    document.getElementById("index_products").disabled = false;
-}
+// if (document.getElementById("api_key").value !== "") {
+//     document.getElementById("index_products").disabled = false;
+// }
 </script>
 <?php

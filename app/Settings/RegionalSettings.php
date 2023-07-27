@@ -58,7 +58,7 @@ class RegionalSettings extends BaseSettings {
                         'label' => 'Regions',
                         'type' => 'multiselect',
                         'args' => array(
-                            'options' => \WC()->countries->get_allowed_countries(),
+                            'options' => \WC()->countries->get_countries(),
                             'placeholder' => 'Select countries',
                         ),
                     ),

@@ -42,6 +42,13 @@ class BlazeWooless
             '\\BlazeWooless\\Settings\\GeneralSettings',
             '\\BlazeWooless\\Settings\\RegionalSettings',
             '\\BlazeWooless\\Settings\\ProductPageSettings',
+            '\\BlazeWooless\\Settings\\HomePageSettings',
+            '\\BlazeWooless\\Settings\\SiteMessageSettings',
+            '\\BlazeWooless\\Settings\\FooterBeforeSettings',
+            '\\BlazeWooless\\Settings\\FooterOneSettings',
+            '\\BlazeWooless\\Settings\\FooterTwoSettings',
+            '\\BlazeWooless\\Settings\\FooterThreeSettings',
+            '\\BlazeWooless\\Settings\\FooterAfterSettings',
         );
 
         foreach ( $settings as $setting ) {
@@ -56,6 +63,8 @@ class BlazeWooless
         $features = array(
             '\\BlazeWooless\\Features\\AttributeSettings',
             '\\BlazeWooless\\Features\\CalculateShipping',
+            '\\BlazeWooless\\Features\\DraggableContent',
+            '\\BlazeWooless\\Features\\LoadCartFromSession',
         );
 
         foreach ( $features as $feature ) {
@@ -70,8 +79,10 @@ class BlazeWooless
             '\\BlazeWooless\\Extensions\\JudgeMe',
             '\\BlazeWooless\\Extensions\\ProductAddons',
             '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
-            '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
+            // '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
             '\\BlazeWooless\\Extensions\\YoastSEO',
+            '\\BlazeWooless\\Extensions\\GraphQL',
+            '\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
         );
 
         foreach ( $extensions as $extension ) {

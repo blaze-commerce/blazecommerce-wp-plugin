@@ -3,10 +3,12 @@
 Plugin Name: Blaze Wooless
 Plugin URI: https://www.blaze.online
 Description: The official plugin that integrates your site to the wooless service.
-Version: 1.2
+Version: 1.4
 Author: Blaze Online
 Author URI: https://www.blaze.online
 */
+
+define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path(__FILE__) );
 
 require 'vendor/autoload.php';
 require_once plugin_dir_path(__FILE__) . 'lib/regional-data-helper.php';
@@ -22,21 +24,11 @@ require_once plugin_dir_path(__FILE__) . 'lib/setting-helper.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/site-info/index.php';
 // require_once plugin_dir_path(__FILE__) . 'views/homepage-setting.php';
 // require_once plugin_dir_path(__FILE__) . 'views/site-message-setting.php';
-require_once plugin_dir_path(__FILE__) . 'graphql/index.php';
+
 
 // Initialize plugin
 \BlazeWooless\BlazeWooless::get_instance()->init();
 
-add_action('init', 'create_custom_jwt_secret_key');
-
-function create_custom_jwt_secret_key() {
-    $jwt_key = get_option('wooless_custom_jwt_secret_key');
-
-    if(!$jwt_key) {
-        $auth_key = wp_salt('auth');
-        add_option( 'wooless_custom_jwt_secret_key', $auth_key );
-    }
-}
 
 // function register_compatibilities()
 // {
@@ -76,8 +68,9 @@ function typesense_enqueue_google_fonts($hook)
     );
     wp_enqueue_style('chosen');
 
-    wp_enqueue_style( 'blaze-wooless-admin-style', plugins_url( 'assets/css/blaze-woozless.css',  __FILE__ ), null, '1.0' );
-    wp_enqueue_script( 'blaze-wooless-admin-script', plugins_url( 'assets/js/blaze-wooless.js', __FILE__ ), array( 'jquery' ), '1.0', true );
+    wp_enqueue_style( 'blaze-wooless-admin-style', plugins_url( 'assets/css/blaze-wooless.css',  __FILE__ ), null, '1.0' );
+    wp_enqueue_script( 'blaze-wooless-admin-script', plugins_url( 'assets/js/blaze-wooless.js', __FILE__ ), array( 'jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable' ), '1.0', true );
+    // wp_enqueue_script( 'blaze-wooless-admin-script-react', plugins_url( 'dist/main.js', __FILE__ ), array( 'jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable' ), '1.0', true );
 
     wp_register_script(
         'chosen',
