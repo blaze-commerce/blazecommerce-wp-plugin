@@ -22,9 +22,21 @@ require_once plugin_dir_path(__FILE__) . 'lib/setting-helper.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/site-info/index.php';
 // require_once plugin_dir_path(__FILE__) . 'views/homepage-setting.php';
 // require_once plugin_dir_path(__FILE__) . 'views/site-message-setting.php';
+require_once plugin_dir_path(__FILE__) . 'graphql/index.php';
 
 // Initialize plugin
 \BlazeWooless\BlazeWooless::get_instance()->init();
+
+add_action('init', 'create_custom_jwt_secret_key');
+
+function create_custom_jwt_secret_key() {
+    $jwt_key = get_option('wooless_custom_jwt_secret_key');
+
+    if(!$jwt_key) {
+        $auth_key = wp_salt('auth');
+        add_option( 'wooless_custom_jwt_secret_key', $auth_key );
+    }
+}
 
 // function register_compatibilities()
 // {
@@ -39,10 +51,6 @@ require_once plugin_dir_path(__FILE__) . 'lib/setting-helper.php';
 
 add_action('admin_enqueue_scripts', 'enqueue_typesense_product_indexer_scripts');
 add_action('admin_menu', 'add_typesense_product_indexer_menu');
-
-
-
-
 
 function enqueue_typesense_product_indexer_scripts()
 {

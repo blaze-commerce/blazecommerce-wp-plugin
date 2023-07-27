@@ -268,7 +268,7 @@ class Product extends BaseCollection
 			'shortDescription' => !empty($shortDescription) ? $shortDescription : substr($description, 0, 150),
 			'description' => $description,
 			'name' => $product->get_name(),
-			'permalink' => get_permalink($product->get_id()),
+			'permalink' => wp_make_link_relative( get_permalink($product->get_id()) ),
 			'slug' => $product->get_slug(),
 			'thumbnail' => $thumbnail,
 			'sku' => $product->get_sku(),
