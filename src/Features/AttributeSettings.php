@@ -19,9 +19,9 @@ class AttributeSettings
 
     public function __construct()
     {
-        add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_available_product_attribute' ), 10, 2 );
-        add_filter( 'blaze_wooless_product_page_settings', array( $this, 'register_settings') );
-        add_action( 'blaze_wooless_save_product_page_settings', array( $this, 'save_settings' ) );
+        add_filter('blaze_wooless_product_data_for_typesense', array( $this, 'add_available_product_attribute' ), 10, 2);
+        add_filter('blaze_wooless_product_page_settings', array( $this, 'register_settings'));
+        add_action('blaze_wooless_save_product_page_settings', array( $this, 'save_settings' ));
     }
 
     public static function get_all_attributes()
@@ -38,7 +38,7 @@ class AttributeSettings
                 ),
             ),
         );
-        
+
         // Create a new WP_Query instance
         $query = new \WP_Query($args);
 
@@ -48,7 +48,7 @@ class AttributeSettings
             // Loop through the variable products
             while ($query->have_posts()) {
                 $query->the_post();
-        
+
                 // Get the product object
                 global $product;
 
@@ -58,7 +58,7 @@ class AttributeSettings
                     $attribute_to_register = array(
                         'name' => $key
                     );
-                    if ( $attr = $attribute->get_taxonomy_object() ) {
+                    if ($attr = $attribute->get_taxonomy_object()) {
                         $attribute_to_register['label'] = $attr->attribute_label;
                     } else {
                         $attribute_to_register['label'] = $attribute->get_name();
@@ -74,59 +74,59 @@ class AttributeSettings
         return $site_product_attributes;
     }
 
-    public function add_available_product_attribute( $product_data, $product_id )
+    public function add_available_product_attribute($product_data, $product_id)
     {
-        ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
         $product = wc_get_product($product_id);
         $product_type = $product->get_type();
 
-        if ( $product_type === 'variable' ) {
+        if ($product_type === 'variable') {
             $attributes = $product->get_attributes();
-
-            // var_dump($attributes); exit;
-
             $generated_attributes = array();
 
             foreach ($attributes as $key => $attribute) {
                 $attribute_to_register = array(
-                    'name' => $key,
+                    'slug' => $key,
                     'options' => $attribute->get_options(),
                 );
-                if ( $attribute->is_taxonomy() ) {
-                    $options = array_reduce( $attribute->get_terms(), function( $carry, $term ) {
-                        $carry[$term->slug] = $term->name;
-                        return $carry;
-                    }, array() );
+
+                if ($attribute->is_taxonomy()) {
+                    $options = array_map(function ($term) {
+                        return [
+                            'label' => $term->name,
+                            'slug' => $term->slug,
+                            'term_id' => $term->term_id,
+							'value' => $term->name,
+                        ];
+                    }, $attribute->get_terms());
                 } else {
-                    $options = array_reduce( $attribute->get_options(), function( $carry, $option ) {
-                        $carry[$option] = ucfirst($option);
-                        return $carry;
-                    }, array() );
+                    $options = array_map(function ($option) {
+                        return [
+                            'label' => $option,
+                            'slug' => $option,
+                            'term_id' => 0,
+							'value' => $option
+                        ];
+                    }, $attribute->get_options());
                 }
 
                 $attribute_to_register['options'] = $options;
 
-                if ( $attr = $attribute->get_taxonomy_object() ) {
+                if ($attr = $attribute->get_taxonomy_object()) {
                     $attribute_to_register['label'] = $attr->attribute_label;
-                    // var_dump(implode( ', ',  )); exit;
                 } else {
                     $attribute_to_register['label'] = $attribute->get_name();
                 }
 
-                $generated_attributes[] = $attribute_to_register;
+                $generated_attributes[] = apply_filters('blaze_wooless_product_attribute_for_typesense', $attribute_to_register, $attribute);
             }
-
-            // exit;
-
+            $product_data['defaultAttributes'] = $product->get_default_attributes();
             $product_data['attributes'] = $generated_attributes;
         }
 
         return $product_data;
     }
 
-    public function register_settings( $product_page_settings )
+    public function register_settings($product_page_settings)
     {
         $product_page_settings['wooless_settings_attributes_section'] = array(
             'label' => 'Attributes',
@@ -154,15 +154,15 @@ error_reporting(E_ALL);
         }, AttributeSettings::get_all_attributes());
     }
 
-    public function save_settings( $options )
+    public function save_settings($options)
     {
-        $attributes = array_filter( $options, function( $option, $key ) {
-            return str_starts_with( $key, 'attribute_' );
+        $attributes = array_filter($options, function ($option, $key) {
+            return str_starts_with($key, 'attribute_');
         }, ARRAY_FILTER_USE_BOTH);
         TypesenseClient::get_instance()->site_info()->upsert([
             'id' => '1000003',
             'name' => 'attribute_display_type',
-            'value' => json_encode( $attributes ),
+            'value' => json_encode($attributes),
             'updated_at' => time(),
         ]);
     }
