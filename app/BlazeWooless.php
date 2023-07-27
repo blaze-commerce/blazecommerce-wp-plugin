@@ -82,6 +82,7 @@ class BlazeWooless
             // '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
             '\\BlazeWooless\\Extensions\\YoastSEO',
             '\\BlazeWooless\\Extensions\\GraphQL',
+            '\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
         );
 
         foreach ( $extensions as $extension ) {
