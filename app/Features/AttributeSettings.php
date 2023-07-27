@@ -156,11 +156,14 @@ class AttributeSettings
 
     public function save_settings($options)
     {
-        $attributes = array_filter($options, function ($option, $key) {
-            return str_starts_with($key, 'attribute_');
+        if ( !is_array( $options )) {
+            $options = array();
+        }
+        $attributes = array_filter( $options, function( $option, $key ) {
+            return str_starts_with( $key, 'attribute_' );
         }, ARRAY_FILTER_USE_BOTH);
         TypesenseClient::get_instance()->site_info()->upsert([
-            'id' => '1000003',
+            'id' => '1000023',
             'name' => 'attribute_display_type',
             'value' => json_encode($attributes),
             'updated_at' => time(),
