@@ -56,9 +56,13 @@ class Woocommerce
 		if ($wc_product->get_status() == 'publish') {
 			try {
 				$document_data = Product::get_instance()->generate_typesense_data($wc_product);
-				Product::get_instance()->update(strval($product_id), $document_data);
+				Product::get_instance()->upsert($document_data);
 				do_action('ts_product_update', $product_id, $wc_product);
 			} catch (\Exception $e) {
+				$logger = wc_get_logger();
+				$context = array( 'source' => 'wooless-product-update' );
+ 
+				$logger->debug( 'TS Product Update Exception: '.$e->getMessage(), $context );
 				error_log("Error updating product in Typesense: " . $e->getMessage());
 			}
 		}

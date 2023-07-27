@@ -19,6 +19,8 @@ class Product extends BaseCollection
 	public function index_to_typesense()
 	{
 		//Product indexing
+		$logger = wc_get_logger();
+		$context = array( 'source' => 'wooless-product-import' );
 
 		// Fetch the store ID from the saved options
 		$wooless_site_id = get_option('store_id');
@@ -28,6 +30,7 @@ class Product extends BaseCollection
 				$this->drop_collection();
 			} catch (\Exception $e) {
 				// Don't error out if the collection was not found
+				$logger->debug( 'TS Drop collection Exception: '.$e->getMessage(), $context );
 			}
 
 			$this->create_collection(
@@ -47,11 +50,11 @@ class Product extends BaseCollection
 						array('name' => 'regularPrice', 'type' => 'object'),
 						array(
 							'name' => 'salePrice',
-							'type' => 'object',
-							'fields' => array(
-								array('name' => 'amount', 'type' => 'float', 'sort' => true),
-								array('name' => 'currency', 'type' => 'string'),
-							)
+							'type' => 'object'
+						),
+						array(
+							'name' => 'salePrice.*',
+							'type' => 'float'
 						),
 						array('name' => 'onSale', 'type' => 'bool', 'facet' => true),
 						array('name' => 'stockQuantity', 'type' => 'int64'),
@@ -111,6 +114,7 @@ class Product extends BaseCollection
 					$result = $this->import($products_batch);
 					$imported_products_count += count($products_batch); // Increment the count of imported products
 				} catch (\Exception $e) {
+					$logger->debug( 'TS Product Import Exception: '.$e->getMessage(), $context );
 					error_log("Error importing products to Typesense: " . $e->getMessage());
 				}
 			}
@@ -120,6 +124,7 @@ class Product extends BaseCollection
 
 			wp_die();
 		} catch (\Exception $e) {
+			$logger->debug( 'TS Batch Exception: '.$e->getMessage(), $context );
 			$error_message = "Error: " . $e->getMessage();
 			echo $error_message; // Print the error message for debugging purposes
 			echo "<script>

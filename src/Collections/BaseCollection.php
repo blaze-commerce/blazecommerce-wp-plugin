@@ -63,4 +63,9 @@ class BaseCollection
     {
         return $this->collection()->documents[ $id ]->update( $document_data );
     }
+
+	public function upsert( $document_data )
+    {
+        return $this->collection()->documents->upsert( $document_data );
+    }
 }
