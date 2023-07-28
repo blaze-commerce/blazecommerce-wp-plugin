@@ -16,112 +16,137 @@ class Product extends BaseCollection
         return self::$instance;
     }
 
+	public function initialize()
+	{
+		$logger = wc_get_logger();
+		$context = array('source' => 'wooless-product-collection-initialize');
+		try {
+			$this->drop_collection();
+		} catch (\Exception $e) {
+		}
+
+		try {
+
+			$logger->debug('TS Product collection: ' . $this->collection_name(), $context);
+			$this->create_collection(
+				array(
+					'name' => $this->collection_name(),
+					'fields' => array(
+						['name' => 'id', 'type' => 'string', 'facet' => true],
+						['name' => 'productId', 'type' => 'string', 'facet' => true],
+						['name' => 'description', 'type' => 'string'],
+						['name' => 'shortDescription', 'type' => 'string'],
+						['name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true],
+						['name' => 'permalink', 'type' => 'string'],
+						['name' => 'slug', 'type' => 'string', 'facet' => true],
+						['name' => 'seoFullHead', 'type' => 'string'],
+						['name' => 'sku', 'type' => 'string'],
+						['name' => 'price', 'type' => 'object', "facet" => true],
+						['name' => 'price.AUD', 'type' => 'float'],
+						['name' => 'regularPrice', 'type' => 'object'],
+						['name' => 'regularPrice.AUD', 'type' => 'float'],
+						['name' => 'salePrice', 'type' => 'object'],
+						['name' => 'salePrice.AUD', 'type' => 'float'],
+						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
+						['name' => 'stockQuantity', 'type' => 'int64'],
+						['name' => 'stockStatus', 'type' => 'string'],
+						['name' => 'updatedAt', 'type' => 'int64'],
+						['name' => 'createdAt', 'type' => 'int64'],
+						['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
+						['name' => 'totalSales', 'type' => 'int64'],
+						['name' => 'productType', 'type' => 'string', 'facet' => true],
+						['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true],
+						// Had to use string[] to type base on https://github.com/typesense/typesense/issues/227#issuecomment-1364072388 because ts is throwing errors after updgrade that the data is not an array
+						['name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+						['name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true],
+						['name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+						['name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+						['name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+					),
+					'default_sorting_field' => 'updatedAt',
+					'enable_nested_fields' => true
+				)
+			);
+
+		} catch (\Exception $e) {
+			$logger->debug('TS Product collection intialize Exception: ' . $e->getMessage(), $context);
+		}
+	}
+
     public function index_to_typesense()
     {
-        //Product indexing
+		//Product indexing
+		$logger = wc_get_logger();
+		$context = array('source' => 'wooless-product-import');
 
-        // Fetch the store ID from the saved options
-        $wooless_site_id = get_option('store_id');
-        $collection_product = 'product-' . $wooless_site_id;
-        try {
-            try {
-                $this->drop_collection();
-            } catch (\Exception $e) {
-                // Don't error out if the collection was not found
-            }
 
-            $this->create_collection(
-                array(
-                    'name' => $collection_product,
-                    'fields' => array(
-                        array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
-                        array( 'name' => 'productId', 'type' => 'string', 'facet' => true ),
-                        array( 'name' => 'description', 'type' => 'string' ),
-                        array( 'name' => 'shortDescription', 'type' => 'string' ),
-                        array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true ),
-                        array( 'name' => 'permalink', 'type' => 'string' ),
-                        array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
-                        array( 'name' => 'seoFullHead', 'type' => 'string' ),
-                        array( 'name' => 'sku', 'type' => 'string' ),
-                        array( 'name' => 'price', 'type' => 'object', "facet" => true ),
-                        array( 'name' => 'regularPrice', 'type' => 'object' ),
-                        array( 'name' => 'salePrice', 'type' => 'object' ),
-                        array( 'name' => 'onSale', 'type' => 'bool', 'facet' => true ),
-                        array( 'name' => 'stockQuantity', 'type' => 'int64' ),
-                        array( 'name' => 'stockStatus', 'type' => 'string' ),
-                        array( 'name' => 'updatedAt', 'type' => 'int64' ),
-                        array( 'name' => 'createdAt', 'type' => 'int64' ),
-                        array( 'name' => 'isFeatured', 'type' => 'bool', 'facet' => true ),
-                        array( 'name' => 'totalSales', 'type' => 'int64' ),
-                        array( 'name' => 'productType', 'type' => 'string', 'facet' => true ),
-                        array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true ),
-                    ),
-                    'default_sorting_field' => 'updatedAt',
-                    'enable_nested_fields' => true
-                )
-            );
+		try {
+			$this->initialize();
+			// Set initial values for pagination and batch size
+			$finished = false;
+			$page = 1;
+			$batch_size = apply_filters('wooless_product_import_batch_size', 20); // Adjust the batch size depending on your server's capacity
+			$imported_products_count = 0;
 
-            // Set initial values for pagination and batch size
-            $finished = false;
-            $page = 1;
-            $batch_size = 100; // Adjust the batch size depending on your server's capacity
-            $imported_products_count = 0;
+			while (!$finished) {
+				$products = \wc_get_products(array('status' => 'publish', 'limit' => $batch_size, 'page' => $page));
 
-            while (!$finished) {
-                $products = \wc_get_products(array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page ));
+				if (empty($products)) {
+					$finished = true;
+					continue;
+				}
 
-                if (empty($products)) {
-                    $finished = true;
-                    continue;
-                }
+				$products_batch = array();
 
-                $products_batch = array();
+				// Prepare products for indexing in Typesense
+				foreach ($products as $product) {
+					// Get the product data
+					$product_data = $this->generate_typesense_data($product);
 
-                // Prepare products for indexing in Typesense
-                foreach ($products as $product) {
-                    // Get the product data
-                    $product_data = $this->generate_typesense_data($product);
+					if (!$product_data) {
+						error_log("Skipping product ID: " . $product->get_id());
+						continue; // Skip this product if no product data is found
+					}
 
-                    if (!$product_data) {
-                        error_log("Skipping product ID: " . $product->get_id());
-                        continue; // Skip this product if no product data is found
-                    }
+					$products_batch[] = $product_data;
 
-                    $products_batch[] = $product_data;
+					// Free memory
+					unset($product_data);
+				}
 
-                    // Free memory
-                    unset($product_data);
-                }
+				// Log the number of products in the batch
+				error_log("Batch size: " . count($products_batch));
 
-                // Log the number of products in the batch
-                error_log("Batch size: " . count($products_batch));
+				// Increment the page number
+				$page++;
 
-                // Increment the page number
-                $page++;
+				// Import products to Typesense
+				try {
+					$result = $this->import($products_batch);
+					$logger->debug('TS Product Import result: ' . print_r($result, 1), $context);
+					$imported_products_count += count($products_batch); // Increment the count of imported products
 
-                // Import products to Typesense
-                try {
-                    $result = $this->import($products_batch);
-                    $imported_products_count += count($products_batch); // Increment the count of imported products
-                } catch (\Exception $e) {
-                    error_log("Error importing products to Typesense: " . $e->getMessage());
-                }
-            }
+				} catch (\Exception $e) {
+					$logger->debug('TS Product Import Exception: ' . $e->getMessage(), $context);
+					error_log("Error importing products to Typesense: " . $e->getMessage());
+				}
+			}
 
-            // After the while loop, print the number of imported products
-            echo "Imported products count: " . $imported_products_count . "\n";
+			// After the while loop, print the number of imported products
+			echo "Imported products count: " . $imported_products_count . "\n";
 
-            wp_die();
-        } catch (\Exception $e) {
-            $error_message = "Error: " . $e->getMessage();
-            echo $error_message; // Print the error message for debugging purposes
-            echo "<script>
+			wp_die();
+		} catch (\Exception $e) {
+			$logger->debug('TS Batch Exception: ' . $e->getMessage(), $context);
+			$error_message = "Error: " . $e->getMessage();
+			echo $error_message; // Print the error message for debugging purposes
+			echo "<script>
             console.log('Error block executed'); // Log a message to the browser console
             document.getElementById('error_message').innerHTML = '$error_message';
         </script>";
-            echo "Error creating collection: " . $e->getMessage() . "\n";
-        }
-    }
+			echo "Error creating collection: " . $e->getMessage() . "\n";
+		}
+	}
 
     public function generate_typesense_data($product)
     {
