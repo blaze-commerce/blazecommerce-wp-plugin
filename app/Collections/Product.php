@@ -45,14 +45,7 @@ class Product extends BaseCollection
                         array( 'name' => 'sku', 'type' => 'string' ),
                         array( 'name' => 'price', 'type' => 'object', "facet" => true ),
                         array( 'name' => 'regularPrice', 'type' => 'object' ),
-                        array(
-                            'name' => 'salePrice',
-                            'type' => 'object',
-                            'fields' => array(
-                                array( 'name' => 'amount', 'type' => 'float', 'sort' => true ),
-                                array( 'name' => 'currency', 'type' => 'string' ),
-                             )
-                         ),
+                        array( 'name' => 'salePrice', 'type' => 'object' ),
                         array( 'name' => 'onSale', 'type' => 'bool', 'facet' => true ),
                         array( 'name' => 'stockQuantity', 'type' => 'int64' ),
                         array( 'name' => 'stockStatus', 'type' => 'string' ),

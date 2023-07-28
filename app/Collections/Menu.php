@@ -2,6 +2,8 @@
 
 namespace BlazeWooless\Collections;
 
+use BlazeWooless\TypesenseClient;
+
 class Menu extends BaseCollection
 {
     private static $instance = null;
@@ -32,11 +34,11 @@ class Menu extends BaseCollection
                 'name' => $this->collection_name(),
                 'fields' => [
                     ['name' => 'name', 'type' => 'string'],
-                    ['name' => 'Wp_Menu_Id', 'type' => 'int32'],
+                    ['name' => 'wp_menu_id', 'type' => 'int32'],
                     ['name' => 'items', 'type' => 'string'],
                     ['name' => 'updated_at', 'type' => 'int64'],
                 ],
-                'default_sorting_field' => 'Wp_Menu_Id',
+                'default_sorting_field' => 'wp_menu_id',
             ]);
 
             // Get all navigation menus
@@ -79,7 +81,7 @@ class Menu extends BaseCollection
                 // Create a document for the current menu and index it to the 'menu' collection
                 $document = [
                     'name' => $menu->name,
-                    'Wp_Menu_Id' => (int) $menu->term_id,
+                    'wp_menu_id' => (int) $menu->term_id,
                     'items' => $menu_item_json,
                     'updated_at' => intval(strtotime($menu_item->post_modified), 10), // Converts the timestamp to a 64-bit integer
                 ];
@@ -124,29 +126,30 @@ class Menu extends BaseCollection
                 'items' => $menu_item_json,
                 'updated_at' => intval(strtotime($menu_item->post_modified), 10), // Converts the timestamp to a 64-bit integer
             ];
-            try {
-                // $this->collection()->documents[(string) $document['wp_menu_id']]->retrieve();
-                $document_exists = true;
-            } catch (\Exception $e) {
-                // Document not found, set $document_exists to false
-                $document_exists = false;
-            }
+            // try {
+            //     // $this->collection()->documents[(string) $document['wp_menu_id']]->retrieve();
+            //     $document_exists = true;
+            // } catch (\Exception $e) {
+            //     // Document not found, set $document_exists to false
+            //     $document_exists = false;
+            // }
 
             // Check if the document exists in the 'menu' collection
-            if ($document_exists) {
-                $this->update((string) $document['wp_menu_id'], $document);
-                set_transient('typesense_updated_success', true, 5);
-            } else {
-                // If the document does not exist, create it
-                $this->create($document);
-                set_transient('typesense_created_success', true, 5);
-            }
+            TypesenseClient::get_instance()->menu()->upsert($document);
+            // if ($document_exists) {
+            //     $this->update((string) $document['wp_menu_id'], $document);
+            //     set_transient('typesense_updated_success', true, 5);
+            // } else {
+            //     // If the document does not exist, create it
+            //     $this->create($document);
+            //     set_transient('typesense_created_success', true, 5);
+            // }
         } catch (\Exception $e) {
             set_transient('typesense_error', true, 5);
         }
 
-        $location = add_query_arg('typesense_menu_updated', '1', wp_get_referer());
-        wp_redirect($location);
-        exit;
+        // $location = add_query_arg('typesense_menu_updated', '1', wp_get_referer());
+        // wp_redirect($location);
+        // exit;
     }
 }
