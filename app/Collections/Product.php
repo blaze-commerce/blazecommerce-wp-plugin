@@ -304,12 +304,17 @@ class Product extends BaseCollection
 
             if (!empty($product_terms) && !is_wp_error($product_terms)) {
                 foreach ($product_terms as $product_term) {
+
+                    // Get Parent Term
+                    $parentTerm = get_term($product_term->parent, $taxonomy);
+
                     $taxonomies_data[] = [
                         'name' => $product_term->name,
                         'url' => get_term_link($product_term->term_id),
                         'type' => $taxonomy,
                         'slug' => $product_term->slug,
-                        'nameAndType' => $product_term->name . '|' . $taxonomy,
+                        'nameAndType' => $product_term->name . '|' . $taxonomy,                       'childAndParentTerm' => $parentTerm->name ? $product_term->name . '|' . $parentTerm->name : '',
+                        'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
 
                     ];
                 }
