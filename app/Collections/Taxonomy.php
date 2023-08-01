@@ -40,6 +40,7 @@ class Taxonomy extends BaseCollection
                     ['name' => 'updatedAt', 'type' => 'int64'],
                     ['name' => 'bannerThumbnail', 'type' => 'string'],
                     ['name' => 'bannerText', 'type' => 'string'],
+                    ['name' => 'parentTerm', 'type' => 'string'],
                 ],
                 'default_sorting_field' => 'updatedAt',
             ]);
@@ -101,6 +102,9 @@ class Taxonomy extends BaseCollection
                         $yoastMeta = \YoastSEO()->meta->for_term($term->term_id);
                         $termHead = is_object($yoastMeta) ? $yoastMeta->get_head() : '';
                         $selFullHead = is_string($termHead) ? $termHead : (isset($termHead->html) ? $termHead->html : '');
+
+                        // Get Parent Term
+                        $parentTerm = get_term($term->parent, $taxonomy);
                         
                         /**
                          * set gb product ingredient image to banneThumbnail. 
@@ -120,6 +124,7 @@ class Taxonomy extends BaseCollection
                             'updatedAt' => $latest_modified_date ? (int) strtotime($latest_modified_date) : 0,
                             'bannerThumbnail' => (string)$bannerThumbnail,
                             'bannerText' => $bannerText,
+                            'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
                         ];
                         
                         // Index the term data in Typesense
@@ -158,6 +163,9 @@ class Taxonomy extends BaseCollection
         $bannerThumbnail = get_term_meta($term->term_id, 'wpcf-image', true);
         $bannerText = get_term_meta($term->term_id, 'wpcf-term-banner-text', true);
 
+        // Get Parent Term
+        $parentTerm = get_term($term->parent, $taxonomy);
+
         // Prepare the data to be updated
         $document = [
             'slug' => $term->slug,
@@ -167,7 +175,7 @@ class Taxonomy extends BaseCollection
             'permalink' => wp_make_link_relative( get_term_link($term) ),
             'updatedAt' => time(),
             'bannerThumbnail' => $bannerThumbnail,
-            'bannerText' => $bannerText,
+            'bannerText' => $bannerText,                            'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
         ];
 
         // Update the term data in Typesense
