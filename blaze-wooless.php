@@ -3,7 +3,7 @@
 Plugin Name: Blaze Wooless
 Plugin URI: https://www.blaze.online
 Description: The official plugin that integrates your site to the wooless service.
-Version: 1.4.1
+Version: 1.4.2
 Author: Blaze Online
 Author URI: https://www.blaze.online
 */
