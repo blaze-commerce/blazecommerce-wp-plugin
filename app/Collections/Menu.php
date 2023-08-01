@@ -67,12 +67,21 @@ class Menu extends BaseCollection
                 // Initialize an empty array to hold the menu item data
                 $menu_item_data = [];
 
-                // Loop through each menu item and add its data to the array
-                foreach ($menu_items as $menu_item) {
-                    $menu_item_data[] = [
-                        'title' => $menu_item->title,
-                        'url' => $menu_item->url,
-                    ];
+                foreach ($menu_items as $item) {
+                    if (!$item->menu_item_parent) {
+                        // If there's no parent, add it to the top level of the nested array
+                        $menu_item_data[$item->ID] = array(
+                            'title' => $item->title,
+                            'url' => $item->url,
+                            'children' => array(),
+                        );
+                    } else {
+                        // If there's a parent, add it as a child of its parent
+                        $menu_item_data[$item->menu_item_parent]['children'][] = array(
+                            'title' => $item->title,
+                            'url' => $item->url,
+                        );
+                    }
                 }
 
                 // Encode the menu item data as JSON
@@ -83,7 +92,7 @@ class Menu extends BaseCollection
                     'name' => $menu->name,
                     'wp_menu_id' => (int) $menu->term_id,
                     'items' => $menu_item_json,
-                    'updated_at' => intval(strtotime($menu_item->post_modified), 10), // Converts the timestamp to a 64-bit integer
+                    'updated_at' => intval(strtotime($menu->post_modified), 10), // Converts the timestamp to a 64-bit integer
                 ];
 
 
