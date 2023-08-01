@@ -56,7 +56,15 @@ class Menu extends BaseCollection
                 ];
             }
             $my_account_menu->menu_items = $my_account_menu_items;
-            $menus[] = $my_account_menu;
+            $document = [
+                'name' => 'WooCommerce My Account',
+                'wp_menu_id' => 12444,
+                'items' => json_encode($my_account_menu_items),
+                'updated_at' => time(), // Converts the timestamp to a 64-bit integer
+            ];
+
+
+            $this->create($document);
 
             // Loop through each menu and index its items to the 'menu' collection
             foreach ($menus as $menu) {
@@ -83,6 +91,8 @@ class Menu extends BaseCollection
                         );
                     }
                 }
+
+                $menu_item_data = array_values($menu_item_data);
 
                 // Encode the menu item data as JSON
                 $menu_item_json = json_encode($menu_item_data);
