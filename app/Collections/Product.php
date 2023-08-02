@@ -55,6 +55,7 @@ class Product extends BaseCollection
                         array( 'name' => 'totalSales', 'type' => 'int64' ),
                         array( 'name' => 'productType', 'type' => 'string', 'facet' => true ),
                         array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true ),
+                        array( 'name' => 'crossSellData', 'type' => 'object[]', 'facet' => true ),
                     ),
                     'default_sorting_field' => 'updatedAt',
                     'enable_nested_fields' => true
@@ -214,9 +215,54 @@ class Product extends BaseCollection
             foreach ($cross_sell_ids as $cross_sell_id) {
                 $cross_sell_product = wc_get_product($cross_sell_id);
                 if ($cross_sell_product) {
+                    $cross_sell_thumbnail_id = get_post_thumbnail_id($cross_sell_id);
+                    $cross_sell_thumbnail_attachment = get_post($cross_sell_thumbnail_id);
+                    $cross_sell_thumbnail = [
+                        'id' => $cross_sell_thumbnail_id,
+                        'title' => $cross_sell_thumbnail_attachment->post_title,
+                        'altText' => get_post_meta($cross_sell_thumbnail_id, '_wp_attachment_image_alt', true),
+                        'src' => get_the_post_thumbnail_url($cross_sell_id),
+                    ];
+
+                    $cross_sell_attachment_ids = $cross_sell_product->get_gallery_image_ids();
+                    $cross_sell_product_gallery = array_map(function ($cross_sell_attachment_id) {
+                        $cross_sell_attachment = get_post($cross_sell_attachment_id);
+                        return [
+                            'id' => $cross_sell_attachment_id,
+                            'title' => $cross_sell_attachment->post_title,
+                            'altText' => get_post_meta($cross_sell_attachment_id, '_wp_attachment_image_alt', true),
+                            'src' => wp_get_attachment_url($cross_sell_attachment_id)
+                        ];
+                    }, $cross_sell_attachment_ids);
+
+                    $cross_sell_stockQuantity = $cross_sell_product->get_stock_quantity();
+
+                    $cross_sell_default_price = [
+                        $currency => floatval($cross_sell_product->get_price())
+                    ];
+                    $cross_sell_default_regular_price = [
+                        $currency => floatval($cross_sell_product->get_regular_price())
+                    ];
+
                     $cross_sell_data[] = array(
                         'id' => $cross_sell_product->get_id(),
                         'name' => $cross_sell_product->get_name(),
+                        'permalink' => wp_make_link_relative( get_permalink($cross_sell_product->get_id()) ),
+                        'slug' => $cross_sell_product->get_slug(),
+                        'thumbnail' => $cross_sell_thumbnail,
+                        'sku' => $cross_sell_product->get_sku(),
+                        'price' => apply_filters('wooless_product_price', $cross_sell_default_price, $cross_sell_id),
+                        'regularPrice' => apply_filters('wooless_product_regular_price', $cross_sell_default_regular_price, $cross_sell_id),
+                        'salePrice' => apply_filters('wooless_product_sale_price', $cross_sell_default_price, $cross_sell_id),
+                        'onSale' => $cross_sell_product->is_on_sale(),
+                        'stockQuantity' => empty($cross_sell_stockQuantity) ? 0 : $cross_sell_stockQuantity,
+                        'stockStatus' => $cross_sell_product->get_stock_status(),
+                        'updatedAt' => strtotime($cross_sell_product->get_date_modified()),
+                        'createdAt' => strtotime($cross_sell_product->get_date_created()),
+                        'isFeatured' => $cross_sell_product->get_featured(),
+                        'totalSales' => $cross_sell_product->get_total_sales(),
+                        'galleryImages' => $cross_sell_product_gallery,
+                        'productType' => $cross_sell_product->get_type(),
                     );
                 }
             }
@@ -278,7 +324,7 @@ class Product extends BaseCollection
             // Add product type
             'variations' => $variations_data,
             // Add variations data
-            'crossSellData' => $cross_sell_data,
+            'crossSellData' => empty($cross_sell_data) ? [] : $cross_sell_data,
             'attributes' => $attributes,
             'defaultAttributes' => $default_attributes,
             'upsellData' => $upsell_data,
