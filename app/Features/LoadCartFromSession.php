@@ -5,68 +5,68 @@ namespace BlazeWooless\Features;
 
 class LoadCartFromSession
 {
-    private static $instance = null;
+	private static $instance = null;
 
-    public static function get_instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
+	public static function get_instance()
+	{
+		if (self::$instance === null) {
+			self::$instance = new self();
+		}
 
-        return self::$instance;
-    }
+		return self::$instance;
+	}
 
-    public function __construct()
-    {
-        add_action( 'woocommerce_load_cart_from_session', array( $this, 'woocommerce_load_cart_from_session' ) );
-        add_action( 'wp_footer', array( $this, 'remove_session_id_from_url_script' ) );
-    }
+	public function __construct()
+	{
+		add_action('woocommerce_load_cart_from_session', array($this, 'woocommerce_load_cart_from_session'));
+		add_action('wp_footer', array($this, 'remove_session_id_from_url_script'));
+	}
 
-    public function woocommerce_load_cart_from_session()
-    {
-        // Bail if there isn't any data
-        if ( ! isset( $_GET['session_id'] ) ) {
-            return;
-        }
+	public function woocommerce_load_cart_from_session()
+	{
+		// Bail if there isn't any data
+		if (!isset($_GET['session_id'])) {
+			return;
+		}
 
-        $session_id = sanitize_text_field( $_GET['session_id'] );
+		$session_id = sanitize_text_field($_GET['session_id']);
 
-        try {
-            $handler      = new \WC_Session_Handler();
-            $session_data = $handler->get_session( $session_id );
-            
+		try {
+			$handler = new \WC_Session_Handler();
+			$session_data = $handler->get_session($session_id);
 
-        // We were passed a session ID, yet no session was found. Let's log this and bail.
-        if ( empty( $session_data ) ) {
-            throw new \Exception( 'Could not locate WooCommerce session on checkout' );
-        }
 
-        // Go get the session instance (WC_Session) from the Main WC Class
-        $session = WC()->session;
+			// We were passed a session ID, yet no session was found. Let's log this and bail.
+			if (empty($session_data)) {
+				throw new \Exception('Could not locate WooCommerce session on checkout');
+			}
 
-        // Set the session variable
-        foreach ( $session_data as $key => $value ) {
-            $session_value = unserialize( $value );
-            $session->set( $key, $session_value );
-        }
+			// Go get the session instance (WC_Session) from the Main WC Class
+			$session = WC()->session;
 
-        } catch ( \Exception $exception ) {
-            // ErrorHandling::capture( $exception );
-        }
-    }
+			// Set the session variable
+			foreach ($session_data as $key => $value) {
+				$session_value = unserialize($value);
+				$session->set($key, $session_value);
+			}
 
-    public function remove_session_id_from_url_script()
-    {
-        if ( !class_exists( 'WooCommerce' ) || !is_checkout() ) {
-            return;
-        }
-        
-        ?>
-        <script>
-            (function() {
-                window.history.pushState({}, '', "/checkout");
-            })()
-        </script>
-        <?php
-    }
+		} catch (\Exception $exception) {
+			// ErrorHandling::capture( $exception );
+		}
+	}
+
+	public function remove_session_id_from_url_script()
+	{
+		if (!class_exists('WooCommerce') || !is_checkout() || !isset($_GET['session_id'])) {
+			return;
+		}
+
+		?>
+		<script>
+			(function () {
+				window.history.pushState({}, '', "/checkout");
+			})()
+		</script>
+		<?php
+	}
 }
