@@ -68,6 +68,8 @@ class Product extends BaseCollection
             $batch_size = 100; // Adjust the batch size depending on your server's capacity
             $imported_products_count = 0;
 
+            $judgeme_product_data = apply_filters( 'blaze_wooless_generate_product_data', array() );
+
             while (!$finished) {
                 $products = \wc_get_products(array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page ));
 
@@ -80,8 +82,11 @@ class Product extends BaseCollection
 
                 // Prepare products for indexing in Typesense
                 foreach ($products as $product) {
+                    $product_id = $product->get_id();
+                    $product_slug = $product->get_slug();
+
                     // Get the product data
-                    $product_data = $this->generate_typesense_data($product);
+                    $product_data = $this->generate_typesense_data($product, $judgeme_product_data);
 
                     if (!$product_data) {
                         error_log("Skipping product ID: " . $product->get_id());
@@ -124,7 +129,7 @@ class Product extends BaseCollection
         }
     }
 
-    public function generate_typesense_data($product)
+    public function generate_typesense_data($product, $judgeme_product_data)
     {
         // Format product data for indexing
         $product_id = $product->get_id();
@@ -212,7 +217,7 @@ class Product extends BaseCollection
         $cross_sell_ids = $product->get_cross_sell_ids();
         $cross_sell_data = [];
         if (!empty($cross_sell_ids)) {
-            $cross_sell_data = $this->get_cross_sell_products( $cross_sell_ids );
+            $cross_sell_data = $this->get_cross_sell_products( $cross_sell_ids, $judgeme_product_data );
         }
 
         $upsell_ids = $product->get_upsell_ids();
@@ -243,7 +248,17 @@ class Product extends BaseCollection
         }
         $taxonomies = $this->get_taxonomies( $product );
 
-        $related_products = $this->get_related_products( $product_id, $taxonomies );
+        $related_products = $this->get_related_products( $product_id, $taxonomies, $judgeme_product_data );
+
+        $product_slug = $product->get_slug();
+
+        $judgeme_product_id = '';
+
+        foreach($judgeme_product_data as $judgeme) {
+            if($judgeme['handle'] === $product_slug) {
+                $judgeme_product_id = $judgeme['id'];
+            }
+        }
 
         $product_data = [
             'id' => strval($product->get_id()),
@@ -252,7 +267,7 @@ class Product extends BaseCollection
             'description' => $description,
             'name' => $product->get_name(),
             'permalink' => wp_make_link_relative( get_permalink($product->get_id()) ),
-            'slug' => $product->get_slug(),
+            'slug' => $product_slug,
             'thumbnail' => $thumbnail,
             'sku' => $product->get_sku(),
             'price' => apply_filters('wooless_product_price', $default_price, $product_id),
@@ -276,9 +291,13 @@ class Product extends BaseCollection
             'defaultAttributes' => $default_attributes,
             'upsellData' => $upsell_data,
             'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
+            'judgeMeProductId' => $judgeme_product_id,
             // 'attributes' => $attributes,
             // 'additional_information_shipping' => $shipping,
         ];
+
+        // print("<pre>".print_r($judgeme,true)."</pre>");
+
         return apply_filters('blaze_wooless_product_data_for_typesense', $product_data, $product_id);
     }
 
@@ -317,7 +336,7 @@ class Product extends BaseCollection
         return $taxonomies_data;
     }
 
-    public function get_related_products($product_id, $taxonomies) {
+    public function get_related_products( $product_id, $taxonomies, $judgeme_product_data ) {
         $category = array();
         foreach($taxonomies as $taxonomy) {
             if($taxonomy['type'] == 'product_cat') {
@@ -337,10 +356,10 @@ class Product extends BaseCollection
         );
         $products = wc_get_products( $args );
 
-        return $this->get_cross_sell_products( $products );
+        return $this->get_cross_sell_products( $products, $judgeme_product_data );
     }
 
-    public function get_cross_sell_products($product_ids) {
+    public function get_cross_sell_products( $product_ids, $judgeme_product_data ) {
         $product_data = array();
 
         foreach($product_ids as $product_id) {
@@ -384,11 +403,21 @@ class Product extends BaseCollection
                     $currency => floatval($product->get_sale_price())
                 ];
 
+                $product_slug = $product->get_slug();
+
+                $judgeme_product_id = '';
+        
+                foreach($judgeme_product_data as $judgeme) {
+                    if($judgeme['handle'] === $product_slug) {
+                        $judgeme_product_id = $judgeme['id'];
+                    }
+                }
+
                 $product_data[] = array(
                     'id' => $product->get_id(),
                     'name' => $product->get_name(),
                     'permalink' => wp_make_link_relative( get_permalink($product->get_id()) ),
-                    'slug' => $product->get_slug(),
+                    'slug' => $product_slug,
                     'thumbnail' => $thumbnail,
                     'sku' => $product->get_sku(),
                     'price' => apply_filters('wooless_product_price', $default_price, $product_id),
@@ -403,6 +432,7 @@ class Product extends BaseCollection
                     'totalSales' => $product->get_total_sales(),
                     'galleryImages' => $product_gallery,
                     'productType' => $product->get_type(),
+                    'judgeMeProductId' => $judgeme_product_id ? $judgeme_product_id : '',
                 );
             }
         }
