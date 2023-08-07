@@ -22,6 +22,10 @@ class WoocommerceAeliaCurrencySwitcher
         if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
             add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
             add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_multicurrency_site_info' ), 10, 1 );
+
+            add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
+            add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
+            add_filter( 'graphql_RootQuery_fields', array($this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
         }
     }
 
@@ -130,5 +134,54 @@ class WoocommerceAeliaCurrencySwitcher
         }
 
         return apply_filters('woocommerce_price_format', $format, $currency_pos);
+    }
+
+    public function graphql_woocommerce_price( $return, $price, $args, $unformatted_price, $symbol )
+    {
+        $convert_to = $_POST['aelia_cs_currency'];
+        $cs_settings = \Aelia\WC\CurrencySwitcher\WC_Aelia_CurrencySwitcher::settings();
+        $default_currency = $cs_settings->default_geoip_currency();
+
+        if (isset( $convert_to ) && $convert_to !== $default_currency) {
+            $converted_price = \Aelia\WC\CurrencySwitcher\WC_Aelia_CurrencySwitcher::instance()->convert($unformatted_price, $default_currency, $convert_to );
+            return $converted_price;
+        }
+        
+        return $unformatted_price;
+    }
+
+    public function modify_grapqhl_rootquery_cart_fields( $fields )
+    {
+        $fields['cart']['args']['currency'] = array(
+            'type' => 'String',
+            'description' => 'Current Currency',
+        );
+        return $fields;
+    }
+
+    public function graphql_resolve_field( $result, $source, $args, $context, $info, $type_name, $field_key, $field, $field_resolver )
+    {
+        if ( 'rootquery' === strtolower( $type_name ) && 'cart' === $field_key ) {
+            $_POST['aelia_cs_currency'] = $args['currency'];
+        } else if ( 'shippingrate' === strtolower( $type_name ) && 'cost' === $field_key ) {
+            $convert_to = $_POST['aelia_cs_currency'];
+            $cs_settings = \Aelia\WC\CurrencySwitcher\WC_Aelia_CurrencySwitcher::settings();
+            $default_currency = $cs_settings->default_geoip_currency();
+
+            $converted_price = \Aelia\WC\CurrencySwitcher\WC_Aelia_CurrencySwitcher::instance()->convert(floatval($result), $default_currency, $convert_to );
+
+            return $converted_price;
+        }
+        // else if ( 'cartitem' === strtolower( $type_name )  && 'total' === $field_key ) {
+        //     $quantity = isset( $source['quantity'] ) ? $source['quantity'] : 0;
+        //     $convert_to = $_POST['aelia_cs_currency'];
+
+        //     $product = wc_get_product( $source['product_id'] );
+        //     $converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $convert_to );
+
+        //     return $converted_product->get_price() * $quantity;
+        // }
+
+        return $result;
     }
 }
