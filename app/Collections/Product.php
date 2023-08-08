@@ -254,9 +254,11 @@ class Product extends BaseCollection
 
         $judgeme_product_id = '';
 
-        foreach($judgeme_product_data as $judgeme) {
-            if($judgeme['handle'] === $product_slug) {
-                $judgeme_product_id = $judgeme['id'];
+        if(!empty($judgeme_product_data)) {
+            foreach($judgeme_product_data as $judgeme) {
+                if($judgeme['handle'] === $product_slug) {
+                    $judgeme_product_id = $judgeme['id'];
+                }
             }
         }
 
@@ -406,10 +408,12 @@ class Product extends BaseCollection
                 $product_slug = $product->get_slug();
 
                 $judgeme_product_id = '';
-        
-                foreach($judgeme_product_data as $judgeme) {
-                    if($judgeme['handle'] === $product_slug) {
-                        $judgeme_product_id = $judgeme['id'];
+
+                if(!empty($judgeme_product_data)) {
+                    foreach($judgeme_product_data as $judgeme) {
+                        if($judgeme['handle'] === $product_slug) {
+                            $judgeme_product_id = $judgeme['id'];
+                        }
                     }
                 }
 
