@@ -46,11 +46,11 @@ class JudgeMe
                 $base_url = 'premiumvape.co.nz';
             }
 
+            $products_batch = array();
+
             if( $api_key = get_option('judgeme_shop_token') ) {
                 $finished = false;
                 $page = 1;
-
-                $products_batch = array();
 
                 while (!$finished) {
                     $product_parameters = http_build_query( array(
@@ -78,9 +78,9 @@ class JudgeMe
                     // Increment the page number
                     $page++;
                 }
-
-                return $products_batch;
             }
+
+            return $products_batch;
         }
 
         public function reformat_url( $url ) {

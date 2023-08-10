@@ -43,6 +43,7 @@ class BlazeWooless
             '\\BlazeWooless\\Settings\\RegionalSettings',
             '\\BlazeWooless\\Settings\\ProductPageSettings',
             '\\BlazeWooless\\Settings\\HomePageSettings',
+            '\\BlazeWooless\\Settings\\SiteMessageTopHeaderSettings',
             '\\BlazeWooless\\Settings\\SiteMessageSettings',
             '\\BlazeWooless\\Settings\\FooterBeforeSettings',
             '\\BlazeWooless\\Settings\\FooterOneSettings',

@@ -115,6 +115,14 @@ class SiteInfo extends BaseCollection
                     'value' => get_option('date_format'),
                     'updated_at' => intval( get_option('date_format_last_updated', $update_at) ),
                 ),
+                array(
+                    'name' => 'woocommerce_calc_taxes',
+                    'value' => get_option( 'woocommerce_calc_taxes', 'no' ),
+                ),
+                array(
+                    'name' => 'woocommerce_prices_include_tax',
+                    'value' => get_option( 'woocommerce_prices_include_tax', 'no' ),
+                ),
             );
 
             $datas[] = $this->site_logo_settings();

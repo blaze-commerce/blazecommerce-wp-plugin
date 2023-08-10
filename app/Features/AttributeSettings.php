@@ -86,6 +86,7 @@ class AttributeSettings
             foreach ($attributes as $key => $attribute) {
                 $attribute_to_register = array(
                     'slug' => $key,
+                    'name' => $key,
                     'options' => $attribute->get_options(),
                 );
 
@@ -94,6 +95,7 @@ class AttributeSettings
                         return [
                             'label' => $term->name,
                             'slug' => $term->slug,
+                            'name' => $term->slug,
                             'term_id' => $term->term_id,
 							'value' => $term->name,
                         ];
@@ -103,6 +105,7 @@ class AttributeSettings
                         return [
                             'label' => $option,
                             'slug' => $option,
+                            'name' => $option,
                             'term_id' => 0,
 							'value' => $option
                         ];

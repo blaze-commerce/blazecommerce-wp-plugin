@@ -43,7 +43,7 @@ class YoastSEO
         $seo_head .= "<link rel='canonical' href='$canonical' />";
 
         $GLOBALS['post'] = $prev_post;
-        $product_data['seo'] = $seo_head;
+        $product_data['seo'] = htmlspecialchars($seo_head);
 
         // Generate full seo head
         $fullHead = '';
@@ -51,7 +51,7 @@ class YoastSEO
             $meta = \YoastSEO()->meta->for_post($product_id);
             $fullHead = wp_gql_seo_get_full_head($meta);
         }
-        $product_data['seoFullHead'] = $fullHead;
+        $product_data['seoFullHead'] = htmlspecialchars($fullHead);
 
         return $product_data;
     }
