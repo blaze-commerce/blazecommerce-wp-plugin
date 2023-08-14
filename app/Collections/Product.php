@@ -67,6 +67,7 @@ class Product extends BaseCollection
             $page = 1;
             $batch_size = 100; // Adjust the batch size depending on your server's capacity
             $imported_products_count = 0;
+            $total_imports = 0;
 
             $judgeme_product_data = apply_filters( 'blaze_wooless_generate_product_data', array() );
 
@@ -108,14 +109,19 @@ class Product extends BaseCollection
                 // Import products to Typesense
                 try {
                     $result = $this->import($products_batch);
-                    $imported_products_count += count($products_batch); // Increment the count of imported products
+                    // echo "<pre>"; print_r($result); echo "</pre>";
+                    $successful_imports = array_filter($result, function($batch_result) {
+                        return isset($batch_result['success']) && $batch_result['success'] == "1";
+                    });
+                    $imported_products_count += count($successful_imports); // Increment the count of imported products
+                    $total_imports += count($products_batch); // Increment the count of imported products
                 } catch (\Exception $e) {
                     error_log("Error importing products to Typesense: " . $e->getMessage());
                 }
             }
 
             // After the while loop, print the number of imported products
-            echo "Imported products count: " . $imported_products_count . "\n";
+            echo "Imported products count: " . $imported_products_count ."/" . $total_imports . "\n";
 
             wp_die();
         } catch (\Exception $e) {
