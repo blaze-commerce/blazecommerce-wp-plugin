@@ -5,6 +5,7 @@
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="callToAction"><div class="content">Call to action</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="categories"><div class="content">Featured Categories</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="cardGroup"><div class="content">Card Group</div></div>
+        <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="cardGroupSlider"><div class="content">Card Group Slider</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="singleImage"><div class="content">Single Image</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="multipleImage"><div class="content">Multiple Image</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="list"><div class="content">List</div></div>

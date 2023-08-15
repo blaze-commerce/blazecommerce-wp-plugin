@@ -16,52 +16,71 @@ class Product extends BaseCollection
 		return self::$instance;
 	}
 
-	public function index_to_typesense()
+	public function initialize()
 	{
-		//Product indexing
-
-		// Fetch the store ID from the saved options
-		$wooless_site_id = get_option('store_id');
-		$collection_product = 'product-' . $wooless_site_id;
+		$logger = wc_get_logger();
+		$context = array('source' => 'wooless-product-collection-initialize');
 		try {
-			try {
-				$this->drop_collection();
-			} catch (\Exception $e) {
-				// Don't error out if the collection was not found
-			}
+			$this->drop_collection();
+		} catch (\Exception $e) {
+		}
 
+		try {
+
+			$logger->debug('TS Product collection: ' . $this->collection_name(), $context);
 			$this->create_collection(
 				array(
-					'name' => $collection_product,
+					'name' => $this->collection_name(),
 					'fields' => array(
-						array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
-						array( 'name' => 'productId', 'type' => 'string', 'facet' => true ),
-						array( 'name' => 'description', 'type' => 'string' ),
-						array( 'name' => 'shortDescription', 'type' => 'string' ),
-						array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true ),
-						array( 'name' => 'permalink', 'type' => 'string' ),
-						array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
-						array( 'name' => 'seoFullHead', 'type' => 'string' ),
-						array( 'name' => 'sku', 'type' => 'string' ),
-						array( 'name' => 'onSale', 'type' => 'bool', 'facet' => true ),
-						array( 'name' => 'stockQuantity', 'type' => 'int64' ),
-						array( 'name' => 'stockStatus', 'type' => 'string' ),
-						array( 'name' => 'updatedAt', 'type' => 'int64' ),
-						array( 'name' => 'createdAt', 'type' => 'int64' ),
-						array( 'name' => 'isFeatured', 'type' => 'bool', 'facet' => true ),
-						array( 'name' => 'totalSales', 'type' => 'int64' ),
-						array( 'name' => 'productType', 'type' => 'string', 'facet' => true ),
-						array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true ),
-						array( 'name' => 'crossSellData', 'type' => 'object[]', 'facet' => true ),
-						array( 'name' => 'price', 'type' => 'object', "facet" => true ),
-						array( 'name' => 'regularPrice', 'type' => 'object'),
-						array( 'name' => 'salePrice', 'type' => 'object' ),
+						['name' => 'id', 'type' => 'string', 'facet' => true],
+						['name' => 'productId', 'type' => 'string', 'facet' => true],
+						['name' => 'description', 'type' => 'string'],
+						['name' => 'shortDescription', 'type' => 'string'],
+						['name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true],
+						['name' => 'permalink', 'type' => 'string'],
+						['name' => 'slug', 'type' => 'string', 'facet' => true],
+						['name' => 'seoFullHead', 'type' => 'string'],
+						['name' => 'sku', 'type' => 'string'],
+						['name' => 'price', 'type' => 'object', "facet" => true],
+						['name' => 'price.AUD', 'type' => 'float'],
+						['name' => 'regularPrice', 'type' => 'object'],
+						['name' => 'regularPrice.AUD', 'type' => 'float'],
+						['name' => 'salePrice', 'type' => 'object'],
+						['name' => 'salePrice.AUD', 'type' => 'float'],
+						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
+						['name' => 'stockQuantity', 'type' => 'int64'],
+						['name' => 'stockStatus', 'type' => 'string'],
+						['name' => 'updatedAt', 'type' => 'int64'],
+						['name' => 'createdAt', 'type' => 'int64'],
+						['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
+						['name' => 'totalSales', 'type' => 'int64'],
+						['name' => 'productType', 'type' => 'string', 'facet' => true],
+						['name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true],
+						// Had to use string[] to type base on https://github.com/typesense/typesense/issues/227#issuecomment-1364072388 because ts is throwing errors after updgrade that the data is not an array
+						['name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+						['name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true],
+						['name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+						['name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+						['name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 					),
 					'default_sorting_field' => 'updatedAt',
 					'enable_nested_fields' => true
 				)
 			);
+		} catch (\Exception $e) {
+			$logger->debug('TS Product collection intialize Exception: ' . $e->getMessage(), $context);
+		}
+	}
 
+	public function index_to_typesense()
+	{
+		//Product indexing
+		$logger = wc_get_logger();
+		$context = array('source' => 'wooless-product-import');
+
+
+		try {
+			$this->initialize();
 			// Set initial values for pagination and batch size
 			$finished = false;
 			$page = 1;
@@ -73,7 +92,6 @@ class Product extends BaseCollection
 
 			while (!$finished) {
 				$products = \wc_get_products(array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page ));
-
 				if (empty($products)) {
 					$finished = true;
 					continue;
@@ -113,9 +131,11 @@ class Product extends BaseCollection
 					$successful_imports = array_filter($result, function ($batch_result) {
 						return isset($batch_result['success']) && $batch_result['success'] == "1";
 					});
+					$logger->debug('TS Product Import result: ' . print_r($result, 1), $context);
 					$imported_products_count += count($successful_imports); // Increment the count of imported products
 					$total_imports += count($products_batch); // Increment the count of imported products
 				} catch (\Exception $e) {
+					$logger->debug('TS Product Import Exception: ' . $e->getMessage(), $context);
 					error_log("Error importing products to Typesense: " . $e->getMessage());
 				}
 			}
@@ -125,6 +145,7 @@ class Product extends BaseCollection
 
 			wp_die();
 		} catch (\Exception $e) {
+			$logger->debug('TS Batch Exception: ' . $e->getMessage(), $context);
 			$error_message = "Error: " . $e->getMessage();
 			echo $error_message; // Print the error message for debugging purposes
 			echo "<script>
@@ -275,7 +296,7 @@ class Product extends BaseCollection
 			'description' => $description,
 			'name' => $product->get_name(),
 			'permalink' => wp_make_link_relative(get_permalink($product->get_id())),
-			'slug' => $product_slug,
+			'slug' => $product->get_slug(),
 			'thumbnail' => $thumbnail,
 			'sku' => $product->get_sku(),
 			'price' => apply_filters('wooless_product_price', $default_price, $product_id),
@@ -333,7 +354,8 @@ class Product extends BaseCollection
 						'url' => get_term_link($product_term->term_id),
 						'type' => $taxonomy,
 						'slug' => $product_term->slug,
-						'nameAndType' => $product_term->name . '|' . $taxonomy,					   'childAndParentTerm' => $parentTerm->name ? $product_term->name . '|' . $parentTerm->name : '',
+						'nameAndType' => $product_term->name . '|' . $taxonomy,
+						'childAndParentTerm' => $parentTerm->name ? $product_term->name . '|' . $parentTerm->name : '',
 						'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
 
 					];
