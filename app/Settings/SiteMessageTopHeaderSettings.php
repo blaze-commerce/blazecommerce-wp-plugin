@@ -6,16 +6,26 @@ use BlazeWooless\TypesenseClient;
 
 class SiteMessageTopHeaderSettings extends BaseSettings {
     private static $instance = null;
-    public $tab_key = 'sitemessage_topheader';
-    public $page_label = 'Site Message (Top Header)';
+    public $tab_key = 'site_message_top_header';
+    public $page_label = 'Site Message Top Header';
 
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_sitemessage_topheader_settings_options' );
+            self::$instance = new self( 'wooless_site_message_top_header_settings_options' );
         }
 
         return self::$instance;
+    }
+
+    public function update_typesense_data($site_message_top_header)
+    {
+        TypesenseClient::get_instance()->site_info()->upsert([
+            'id' => '1002456',
+            'name' => 'site_message_top_header',
+            'value' => json_encode($site_message_top_header),
+            'updated_at' => time(),
+        ]);
     }
     
     public function settings_callback( $options )
@@ -28,12 +38,7 @@ class SiteMessageTopHeaderSettings extends BaseSettings {
         if (is_array($site_message_top_header)) {
             update_option('blaze_wooless_site_message_top_header', $site_message_top_header);
 
-            TypesenseClient::get_instance()->site_info()->upsert([
-                'id' => '10000024',
-                'name' => 'site_message_top_header',
-                'value' => json_encode($site_message_top_header),
-                'updated_at' => time(),
-            ]);
+            $this->update_typesense_data( $site_message_top_header );
         }
         
         return $options;
@@ -72,13 +77,8 @@ class SiteMessageTopHeaderSettings extends BaseSettings {
     public function add_site_settings_data()
     {
         $site_message_top_header = get_option('blaze_wooless_site_message_top_header', '');
-        TypesenseClient::get_instance()->site_info()->upsert([
-            'id' => '10000024',
-            'name' => 'site_message_top_header',
-            'value' => json_encode($site_message_top_header),
-            'updated_at' => time(),
-        ]);
+        $this->update_typesense_data( $site_message_top_header );
     }
 }
 
-SiteMessageTopHeaderSettings::get_instance();
+SiteMessageSettings::get_instance();
