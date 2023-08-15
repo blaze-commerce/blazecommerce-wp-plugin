@@ -20,8 +20,12 @@ class WoocommerceAeliaCurrencySwitcher
     public function __construct()
     {
         if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
-            add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
+            // add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
             add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_multicurrency_site_info' ), 10, 1 );
+
+            add_filter('wooless_product_price', array( $this, 'wooless_product_regular_price'), 10, 2);
+            add_filter('wooless_product_regular_price', array( $this, 'wooless_product_regular_price'), 10, 2);
+            add_filter('wooless_product_sale_price', array( $this, 'wooless_product_sale_price'), 10, 2);
 
             add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
             add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
@@ -34,7 +38,7 @@ class WoocommerceAeliaCurrencySwitcher
         $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
 
         $regular_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices($product_id);
-        $product_data["regularPrice"] = $regular_prices;
+        $product_data['regularPrice'] = $regular_prices;
 
         $sale_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_sale_prices($product_id);
         $product_data["salePrice"] = $sale_prices;
@@ -70,6 +74,50 @@ class WoocommerceAeliaCurrencySwitcher
         }
 
         return $product_data;
+    }
+
+    public function wooless_product_regular_price( $price, $product_id )
+    {
+        $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+
+        $regular_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices($product_id);
+
+        
+        foreach ($available_currencies as $currency => $value) {
+            if (! isset( $regular_prices[ $currency ]) ) {
+                $product = wc_get_product( $product_id );
+                $converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
+                $price_value = $converted_product->get_regular_price();
+            } else {
+                $price_value = $regular_prices[ $currency ];
+            }
+            
+
+            $price[ $currency ] =  floatval(number_format((float) $price_value, 2));
+        }
+
+        return $price;
+    }
+
+    public function wooless_product_sale_price( $price, $product_id )
+    {
+        $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+
+        $sale_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_sale_prices($product_id);
+        foreach ($available_currencies as $currency => $value) {
+            if (! isset( $sale_prices[ $currency ]) ) {
+                $product = wc_get_product( $product_id );
+                $converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
+
+                $price_value = $converted_product->get_sale_price();
+            } else {
+                $price_value = $sale_prices[ $currency ];
+            }
+
+            $price[ $currency ] =  floatval(number_format((float) $price_value, 2));
+        }
+
+        return $price;
     }
 
     public function add_multicurrency_site_info( $additional_settings )
