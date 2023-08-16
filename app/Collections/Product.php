@@ -237,8 +237,6 @@ class Product extends BaseCollection
 					],
 				];
 			}
-
-			$default_attributes = $product->get_default_attributes();
 		}
 
 		$cross_sell_ids = $product->get_cross_sell_ids();
@@ -316,13 +314,9 @@ class Product extends BaseCollection
 			'variations' => $variations_data,
 			// Add variations data
 			'crossSellData' => empty($cross_sell_data) ? $related_products : $cross_sell_data,
-			'attributes' => $attributes,
-			'defaultAttributes' => $default_attributes,
 			'upsellData' => $upsell_data,
 			'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
 			'judgeMeProductId' => $judgeme_product_id,
-			// 'attributes' => $attributes,
-			// 'additional_information_shipping' => $shipping,
 		];
 
 		// print("<pre>".print_r($judgeme,true)."</pre>");
