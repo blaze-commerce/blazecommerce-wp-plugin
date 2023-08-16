@@ -32,7 +32,7 @@ class Taxonomy extends BaseCollection
                 'name' => $collection_taxonomy,
                 'fields' => [
                     ['name' => 'slug', 'type' => 'string', 'facet' => true],
-                    ['name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true],
+                    ['name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true, 'sort' => true],
                     ['name' => 'description', 'type' => 'string'],
                     ['name' => 'type', 'type' => 'string', 'facet' => true, 'infix' => true],
                     ['name' => 'seoFullHead', 'type' => 'string', 'facet' => true, 'infix' => true],
