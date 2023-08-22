@@ -4,60 +4,60 @@ namespace BlazeWooless\Extensions;
 
 class YoastSEO
 {
-    private static $instance = null;
+	private static $instance = null;
 
-    public static function get_instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
+	public static function get_instance()
+	{
+		if (self::$instance === null) {
+			self::$instance = new self();
+		}
 
-        return self::$instance;
-    }
+		return self::$instance;
+	}
 
-    public function __construct()
-    {
-        if ( \is_plugin_active( 'wordpress-seo/wp-seo.php' ) ) {
-            add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_seo_to_product_schema' ), 10, 2 );
-        }
-    }
+	public function __construct()
+	{
+		if (\is_plugin_active('wordpress-seo/wp-seo.php')) {
+			add_filter('blaze_wooless_product_data_for_typesense', array($this, 'add_seo_to_product_schema'), 10, 2);
+			add_filter('blaze_wooless_page_data_for_typesense', array($this, 'add_seo_to_page_schema'), 10, 2);
+		}
+	}
 
-    public function add_seo_to_product_schema( $product_data, $product_id )
-    {
-        $product = wc_get_product( $product_id );
+	public function add_seo_to_page_schema($document, $page)
+	{
+		$fullHead = '';
 
-        // Generate seo
-        $seo_head = '';
-        $prev_post = $GLOBALS['post'];
-        $GLOBALS['post'] = get_post($product->get_id());
+		if (!empty($page->ID)) {
+			// Generate full seo head
+			$meta = \YoastSEO()->meta->for_post($page->ID);
+			$fullHead = $this->get_full_head($meta);
 
-        $wpseo_frontend = \WPSEO_Frontend::get_instance();
-        $title = $wpseo_frontend->get_content_title();
-        $metadesc = $wpseo_frontend->get_meta_description();
+			$document['seoFullHead'] = htmlspecialchars($fullHead);
+		}
 
-        $canonical = \WPSEO_Meta::get_value('canonical');
-        $canonical = $canonical ? $canonical : get_permalink($product->get_id());
 
-        $seo_head = "<title>$title</title>";
-        $seo_head .= "<meta name='description' content='$metadesc' />";
-        $seo_head .= "<link rel='canonical' href='$canonical' />";
+		return $document;
+	}
 
-        $GLOBALS['post'] = $prev_post;
-        $product_data['seo'] = htmlspecialchars($seo_head);
+	public function add_seo_to_product_schema($product_data, $product_id)
+	{
+		// Generate full seo head
+		$meta = \YoastSEO()->meta->for_post($product_id);
+		$fullHead = $this->get_full_head($meta);
 
-        // Generate full seo head
-        $fullHead = '';
-        if ( $this->is_wp_graphql_yoast_seo_active() ) {
-            $meta = \YoastSEO()->meta->for_post($product_id);
-            $fullHead = wp_gql_seo_get_full_head($meta);
-        }
-        $product_data['seoFullHead'] = htmlspecialchars($fullHead);
+		$product_data['seoFullHead'] = htmlspecialchars($fullHead);
 
-        return $product_data;
-    }
+		return $product_data;
+	}
 
-    public function is_wp_graphql_yoast_seo_active()
-    {
-        return \is_plugin_active( 'wp-graphql-yoast-seo-master/wp-graphql-yoast-seo.php' ) || is_plugin_active( 'add-wpgraphql-seo/wp-graphql-yoast-seo.php' );
-    }
+	public function get_full_head($metaForPost)
+	{
+		if ($metaForPost !== false) {
+			$head = $metaForPost->get_head();
+
+			return is_string($head) ? $head : $head->html;
+		}
+
+		return '';
+	}
 }
