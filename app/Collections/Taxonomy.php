@@ -32,7 +32,7 @@ class Taxonomy extends BaseCollection
                 'name' => $collection_taxonomy,
                 'fields' => [
                     ['name' => 'slug', 'type' => 'string', 'facet' => true],
-                    ['name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true],
+                    ['name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true, 'sort' => true],
                     ['name' => 'description', 'type' => 'string'],
                     ['name' => 'type', 'type' => 'string', 'facet' => true, 'infix' => true],
                     ['name' => 'seoFullHead', 'type' => 'string', 'facet' => true, 'infix' => true],
@@ -112,6 +112,17 @@ class Taxonomy extends BaseCollection
                         if($taxonomy == 'product_ingredients' && function_exists('z_taxonomy_image_url')) {
                             $bannerThumbnail = \z_taxonomy_image_url($term->term_id);
                         }
+		
+                        // Get the thumbnail
+                        $thumbnail_id = get_term_meta( $term->term_id, 'thumbnail_id', true );
+                        $attachment = get_post($thumbnail_id);
+                
+                        $thumbnail = [
+                            'id' => $thumbnail_id,
+                            'title' => $attachment->post_title,
+                            'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+                            'src' => wp_get_attachment_url($thumbnail_id),
+                        ];
 
                         // Prepare the data to be indexed
                         $document = [
@@ -125,6 +136,7 @@ class Taxonomy extends BaseCollection
                             'bannerThumbnail' => (string)$bannerThumbnail,
                             'bannerText' => $bannerText,
                             'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
+                            'thumbnail' => $thumbnail,
                         ];
                         
                         // Index the term data in Typesense
@@ -165,6 +177,17 @@ class Taxonomy extends BaseCollection
 
         // Get Parent Term
         $parentTerm = get_term($term->parent, $taxonomy);
+		
+        // Get the thumbnail
+        $thumbnail_id = get_term_meta( $term->term_id, 'thumbnail_id', true );
+        $attachment = get_post($thumbnail_id);
+
+        $thumbnail = [
+            'id' => $thumbnail_id,
+            'title' => $attachment->post_title,
+            'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+            'src' => wp_get_attachment_url($thumbnail_id),
+        ];
 
         // Prepare the data to be updated
         $document = [
@@ -176,6 +199,7 @@ class Taxonomy extends BaseCollection
             'updatedAt' => time(),
             'bannerThumbnail' => $bannerThumbnail,
             'bannerText' => $bannerText,                            'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
+            'thumbnail' => $thumbnail,
         ];
 
         // Update the term data in Typesense
