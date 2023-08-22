@@ -61,12 +61,8 @@ class LoadCartFromSession
 			return;
 		}
 
-		?>
-		<script>
-			(function () {
-				window.history.pushState({}, '', "/checkout");
-			})()
-		</script>
-		<?php
+		$url = remove_query_arg('session_id', $_SERVER['REQUEST_URI']);
+		wp_redirect(add_filter('blaze_wooless_destination_url_from_frontend', $url));
+		exit;
 	}
 }
