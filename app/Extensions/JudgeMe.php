@@ -42,7 +42,7 @@ class JudgeMe
 
         public function generate_product_data() {
             $SHOP_DOMAIN = $this->reformat_url( get_site_url() );
-            if($SHOP_DOMAIN === 'stg-premiumvape-wooless.s1.blz.onl') {
+            if($SHOP_DOMAIN === 'cart.premium-vape-staging.blz.onl') {
                 $SHOP_DOMAIN = 'premiumvape.co.nz';
             }
 
@@ -105,7 +105,7 @@ class JudgeMe
 
         public function generate_product_reviews_widgets() {
             $SHOP_DOMAIN = $this->reformat_url( get_site_url() );
-            if($SHOP_DOMAIN === 'stg-premiumvape-wooless.s1.blz.onl') {
+            if($SHOP_DOMAIN === 'cart.premium-vape-staging.blz.onl') {
                 $SHOP_DOMAIN = 'premiumvape.co.nz';
             }
 
