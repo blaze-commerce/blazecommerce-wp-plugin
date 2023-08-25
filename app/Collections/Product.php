@@ -47,6 +47,8 @@ class Product extends BaseCollection
 						['name' => 'regularPrice.AUD', 'type' => 'float'],
 						['name' => 'salePrice', 'type' => 'object'],
 						['name' => 'salePrice.AUD', 'type' => 'float'],
+						['name' => 'salePrice.USD', 'type' => 'float'],
+						['name' => 'salePrice.NZD', 'type' => 'float'],
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
 						['name' => 'stockStatus', 'type' => 'string'],
