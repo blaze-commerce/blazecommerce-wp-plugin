@@ -94,7 +94,15 @@ class GeneralSettings extends BaseSettings {
 
     public function footer_callback()
     {
-        $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+        if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
+            $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+        } else {
+            $base_currency =  get_woocommerce_currency();
+            $available_currencies = [
+                $base_currency => ''
+            ];
+        }
+
         $free_shipping_threshold = get_option( 'free_shipping_threshold', []);
         ?>
             <h2>Free Shipping Threshold</h2>
