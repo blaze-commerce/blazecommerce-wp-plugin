@@ -55,7 +55,7 @@ class Product extends BaseCollection
 						['name' => 'salePrice.NZD', 'type' => 'float'],
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
-						['name' => 'stockStatus', 'type' => 'string'],
+						['name' => 'stockStatus', 'type' => 'string', 'sort' => true],
 						['name' => 'updatedAt', 'type' => 'int64'],
 						['name' => 'createdAt', 'type' => 'int64'],
 						['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
