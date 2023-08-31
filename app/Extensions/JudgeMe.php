@@ -5,6 +5,9 @@ namespace BlazeWooless\Extensions;
 class JudgeMe 
     {
         private static $instance = null;
+        public static $API_URL = 'https://judge.me/api/v1';
+        public static $WIDGET_URL = 'https://cache.judge.me/widgets/woocommerce/';
+        public static $PRODUCTS_ENDPOINT = '/products/?';
 
         public static function get_instance()
         {
@@ -20,7 +23,7 @@ class JudgeMe
             if ( is_plugin_active( 'judgeme-product-reviews-woocommerce/judgeme.php' ) ) {
                 add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_review_config_to_site_info' ), 10, 2 );
 
-                add_filter('blaze_wooless_generate_product_data', array( $this, 'generate_product_data' ), 10, 2);
+                add_filter('blaze_wooless_generate_product_reviews_widgets', array( $this, 'generate_product_reviews_widgets' ), 10, 2);
             }
         }
 
@@ -38,29 +41,28 @@ class JudgeMe
         }
 
         public function generate_product_data() {
-            $products_endpoint = '/products/?';
-            $api_url = 'https://judge.me/api/v1';
-            $site_url = $this->reformat_url( get_site_url() );
-            $base_url = '';
-            if($site_url === 'stg-premiumvape-wooless.s1.blz.onl') {
-                $base_url = 'premiumvape.co.nz';
+            $SHOP_DOMAIN = $this->reformat_url( get_site_url() );
+            if($SHOP_DOMAIN === 'cart.premium-vape-staging.blz.onl') {
+                $SHOP_DOMAIN = 'premiumvape.co.nz';
             }
 
             $products_batch = array();
 
-            if( $api_key = get_option('judgeme_shop_token') ) {
+            if( $this->get_api_key() ) {
                 $finished = false;
                 $page = 1;
 
                 while (!$finished) {
-                    $product_parameters = http_build_query( array(
-                        'api_token' => $api_key,
-                        'shop_domain' => $base_url,
+                    $params = array(
+                        'api_token' => $this->get_api_key(),
+                        'shop_domain' => $SHOP_DOMAIN,
                         'page' => $page,
                         'per_page' => 100,
-                    ) );
+                    );
 
-                    $products = wp_remote_get( $api_url . $products_endpoint . $product_parameters );
+                    $PRODUCT_PARAMETERS = http_build_query( $params );
+
+                    $products = wp_remote_get( self::$API_URL . self::$PRODUCTS_ENDPOINT . $PRODUCT_PARAMETERS );
         
                     $response = json_decode( wp_remote_retrieve_body($products), true );
 
@@ -95,5 +97,58 @@ class JudgeMe
                }
             }
             return $url;
+        }
+
+        public function get_api_key() {
+            return get_option('judgeme_shop_token');
+        }
+
+        public function generate_product_reviews_widgets() {
+            $SHOP_DOMAIN = $this->reformat_url( get_site_url() );
+            if($SHOP_DOMAIN === 'cart.premium-vape-staging.blz.onl') {
+                $SHOP_DOMAIN = 'premiumvape.co.nz';
+            }
+
+            $products = $this->generate_product_data();
+
+            $product_items = array();
+
+            $product_ids = array();
+
+            $widget = array();
+
+            if(!empty($products)) {
+                foreach($products as $product) {
+                    $product_items[] = array(
+                        'product_external_id' => $product['external_id'],
+                        'product_handle' => $product['handle'],
+                    );
+                }
+
+                foreach($product_items as $product_id) {
+                    $product_ids[] = $product_id['product_external_id'];
+                }
+
+                $REVIEWS_WIDGETS_PARAMETERS = 'review_widget_product_ids=' . implode(",", $product_ids);
+    
+                $result = wp_remote_get( self::$WIDGET_URL . $SHOP_DOMAIN . "?" . $REVIEWS_WIDGETS_PARAMETERS );
+    
+                $response = json_decode( wp_remote_retrieve_body($result), true );
+
+                foreach($product_items as $product_item) {
+                    foreach($response['review_widgets'] as $key=>$value) {
+                        if($product_item['product_external_id'] === $key) {
+                            $widget[] = array(
+                                'slug' => $product_item['product_handle'],
+                                'widget' => $value,
+                            );
+                        }
+                    }
+                }
+
+                return $widget;
+            }
+            
+            return null;
         }
     }

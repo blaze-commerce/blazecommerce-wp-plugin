@@ -38,8 +38,8 @@ class Woocommerce
 
 				if ($wc_product->get_status() == 'publish') {
 					try {
-                        $judgeme_product_data = apply_filters( 'blaze_wooless_generate_product_data', array() );
-						$document_data = Product::get_instance()->generate_typesense_data($wc_product, $judgeme_product_data);
+						$judgeme_product_reviews_widgets = apply_filters('blaze_wooless_generate_product_reviews_widgets', array());
+						$document_data = Product::get_instance()->generate_typesense_data($wc_product, $judgeme_product_reviews_widgets);
 						Product::get_instance()->update(strval($product_id), $document_data);
 						do_action('ts_product_update', $product_id, $wc_product);
 					} catch (\Exception $e) {
@@ -56,8 +56,8 @@ class Woocommerce
 		// Check if the product is published before updating typesense data
 		if ($wc_product->get_status() == 'publish') {
 			try {
-                $judgeme_product_data = apply_filters( 'blaze_wooless_generate_product_data', array() );
-				$document_data = Product::get_instance()->generate_typesense_data($wc_product, $judgeme_product_data);
+				$judgeme_product_reviews_widgets = apply_filters('blaze_wooless_generate_product_reviews_widgets', array());
+				$document_data = Product::get_instance()->generate_typesense_data($wc_product, $judgeme_product_reviews_widgets);
 				Product::get_instance()->upsert($document_data);
 				do_action('ts_product_update', $product_id, $wc_product);
 			} catch (\Exception $e) {
@@ -85,8 +85,8 @@ class Woocommerce
 
 			if ($wc_product->get_status() == 'publish') {
 				try {
-                    $judgeme_product_data = apply_filters( 'blaze_wooless_generate_product_data', array() );
-					$document_data = Product::get_instance()->generate_typesense_data($wc_product, $judgeme_product_data);
+					$judgeme_product_reviews_widgets = apply_filters('blaze_wooless_generate_product_reviews_widgets', array());
+					$document_data = Product::get_instance()->generate_typesense_data($wc_product, $judgeme_product_reviews_widgets);
 					Product::get_instance()->update(strval($product_id), $document_data);
 					do_action('ts_product_update', $product_id, $wc_product);
 				} catch (\Exception $e) {
