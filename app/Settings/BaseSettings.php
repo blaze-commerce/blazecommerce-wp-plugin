@@ -106,6 +106,13 @@ class BaseSettings {
         echo $html;
     }
 
+    public function field_callback_html( $args ) {
+        $value = $this->get_option( $args['id'] );
+        $html = '<textarea rows="4" cols="50" id="'. $args['id'] .'" name="' . $this->option_key . '['. $args['id'] .']">' . $value . '</textarea>'; 
+        $html .= $this->render_field_description( $args ); 
+        echo $html;
+    }
+
     public function field_callback_password( $args ) {
         $value = $this->get_option( $args['id'] );
         $html = '<input type="password" id="'. $args['id'] .'" name="' . $this->option_key . '['. $args['id'] .']" value="' . sanitize_text_field( $value ). '" />';

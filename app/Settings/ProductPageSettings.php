@@ -33,7 +33,10 @@ class ProductPageSettings extends BaseSettings
         if (is_array($homepage_layout)) {
             update_option('blaze_wooless_homepage_layout', $homepage_layout);
         }
-        
+
+        if (isset($options['description_after_content'])) {
+            $options['description_after_content'] = htmlspecialchars( $options['description_after_content'] );
+        }
 
         return $options;
     }
@@ -60,6 +63,14 @@ class ProductPageSettings extends BaseSettings
                             'description' => 'Set the returns policy content.'
                         ),
                     ),
+                    array(
+                        'id' => 'description_after_content',
+                        'label' => 'Description After Content',
+                        'type' => 'html',
+                        'args' => array(
+                            'description' => 'This will be displayed after the description on all products.'
+                        ),
+                    ),
                 )
             ),
         );
@@ -83,6 +94,12 @@ class ProductPageSettings extends BaseSettings
             'id' => '1000002',
             'name' => 'returns_policy_content',
             'value' => $options['returns_policy'],
+            'updated_at' => time(),
+        ]);
+        TypesenseClient::get_instance()->site_info()->upsert([
+            'id' => '1008955',
+            'name' => 'description_after_content',
+            'value' => $options['description_after_content'],
             'updated_at' => time(),
         ]);
 

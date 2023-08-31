@@ -211,10 +211,12 @@ class SiteInfo extends BaseCollection
             }
     
             $initial_additional_data = array();
-    
+            
             $site_currency = get_woocommerce_currency();
+            $base_currency = \RegionalDataHelper::$currency_country_map[ $site_currency ];
             $currencies = array(
-                'countries' => \RegionalDataHelper::$currency_country_map[ $site_currency ],
+                'countries' => [$base_currency],
+                'baseCountry' => $base_currency,
                 'currency' => $site_currency,
                 'symbol' => html_entity_decode(get_woocommerce_currency_symbol( $site_currency )),
                 'symbolPosition'  => get_option( 'woocommerce_currency_pos' ),
