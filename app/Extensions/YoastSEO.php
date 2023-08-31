@@ -32,7 +32,7 @@ class YoastSEO
 			$meta = \YoastSEO()->meta->for_post($page->ID);
 			$fullHead = $this->get_full_head($meta);
 
-			$document['seoFullHead'] = htmlspecialchars($fullHead);
+			$document['seoFullHead'] = htmlspecialchars($fullHead, ENT_QUOTES, 'UTF-8');
 		}
 
 
@@ -45,7 +45,7 @@ class YoastSEO
 		$meta = \YoastSEO()->meta->for_post($product_id);
 		$fullHead = $this->get_full_head($meta);
 
-		$product_data['seoFullHead'] = htmlspecialchars($fullHead);
+		$product_data['seoFullHead'] = htmlspecialchars($fullHead, ENT_QUOTES, 'UTF-8');
 
 		return $product_data;
 	}
