@@ -35,24 +35,20 @@ class Product extends BaseCollection
 						['name' => 'id', 'type' => 'string', 'facet' => true],
 						['name' => 'productId', 'type' => 'string', 'facet' => true],
 						['name' => 'description', 'type' => 'string'],
-						['name' => 'shortDescription', 'type' => 'string'],
 						['name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true],
 						['name' => 'permalink', 'type' => 'string'],
 						['name' => 'slug', 'type' => 'string', 'facet' => true],
 						['name' => 'seoFullHead', 'type' => 'string'],
 						['name' => 'sku', 'type' => 'string'],
 						['name' => 'price', 'type' => 'object', "facet" => true],
-						['name' => 'price.AUD', 'type' => 'float'],
-						['name' => 'price.USD', 'type' => 'float'],
-						['name' => 'price.NZD', 'type' => 'float'],
+						['name' => 'price.AUD', 'type' => 'float', 'optional' => true ],
+						['name' => 'price.NZD', 'type' => 'float', 'optional' => true ],
 						['name' => 'regularPrice', 'type' => 'object'],
-						['name' => 'regularPrice.AUD', 'type' => 'float'],
-						['name' => 'regularPrice.USD', 'type' => 'float'],
-						['name' => 'regularPrice.NZD', 'type' => 'float'],
+						['name' => 'regularPrice.AUD', 'type' => 'float', 'optional' => true ],
+						['name' => 'regularPrice.NZD', 'type' => 'float', 'optional' => true ],
 						['name' => 'salePrice', 'type' => 'object'],
-						['name' => 'salePrice.AUD', 'type' => 'float'],
-						['name' => 'salePrice.USD', 'type' => 'float'],
-						['name' => 'salePrice.NZD', 'type' => 'float'],
+						['name' => 'salePrice.AUD', 'type' => 'float', 'optional' => true ],
+						['name' => 'salePrice.NZD', 'type' => 'float', 'optional' => true ],
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
 						['name' => 'stockStatus', 'type' => 'string', 'sort' => true],
@@ -247,8 +243,6 @@ class Product extends BaseCollection
 					],
 				];
 			}
-
-			$default_attributes = $product->get_default_attributes();
 		}
 
 		$cross_sell_ids = $product->get_cross_sell_ids();
@@ -292,7 +286,6 @@ class Product extends BaseCollection
 		$product_data = [
 			'id' => strval($product->get_id()),
 			'productId' => strval($product->get_id()),
-			'shortDescription' => !empty($shortDescription) ? $shortDescription : substr($description, 0, 150),
 			'description' => $description,
 			'name' => $product->get_name(),
 			'permalink' => wp_make_link_relative(get_permalink($product->get_id())),
@@ -316,8 +309,6 @@ class Product extends BaseCollection
 			'variations' => $variations_data,
 			// Add variations data
 			'crossSellData' => empty($cross_sell_data) ? $related_products : $cross_sell_data,
-			'attributes' => $attributes,
-			'defaultAttributes' => $default_attributes,
 			'upsellData' => $upsell_data,
 			'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
 			// 'attributes' => $attributes,
