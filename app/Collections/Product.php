@@ -368,7 +368,7 @@ class Product extends BaseCollection
 		// Get products that aren't the current product.
 		$args = array(
 			'exclude' => array( $product_id ),
-			'limit' => 5,
+			'limit' => 10,
 			'page'  => 1,
 			'status' => 'publish',
 			'return' => 'ids',
@@ -383,6 +383,7 @@ class Product extends BaseCollection
 	public function get_cross_sell_products($product_ids)
 	{
 		$product_data = array();
+		$cross_sell_product_data = array();
 
 		foreach($product_ids as $product_id) {
 			$product = wc_get_product($product_id);
@@ -433,23 +434,22 @@ class Product extends BaseCollection
 					'permalink' => wp_make_link_relative(get_permalink($product->get_id())),
 					'slug' => $product_slug,
 					'thumbnail' => $thumbnail,
-					'sku' => $product->get_sku(),
 					'price' => apply_filters('wooless_product_price', $default_price, $product_id),
 					'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
 					'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
 					'onSale' => $product->is_on_sale(),
-					'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
 					'stockStatus' => $product->get_stock_status(),
-					'updatedAt' => strtotime($product->get_date_modified()),
 					'createdAt' => strtotime($product->get_date_created()),
-					'isFeatured' => $product->get_featured(),
-					'totalSales' => $product->get_total_sales(),
 					'galleryImages' => $product_gallery,
 					'productType' => $product->get_type(),
 				);
+					
+				$cross_sell_product_data[] = apply_filters('blaze_wooless_cross_sell_data_for_typesense', $product_data);
+
+				unset($product_data);
 			}
 		}
 
-		return apply_filters('blaze_wooless_product_data_for_typesense', $product_data, $product_id);
+		return $cross_sell_product_data;
 	}
 }
