@@ -64,6 +64,9 @@ class Product extends BaseCollection
 						['name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 						['name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 						['name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true],
+						['name' => 'judgemeReviews', 'type' => 'object', 'optional' => true],
+						['name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true],
+						['name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true],
 					),
 					'default_sorting_field' => 'updatedAt',
 					'enable_nested_fields' => true
@@ -82,6 +85,9 @@ class Product extends BaseCollection
 
 
 		try {
+			// Query judge.me product external_ids and update to options	
+			do_action('blaze_wooless_generate_product_data');
+
 			$this->initialize();
 			// Set initial values for pagination and batch size
 			$finished = false;
@@ -89,8 +95,6 @@ class Product extends BaseCollection
 			$batch_size = 100; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports = 0;
-
-			$judgeme_product_reviews_widgets = apply_filters('blaze_wooless_generate_product_reviews_widgets', array());
 
 			while (!$finished) {
 				$products = \wc_get_products(array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page ));
@@ -107,7 +111,7 @@ class Product extends BaseCollection
 					$product_slug = $product->get_slug();
 
 					// Get the product data
-					$product_data = $this->generate_typesense_data($product, $judgeme_product_reviews_widgets);
+					$product_data = $this->generate_typesense_data($product);
 
 					if (!$product_data) {
 						error_log("Skipping product ID: " . $product->get_id());
@@ -158,7 +162,7 @@ class Product extends BaseCollection
 		}
 	}
 
-	public function generate_typesense_data($product, $judgeme_product_reviews_widgets)
+	public function generate_typesense_data($product)
 	{
 		// Format product data for indexing
 		$product_id = $product->get_id();
@@ -244,7 +248,7 @@ class Product extends BaseCollection
 		$cross_sell_ids = $product->get_cross_sell_ids();
 		$cross_sell_data = [];
 		if (!empty($cross_sell_ids)) {
-			$cross_sell_data = $this->get_cross_sell_products($cross_sell_ids, $judgeme_product_reviews_widgets);
+			$cross_sell_data = $this->get_cross_sell_products($cross_sell_ids);
 		}
 
 		$upsell_ids = $product->get_upsell_ids();
@@ -275,19 +279,9 @@ class Product extends BaseCollection
 		}
 		$taxonomies = $this->get_taxonomies($product);
 
-		$related_products = $this->get_related_products($product_id, $taxonomies, $judgeme_product_reviews_widgets);
+		$related_products = $this->get_related_products($product_id, $taxonomies);
 
 		$product_slug = $product->get_slug();
-
-		$judgeme_reviews_widget = '';
-
-		if(!empty($judgeme_product_reviews_widgets)) {
-			foreach($judgeme_product_reviews_widgets as $reviews) {
-				if($reviews['slug'] === $product_slug) {
-					$judgeme_reviews_widget = $reviews['widget'];
-				}
-			}
-		}
 
 		$product_data = [
 			'id' => strval($product->get_id()),
@@ -317,7 +311,6 @@ class Product extends BaseCollection
 			'crossSellData' => empty($cross_sell_data) ? $related_products : $cross_sell_data,
 			'upsellData' => $upsell_data,
 			'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
-			'judgemeReviewsWidget' => $judgeme_reviews_widget,
 			// 'attributes' => $attributes,
 			// 'additional_information_shipping' => $shipping,
 		];
@@ -363,7 +356,7 @@ class Product extends BaseCollection
 		return $taxonomies_data;
 	}
 
-	public function get_related_products($product_id, $taxonomies, $judgeme_product_reviews_widgets)
+	public function get_related_products($product_id, $taxonomies)
 	{
 		$category = array();
 		foreach($taxonomies as $taxonomy) {
@@ -384,10 +377,10 @@ class Product extends BaseCollection
 		);
 		$products = wc_get_products($args);
 
-		return $this->get_cross_sell_products($products, $judgeme_product_reviews_widgets);
+		return $this->get_cross_sell_products($products);
 	}
 
-	public function get_cross_sell_products($product_ids, $judgeme_product_reviews_widgets)
+	public function get_cross_sell_products($product_ids)
 	{
 		$product_data = array();
 
@@ -434,16 +427,6 @@ class Product extends BaseCollection
 
 				$product_slug = $product->get_slug();
 
-				$judgeme_reviews_widget = '';
-		
-				if(!empty($judgeme_product_reviews_widgets)) {
-					foreach($judgeme_product_reviews_widgets as $reviews) {
-						if($reviews['slug'] === $product_slug) {
-							$judgeme_reviews_widget = $reviews['widget'];
-						}
-					}
-				}
-
 				$product_data[] = array(
 					'id' => $product->get_id(),
 					'name' => $product->get_name(),
@@ -463,11 +446,10 @@ class Product extends BaseCollection
 					'totalSales' => $product->get_total_sales(),
 					'galleryImages' => $product_gallery,
 					'productType' => $product->get_type(),
-					'judgemeReviewsWidget' => $judgeme_reviews_widget,
 				);
 			}
 		}
 
-		return $product_data;
+		return apply_filters('blaze_wooless_product_data_for_typesense', $product_data, $product_id);
 	}
 }

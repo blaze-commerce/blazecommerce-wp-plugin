@@ -23,7 +23,9 @@ class JudgeMe
             if ( is_plugin_active( 'judgeme-product-reviews-woocommerce/judgeme.php' ) ) {
                 add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_review_config_to_site_info' ), 10, 2 );
 
-                add_filter('blaze_wooless_generate_product_reviews_widgets', array( $this, 'generate_product_reviews_widgets' ), 10, 2);
+                add_action('blaze_wooless_generate_product_data', array( $this, 'generate_product_data' ), 10, 1);
+
+                add_filter('blaze_wooless_product_data_for_typesense', array( $this, 'get_product_reviews_data' ), 10, 2);
             }
         }
 
@@ -58,17 +60,17 @@ class JudgeMe
 
                     $PRODUCT_PARAMETERS = http_build_query( $params );
 
-                    $products = wp_remote_get( self::$API_URL . self::$PRODUCTS_ENDPOINT . $PRODUCT_PARAMETERS );
+                    $result = wp_remote_get( self::$API_URL . self::$PRODUCTS_ENDPOINT . $PRODUCT_PARAMETERS );
         
-                    $response = json_decode( wp_remote_retrieve_body($products), true );
+                    $response = json_decode( wp_remote_retrieve_body($result), true );
 
                     if (empty($response['products'])) {
                         $finished = true;
                         continue;
                     }
 
-                    foreach($response['products'] as $product_data) {
-                        $products_batch[] = $product_data;
+                    foreach($response['products'] as $products) {
+                        $products_batch[] = $products;
                     }
 
                     unset($response);
@@ -78,7 +80,9 @@ class JudgeMe
                 }
             }
 
-            return $products_batch;
+            $product_reviews = $this->generate_product_reviews($products_batch);
+
+            update_option('judgeme_product_reviews', $product_reviews);
         }
 
         public function reformat_url( $url ) {
@@ -99,26 +103,17 @@ class JudgeMe
             return get_option('judgeme_shop_token');
         }
 
-        public function generate_product_reviews_widgets() {
-            $SHOP_DOMAIN = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
-            $products = $this->generate_product_data();
+        public function generate_product_reviews($products) {
+            $SHOP_DOMAIN = $this->reformat_url( get_site_url() );
+            if($SHOP_DOMAIN === 'cart.premium-vape-staging.blz.onl') {
+                $SHOP_DOMAIN = 'premiumvape.co.nz';
+            }
 
-            $product_items = array();
-
-            $product_ids = array();
-
-            $widget = array();
+            $product_reviews = array();
 
             if(!empty($products)) {
                 foreach($products as $product) {
-                    $product_items[] = array(
-                        'product_external_id' => $product['external_id'],
-                        'product_handle' => $product['handle'],
-                    );
-                }
-
-                foreach($product_items as $product_id) {
-                    $product_ids[] = $product_id['product_external_id'];
+                    $product_ids[] = $product['external_id'];
                 }
 
                 $REVIEWS_WIDGETS_PARAMETERS = 'review_widget_product_ids=' . implode(",", $product_ids);
@@ -127,20 +122,45 @@ class JudgeMe
     
                 $response = json_decode( wp_remote_retrieve_body($result), true );
 
-                foreach($product_items as $product_item) {
+                foreach($products as $product) {
                     foreach($response['review_widgets'] as $key=>$value) {
-                        if($product_item['product_external_id'] === $key) {
-                            $widget[] = array(
-                                'slug' => $product_item['product_handle'],
-                                'widget' => $value,
+                        if($product['external_id'] === $key) {
+                            $average_rating = $this->get_reviews_average_rating($value);
+                            $rating_count = $this->get_reviews_rating_count($value);
+                            $product_reviews[$product['handle']] = array(
+                                'average' => (float)$average_rating[1],
+                                'count' => (int)$rating_count[1],
                             );
                         }
                     }
                 }
-
-                return $widget;
             }
+
+            return $product_reviews;
+        }
+
+        public function get_product_reviews_data($product_data, $product_id) {
+            $judgeme_reviews = array();
+            $reviews = get_option('judgeme_product_reviews');
+                
+            if(!empty($reviews[$product_data['slug']])) {
+                $product_data['judgemeReviews'] = $reviews[$product_data['slug']];
+            }
+
+            return $product_data;
+        }
+
+        public function get_reviews_average_rating($html) {
+            $re = "/data-average-rating='(.*?)'/m";
+            preg_match_all($re, $html, $matches, PREG_SET_ORDER, 0);
             
-            return null;
+            return $matches[0];
+        }
+
+        public function get_reviews_rating_count($html) {
+            $re = "/data-number-of-reviews='(.*?)'/m";
+            preg_match_all($re, $html, $matches, PREG_SET_ORDER, 0);
+
+            return $matches[0];
         }
     }
