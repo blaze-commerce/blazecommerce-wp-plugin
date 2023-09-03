@@ -83,6 +83,14 @@ class GeneralSettings extends BaseSettings {
                             'description' => 'API Key generated from the wooless admin portal.'
                         ),
                     ),
+                    array(
+                        'id' => 'shop_domain',
+                        'label' => 'Shop Domain',
+                        'type' => 'text',
+                        'args' => array(
+                            'description' => 'Live site domain. (e.g. website.com.au)'
+                        ),
+                    ),
                 )
             ),
         );
