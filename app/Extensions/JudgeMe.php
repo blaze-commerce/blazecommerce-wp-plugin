@@ -26,6 +26,8 @@ class JudgeMe
                 add_action('blaze_wooless_generate_product_data', array( $this, 'generate_product_data' ), 10, 1);
 
                 add_filter('blaze_wooless_product_data_for_typesense', array( $this, 'get_product_reviews_data' ), 10, 2);
+
+                add_filter('blaze_wooless_cross_sell_data_for_typesense', array( $this, 'get_cross_sell_reviews_data' ), 10, 2);
             }
         }
 
@@ -104,11 +106,7 @@ class JudgeMe
         }
 
         public function generate_product_reviews($products) {
-            $SHOP_DOMAIN = $this->reformat_url( get_site_url() );
-            if($SHOP_DOMAIN === 'cart.premium-vape-staging.blz.onl') {
-                $SHOP_DOMAIN = 'premiumvape.co.nz';
-            }
-
+            $SHOP_DOMAIN = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
             $product_reviews = array();
 
             if(!empty($products)) {
@@ -136,18 +134,37 @@ class JudgeMe
                 }
             }
 
+            unset($response);
+
             return $product_reviews;
         }
 
         public function get_product_reviews_data($product_data, $product_id) {
-            $judgeme_reviews = array();
             $reviews = get_option('judgeme_product_reviews');
                 
             if(!empty($reviews[$product_data['slug']])) {
                 $product_data['judgemeReviews'] = $reviews[$product_data['slug']];
             }
 
+            unset($reviews);
+
             return $product_data;
+        }
+
+        public function get_cross_sell_reviews_data($product_data) {
+            $reviews = get_option('judgeme_product_reviews');
+            $product = array();
+
+            foreach($product_data as $product) {
+                if(!empty($reviews[$product['slug']])) {
+                    $product['judgemeReviews'] = $reviews[$product['slug']];
+                }
+            }
+
+            unset($product_data);
+            unset($reviews);
+
+            return $product;
         }
 
         public function get_reviews_average_rating($html) {
