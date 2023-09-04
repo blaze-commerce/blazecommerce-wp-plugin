@@ -54,6 +54,7 @@ class Product extends BaseCollection
 						['name' => 'stockStatus', 'type' => 'string', 'sort' => true],
 						['name' => 'updatedAt', 'type' => 'int64'],
 						['name' => 'createdAt', 'type' => 'int64'],
+						['name' => 'publishedAt', 'type' => 'int64', 'optional' => true],
 						['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
 						['name' => 'totalSales', 'type' => 'int64'],
 						['name' => 'productType', 'type' => 'string', 'facet' => true],
@@ -300,6 +301,7 @@ class Product extends BaseCollection
 			'stockStatus' => $product->get_stock_status(),
 			'updatedAt' => strtotime($product->get_date_modified()),
 			'createdAt' => strtotime($product->get_date_created()),
+			'publishedAt' => strtotime(get_the_date('', $product->get_id())),
 			'isFeatured' => $product->get_featured(),
 			'totalSales' => $product->get_total_sales(),
 			'galleryImages' => $product_gallery,
@@ -440,6 +442,7 @@ class Product extends BaseCollection
 					'onSale' => $product->is_on_sale(),
 					'stockStatus' => $product->get_stock_status(),
 					'createdAt' => strtotime($product->get_date_created()),
+					'publishedAt' => strtotime(get_the_date('', $product->get_id())),
 					'galleryImages' => $product_gallery,
 					'productType' => $product->get_type(),
 				);
