@@ -51,7 +51,40 @@ class BaseCollection
 
 	public function import($batch)
 	{
-		return $this->collection()->documents->import($batch);
+        $batch_files = array_map(function( $data ) {
+            return json_encode( $data );
+        }, $batch);
+        $to_jsonl = implode( PHP_EOL, $batch_files );
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => 'https://' . $this->typesense->get_host() . '/collections/' . $this->collection_name() . '/documents/import?action=create',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => $to_jsonl,
+            CURLOPT_HTTPHEADER => array(
+                'X-TYPESENSE-API-KEY: ' . $this->typesense->get_api_key(),
+                'Content-Type: text/plain'
+            ),
+        ));
+          
+        $response = curl_exec($curl);
+        
+        curl_close($curl);
+
+        $response_from_jsonl = explode( PHP_EOL, $response );
+
+        $mapped_response = array_map(function( $resp ) {
+            return json_decode( $resp, true );
+        }, $response_from_jsonl);
+          
+        return $mapped_response;
 	}
 
 	public function create($args)
