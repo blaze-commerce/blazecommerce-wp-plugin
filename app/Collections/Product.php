@@ -38,7 +38,7 @@ class Product extends BaseCollection
 						['name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true],
 						['name' => 'permalink', 'type' => 'string'],
 						['name' => 'slug', 'type' => 'string', 'facet' => true],
-						['name' => 'seoFullHead', 'type' => 'string', 'optional' => true],
+						['name' => 'seoFullHead', 'type' => 'string', 'optional' => true ],
 						['name' => 'sku', 'type' => 'string'],
 						['name' => 'price', 'type' => 'object', "facet" => true],
 						['name' => 'price.AUD', 'type' => 'float', 'optional' => true ],
@@ -146,7 +146,7 @@ class Product extends BaseCollection
 					$result = $this->import($products_batch);
 					// echo "<pre>"; print_r($result); echo "</pre>";
 					$successful_imports = array_filter($result, function ($batch_result) {
-						return isset($batch_result['success']) && $batch_result['success'] == "1";
+						return isset($batch_result['success']) && $batch_result['success'] == true;
 					});
 					$logger->debug('TS Product Import result: ' . print_r($result, 1), $context);
 					$imported_products_count += count($successful_imports); // Increment the count of imported products
@@ -304,7 +304,7 @@ class Product extends BaseCollection
 		$product_data = [
 			'id' => strval($product->get_id()),
 			'productId' => strval($product->get_id()),
-			'description' => $description,
+			'description' => wpautop( $description ),
 			'name' => $product->get_name(),
 			'permalink' => wp_make_link_relative(get_permalink($product->get_id())),
 			'slug' => $product->get_slug(),
@@ -394,9 +394,9 @@ class Product extends BaseCollection
 			'category' => $category,
 			'stock_status' => 'instock',
 		);
-		$products = wc_get_products($args);
+		$product_ids = wc_get_products($args);
 
-		return $this->get_cross_sell_products($products);
+		return $this->get_cross_sell_products($product_ids);
 	}
 
 	public function get_cross_sell_products($product_ids)

@@ -8,8 +8,8 @@ use Typesense\Client;
 class TypesenseClient
 {
     private static $instance = null;
-    private $api_key = null;
-    private $host = null;
+    protected $api_key = null;
+    protected $host = null;
     public $store_id = null;
     private $client = null;
 
@@ -71,6 +71,16 @@ class TypesenseClient
     public function client()
     {
         return $this->client;
+    }
+
+    public function get_api_key()
+    {
+        return $this->api_key;
+    }
+
+    public function get_host()
+    {
+        return $this->host;
     }
 
     public function get_documents( $collection )
