@@ -183,12 +183,13 @@ class Product extends BaseCollection
 		$product_gallery = array_map(function ($attachment_id) {
 			$attachment = get_post($attachment_id);
 			$thumbnail_alt_text = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
+			$thumbnail_src = wp_get_attachment_url($attachment_id);
 
 			return [
 				'id' => $attachment_id,
 				'title' => $attachment->post_title,
 				'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
-				'src' => wp_get_attachment_url($attachment_id)
+				'src' => $thumbnail_src ? $thumbnail_src : '',
 			];
 		}, $attachment_ids);
 
@@ -199,12 +200,13 @@ class Product extends BaseCollection
 		$thumbnail_id = get_post_thumbnail_id($product_id);
 		$attachment = get_post($thumbnail_id);
 		$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
+		$thumbnail_src = get_the_post_thumbnail_url($product_id);
 
 		$thumbnail = [
 			'id' => $thumbnail_id,
 			'title' => $attachment->post_title,
 			'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
-			'src' => get_the_post_thumbnail_url($product_id),
+			'src' => $thumbnail_src ? $thumbnail_src : '',
 		];
 
 		$stockQuantity = $product->get_stock_quantity();
@@ -233,6 +235,7 @@ class Product extends BaseCollection
 				$variant_thumbnail_id = get_post_thumbnail_id($variation['variation_id']);
 				$variant_attachment = get_post($variant_thumbnail_id);
 				$variant_thumbnail_alt_text = get_post_meta($variant_thumbnail_id, '_wp_attachment_image_alt', true);
+				$variant_thumbnail_src = get_the_post_thumbnail_url($variation['variation_id']);
 
 				$variations_data[] = [
 					'variationId' => $variation['variation_id'],
@@ -254,7 +257,7 @@ class Product extends BaseCollection
 						'id' => $variant_thumbnail_id,
 						'title' => $variant_attachment->post_title,
 						'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
-						'src' => get_the_post_thumbnail_url($variation['variation_id']),
+						'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
 					],
 				];
 			}
@@ -408,12 +411,13 @@ class Product extends BaseCollection
 				$product_gallery = array_map(function ($attachment_id) {
 					$attachment = get_post($attachment_id);
 					$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
+					$thumbnail_src = wp_get_attachment_url($attachment_id);
 
 					return [
 						'id' => $attachment_id,
 						'title' => $attachment->post_title,
 						'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
-						'src' => wp_get_attachment_url($attachment_id)
+						'src' => $thumbnail_src ? $thumbnail_src : '',
 					];
 				}, $attachment_ids);
 		
@@ -421,12 +425,13 @@ class Product extends BaseCollection
 				$thumbnail_id = get_post_thumbnail_id($product_id);
 				$attachment = get_post($thumbnail_id);
 				$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
+				$thumbnail_src = get_the_post_thumbnail_url($product_id);
 		
 				$thumbnail = [
 					'id' => $thumbnail_id,
 					'title' => $attachment->post_title,
 					'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
-					'src' => get_the_post_thumbnail_url($product_id),
+					'src' => $thumbnail_src ? $thumbnail_src : '',
 				];
 		
 				$stockQuantity = $product->get_stock_quantity();
