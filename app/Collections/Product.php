@@ -303,7 +303,7 @@ class Product extends BaseCollection
 			'createdAt' => strtotime($product->get_date_created()),
 			'publishedAt' => strtotime(get_the_date('', $product->get_id())),
 			'isFeatured' => $product->get_featured(),
-			'totalSales' => $product->get_total_sales(),
+			'totalSales' => (int)$product->get_total_sales(),
 			'galleryImages' => $product_gallery,
 			'taxonomies' => $taxonomies,
 			'productType' => $product_type,
