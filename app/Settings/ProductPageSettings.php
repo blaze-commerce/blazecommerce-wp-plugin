@@ -50,7 +50,7 @@ class ProductPageSettings extends BaseSettings
                     array(
                         'id' => 'privacy_policy',
                         'label' => 'Privacy Policy',
-                        'type' => 'textarea',
+                        'type' => 'html',
                         'args' => array(
                             'description' => 'Set the privacy policy content.',
                         ),
@@ -58,7 +58,7 @@ class ProductPageSettings extends BaseSettings
                     array(
                         'id' => 'returns_policy',
                         'label' => 'Returns Policy',
-                        'type' => 'textarea',
+                        'type' => 'html',
                         'args' => array(
                             'description' => 'Set the returns policy content.'
                         ),
