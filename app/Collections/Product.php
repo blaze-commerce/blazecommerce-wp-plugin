@@ -407,7 +407,7 @@ class Product extends BaseCollection
 				$attachment_ids = $product->get_gallery_image_ids();
 				$product_gallery = array_map(function ($attachment_id) {
 					$attachment = get_post($attachment_id);
-					$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
+					$thumbnail_alt_text = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
 
 					return [
 						'id' => $attachment_id,
