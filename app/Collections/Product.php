@@ -73,6 +73,11 @@ class Product extends BaseCollection
 						['name' => 'judgemeReviews', 'type' => 'object', 'optional' => true],
 						['name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true],
 						['name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true],
+						['name' => 'thumbnail', 'type' => 'object'],
+						['name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true],
+						['name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true],
+						['name' => 'thumbnail.src', 'type' => 'string', 'optional' => true],
+						['name' => 'thumbnail.title', 'type' => 'string', 'optional' => true],
 					),
 					'default_sorting_field' => 'updatedAt',
 					'enable_nested_fields' => true
@@ -177,10 +182,12 @@ class Product extends BaseCollection
 		$attachment_ids = $product->get_gallery_image_ids();
 		$product_gallery = array_map(function ($attachment_id) {
 			$attachment = get_post($attachment_id);
+			$thumbnail_alt_text = get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
+
 			return [
 				'id' => $attachment_id,
 				'title' => $attachment->post_title,
-				'altText' => get_post_meta($attachment_id, '_wp_attachment_image_alt', true),
+				'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
 				'src' => wp_get_attachment_url($attachment_id)
 			];
 		}, $attachment_ids);
@@ -191,11 +198,12 @@ class Product extends BaseCollection
 		// Get the thumbnail
 		$thumbnail_id = get_post_thumbnail_id($product_id);
 		$attachment = get_post($thumbnail_id);
+		$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
 
 		$thumbnail = [
 			'id' => $thumbnail_id,
 			'title' => $attachment->post_title,
-			'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+			'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
 			'src' => get_the_post_thumbnail_url($product_id),
 		];
 
@@ -224,6 +232,7 @@ class Product extends BaseCollection
 
 				$variant_thumbnail_id = get_post_thumbnail_id($variation['variation_id']);
 				$variant_attachment = get_post($variant_thumbnail_id);
+				$variant_thumbnail_alt_text = get_post_meta($variant_thumbnail_id, '_wp_attachment_image_alt', true);
 
 				$variations_data[] = [
 					'variationId' => $variation['variation_id'],
@@ -244,7 +253,7 @@ class Product extends BaseCollection
 					'image' => [
 						'id' => $variant_thumbnail_id,
 						'title' => $variant_attachment->post_title,
-						'altText' => get_post_meta($variant_thumbnail_id, '_wp_attachment_image_alt', true),
+						'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
 						'src' => get_the_post_thumbnail_url($variation['variation_id']),
 					],
 				];
@@ -398,10 +407,12 @@ class Product extends BaseCollection
 				$attachment_ids = $product->get_gallery_image_ids();
 				$product_gallery = array_map(function ($attachment_id) {
 					$attachment = get_post($attachment_id);
+					$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
+
 					return [
 						'id' => $attachment_id,
 						'title' => $attachment->post_title,
-						'altText' => get_post_meta($attachment_id, '_wp_attachment_image_alt', true),
+						'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
 						'src' => wp_get_attachment_url($attachment_id)
 					];
 				}, $attachment_ids);
@@ -409,11 +420,12 @@ class Product extends BaseCollection
 				// Get the thumbnail
 				$thumbnail_id = get_post_thumbnail_id($product_id);
 				$attachment = get_post($thumbnail_id);
+				$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
 		
 				$thumbnail = [
 					'id' => $thumbnail_id,
 					'title' => $attachment->post_title,
-					'altText' => get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true),
+					'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
 					'src' => get_the_post_thumbnail_url($product_id),
 				];
 		
