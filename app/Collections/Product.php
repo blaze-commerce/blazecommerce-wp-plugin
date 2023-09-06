@@ -38,7 +38,7 @@ class Product extends BaseCollection
 						['name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true],
 						['name' => 'permalink', 'type' => 'string'],
 						['name' => 'slug', 'type' => 'string', 'facet' => true],
-						['name' => 'seoFullHead', 'type' => 'string'],
+						['name' => 'seoFullHead', 'type' => 'string', 'optional' => true],
 						['name' => 'sku', 'type' => 'string'],
 						['name' => 'price', 'type' => 'object', "facet" => true],
 						['name' => 'price.AUD', 'type' => 'float', 'optional' => true ],
