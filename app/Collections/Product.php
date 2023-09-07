@@ -71,6 +71,7 @@ class Product extends BaseCollection
 						['name' => 'taxonomies.childAndParentTerm', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 						['name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true],
 						['name' => 'judgemeReviews', 'type' => 'object', 'optional' => true],
+						['name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true],
 						['name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true],
 						['name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true],
 						['name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true],

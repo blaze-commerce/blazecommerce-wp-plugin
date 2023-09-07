@@ -127,21 +127,22 @@ class JudgeMe
                             $rating_count = $this->get_reviews_rating_count($value);
                             $percentage = $this->get_reviews_rating_percentage($value);
                             $product_reviews[$product['handle']] = array(
+                                'id' => (int)$product['id'],
                                 'externalId' => (int)$product['external_id'],
                                 'average' => (float)$average_rating[1],
                                 'count' => (int)$rating_count[1],
                                 'percentage' => $percentage,
                             );
-                        }
 
-                        unset($average_rating);
-                        unset($rating_count);
-                        unset($percentage);
+                            unset($average_rating);
+                            unset($rating_count);
+                            unset($percentage);
+                        }
                     }
                 }
-            }
 
-            unset($response);
+                unset($response);
+            }
             unset($products);
 
             return $product_reviews;
@@ -194,15 +195,22 @@ class JudgeMe
             preg_match_all($ratings, $html, $ratings_matches, PREG_SET_ORDER, 0);
             $percent = "/data-percentage='(.*?)'/m";
             preg_match_all($percent, $html, $percent_matches, PREG_SET_ORDER, 0);
+            $total = "/data-number-of-reviews='(.*?)'/m";
+            preg_match_all($total, $html, $total_matches, PREG_SET_ORDER, 0);
 
             $ratings_and_percent = array();
 
             foreach($ratings_matches as $key => $value) {
                 $ratings_and_percent[] = array(
                     'rating' => (int)$value[1],
+                    'total' => (int)$total_matches[$key][1],
                     'value' => (int)$percent_matches[$key][1],
                 );
             }
+
+            unset($ratings_matches);
+            unset($percent_matches);
+            unset($total_matches);
 
             return $ratings_and_percent;
         }
