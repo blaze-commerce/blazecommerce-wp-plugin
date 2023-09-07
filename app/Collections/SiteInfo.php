@@ -141,6 +141,8 @@ class SiteInfo extends BaseCollection
                 $response = $this->create( $data );
             }
 
+            unset($datas);
+
             // Get the favicon last updated timestamp
             // if ($site_icon_id) {
             //     $favicon_updated_at = strtotime(get_the_modified_date('Y-m-d H:i:s', $site_icon_id));
@@ -195,7 +197,8 @@ class SiteInfo extends BaseCollection
                     'updated_at' => time(),
                 ]);
             }
-    
+
+            unset($homepage_data);
     
             $site_messages_data = apply_filters('blaze_wooless_additional_site_info_message', array());
             foreach ($site_messages_data as $key => $value) {
@@ -209,6 +212,8 @@ class SiteInfo extends BaseCollection
                     'updated_at' => time(),
                 ]);
             }
+
+            unset($site_messages_data);
     
             $initial_additional_data = array();
             
@@ -244,6 +249,8 @@ class SiteInfo extends BaseCollection
                     'updated_at' => time(),
                 ]);
             }
+
+            unset($additional_data);
     
             do_action( 'blaze_wooless_after_site_info_sync' );
     

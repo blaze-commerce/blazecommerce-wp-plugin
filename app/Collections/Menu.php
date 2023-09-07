@@ -105,6 +105,7 @@ class Menu extends BaseCollection
                     'updated_at' => intval(strtotime($menu->post_modified), 10), // Converts the timestamp to a 64-bit integer
                 ];
 
+                unset($menu_items);
 
                 $this->create($document);
             }
