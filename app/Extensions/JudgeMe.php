@@ -136,6 +136,7 @@ class JudgeMe
             }
 
             unset($response);
+            unset($products);
 
             return $product_reviews;
         }
