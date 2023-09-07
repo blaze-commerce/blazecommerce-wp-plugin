@@ -107,7 +107,7 @@ class Taxonomy extends BaseCollection
                             $timestamp = strtotime($latest_modified_date);
                             //var_dump($latest_modified_date, $timestamp);
                         }
-                        $yoastMeta = \YoastSEO()->meta->for_term($term->term_id);
+                        $yoastMeta = is_plugin_active('wordpress-seo/wp-seo.php') ? \YoastSEO()->meta->for_term($term->term_id) : [];
                         $termHead = is_object($yoastMeta) ? $yoastMeta->get_head() : '';
                         $selFullHead = is_string($termHead) ? $termHead : (isset($termHead->html) ? $termHead->html : '');
 
