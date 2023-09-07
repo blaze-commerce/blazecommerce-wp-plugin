@@ -71,8 +71,11 @@ class Product extends BaseCollection
 						['name' => 'taxonomies.childAndParentTerm', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 						['name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true],
 						['name' => 'judgemeReviews', 'type' => 'object', 'optional' => true],
+						['name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true],
+						['name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true],
 						['name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true],
 						['name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true],
+						['name' => 'judgemeReviews.percentage', 'type' => 'object[]', 'optional' => true],
 						['name' => 'thumbnail', 'type' => 'object'],
 						['name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true],
 						['name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true],
@@ -261,6 +264,8 @@ class Product extends BaseCollection
 					],
 				];
 			}
+			
+			unset($variations);
 		}
 
 		$cross_sell_ids = $product->get_cross_sell_ids();
@@ -282,6 +287,9 @@ class Product extends BaseCollection
 				}
 			}
 		}
+
+		unset($upsell_ids);
+
 		// Get the additional product tabs
 		$product_id = $product->get_id();
 		$additional_tabs = get_post_meta($product_id, '_additional_tabs', true);
@@ -295,6 +303,9 @@ class Product extends BaseCollection
 				);
 			}
 		}
+
+		unset($additional_tabs);
+
 		$taxonomies = $this->get_taxonomies($product);
 
 		$related_products = $this->get_related_products($product_id, $taxonomies);
@@ -369,8 +380,12 @@ class Product extends BaseCollection
 
 					];
 				}
+
+				unset($product_terms);
 			}
 		}
+
+		unset($taxonomies);
 
 		return $taxonomies_data;
 	}
@@ -383,6 +398,8 @@ class Product extends BaseCollection
 				$category[] = $taxonomy['name'];
 			}
 		}
+
+		unset($taxonomies);
 
 		// Get products that aren't the current product.
 		$args = array(
@@ -474,6 +491,8 @@ class Product extends BaseCollection
 				unset($product_data);
 			}
 		}
+
+		unset($product_ids);
 
 		return $cross_sell_product_data;
 	}
