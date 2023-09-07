@@ -125,12 +125,18 @@ class JudgeMe
                         if($product['external_id'] === $key) {
                             $average_rating = $this->get_reviews_average_rating($value);
                             $rating_count = $this->get_reviews_rating_count($value);
+                            $percentage = $this->get_reviews_rating_percentage($value);
                             $product_reviews[$product['handle']] = array(
+                                'externalId' => (int)$product['external_id'],
                                 'average' => (float)$average_rating[1],
                                 'count' => (int)$rating_count[1],
-                                'externalId' => (int)$product['external_id'],
+                                'percentage' => $percentage,
                             );
                         }
+
+                        unset($average_rating);
+                        unset($rating_count);
+                        unset($percentage);
                     }
                 }
             }
@@ -181,5 +187,23 @@ class JudgeMe
             preg_match_all($re, $html, $matches, PREG_SET_ORDER, 0);
 
             return $matches[0];
+        }
+
+        public function get_reviews_rating_percentage($html) {
+            $ratings = "/data-rating='(.*?)'/m";
+            preg_match_all($ratings, $html, $ratings_matches, PREG_SET_ORDER, 0);
+            $percent = "/data-percentage='(.*?)'/m";
+            preg_match_all($percent, $html, $percent_matches, PREG_SET_ORDER, 0);
+
+            $ratings_and_percent = array();
+
+            foreach($ratings_matches as $key => $value) {
+                $ratings_and_percent[] = array(
+                    'rating' => (int)$value[1],
+                    'value' => (float)$percent_matches[$key][1],
+                );
+            }
+
+            return $ratings_and_percent;
         }
     }
