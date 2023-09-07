@@ -18,6 +18,12 @@ class Taxonomy extends BaseCollection
 
     public function index_to_typesense()
     {
+		$logger = wc_get_logger();
+		$context = array('source' => 'wooless-taxonomy-collection-initialize');
+
+		$import_logger = wc_get_logger();
+		$import_context = array('source' => 'wooless-taxonomy-import');
+
         // Fetch the store ID from the saved options
         $wooless_site_id = get_option('store_id');
         $collection_taxonomy = 'taxonomy-' . $wooless_site_id;
@@ -28,6 +34,8 @@ class Taxonomy extends BaseCollection
             } catch (\Exception $e) {
                 // Don't error out if the collection was not found
             }
+			$logger->debug('TS Taxonomy collection: ' . $this->collection_name(), $context);
+
             $this->create_collection([
                 'name' => $collection_taxonomy,
                 'fields' => [
@@ -141,8 +149,14 @@ class Taxonomy extends BaseCollection
                         
                         // Index the term data in Typesense
                         try {
-                            $this->create($document);
+                            $result = $this->create($document);
+                            $successful_imports = array_filter($result, function ($batch_result) {
+                                return isset($batch_result['success']) && $batch_result['success'] == true;
+                            });
+                            $import_logger->debug('TS Taxonomy Import result: ' . print_r($result, 1), $import_context);
                         } catch (\Exception $e) {
+                            $logger->debug('TS Taxonomy Import Exception: ' . $e->getMessage(), $context);
+
                             echo "Error adding term '{$term->name}' to Typesense: " . $e->getMessage() . "\n";
                         }
                     }
@@ -151,6 +165,8 @@ class Taxonomy extends BaseCollection
 
             echo "taxonomy added successfully!\n";
         } catch (\Exception $e) {
+			$logger->debug('TS Taxonomy collection intialize Exception: ' . $e->getMessage(), $context);
+
             echo "Error: " . $e->getMessage() . "\n";
         }
     }
