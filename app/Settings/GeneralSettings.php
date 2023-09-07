@@ -34,6 +34,16 @@ class GeneralSettings extends BaseSettings {
                 update_option('private_key_master', $options['api_key']);
                 update_option('typesense_api_key', $typesense_api_key);
                 update_option('store_id', $store_id);
+
+                if (isset($_POST['free_shipping_threshold'])) {
+                    update_option('free_shipping_threshold', $_POST['free_shipping_threshold']);
+                    TypesenseClient::get_instance()->site_info()->upsert([
+                        'id' => '1000482',
+                        'name' => 'free_shipping_threshold',
+                        'value' => json_encode($_POST['free_shipping_threshold']),
+                        'updated_at' => time(),
+                    ]);
+                }
             } else {
                 add_settings_error(
                     'blaze_settings_error',
@@ -42,16 +52,6 @@ class GeneralSettings extends BaseSettings {
                     'error'
                 );
             }            
-        }
-
-        if (isset($_POST['free_shipping_threshold'])) {
-            update_option('free_shipping_threshold', $_POST['free_shipping_threshold']);
-            TypesenseClient::get_instance()->site_info()->upsert([
-                'id' => '1000482',
-                'name' => 'free_shipping_threshold',
-                'value' => json_encode($_POST['free_shipping_threshold']),
-                'updated_at' => time(),
-            ]);
         }
 
         return $options;

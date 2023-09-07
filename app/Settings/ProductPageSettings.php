@@ -35,7 +35,7 @@ class ProductPageSettings extends BaseSettings
         }
 
         if (isset($options['description_after_content'])) {
-            $options['description_after_content'] = htmlspecialchars( $options['description_after_content'] );
+            $options['description_after_content'] = $options['description_after_content'];
         }
 
         return $options;
