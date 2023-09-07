@@ -200,7 +200,7 @@ class JudgeMe
             foreach($ratings_matches as $key => $value) {
                 $ratings_and_percent[] = array(
                     'rating' => (int)$value[1],
-                    'value' => (float)$percent_matches[$key][1],
+                    'value' => (int)$percent_matches[$key][1],
                 );
             }
 
