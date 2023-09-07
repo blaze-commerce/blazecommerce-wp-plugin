@@ -195,14 +195,13 @@ class JudgeMe
             preg_match_all($ratings, $html, $ratings_matches, PREG_SET_ORDER, 0);
             $percent = "/data-percentage='(.*?)'/m";
             preg_match_all($percent, $html, $percent_matches, PREG_SET_ORDER, 0);
-            $total = "/data-number-of-reviews='(.*?)'/m";
+            $total = "/data-frequency='(.*?)'/m";
             preg_match_all($total, $html, $total_matches, PREG_SET_ORDER, 0);
 
             $ratings_and_percent = array();
 
             foreach($ratings_matches as $key => $value) {
-                $ratings_and_percent[] = array(
-                    'rating' => (int)$value[1],
+                $ratings_and_percent[$value[1]] = array(
                     'total' => (int)$total_matches[$key][1],
                     'value' => (int)$percent_matches[$key][1],
                 );
