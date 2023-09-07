@@ -74,6 +74,7 @@ class Product extends BaseCollection
 						['name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true],
 						['name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true],
 						['name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true],
+						['name' => 'judgemeReviews.percentage', 'type' => 'object[]', 'optional' => true],
 						['name' => 'thumbnail', 'type' => 'object'],
 						['name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true],
 						['name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true],
