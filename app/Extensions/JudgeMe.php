@@ -128,6 +128,7 @@ class JudgeMe
                             $product_reviews[$product['handle']] = array(
                                 'average' => (float)$average_rating[1],
                                 'count' => (int)$rating_count[1],
+                                'externalId' => (int)$product['external_id'],
                             );
                         }
                     }
