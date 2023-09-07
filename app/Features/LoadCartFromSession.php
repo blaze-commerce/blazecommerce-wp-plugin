@@ -57,7 +57,7 @@ class LoadCartFromSession
 
 	public function remove_session_id_from_url_script()
 	{
-		if (!class_exists('WooCommerce') || !is_checkout() || !isset($_GET['session_id'])) {
+		if (!class_exists('WooCommerce') || !is_checkout() || !isset($_GET['session_id']) || isset($_GET['from_wooless'])) {
 			return;
 		}
 
