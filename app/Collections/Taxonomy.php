@@ -161,7 +161,11 @@ class Taxonomy extends BaseCollection
                         }
                     }
                 }
+
+                unset($terms);
             }
+
+            unset($taxonomies);
 
             echo "taxonomy added successfully!\n";
         } catch (\Exception $e) {

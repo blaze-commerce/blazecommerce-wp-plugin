@@ -144,7 +144,9 @@ class Page extends BaseCollection
 					];
 				}
 			}
+			unset($post_terms);
 		}
+		unset($taxonomies);
 
 		return $taxonomies_data;
 	}
