@@ -57,12 +57,24 @@ class LoadCartFromSession
 
 	public function remove_session_id_from_url_script()
 	{
-		if (!class_exists('WooCommerce') || !is_checkout() || !isset($_GET['session_id']) || isset($_GET['from_wooless'])) {
-			return;
-		}
+        $restricted_pages = apply_filters('blaze_wooless_restricted_pages', is_cart());
+        if ( $restricted_pages ) {
+            wp_redirect(home_url());
+            exit;
+        }
+
+        $pages_should_redirect_to_frontend = apply_filters('blaze_wooless_pages_should_redirect_to_frontend', is_shop() || is_product_category() || is_product());
+        if ( $pages_should_redirect_to_frontend ) {
+            wp_redirect(home_url( $_SERVER['REQUEST_URI'] ));
+            exit;
+        }
+
+        if (!class_exists('WooCommerce') || !is_checkout() || !isset($_GET['session_id']) || isset($_GET['from_wooless'])) {
+            return;
+        }
 
 		$url = remove_query_arg('session_id', $_SERVER['REQUEST_URI']);
-		wp_redirect(add_filter('blaze_wooless_destination_url_from_frontend', $url));
+		wp_redirect(apply_filters('blaze_wooless_destination_url_from_frontend', $url));
 		exit;
 	}
 }
