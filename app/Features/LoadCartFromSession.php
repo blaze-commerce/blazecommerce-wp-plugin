@@ -50,6 +50,13 @@ class LoadCartFromSession
 				$session->set($key, $session_value);
 			}
 
+            $user_id = $session->get_customer_id();
+
+            if ($user_id) {
+                // Authenticate the user and set the authentication cookies
+                wp_set_auth_cookie($user_id);
+            }
+
 		} catch (\Exception $exception) {
 			// ErrorHandling::capture( $exception );
 		}
