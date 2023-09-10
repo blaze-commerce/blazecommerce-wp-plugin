@@ -16,6 +16,7 @@ require_once plugin_dir_path(__FILE__) . 'lib/regional-data-helper.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/settings/class-general-settings.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/settings/class-product-page-settings.php';
 require_once plugin_dir_path(__FILE__) . 'lib/setting-helper.php';
+require_once plugin_dir_path(__FILE__) . 'lib/blaze-wooless-functions.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/class-settings.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/product/index.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/menu/index.php';
