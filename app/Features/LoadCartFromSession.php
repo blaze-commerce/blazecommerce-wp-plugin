@@ -19,6 +19,7 @@ class LoadCartFromSession
 	public function __construct()
 	{
 		add_action('woocommerce_load_cart_from_session', array($this, 'woocommerce_load_cart_from_session'));
+		add_action('init', array($this, 'load_user_from_session'));
 		add_action('wp_footer', array($this, 'remove_session_id_from_url_script'));
 	}
 
@@ -49,18 +50,44 @@ class LoadCartFromSession
 				$session_value = unserialize($value);
 				$session->set($key, $session_value);
 			}
-
-            $user_id = $session->get_customer_id();
-
-            if ($user_id) {
-                // Authenticate the user and set the authentication cookies
-                wp_set_auth_cookie($user_id);
-            }
-
 		} catch (\Exception $exception) {
 			// ErrorHandling::capture( $exception );
 		}
 	}
+
+	public function load_user_from_session()
+    {
+        // Bail if there isn't any data
+		if (!isset($_GET['session_id']) || is_user_logged_in()) {
+			return;
+		}
+
+		$session_id = sanitize_text_field($_GET['session_id']);
+
+		try {
+			$handler = new \WC_Session_Handler();
+			$session_data = $handler->get_session($session_id);
+
+
+			// We were passed a session ID, yet no session was found. Let's log this and bail.
+			if (empty($session_data)) {
+				throw new \Exception('Could not locate WooCommerce session on checkout');
+			}
+
+            if ($customer = $session_data['customer']) {
+                $customer_data = unserialize($customer);
+                $customer_id = $customer_data['id'];
+                echo "<pre>"; print_r($customer_id); echo "</pre>";
+
+                if ($customer_id) {
+                    // Authenticate the user and set the authentication cookies
+                    wp_set_auth_cookie($customer_id);
+                }
+            }
+		} catch (\Exception $exception) {
+			// ErrorHandling::capture( $exception );
+		}
+    }
 
 	public function remove_session_id_from_url_script()
 	{
@@ -76,11 +103,11 @@ class LoadCartFromSession
             exit;
         }
 
-        if (!class_exists('WooCommerce') || !is_checkout() || !isset($_GET['session_id']) || isset($_GET['from_wooless'])) {
+        if (!class_exists('WooCommerce') || (!isset($_GET['session_id']) && !isset($_GET['from_wooless']))) {
             return;
         }
 
-		$url = remove_query_arg('session_id', $_SERVER['REQUEST_URI']);
+		$url = remove_query_arg(['session_id', 'from_wooless'], $_SERVER['REQUEST_URI']);
 		wp_redirect(apply_filters('blaze_wooless_destination_url_from_frontend', $url));
 		exit;
 	}
