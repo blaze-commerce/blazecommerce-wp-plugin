@@ -134,8 +134,8 @@ function add_typesense_product_indexer_menu()
     $menu_slug = 'wooless-settings';
 
     add_menu_page(
-        'Wooless',
-        'Wooless',
+        'Blaze Commerce',
+        'Blaze Commerce',
         'manage_options',
         $menu_slug,
         'typesense_product_indexer_page',
