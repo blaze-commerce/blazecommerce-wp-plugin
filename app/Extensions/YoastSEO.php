@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeCommerce\Extensions;
+namespace BlazeWooless\Extensions;
 
 class YoastSEO
 {
@@ -18,8 +18,8 @@ class YoastSEO
 	public function __construct()
 	{
 		if (\is_plugin_active('wordpress-seo/wp-seo.php')) {
-			add_filter('blaze_commerce_product_data_for_typesense', array($this, 'add_seo_to_product_schema'), 10, 2);
-			add_filter('blaze_commerce_page_data_for_typesense', array($this, 'add_seo_to_page_schema'), 10, 2);
+			add_filter('blaze_wooless_product_data_for_typesense', array($this, 'add_seo_to_product_schema'), 10, 2);
+			add_filter('blaze_wooless_page_data_for_typesense', array($this, 'add_seo_to_page_schema'), 10, 2);
 		}
 	}
 

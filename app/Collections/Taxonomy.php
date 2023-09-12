@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeCommerce\Collections;
+namespace BlazeWooless\Collections;
 
 class Taxonomy extends BaseCollection
 {
@@ -19,14 +19,14 @@ class Taxonomy extends BaseCollection
     public function index_to_typesense()
     {
 		$logger = wc_get_logger();
-		$context = array('source' => 'blaze-commerce-taxonomy-collection-initialize');
+		$context = array('source' => 'wooless-taxonomy-collection-initialize');
 
 		$import_logger = wc_get_logger();
-		$import_context = array('source' => 'blaze-commerce-taxonomy-import');
+		$import_context = array('source' => 'wooless-taxonomy-import');
 
         // Fetch the store ID from the saved options
-        $blaze_commerce_site_id = get_option('store_id');
-        $collection_taxonomy = 'taxonomy-' . $blaze_commerce_site_id;
+        $wooless_site_id = get_option('store_id');
+        $collection_taxonomy = 'taxonomy-' . $wooless_site_id;
         //indexing taxonmy terms
         try {
             try {

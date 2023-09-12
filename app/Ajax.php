@@ -1,12 +1,12 @@
 <?php
 
-namespace BlazeCommerce;
+namespace BlazeWooless;
 
-use BlazeCommerce\Collections\Product;
-use BlazeCommerce\Collections\SiteInfo;
-use BlazeCommerce\Collections\Taxonomy;
-use BlazeCommerce\Collections\Page;
-use BlazeCommerce\Collections\Menu;
+use BlazeWooless\Collections\Product;
+use BlazeWooless\Collections\SiteInfo;
+use BlazeWooless\Collections\Taxonomy;
+use BlazeWooless\Collections\Page;
+use BlazeWooless\Collections\Menu;
 
 class Ajax
 {
@@ -35,18 +35,18 @@ class Ajax
             $decoded_api_key = base64_decode($encoded_api_key);
             $trimmed_api_key = explode(':', $decoded_api_key);
             $typesense_private_key = $trimmed_api_key[0];
-            $blaze_commerce_site_id = $trimmed_api_key[1];
+            $wooless_site_id = $trimmed_api_key[1];
 
             $client = TypesenseCLient::get_instance()->client();
 
 
             try {
-                $collection_name = 'product-' . $blaze_commerce_site_id;
+                $collection_name = 'product-' . $wooless_site_id;
                 $collections = $client->collections[$collection_name]->retrieve();
                 if (!empty($collections)) {
                     echo json_encode(['status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections]);
                 } else {
-                    echo json_encode(['status' => 'error', 'message' => 'No collection found for store ID: ' . $blaze_commerce_site_id]);
+                    echo json_encode(['status' => 'error', 'message' => 'No collection found for store ID: ' . $wooless_site_id]);
                 }
             } catch (Typesense\Exception\ObjectNotFound $e) {
                 echo json_encode(['status' => 'error', 'message' => 'Collection not found: ' . $e->getMessage()]);

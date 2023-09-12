@@ -58,7 +58,7 @@ class ComposerStaticInitf6e8a1f5fedf9f8744e1c449ae9ca57a
         ),
         'B' => 
         array (
-            'BlazeCommerce\\' => 13,
+            'BlazeWooless\\' => 13,
         ),
     );
 
@@ -145,7 +145,7 @@ class ComposerStaticInitf6e8a1f5fedf9f8744e1c449ae9ca57a
         array (
             0 => __DIR__ . '/..' . '/clue/stream-filter/src',
         ),
-        'BlazeCommerce\\' => 
+        'BlazeWooless\\' => 
         array (
             0 => __DIR__ . '/../..' . '/app',
         ),

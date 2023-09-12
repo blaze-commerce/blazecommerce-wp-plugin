@@ -5,6 +5,6 @@
         "symfony/http-client": "^5.4"
     },
     "autoload": {
-        "psr-4": {"BlazeCommerce\\": "app/"}
+        "psr-4": {"BlazeWooless\\": "app/"}
     }
 }

@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeCommerce\Features;
+namespace BlazeWooless\Features;
 
-use BlazeCommerce\TypesenseClient;
+use BlazeWooless\TypesenseClient;
 
 class AttributeSettings
 {
@@ -19,9 +19,9 @@ class AttributeSettings
 
     public function __construct()
     {
-        add_filter('blaze_commerce_product_data_for_typesense', array( $this, 'add_available_product_attribute' ), 10, 2);
-        add_filter('blaze_commerce_product_page_settings', array( $this, 'register_settings'));
-        add_action('blaze_commerce_save_product_page_settings', array( $this, 'save_settings' ));
+        add_filter('blaze_wooless_product_data_for_typesense', array( $this, 'add_available_product_attribute' ), 10, 2);
+        add_filter('blaze_wooless_product_page_settings', array( $this, 'register_settings'));
+        add_action('blaze_wooless_save_product_page_settings', array( $this, 'save_settings' ));
     }
 
     public static function get_all_attributes()
@@ -120,7 +120,7 @@ class AttributeSettings
                     $attribute_to_register['label'] = $attribute->get_name();
                 }
 
-                $generated_attributes[] = apply_filters('blaze_commerce_product_attribute_for_typesense', $attribute_to_register, $attribute);
+                $generated_attributes[] = apply_filters('blaze_wooless_product_attribute_for_typesense', $attribute_to_register, $attribute);
             }
             $product_data['defaultAttributes'] = $product->get_default_attributes();
             $product_data['attributes'] = $generated_attributes;
@@ -131,7 +131,7 @@ class AttributeSettings
 
     public function register_settings($product_page_settings)
     {
-        $product_page_settings['blaze_commerce_settings_attributes_section'] = array(
+        $product_page_settings['wooless_settings_attributes_section'] = array(
             'label' => 'Attributes',
             'options' => $this->get_attribute_mapping_settings(),
         );
