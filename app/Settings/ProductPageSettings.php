@@ -1,9 +1,9 @@
 <?php
 
-namespace BlazeWooless\Settings;
+namespace BlazeCommerce\Settings;
 
-use BlazeWooless\Features\AttributeSettings;
-use BlazeWooless\TypesenseClient;
+use BlazeCommerce\Features\AttributeSettings;
+use BlazeCommerce\TypesenseClient;
 
 class ProductPageSettings extends BaseSettings 
 {
@@ -14,7 +14,7 @@ class ProductPageSettings extends BaseSettings
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_settings_product_page_options' );
+            self::$instance = new self( 'blaze_commerce_settings_product_page_options' );
         }
 
         return self::$instance;
@@ -31,7 +31,7 @@ class ProductPageSettings extends BaseSettings
         $homepage_layout = json_decode( stripslashes($_POST['homepage_layout']), true );
 
         if (is_array($homepage_layout)) {
-            update_option('blaze_wooless_homepage_layout', $homepage_layout);
+            update_option('blaze_commerce_homepage_layout', $homepage_layout);
         }
 
         if (isset($options['description_after_content'])) {
@@ -44,7 +44,7 @@ class ProductPageSettings extends BaseSettings
     public function settings()
     {
         $product_page_settings = array(
-            'wooless_settings_product_page_section' => array(
+            'blaze_commerce_settings_product_page_section' => array(
                 'label' => 'Product Page',
                 'options' => array(
                     array(
@@ -75,7 +75,7 @@ class ProductPageSettings extends BaseSettings
             ),
         );
 
-        return apply_filters( 'blaze_wooless_product_page_settings', $product_page_settings );
+        return apply_filters( 'blaze_commerce_product_page_settings', $product_page_settings );
     }
 
     public function section_callback() {
@@ -103,12 +103,12 @@ class ProductPageSettings extends BaseSettings
             'updated_at' => time(),
         ]);
 
-        do_action( 'blaze_wooless_save_product_page_settings', $options );
+        do_action( 'blaze_commerce_save_product_page_settings', $options );
     }
 
     public function register_hooks()
     {
-        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'sync_additional_data' ), 10 );
+        add_action( 'blaze_commerce_after_site_info_sync', array( $this, 'sync_additional_data' ), 10 );
     }
 
     public function sync_additional_data()

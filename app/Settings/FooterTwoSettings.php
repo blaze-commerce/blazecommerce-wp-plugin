@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeWooless\Settings;
+namespace BlazeCommerce\Settings;
 
-use BlazeWooless\TypesenseClient;
+use BlazeCommerce\TypesenseClient;
 
 class FooterTwoSettings extends BaseSettings {
     private static $instance = null;
@@ -12,7 +12,7 @@ class FooterTwoSettings extends BaseSettings {
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_footer_2_settings_options' );
+            self::$instance = new self( 'blaze_commerce_footer_2_settings_options' );
         }
 
         return self::$instance;
@@ -26,7 +26,7 @@ class FooterTwoSettings extends BaseSettings {
         }
 
         if (is_array($footer_content_2)) {
-            update_option('blaze_wooless_footer_2_content', $footer_content_2);
+            update_option('blaze_commerce_footer_2_content', $footer_content_2);
 
             TypesenseClient::get_instance()->site_info()->upsert([
                 'id' => '1000008',
@@ -50,20 +50,20 @@ class FooterTwoSettings extends BaseSettings {
 
     public function register_hooks()
     {
-        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
-        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_footer_two_data' ), 10, 2 );
+        add_action( 'blaze_commerce_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_commerce_after_site_info_sync', array( $this, 'add_footer_two_data' ), 10, 2 );
     }
 
     public function footer_callback()
     {
-        require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/draggable-content-simple.php';
+        require_once BLAZE_COMMERCE_PLUGIN_DIR . 'views/draggable-content-simple.php';
     }
 
     public function default_draggable_data()
     {
         if (empty($_GET['tab']) || $this->tab_key !== $_GET['tab']) return;
 
-        $footer_content = get_option('blaze_wooless_footer_2_content', '');
+        $footer_content = get_option('blaze_commerce_footer_2_content', '');
         ?>
             <input type="hidden" id="draggable_result" name="footer_content_2" value='<?php echo json_encode($footer_content) ?>'/>
         <?php
@@ -71,7 +71,7 @@ class FooterTwoSettings extends BaseSettings {
 
     public function add_footer_two_data()
     {
-        $footer_content_2 = get_option('blaze_wooless_footer_2_content', '');
+        $footer_content_2 = get_option('blaze_commerce_footer_2_content', '');
         TypesenseClient::get_instance()->site_info()->upsert([
             'id' => '1000008',
             'name' => 'footer_content_2',

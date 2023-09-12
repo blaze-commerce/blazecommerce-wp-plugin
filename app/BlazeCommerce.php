@@ -1,11 +1,11 @@
 <?php
 
-namespace BlazeWooless;
+namespace BlazeCommerce;
 
-use BlazeWooless\Collections\Menu;
-use BlazeWooless\Collections\Taxonomy;
+use BlazeCommerce\Collections\Menu;
+use BlazeCommerce\Collections\Taxonomy;
 
-class BlazeWooless
+class BlazeCommerce
 {
     private static $instance = null;
 
@@ -39,22 +39,22 @@ class BlazeWooless
     public function register_settings()
     {
         $settings = array(
-            '\\BlazeWooless\\Settings\\GeneralSettings',
-            '\\BlazeWooless\\Settings\\RegionalSettings',
-            '\\BlazeWooless\\Settings\\ProductPageSettings',
-            '\\BlazeWooless\\Settings\\HomePageSettings',
-            '\\BlazeWooless\\Settings\\SiteMessageTopHeaderSettings',
-            '\\BlazeWooless\\Settings\\SiteMessageSettings',
-            '\\BlazeWooless\\Settings\\FooterBeforeSettings',
-            '\\BlazeWooless\\Settings\\FooterOneSettings',
-            '\\BlazeWooless\\Settings\\FooterTwoSettings',
-            '\\BlazeWooless\\Settings\\FooterThreeSettings',
-            '\\BlazeWooless\\Settings\\FooterAfterSettings',
+            '\\BlazeCommerce\\Settings\\GeneralSettings',
+            '\\BlazeCommerce\\Settings\\RegionalSettings',
+            '\\BlazeCommerce\\Settings\\ProductPageSettings',
+            '\\BlazeCommerce\\Settings\\HomePageSettings',
+            '\\BlazeCommerce\\Settings\\SiteMessageTopHeaderSettings',
+            '\\BlazeCommerce\\Settings\\SiteMessageSettings',
+            '\\BlazeCommerce\\Settings\\FooterBeforeSettings',
+            '\\BlazeCommerce\\Settings\\FooterOneSettings',
+            '\\BlazeCommerce\\Settings\\FooterTwoSettings',
+            '\\BlazeCommerce\\Settings\\FooterThreeSettings',
+            '\\BlazeCommerce\\Settings\\FooterAfterSettings',
         );
 
         foreach ( $settings as $setting ) {
             // Instantiating the settings will register an admin_init hook to add the configuration
-            // See here BlazeWooless\Settings\BaseSEttings.php @ line 18
+            // See here BlazeCommerce\Settings\BaseSEttings.php @ line 18
             $setting::get_instance();
         }
     }
@@ -62,10 +62,10 @@ class BlazeWooless
     public function register_features()
     {
         $features = array(
-            '\\BlazeWooless\\Features\\AttributeSettings',
-            '\\BlazeWooless\\Features\\CalculateShipping',
-            '\\BlazeWooless\\Features\\DraggableContent',
-            '\\BlazeWooless\\Features\\LoadCartFromSession',
+            '\\BlazeCommerce\\Features\\AttributeSettings',
+            '\\BlazeCommerce\\Features\\CalculateShipping',
+            '\\BlazeCommerce\\Features\\DraggableContent',
+            '\\BlazeCommerce\\Features\\LoadCartFromSession',
         );
 
         foreach ( $features as $feature ) {
@@ -76,14 +76,14 @@ class BlazeWooless
     public function register_extensions()
     {
         $extensions = array(
-            '\\BlazeWooless\\Extensions\\CustomProductTabsForWoocommerce',
-            '\\BlazeWooless\\Extensions\\JudgeMe',
-            '\\BlazeWooless\\Extensions\\ProductAddons',
-            '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
-            // '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
-            '\\BlazeWooless\\Extensions\\YoastSEO',
-            '\\BlazeWooless\\Extensions\\GraphQL',
-            '\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
+            '\\BlazeCommerce\\Extensions\\CustomProductTabsForWoocommerce',
+            '\\BlazeCommerce\\Extensions\\JudgeMe',
+            '\\BlazeCommerce\\Extensions\\ProductAddons',
+            '\\BlazeCommerce\\Extensions\\WoocommerceAeliaCurrencySwitcher',
+            // '\\BlazeCommerce\\Extensions\\WoocommercePriceBasedOnCountry',
+            '\\BlazeCommerce\\Extensions\\YoastSEO',
+            '\\BlazeCommerce\\Extensions\\GraphQL',
+            '\\BlazeCommerce\\Extensions\\WoocommerceVariationSwatches',
         );
 
         foreach ( $extensions as $extension ) {
@@ -93,4 +93,4 @@ class BlazeWooless
     }
 }
 
-BlazeWooless::get_instance();
+BlazeCommerce::get_instance();

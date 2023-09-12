@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeWooless;
+namespace BlazeCommerce;
 
-use BlazeWooless\Collections\Product;
+use BlazeCommerce\Collections\Product;
 
 class Woocommerce
 {
@@ -60,7 +60,7 @@ class Woocommerce
 				do_action('ts_product_update', $product_id, $wc_product);
 			} catch (\Exception $e) {
 				$logger = wc_get_logger();
-				$context = array('source' => 'wooless-product-update');
+				$context = array('source' => 'blaze-commerce-product-update');
 
 				$logger->debug('TS Product Update Exception: ' . $e->getMessage(), $context);
 				error_log("Error updating product in Typesense: " . $e->getMessage());

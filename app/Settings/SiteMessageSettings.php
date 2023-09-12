@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeWooless\Settings;
+namespace BlazeCommerce\Settings;
 
-use BlazeWooless\TypesenseClient;
+use BlazeCommerce\TypesenseClient;
 
 class SiteMessageSettings extends BaseSettings {
     private static $instance = null;
@@ -12,7 +12,7 @@ class SiteMessageSettings extends BaseSettings {
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_sitemessage_settings_options' );
+            self::$instance = new self( 'blaze_commerce_sitemessage_settings_options' );
         }
 
         return self::$instance;
@@ -26,7 +26,7 @@ class SiteMessageSettings extends BaseSettings {
         }
 
         if (is_array($site_message)) {
-            update_option('blaze_wooless_site_message', $site_message);
+            update_option('blaze_commerce_site_message', $site_message);
 
             TypesenseClient::get_instance()->site_info()->upsert([
                 'id' => '1000004',
@@ -50,20 +50,20 @@ class SiteMessageSettings extends BaseSettings {
 
     public function register_hooks()
     {
-        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
-        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_site_settings_data' ), 10, 2 );
+        add_action( 'blaze_commerce_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_commerce_after_site_info_sync', array( $this, 'add_site_settings_data' ), 10, 2 );
     }
 
     public function footer_callback()
     {
-        require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/draggable-content-simple.php';
+        require_once BLAZE_COMMERCE_PLUGIN_DIR . 'views/draggable-content-simple.php';
     }
 
     public function default_draggable_data()
     {
         if (empty($_GET['tab']) || $this->tab_key !== $_GET['tab']) return;
 
-        $site_message = get_option('blaze_wooless_site_message', '');
+        $site_message = get_option('blaze_commerce_site_message', '');
         ?>
             <input type="hidden" id="draggable_result" name="site_message" value='<?php echo json_encode($site_message) ?>'/>
         <?php
@@ -71,7 +71,7 @@ class SiteMessageSettings extends BaseSettings {
 
     public function add_site_settings_data()
     {
-        $site_message = get_option('blaze_wooless_site_message', '');
+        $site_message = get_option('blaze_commerce_site_message', '');
         TypesenseClient::get_instance()->site_info()->upsert([
             'id' => '1000004',
             'name' => 'site_message',

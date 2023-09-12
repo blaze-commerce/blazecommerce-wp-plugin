@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeWooless\Settings;
+namespace BlazeCommerce\Settings;
 
 class BaseSettings {
     public $option_key;
@@ -14,9 +14,9 @@ class BaseSettings {
         $this->register_hooks();
         
         add_action( 'admin_init', array( $this, 'init' ), 10, 1 );
-        add_action( 'blaze_wooless_settings_navtab', array( $this, 'register_settings_navtab' ), 10, 1 );
-        add_action( 'blaze_wooless_render_settings_tab', array( $this, 'render_settings_tab' ), 10, 1 );
-        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'render_settings_footer_tab' ), 10, 1 );
+        add_action( 'blaze_commerce_settings_navtab', array( $this, 'register_settings_navtab' ), 10, 1 );
+        add_action( 'blaze_commerce_render_settings_tab', array( $this, 'render_settings_tab' ), 10, 1 );
+        add_action( 'blaze_commerce_render_settings_tab_footer', array( $this, 'render_settings_footer_tab' ), 10, 1 );
     }
 
     public function init()
@@ -134,7 +134,7 @@ class BaseSettings {
 
     public function field_callback_multiselect( $args ) {
         $values = $this->get_option( $args['id'] ) ?: array();
-        $html = '<select name="' . $this->option_key . '['. $args['id'] .'][]" class="wooless-multiple-select" multiple="multiple" data-placeholder="' . $args['placeholder'] . '">';
+        $html = '<select name="' . $this->option_key . '['. $args['id'] .'][]" class="blaze-commerce-multiple-select" multiple="multiple" data-placeholder="' . $args['placeholder'] . '">';
         foreach ( $args['options'] as $key => $label) {
             $html .= '<option value="' . $key . '" ' . (in_array($key, $values) ? 'selected' : '') .'>' . $label . '</option>';
         }
@@ -159,7 +159,7 @@ class BaseSettings {
     public function register_settings_navtab( $active_tab )
     {
         echo sprintf(
-            '<a href="/wp-admin/admin.php?page=wooless-settings&tab=%s" class="nav-tab %s">%s</a>',
+            '<a href="/wp-admin/admin.php?page=blaze-commerce-settings&tab=%s" class="nav-tab %s">%s</a>',
             $this->tab_key,
             $active_tab == $this->tab_key ? 'nav-tab-active' : '',
             $this->page_label

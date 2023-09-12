@@ -1,7 +1,7 @@
 <?php
 
 
-namespace BlazeWooless\Features;
+namespace BlazeCommerce\Features;
 
 class DraggableContent
 {
@@ -18,8 +18,8 @@ class DraggableContent
 
     public function __construct()
     {
-        add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_dragable_content' ), 10, 2 );
-        add_action( 'before_wooless_draggable_canvas', array( $this, 'content_region_selector' ) );
+        add_filter( 'blaze_commerce_product_data_for_typesense', array( $this, 'add_dragable_content' ), 10, 2 );
+        add_action( 'before_blaze_commerce_draggable_canvas', array( $this, 'content_region_selector' ) );
     }
 
     public function add_dragable_content( $product_data, $product_id )
@@ -29,7 +29,7 @@ class DraggableContent
 
     // public function register_settings($product_page_settings)
     // {
-    //     $product_page_settings['wooless_settings_attributes_section'] = array(
+    //     $product_page_settings['blaze_commerce_settings_attributes_section'] = array(
     //         'label' => 'Attributes',
     //         'options' => $this->get_attribute_mapping_settings(),
     //     );
@@ -39,7 +39,7 @@ class DraggableContent
 
     public function content_region_selector()
     {
-        $regions = \BlazeWooless\Settings\RegionalSettings::get_instance()->get_option('regions');
+        $regions = \BlazeCommerce\Settings\RegionalSettings::get_instance()->get_option('regions');
         $countries = \WC()->countries->get_countries();
         $base_country = \WC()->countries->get_base_country();
         ?>

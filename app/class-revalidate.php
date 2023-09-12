@@ -1,7 +1,7 @@
 <?php
 
-if ( !class_exists( 'Blaze_Wooless_Revalidate' ) ) {
-    class Blaze_Wooless_Revalidate {
+if ( !class_exists( 'Blaze_Commerce_Revalidate' ) ) {
+    class Blaze_Commerce_Revalidate {
         private static $instance = null;
 
         public static function get_instance()
@@ -83,5 +83,5 @@ if ( !class_exists( 'Blaze_Wooless_Revalidate' ) ) {
         
     }
 
-    Blaze_Wooless_Revalidate::get_instance();
+    Blaze_Commerce_Revalidate::get_instance();
 }

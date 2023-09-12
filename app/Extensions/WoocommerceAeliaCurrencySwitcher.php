@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeWooless\Extensions;
+namespace BlazeCommerce\Extensions;
 
-use BlazeWooless\Settings\RegionalSettings;
+use BlazeCommerce\Settings\RegionalSettings;
 
 class WoocommerceAeliaCurrencySwitcher 
 {
@@ -20,12 +20,12 @@ class WoocommerceAeliaCurrencySwitcher
     public function __construct()
     {
         if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
-            // add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
-            add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_multicurrency_site_info' ), 10, 1 );
+            // add_filter( 'blaze_commerce_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
+            add_filter( 'blaze_commerce_additional_site_info', array( $this, 'add_multicurrency_site_info' ), 10, 1 );
 
-            add_filter('wooless_product_price', array( $this, 'wooless_product_regular_price'), 10, 2);
-            add_filter('wooless_product_regular_price', array( $this, 'wooless_product_regular_price'), 10, 2);
-            add_filter('wooless_product_sale_price', array( $this, 'wooless_product_sale_price'), 10, 2);
+            add_filter('blaze_commerce_product_price', array( $this, 'blaze_commerce_product_regular_price'), 10, 2);
+            add_filter('blaze_commerce_product_regular_price', array( $this, 'blaze_commerce_product_regular_price'), 10, 2);
+            add_filter('blaze_commerce_product_sale_price', array( $this, 'blaze_commerce_product_sale_price'), 10, 2);
 
             add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
             add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
@@ -76,7 +76,7 @@ class WoocommerceAeliaCurrencySwitcher
         return $product_data;
     }
 
-    public function wooless_product_regular_price( $price, $product_id )
+    public function blaze_commerce_product_regular_price( $price, $product_id )
     {
         $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
 
@@ -99,7 +99,7 @@ class WoocommerceAeliaCurrencySwitcher
         return $price;
     }
 
-    public function wooless_product_sale_price( $price, $product_id )
+    public function blaze_commerce_product_sale_price( $price, $product_id )
     {
         $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
 

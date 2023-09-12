@@ -161,7 +161,7 @@
   }
   var baseCountry = $( 'input#base-country').val() || '';
 
-  var blazeWooless = {
+  var blazeCommerce = {
     syncResultsContainer: '#sync-results-container',
     syncProductLink: '#sync-product-link',
     syncTaxonomiesLink: '#sync-taxonomies-link',
@@ -173,20 +173,20 @@
     syncInProgress: false,
 
     renderLoader: function(message) {
-      if ($('#wooless-loader').length === 0) {
-        $(this.syncResultsContainer).append('<img id="wooless-loader" src="/wp-includes/js/thickbox/loadingAnimation.gif" />')
+      if ($('#blaze-commerce-loader').length === 0) {
+        $(this.syncResultsContainer).append('<img id="blaze-commerce-loader" src="/wp-includes/js/thickbox/loadingAnimation.gif" />')
       }
 
-      if ($('#wooless-loader-message').length === 1) {
-        $('#wooless-loader-message').remove();
+      if ($('#blaze-commerce-loader-message').length === 1) {
+        $('#blaze-commerce-loader-message').remove();
       }
         
-      $(this.syncResultsContainer).append('<div id="wooless-loader-message">' + message + '</div>')
+      $(this.syncResultsContainer).append('<div id="blaze-commerce-loader-message">' + message + '</div>')
     },
 
     hideLoader: function() {
-      $('#wooless-loader').remove();
-      $('#wooless-loader-message').remove();
+      $('#blaze-commerce-loader').remove();
+      $('#blaze-commerce-loader-message').remove();
     },
 
     clearResultContainer: function() {
@@ -289,10 +289,10 @@
     init: function() {
       this.registerEvents();
 
-      $(document.body).find( '.wooless-multiple-select' ).chosen();
+      $(document.body).find( '.blaze-commerce-multiple-select' ).chosen();
 
       // if ( jQuery().chosen ) {
-      //   $(document.body).find( '.wooless-multiple-select' ).chosen();
+      //   $(document.body).find( '.blaze-commerce-multiple-select' ).chosen();
       // }
 
       this.initializeDragabbleContents();
@@ -302,7 +302,7 @@
       var droppedElement = $(element);
       var blockId = droppedElement.data('block_id');
       var blockType = droppedElement.data('block_type');
-      var blockElement = $('.blaze-wooless-draggable-panel').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+      var blockElement = $('.blaze-commerce-draggable-panel').find('.blaze-commerce-draggable-block[data-block_id="' + blockId + '"]');
 
       if (blockType === BLOCK_TYPE_SINGLE) {
         blockElement.draggable('disable');
@@ -313,7 +313,7 @@
     addRemoveButtonToDroppedElement: function(element) {
       var droppedElement = $(element);
       var blockId = droppedElement.data('block_id');
-      var blockElement = $('.blaze-wooless-draggable-panel').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+      var blockElement = $('.blaze-commerce-draggable-panel').find('.blaze-commerce-draggable-block[data-block_id="' + blockId + '"]');
 
       if (droppedElement.find('.remove').length === 0) {
         var removeButton = $( '<span class="remove">✕</span>' );
@@ -321,7 +321,7 @@
           droppedElement.remove();
           blockElement.draggable('enable');
           blockElement.removeClass('disabled');
-          blazeWooless.generateSaveData();
+          blazeCommerce.generateSaveData();
         });
         droppedElement.find('.content').append(removeButton)
       }
@@ -331,7 +331,7 @@
     addCollapsedConfig: function(element) {
       var blockElement = $(element);
       var blockId = blockElement.data('block_id');
-      // var blockElement = $('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+      // var blockElement = $('.blaze-commerce-draggable-canvas').find('.blaze-commerce-draggable-block[data-block_id="' + blockId + '"]');
       
       if (blockElement.find('.configuration').length > 0) {
         return;
@@ -349,38 +349,38 @@
     },
 
     initializeDragabbleContents: function() {
-      $('.blaze-wooless-draggable-block').draggable({
-        connectToSortable: ".blaze-wooless-draggable-canvas",
+      $('.blaze-commerce-draggable-block').draggable({
+        connectToSortable: ".blaze-commerce-draggable-canvas",
         opacity: 0.7,
         helper: "clone",
         stop: function (event, ui) {
           console.log('stop', event);
         }
       });
-      $('.blaze-wooless-draggable-canvas').droppable({
-        accept: ".blaze-wooless-draggable-block",
+      $('.blaze-commerce-draggable-canvas').droppable({
+        accept: ".blaze-commerce-draggable-block",
         drop: function( event, ui ) {
-          blazeWooless.disableDroppedElement(ui.helper);
+          blazeCommerce.disableDroppedElement(ui.helper);
           console.log(ui);
-          blazeWooless.addCollapsedConfig(ui.helper);
+          blazeCommerce.addCollapsedConfig(ui.helper);
         },
       });
 
-      $('.blaze-wooless-draggable-canvas').sortable({
+      $('.blaze-commerce-draggable-canvas').sortable({
         stop: function(e, ui) {
           console.log('sortable stop');
-          // blazeWooless.generateSaveData();
+          // blazeCommerce.generateSaveData();
           generateMetaDataFromElement(ui.item);
-          $('.blaze-wooless-draggable-canvas').sortable( "refresh" );
+          $('.blaze-commerce-draggable-canvas').sortable( "refresh" );
         }
       });
 
       this.loadInitialData();
-      $('.blaze-wooless-draggable-canvas').sortable( "refresh" );
+      $('.blaze-commerce-draggable-canvas').sortable( "refresh" );
     },
 
     generateSaveData: function() {
-      const data = $.map($('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block'), function(el) {
+      const data = $.map($('.blaze-commerce-draggable-canvas').find('.blaze-commerce-draggable-block'), function(el) {
         var $el = $(el);
         var blockType = $el.data('block_type');
         var blockId = $el.data('block_id');
@@ -407,17 +407,17 @@
       if (!Array.isArray(datas)) {
         datas = [];
       }
-      $('.blaze-wooless-draggable-canvas').sortable( "refresh" );
+      $('.blaze-commerce-draggable-canvas').sortable( "refresh" );
       datas.forEach(function(element) {
-        var blockElement = $('.blaze-wooless-draggable-block[data-block_id="' + element.blockId + '"]').first().clone();
+        var blockElement = $('.blaze-commerce-draggable-block[data-block_id="' + element.blockId + '"]').first().clone();
         blockElement.data('block_metadata', element.metaData)
         if (element.blockType === BLOCK_TYPE_SINGLE) {
-          blazeWooless.disableDroppedElement(blockElement);
+          blazeCommerce.disableDroppedElement(blockElement);
         }
 
-        blazeWooless.addCollapsedConfig(blockElement);
+        blazeCommerce.addCollapsedConfig(blockElement);
 
-        blockElement.appendTo('.blaze-wooless-draggable-canvas');
+        blockElement.appendTo('.blaze-commerce-draggable-canvas');
       });
       console.log(datas);
     }
@@ -566,7 +566,7 @@
 
   function generateMetaDataFromElement(element) {
     var el = $(element)
-    var elementBlock = el.closest('.blaze-wooless-draggable-block');
+    var elementBlock = el.closest('.blaze-commerce-draggable-block');
     var blockType = elementBlock.data('block_type');
     var blockId = elementBlock.data('block_id');
     var data = {};
@@ -584,7 +584,7 @@
 
     console.log('generateMetaDataFromElement');
     
-    blazeWooless.generateSaveData();
+    blazeCommerce.generateSaveData();
   }
 
   function generateRowItemsData(element, itemsElement) {
@@ -638,48 +638,48 @@
   }
 
   $(document).ready(function() {
-    blazeWooless.init();
+    blazeCommerce.init();
 
-    $(document.body).on('click', '.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block', function() {
+    $(document.body).on('click', '.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block', function() {
       $(this).toggleClass('open');
 
     });
-    $(document.body).on('click', '.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block .configuration', function(e) {
+    $(document.body).on('click', '.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block .configuration', function(e) {
       e.preventDefault();
       e.stopImmediatePropagation();
     });
 
-    $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .add-item', function(e) {
-      var element = $(this).closest('.blaze-wooless-draggable-block')
+    $(document.body).on('click', '.blaze-commerce-draggable-block .configuration .add-item', function(e) {
+      var element = $(this).closest('.blaze-commerce-draggable-block')
       var blockId = element.data('block_id');
       addRowItem(element, blockId);
     });
 
-    $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .row-item .remove', function(e) {
+    $(document.body).on('click', '.blaze-commerce-draggable-block .configuration .row-item .remove', function(e) {
       var items = $(this).closest('.items');
       $(this).closest('.row-item').remove();
       generateMetaDataFromElement(items);
     });
 
-    $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .delete-block', function(e) {
-      var droppedElement = $(this).closest('.blaze-wooless-draggable-block');
+    $(document.body).on('click', '.blaze-commerce-draggable-block .configuration .delete-block', function(e) {
+      var droppedElement = $(this).closest('.blaze-commerce-draggable-block');
       var blockId = droppedElement.data('block_id');
-      var blockElement = $('.blaze-wooless-draggable-panel').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
+      var blockElement = $('.blaze-commerce-draggable-panel').find('.blaze-commerce-draggable-block[data-block_id="' + blockId + '"]');
 
       droppedElement.remove();
       blockElement.draggable('enable');
       blockElement.removeClass('disabled');
-      blazeWooless.generateSaveData();
+      blazeCommerce.generateSaveData();
     });
 
-    $(document.body).on('blur', '.blaze-wooless-draggable-block .row-item .input', function() {
+    $(document.body).on('blur', '.blaze-commerce-draggable-block .row-item .input', function() {
       generateMetaDataFromElement(this)
     });
 
     $(document.body).on('change', 'select#region_selector', function(e) {
       var selectedRegion = e.target.value;
       console.log('selectedRegion', selectedRegion);
-      $.each($('.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block'), function(index, block) {
+      $.each($('.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block'), function(index, block) {
         console.log(block, 'block');
         var blockId = $(block).data('block_id');
         var blockType = $(block).data('block_type');
