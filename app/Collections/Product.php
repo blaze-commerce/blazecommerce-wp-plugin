@@ -58,6 +58,7 @@ class Product extends BaseCollection
 						['name' => 'updatedAt', 'type' => 'int64'],
 						['name' => 'createdAt', 'type' => 'int64'],
 						['name' => 'publishedAt', 'type' => 'int64', 'optional' => true],
+						['name' => 'daysPassed', 'type' => 'int64', 'optional' => true],
 						['name' => 'isFeatured', 'type' => 'bool', 'facet' => true],
 						['name' => 'totalSales', 'type' => 'int64'],
 						['name' => 'productType', 'type' => 'string', 'facet' => true],
@@ -312,6 +313,10 @@ class Product extends BaseCollection
 
 		$product_slug = $product->get_slug();
 
+		$published_at = strtotime(get_the_date('', $product->get_id()));
+
+		$days_passed = $this->get_days_passed($published_at);
+
 		$product_data = [
 			'id' => strval($product->get_id()),
 			'productId' => strval($product->get_id()),
@@ -329,7 +334,8 @@ class Product extends BaseCollection
 			'stockStatus' => $product->get_stock_status(),
 			'updatedAt' => strtotime($product->get_date_modified()),
 			'createdAt' => strtotime($product->get_date_created()),
-			'publishedAt' => strtotime(get_the_date('', $product->get_id())),
+			'publishedAt' => $published_at,
+			'daysPassed' => $days_passed,
 			'isFeatured' => $product->get_featured(),
 			'totalSales' => (int)$product->get_total_sales(),
 			'galleryImages' => $product_gallery,
@@ -495,5 +501,13 @@ class Product extends BaseCollection
 		unset($product_ids);
 
 		return $cross_sell_product_data;
+	}
+
+	public function get_days_passed($date) {
+		$current_date = strtotime( date('Y-m-d H:i:s') );
+		$diff = $current_date - $date;
+		$days = floor($diff / (60 * 60 * 24));
+
+		return $days;
 	}
 }
