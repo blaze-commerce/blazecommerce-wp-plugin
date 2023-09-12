@@ -1,7 +1,7 @@
 <?php
 /**
  * This adds an endpoint for getting available shipping methods based on cart data
- * POST /wp-json/wooless-wc/v1/available-shipping-methods
+ * POST /wp-json/blaze-commerce-wc/v1/available-shipping-methods
  * Request Params
  * {
  *  "products": [
@@ -37,7 +37,7 @@
  *  }
  * }
  */
-namespace BlazeWooless\Features;
+namespace BlazeCommerce\Features;
 
 class CalculateShipping
 {
@@ -60,7 +60,7 @@ class CalculateShipping
     public function register_rest_endpoints()
     {
         register_rest_route(
-            'wooless-wc/v1',
+            'blaze-commerce-wc/v1',
             '/available-shipping-methods',
             array(
                 'methods' => 'POST',

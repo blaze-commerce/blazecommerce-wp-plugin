@@ -1,7 +1,7 @@
 <?php
 
 
-namespace BlazeWooless\Features;
+namespace BlazeCommerce\Features;
 
 class LoadCartFromSession
 {
@@ -57,12 +57,12 @@ class LoadCartFromSession
 
 	public function remove_session_id_from_url_script()
 	{
-		if (!class_exists('WooCommerce') || !is_checkout() || !isset($_GET['session_id']) || isset($_GET['from_wooless'])) {
+		if (!class_exists('WooCommerce') || !is_checkout() || !isset($_GET['session_id']) || isset($_GET['from_blaze_commerce'])) {
 			return;
 		}
 
 		$url = remove_query_arg('session_id', $_SERVER['REQUEST_URI']);
-		wp_redirect(add_filter('blaze_wooless_destination_url_from_frontend', $url));
+		wp_redirect(add_filter('blaze_commerce_destination_url_from_frontend', $url));
 		exit;
 	}
 }

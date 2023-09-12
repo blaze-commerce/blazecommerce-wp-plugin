@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeWooless\Collections;
+namespace BlazeCommerce\Collections;
 
 class Page extends BaseCollection
 {
@@ -54,7 +54,7 @@ class Page extends BaseCollection
 		$thumbnail_id = get_post_thumbnail_id($page_id);
 		$thumbnail = $this->get_thumbnail($thumbnail_id, $page_id);
 
-		return apply_filters('blaze_wooless_page_data_for_typesense', [
+		return apply_filters('blaze_commerce_page_data_for_typesense', [
 			'id' => (string) $page_id,
 			'slug' => $page->post_name,
 			'name' => $page->post_title,

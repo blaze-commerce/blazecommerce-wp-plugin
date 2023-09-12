@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeWooless\Extensions;
+namespace BlazeCommerce\Extensions;
 
 class CustomProductTabsForWoocommerce
 {
@@ -19,7 +19,7 @@ class CustomProductTabsForWoocommerce
     {
         if ( is_plugin_active( 'yikes-inc-easy-custom-woocommerce-product-tabs/yikes-inc-easy-custom-woocommerce-product-tabs.php' ) ) {
             // var_dump('activated'); exit;
-            add_filter( 'wooless_product_tabs', array( $this, 'add_additional_tabs' ), 10, 2 );
+            add_filter( 'blaze_commerce_product_tabs', array( $this, 'add_additional_tabs' ), 10, 2 );
         }
     }
 

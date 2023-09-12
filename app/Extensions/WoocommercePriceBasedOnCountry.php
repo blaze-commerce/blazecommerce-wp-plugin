@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeWooless\Extensions;
+namespace BlazeCommerce\Extensions;
 
 class WoocommercePriceBasedOnCountry 
     {
@@ -18,8 +18,8 @@ class WoocommercePriceBasedOnCountry
         public function __construct()
         {
             if ( is_plugin_active( 'woocommerce-product-price-based-on-countries/woocommerce-product-price-based-on-countries.php' ) ) {
-                add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
-                add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_multicurrency_site_info' ), 10, 1 );
+                add_filter( 'blaze_commerce_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
+                add_filter( 'blaze_commerce_additional_site_info', array( $this, 'add_multicurrency_site_info' ), 10, 1 );
             }
         }
 

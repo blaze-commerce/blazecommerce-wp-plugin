@@ -1,14 +1,14 @@
 <?php
 /*
-Plugin Name: Blaze Wooless
-Plugin URI: https://www.blaze.online
-Description: The official plugin that integrates your site to the wooless service.
+Plugin Name: Blaze Commerce
+Plugin URI: https://www.blazecommerce.io
+Description: The official plugin that integrates your site with the Blaze Commerce service.
 Version: 1.4.4
-Author: Blaze Online
-Author URI: https://www.blaze.online
+Author: Blaze Commerce
+Author URI: https://www.blazecommerce.io
 */
 
-define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path(__FILE__) );
+define( 'BLAZE_COMMERCE_PLUGIN_DIR', plugin_dir_path(__FILE__) );
 
 require 'vendor/autoload.php';
 require_once plugin_dir_path(__FILE__) . 'lib/regional-data-helper.php';
@@ -16,7 +16,7 @@ require_once plugin_dir_path(__FILE__) . 'lib/regional-data-helper.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/settings/class-general-settings.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/settings/class-product-page-settings.php';
 require_once plugin_dir_path(__FILE__) . 'lib/setting-helper.php';
-require_once plugin_dir_path(__FILE__) . 'lib/blaze-wooless-functions.php';
+require_once plugin_dir_path(__FILE__) . 'lib/blaze-commerce-functions.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/class-settings.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/product/index.php';
 // require_once plugin_dir_path(__FILE__) . 'inc/menu/index.php';
@@ -28,7 +28,7 @@ require_once plugin_dir_path(__FILE__) . 'lib/blaze-wooless-functions.php';
 
 
 // Initialize plugin
-\BlazeWooless\BlazeWooless::get_instance()->init();
+\BlazeCommerce\BlazeCommerce::get_instance()->init();
 
 
 // function register_compatibilities()
@@ -52,7 +52,7 @@ function enqueue_typesense_product_indexer_scripts()
 function typesense_enqueue_google_fonts($hook)
 {
     // Only load the font on your plugin's page
-    if ('toplevel_page_wooless-settings' !== $hook) {
+    if ('toplevel_page_blaze-commerce-settings' !== $hook) {
         return;
     }
 
@@ -69,9 +69,9 @@ function typesense_enqueue_google_fonts($hook)
     );
     wp_enqueue_style('chosen');
 
-    wp_enqueue_style( 'blaze-wooless-admin-style', plugins_url( 'assets/css/blaze-wooless.css',  __FILE__ ), null, '1.0' );
-    wp_enqueue_script( 'blaze-wooless-admin-script', plugins_url( 'assets/js/blaze-wooless.js', __FILE__ ), array( 'jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable' ), '1.0', true );
-    // wp_enqueue_script( 'blaze-wooless-admin-script-react', plugins_url( 'dist/main.js', __FILE__ ), array( 'jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable' ), '1.0', true );
+    wp_enqueue_style( 'blaze-commerce-admin-style', plugins_url( 'assets/css/blaze-commerce.css',  __FILE__ ), null, '1.0' );
+    wp_enqueue_script( 'blaze-commerce-admin-script', plugins_url( 'assets/js/blaze-commerce.js', __FILE__ ), array( 'jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable' ), '1.0', true );
+    // wp_enqueue_script( 'blaze-commerce-admin-script-react', plugins_url( 'dist/main.js', __FILE__ ), array( 'jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable' ), '1.0', true );
 
     wp_register_script(
         'chosen',
@@ -88,7 +88,7 @@ add_action('admin_enqueue_scripts', 'typesense_enqueue_google_fonts');
 // function typesense_enqueue_styles($hook)
 // {
 //     // Only load styles on your plugin's page
-//     if ('toplevel_page_wooless-settings' !== $hook) {
+//     if ('toplevel_page_blaze-commerce-settings' !== $hook) {
 //         return;
 //     }
 
@@ -102,7 +102,7 @@ add_action('admin_enqueue_scripts', 'typesense_enqueue_google_fonts');
 
 // function my_admin_enqueue_scripts($hook)
 // {
-//     if ($hook == 'wooless_page_typesense-product-indexer-site-message') {
+//     if ($hook == 'blaze_commerce_page_typesense-product-indexer-site-message') {
 //         wp_enqueue_style('my_admin-style', plugins_url('assets/css/style.css', __FILE__));
 //         wp_enqueue_script('my_admin-script', plugins_url('assets/js/typesense-admin.js', __FILE__), array('jquery'), '1.0', true);
 //     }
@@ -111,7 +111,7 @@ add_action('admin_enqueue_scripts', 'typesense_enqueue_google_fonts');
 // function homepage_enqueue_scripts($hook)
 // {
 
-//     if ($hook == 'wooless_page_typesense-product-indexer-homepage') {
+//     if ($hook == 'blaze_commerce_page_typesense-product-indexer-homepage') {
 //         wp_enqueue_style('my_admin-style', plugins_url('assets/css/style.css', __FILE__));
 //         wp_enqueue_script('my_admin-script', plugins_url('assets/js/typesense-admin.js', __FILE__), array('jquery'), '1.0', true);
 //     }
@@ -131,11 +131,11 @@ function typesense_product_indexer_page()
 
 function add_typesense_product_indexer_menu()
 {
-    $menu_slug = 'wooless-settings';
+    $menu_slug = 'blaze-commerce-settings';
 
     add_menu_page(
-        'Wooless',
-        'Wooless',
+        'Blaze Commerce',
+        'Blaze Commerce',
         'manage_options',
         $menu_slug,
         'typesense_product_indexer_page',
@@ -145,7 +145,7 @@ function add_typesense_product_indexer_menu()
     // Create the submenus using the action
     do_action('bwl_setting_menu', $menu_slug);
 
-    // Remove the default 'Wooless' submenu page
+    // Remove the default 'Blaze Commerce' submenu page
     remove_submenu_page($menu_slug, $menu_slug);
 
     // Add the "Setting" subpage last so it appears at the end
@@ -162,7 +162,7 @@ function add_typesense_product_indexer_menu()
 
 // function my_admin_theme_style()
 // {
-//     wp_enqueue_style('my-admin-theme', plugins_url('blaze-wooless/assets/css/style.css', __FILE__));
+//     wp_enqueue_style('my-admin-theme', plugins_url('blaze-commerce/assets/css/style.css', __FILE__));
 // }
 // add_action('admin_enqueue_scripts', 'my_admin_theme_style');
 
@@ -203,18 +203,18 @@ function add_typesense_product_indexer_menu()
 //         $decoded_api_key = base64_decode($encoded_api_key);
 //         $trimmed_api_key = explode(':', $decoded_api_key);
 //         $typesense_private_key = $trimmed_api_key[0];
-//         $wooless_site_id = $trimmed_api_key[1];
+//         $blaze_commerce_site_id = $trimmed_api_key[1];
 
 //         $client = getTypeSenseClient($typesense_private_key);
 
 
 //         try {
-//             $collection_name = 'product-' . $wooless_site_id;
+//             $collection_name = 'product-' . $blaze_commerce_site_id;
 //             $collections = $client->collections[$collection_name]->retrieve();
 //             if (!empty($collections)) {
 //                 echo json_encode(['status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections]);
 //             } else {
-//                 echo json_encode(['status' => 'error', 'message' => 'No collection found for store ID: ' . $wooless_site_id]);
+//                 echo json_encode(['status' => 'error', 'message' => 'No collection found for store ID: ' . $blaze_commerce_site_id]);
 //             }
 //         } catch (Typesense\Exception\ObjectNotFound $e) {
 //             echo json_encode(['status' => 'error', 'message' => 'Collection not found: ' . $e->getMessage()]);

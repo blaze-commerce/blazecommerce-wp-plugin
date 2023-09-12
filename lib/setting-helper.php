@@ -1,6 +1,6 @@
 <?php
 
-use BlazeWooless\Settings\GeneralSettings;
+use BlazeCommerce\Settings\GeneralSettings;
 
 function bw_get_general_settings( $key = false ) {
     $default_value = array(

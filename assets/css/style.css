@@ -109,7 +109,7 @@ body .indexer_page {
     margin-right: 10px;
 }
 
-.wooless_message {
+.blaze_commerce_message {
     width: 523px;
     height: 68px;
     background: #EDF0F7;
@@ -145,7 +145,7 @@ div#message {
     padding-left: 10px;
 }
 
-.wooless_message .message_success {
+.blaze_commerce_message .message_success {
     font-family: 'Poppins';
     font-style: normal;
     font-weight: 500;

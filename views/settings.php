@@ -13,12 +13,12 @@
                 }
             ?>
             <nav class="nav-tab-wrapper">
-                <?php do_action( 'blaze_wooless_settings_navtab', $active_tab ) ?>
+                <?php do_action( 'blaze_commerce_settings_navtab', $active_tab ) ?>
             </nav>
 
             <?php
-                do_action( 'blaze_wooless_render_settings_tab', $active_tab );
-                do_action( 'blaze_wooless_render_settings_tab_footer', $active_tab );
+                do_action( 'blaze_commerce_render_settings_tab', $active_tab );
+                do_action( 'blaze_commerce_render_settings_tab_footer', $active_tab );
             ?>
 
             <?php
@@ -30,9 +30,9 @@
     <h1>Typesense Product Indexer</h1>
     <div id="wrapper-id" class="message-wrapper">
         <div class="message-image">
-            <img src="<?php echo plugins_url('blaze-wooless/assets/images/Shape.png'); ?>" alt="" srcset="">
+            <img src="<?php echo plugins_url('blaze-commerce/assets/images/Shape.png'); ?>" alt="" srcset="">
         </div>
-        <div class="wooless_message">
+        <div class="blaze_commerce_message">
             <div class="message_success">Success</div>
             <div id="message"></div>
         </div>
@@ -43,7 +43,7 @@
             <input class="input_p" type="password" id="api_key" name="api_key"
                 value="<?php echo esc_attr($private_key_master); ?>" />
             <div class="error-icon" id="error_id" style="display: none;">
-                <img src="<?php echo plugins_url('blaze-wooless/assets/images/error.png'); ?>" alt="" srcset="">
+                <img src="<?php echo plugins_url('blaze-commerce/assets/images/error.png'); ?>" alt="" srcset="">
                 <div id="error_message"></div>
             </div>
         </div>
@@ -51,7 +51,7 @@
         <label class="checkbox_Label">Show API Key</label>
     </div>
     <div class="item_wrapper_indexer_page">
-        <button id="index_products" onclick="indexData()" store-id="<?php echo $wooless_site_id; ?>" disabled>Manual
+        <button id="index_products" onclick="indexData()" store-id="<?php echo $blaze_commerce_site_id; ?>" disabled>Manual
 
             <button id="index_products" onclick="indexData()" disabled>Manual Sync
 
@@ -80,19 +80,19 @@ function decodeAndSaveApiKey(apiKey) {
     var decodedApiKey = atob(apiKey);
     var trimmedApiKey = decodedApiKey.split(':');
     var typesensePrivateKey = trimmedApiKey[0];
-    var woolessSiteId = trimmedApiKey[1];
+    var blazeCommerceSiteId = trimmedApiKey[1];
 
     // Display API key and store ID for testing purposes
     //document.getElementById("jsdecoded").innerHTML = 'Typesense Private Key: ' + typesensePrivateKey +
     //  '<br> Store ID: ' +
-    //woolessSiteId;
+    //blazeCommerceSiteId;
 
     // Save the API key, store ID, and private key
     jQuery.post(ajaxurl, {
         'action': 'save_typesense_api_key',
         'api_key': apiKey, // Add the private key in the request
         'typesense_api_key': typesensePrivateKey,
-        'store_id': woolessSiteId,
+        'store_id': blazeCommerceSiteId,
     }, function(save_response) {
         setTimeout(function() {
             document.getElementById("message").textContent += ' - ' + save_response;

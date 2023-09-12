@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeWooless\Settings;
+namespace BlazeCommerce\Settings;
 
-use BlazeWooless\TypesenseClient;
+use BlazeCommerce\TypesenseClient;
 
 class GeneralSettings extends BaseSettings {
     private static $instance = null;
@@ -12,7 +12,7 @@ class GeneralSettings extends BaseSettings {
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_general_settings_options' );
+            self::$instance = new self( 'blaze_commerce_general_settings_options' );
         }
 
         return self::$instance;
@@ -60,7 +60,7 @@ class GeneralSettings extends BaseSettings {
     public function settings()
     {
         return array(
-            'wooless_general_settings_section' => array(
+            'blaze_commerce_general_settings_section' => array(
                 'label' => 'General Settings',
                 'options' => array(
                     array(
@@ -80,7 +80,7 @@ class GeneralSettings extends BaseSettings {
                         'label' => 'API Key',
                         'type' => 'password',
                         'args' => array(
-                            'description' => 'API Key generated from the wooless admin portal.'
+                            'description' => 'API Key generated from the Blaze Commerce Admin Portal.'
                         ),
                     ),
                     array(

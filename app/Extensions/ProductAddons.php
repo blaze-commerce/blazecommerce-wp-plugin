@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeWooless\Extensions;
+namespace BlazeCommerce\Extensions;
 
 class ProductAddons
 {
@@ -18,7 +18,7 @@ class ProductAddons
     public function __construct()
     {
         if ( is_plugin_active( 'woocommerce-product-addons/woocommerce-product-addons.php' ) ) {
-            add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_addons_to_product_schema' ), 10, 2 );
+            add_filter( 'blaze_commerce_product_data_for_typesense', array( $this, 'add_addons_to_product_schema' ), 10, 2 );
         }
     }
 
