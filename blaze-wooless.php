@@ -1,11 +1,11 @@
 <?php
 /*
-Plugin Name: Blaze Wooless
-Plugin URI: https://www.blaze.online
-Description: The official plugin that integrates your site to the wooless service.
+Plugin Name: Blaze Commerce
+Plugin URI: https://www.blazecommerce.io
+Description: The official plugin that integrates your site with the Blaze Commerce service.
 Version: 1.4.4
-Author: Blaze Online
-Author URI: https://www.blaze.online
+Author: Blaze Commerce
+Author URI: https://www.blazecommerce.io
 */
 
 define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path(__FILE__) );
