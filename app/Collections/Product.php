@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeCommerce\Collections;
+namespace BlazeWooless\Collections;
 
 class Product extends BaseCollection
 {
@@ -19,7 +19,7 @@ class Product extends BaseCollection
 	public function initialize()
 	{
 		$logger = wc_get_logger();
-		$context = array('source' => 'blaze-commerce-product-collection-initialize');
+		$context = array('source' => 'wooless-product-collection-initialize');
 		try {
 			$this->drop_collection();
 		} catch (\Exception $e) {
@@ -96,12 +96,12 @@ class Product extends BaseCollection
 	{
 		//Product indexing
 		$logger = wc_get_logger();
-		$context = array('source' => 'blaze-commerce-product-import');
+		$context = array('source' => 'wooless-product-import');
 
 
 		try {
 			// Query judge.me product external_ids and update to options	
-			do_action('blaze_commerce_generate_product_data');
+			do_action('blaze_wooless_generate_product_data');
 
 			$this->initialize();
 			// Set initial values for pagination and batch size
@@ -326,9 +326,9 @@ class Product extends BaseCollection
 			'slug' => $product->get_slug(),
 			'thumbnail' => $thumbnail,
 			'sku' => $product->get_sku(),
-			'price' => apply_filters('blaze_commerce_product_price', $default_price, $product_id),
-			'regularPrice' => apply_filters('blaze_commerce_product_regular_price', $default_regular_price, $product_id),
-			'salePrice' => apply_filters('blaze_commerce_product_sale_price', $default_sale_price, $product_id),
+			'price' => apply_filters('wooless_product_price', $default_price, $product_id),
+			'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
+			'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
 			'onSale' => $product->is_on_sale(),
 			'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
 			'stockStatus' => $product->get_stock_status(),
@@ -346,14 +346,14 @@ class Product extends BaseCollection
 			// Add variations data
 			'crossSellData' => empty($cross_sell_data) ? $related_products : $cross_sell_data,
 			'upsellData' => $upsell_data,
-			'additionalTabs' => apply_filters('blaze_commerce_product_tabs', $formatted_additional_tabs, $product_id),
+			'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
 			// 'attributes' => $attributes,
 			// 'additional_information_shipping' => $shipping,
 		];
 
 		// print("<pre>".print_r($judgeme,true)."</pre>");
 
-		return apply_filters('blaze_commerce_product_data_for_typesense', $product_data, $product_id);
+		return apply_filters('blaze_wooless_product_data_for_typesense', $product_data, $product_id);
 	}
 
 	public function get_taxonomies($product)
@@ -481,9 +481,9 @@ class Product extends BaseCollection
 					'permalink' => wp_make_link_relative(get_permalink($product->get_id())),
 					'slug' => $product_slug,
 					'thumbnail' => $thumbnail,
-					'price' => apply_filters('blaze_commerce_product_price', $default_price, $product_id),
-					'regularPrice' => apply_filters('blaze_commerce_product_regular_price', $default_regular_price, $product_id),
-					'salePrice' => apply_filters('blaze_commerce_product_sale_price', $default_sale_price, $product_id),
+					'price' => apply_filters('wooless_product_price', $default_price, $product_id),
+					'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
+					'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
 					'onSale' => $product->is_on_sale(),
 					'stockStatus' => $product->get_stock_status(),
 					'createdAt' => strtotime($product->get_date_created()),
@@ -492,7 +492,7 @@ class Product extends BaseCollection
 					'productType' => $product->get_type(),
 				);
 					
-				$cross_sell_product_data[] = apply_filters('blaze_commerce_cross_sell_data_for_typesense', $product_data);
+				$cross_sell_product_data[] = apply_filters('blaze_wooless_cross_sell_data_for_typesense', $product_data);
 
 				unset($product_data);
 			}

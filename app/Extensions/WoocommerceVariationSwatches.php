@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeCommerce\Extensions;
+namespace BlazeWooless\Extensions;
 
 class WoocommerceVariationSwatches
 {
@@ -18,7 +18,7 @@ class WoocommerceVariationSwatches
     public function __construct()
     {
         if($this->is_active()) {
-            add_filter('blaze_commerce_product_attribute_for_typesense', array( $this, 'add_swatches_data' ), 10, 2);
+            add_filter('blaze_wooless_product_attribute_for_typesense', array( $this, 'add_swatches_data' ), 10, 2);
         }
     }
 

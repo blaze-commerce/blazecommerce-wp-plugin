@@ -1,8 +1,8 @@
 {
-  "name": "blaze-commerce",
+  "name": "blaze-wooless",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "git@bitbucket.org:wooless/blaze-commerce.git",
+  "repository": "git@bitbucket.org:wooless/blaze-wooless.git",
   "author": "Zildjian Jax <zildjianjaxolis@gmail.com>",
   "license": "MIT",
   "scripts": {

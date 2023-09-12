@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeCommerce\Collections;
+namespace BlazeWooless\Collections;
 
-use BlazeCommerce\TypesenseClient;
+use BlazeWooless\TypesenseClient;
 
 class Menu extends BaseCollection
 {

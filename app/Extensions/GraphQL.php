@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeCommerce\Extensions;
+namespace BlazeWooless\Extensions;
 
 use GraphQL\Error\UserError;
 
@@ -35,11 +35,11 @@ class GraphQL
 
 	public function maybe_save_jwt_secret()
 	{
-		$jwt_key = get_option('blaze_commerce_custom_jwt_secret_key');
+		$jwt_key = get_option('wooless_custom_jwt_secret_key');
 
 		if (!$jwt_key) {
 			$auth_key = wp_salt('auth');
-			add_option('blaze_commerce_custom_jwt_secret_key', $auth_key);
+			add_option('wooless_custom_jwt_secret_key', $auth_key);
 		}
 	}
 
@@ -163,7 +163,7 @@ class GraphQL
 	public function auth_secret_key()
 	{
 		$auth_key = wp_salt('auth');
-		$jwt_key = get_option('blaze_commerce_custom_jwt_secret_key', $auth_key);
+		$jwt_key = get_option('wooless_custom_jwt_secret_key', $auth_key);
 
 		return $jwt_key;
 	}

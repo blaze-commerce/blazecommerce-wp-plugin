@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeCommerce;
+namespace BlazeWooless;
 
 use Symfony\Component\HttpClient\HttplugClient;
 use Typesense\Client;
@@ -37,7 +37,7 @@ class TypesenseClient
         $this->client = $client;
 
         // ajax endpoints
-        // add_action( 'wp_ajax_blaze_commerce_test_connection', array( $this, 'blaze_commerce_test_connection' ) );
+        // add_action( 'wp_ajax_blaze_wooless_test_connection', array( $this, 'blaze_wooless_test_connection' ) );
     }
 
     public function debug()

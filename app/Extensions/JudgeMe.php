@@ -1,6 +1,6 @@
 <?php
 
-namespace BlazeCommerce\Extensions;
+namespace BlazeWooless\Extensions;
 
 class JudgeMe 
     {
@@ -21,13 +21,13 @@ class JudgeMe
         public function __construct()
         {
             if ( is_plugin_active( 'judgeme-product-reviews-woocommerce/judgeme.php' ) ) {
-                add_filter( 'blaze_commerce_additional_site_info', array( $this, 'add_review_config_to_site_info' ), 10, 2 );
+                add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_review_config_to_site_info' ), 10, 2 );
 
-                add_action('blaze_commerce_generate_product_data', array( $this, 'generate_product_data' ), 10, 1);
+                add_action('blaze_wooless_generate_product_data', array( $this, 'generate_product_data' ), 10, 1);
 
-                add_filter('blaze_commerce_product_data_for_typesense', array( $this, 'get_product_reviews_data' ), 10, 2);
+                add_filter('blaze_wooless_product_data_for_typesense', array( $this, 'get_product_reviews_data' ), 10, 2);
 
-                add_filter('blaze_commerce_cross_sell_data_for_typesense', array( $this, 'get_cross_sell_reviews_data' ), 10, 2);
+                add_filter('blaze_wooless_cross_sell_data_for_typesense', array( $this, 'get_cross_sell_reviews_data' ), 10, 2);
             }
         }
 

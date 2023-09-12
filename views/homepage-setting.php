@@ -404,8 +404,8 @@ if (isset($options['typesense_homepage_popular_categories'])) {
 }
 
 
-if (!class_exists('Blaze_Commerce_Homepage_Settings_Compatibility')) {
-    class Blaze_Commerce_Homepage_Settings_Compatibility
+if (!class_exists('Blaze_Wooless_Homepage_Settings_Compatibility')) {
+    class Blaze_Wooless_Homepage_Settings_Compatibility
     {
         private static $instance = null;
 
@@ -420,7 +420,7 @@ if (!class_exists('Blaze_Commerce_Homepage_Settings_Compatibility')) {
 
         public function __construct()
         {
-            add_filter('blaze_commerce_additional_homepage_info', array($this, 'add_homepage_settings'), 10, 1);
+            add_filter('blaze_wooless_additional_homepage_info', array($this, 'add_homepage_settings'), 10, 1);
         }
 
         public function add_homepage_settings($additional_settings)
@@ -446,5 +446,5 @@ if (!class_exists('Blaze_Commerce_Homepage_Settings_Compatibility')) {
 
     }
 
-    Blaze_Commerce_Homepage_Settings_Compatibility::get_instance();
+    Blaze_Wooless_Homepage_Settings_Compatibility::get_instance();
 }

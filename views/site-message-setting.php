@@ -82,8 +82,8 @@ function region_messages_callback()
     }
 }
 
-if (!class_exists('Blaze_Commerce_Site_Message_Compatibility')) {
-    class Blaze_Commerce_Site_Message_Compatibility
+if (!class_exists('Blaze_Wooless_Site_Message_Compatibility')) {
+    class Blaze_Wooless_Site_Message_Compatibility
     {
         private static $instance = null;
 
@@ -98,7 +98,7 @@ if (!class_exists('Blaze_Commerce_Site_Message_Compatibility')) {
 
         public function __construct()
         {
-            add_filter('blaze_commerce_additional_site_info_message', array($this, 'add_site_messages'), 10, 1);
+            add_filter('blaze_wooless_additional_site_info_message', array($this, 'add_site_messages'), 10, 1);
         }
 
         public function add_site_messages($site_messages_settings)
@@ -120,5 +120,5 @@ if (!class_exists('Blaze_Commerce_Site_Message_Compatibility')) {
         }
     }
 
-    Blaze_Commerce_Site_Message_Compatibility::get_instance();
+    Blaze_Wooless_Site_Message_Compatibility::get_instance();
 }

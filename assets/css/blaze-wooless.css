@@ -2,17 +2,17 @@
     margin-top: 10px;
 }
 
-.blaze-commerce-layout-editor {
+.blaze-wooless-layout-editor {
     display: flex;
     background-color: #1e2327;
 }
-.blaze-commerce-draggable-block .content {
+.blaze-wooless-draggable-block .content {
     background: white;
     padding: 10px;
     border: 1px solid #ccc;
     cursor: grab;
 }
-.blaze-commerce-draggable-panel h2 {
+.blaze-wooless-draggable-panel h2 {
     background: transparent;
     margin: 0;
     padding: 20px 20px;
@@ -21,18 +21,18 @@
     display: flex;
     align-items: center;
 }
-.blaze-commerce-draggable-block.disabled {
+.blaze-wooless-draggable-block.disabled {
     opacity: 0.5;
 }
-.blaze-commerce-draggable-panel {
+.blaze-wooless-draggable-panel {
     width: 350px;
 }
-.blaze-commerce-draggable-panel-container {
+.blaze-wooless-draggable-panel-container {
     padding: 20px;
     background: #fff;
     border: 1px solid #ccc;
 }
-.blaze-commerce-draggable-canvas-container {
+.blaze-wooless-draggable-canvas-container {
     background: white;
     width: 100%;
     padding: 10px;
@@ -43,38 +43,38 @@
     align-items: stretch;
 }
 
-.blaze-commerce-draggable-canvas {
+.blaze-wooless-draggable-canvas {
     height: 100%;
 }
 
-.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block {
     display: flex;
     width: auto !important;
     flex-wrap: wrap;
 }
 
-.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block .content {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block .content {
     width: 100%;
     display: flex;
 }
-.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block .remove {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block .remove {
     margin-left: auto;
     cursor: pointer;
 }
 
-.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block span.caret-status {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block span.caret-status {
     margin-left: auto;
     cursor: pointer;
 }
 
-.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block span.caret-status:before {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block span.caret-status:before {
     content: "\f140";
 }
-.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block.open span.caret-status:before {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block.open span.caret-status:before {
     content: "\f142";
 }
 
-.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block .configuration {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block .configuration {
     display: none;
     width: 100%;
     padding: 10px;
@@ -82,18 +82,18 @@
     background-color: #fff;
 }
 
-.blaze-commerce-draggable-canvas .blaze-commerce-draggable-block.open .configuration {
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block.open .configuration {
     display: block;
 }
 
-.blaze-commerce-draggable-block .configuration .footer {
+.blaze-wooless-draggable-block .configuration .footer {
     width: 100%;
     display: flex;
     justify-content: end;
     gap: 5px;
 }
 
-.blaze-commerce-draggable-block .configuration .items .row-item {
+.blaze-wooless-draggable-block .configuration .items .row-item {
     margin-bottom: 15px;
     padding: 10px;
     border: 1px solid #ccc;
@@ -101,20 +101,20 @@
     background-color: #fff;
 }
 
-.blaze-commerce-draggable-block .configuration .row-item .remove {
+.blaze-wooless-draggable-block .configuration .row-item .remove {
     position: absolute;
     top: 5px;
     right: 10px;
 }
 
-.blaze-commerce-draggable-block .input-wrapper {
+.blaze-wooless-draggable-block .input-wrapper {
     margin-bottom: 10px;
 }
 
-.blaze-commerce-draggable-block .input-wrapper label {
+.blaze-wooless-draggable-block .input-wrapper label {
     font-weight: bold;
 }
-.blaze-commerce-draggable-block .input-wrapper .input {
+.blaze-wooless-draggable-block .input-wrapper .input {
     width: 100%;
 }
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeCommerce\Settings;
+namespace BlazeWooless\Settings;
 
-use BlazeCommerce\TypesenseClient;
+use BlazeWooless\TypesenseClient;
 
 class RegionalSettings extends BaseSettings {
     private static $instance = null;
@@ -12,7 +12,7 @@ class RegionalSettings extends BaseSettings {
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'blaze_commerce_regional_settings_options', 'blaze_commerce_regional_settings_section', 'Regional Settings' );
+            self::$instance = new self( 'wooless_regional_settings_options', 'wooless_regional_settings_section', 'Regional Settings' );
         }
 
         return self::$instance;
@@ -50,7 +50,7 @@ class RegionalSettings extends BaseSettings {
     public function settings()
     {
         return array(
-            'blaze_commerce_regional_settings_section' => array(
+            'wooless_regional_settings_section' => array(
                 'label' => 'Regional Data',
                 'options' => array(
                     array(

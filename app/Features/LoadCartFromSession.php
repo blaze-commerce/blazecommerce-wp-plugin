@@ -1,7 +1,7 @@
 <?php
 
 
-namespace BlazeCommerce\Features;
+namespace BlazeWooless\Features;
 
 class LoadCartFromSession
 {
@@ -91,24 +91,24 @@ class LoadCartFromSession
 
 	public function remove_session_id_from_url_script()
 	{
-        $restricted_pages = apply_filters('blaze_commerce_restricted_pages', is_cart());
+        $restricted_pages = apply_filters('blaze_wooless_restricted_pages', is_cart());
         if ( $restricted_pages ) {
             wp_redirect(home_url());
             exit;
         }
 
-        $pages_should_redirect_to_frontend = apply_filters('blaze_commerce_pages_should_redirect_to_frontend', is_shop() || is_product_category() || is_product());
+        $pages_should_redirect_to_frontend = apply_filters('blaze_wooless_pages_should_redirect_to_frontend', is_shop() || is_product_category() || is_product());
         if ( $pages_should_redirect_to_frontend ) {
             wp_redirect(home_url( $_SERVER['REQUEST_URI'] ));
             exit;
         }
 
-        if (!class_exists('WooCommerce') || (!isset($_GET['session_id']) && !isset($_GET['from_commerce']))) {
+        if (!class_exists('WooCommerce') || (!isset($_GET['session_id']) && !isset($_GET['from_wooless']))) {
             return;
         }
 
-		$url = remove_query_arg(['session_id', 'from_commerce'], $_SERVER['REQUEST_URI']);
-		wp_redirect(apply_filters('blaze_commerce_destination_url_from_frontend', $url));
+		$url = remove_query_arg(['session_id', 'from_wooless'], $_SERVER['REQUEST_URI']);
+		wp_redirect(apply_filters('blaze_wooless_destination_url_from_frontend', $url));
 		exit;
 	}
 }

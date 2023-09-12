@@ -1,7 +1,7 @@
 <?php
-namespace BlazeCommerce\Collections;
+namespace BlazeWooless\Collections;
 
-use BlazeCommerce\Settings\RegionalSettings;
+use BlazeWooless\Settings\RegionalSettings;
 
 class SiteInfo extends BaseCollection
 {
@@ -25,8 +25,8 @@ class SiteInfo extends BaseCollection
     public function index_to_typesense()
     {
         // Fetch the store ID from the saved options
-        $blaze_commerce_site_id = get_option('store_id');
-        $collection_site_info = 'site_info-' . $blaze_commerce_site_id;
+        $wooless_site_id = get_option('store_id');
+        $collection_site_info = 'site_info-' . $wooless_site_id;
         //Indexing Site Info
         try {
             // Delete the existing 'site_info' collection (if it exists)
@@ -180,7 +180,7 @@ class SiteInfo extends BaseCollection
             // }
             // add_action('update_option_date_format', 'my_date_format_updated_callback', 10, 3);
     
-            $homepage_data = apply_filters('blaze_commerce_additional_homepage_info', array());
+            $homepage_data = apply_filters('blaze_wooless_additional_homepage_info', array());
             foreach ($homepage_data as $key => $value) {
                 if (empty($value)) {
                     continue;
@@ -200,7 +200,7 @@ class SiteInfo extends BaseCollection
 
             unset($homepage_data);
     
-            $site_messages_data = apply_filters('blaze_commerce_additional_site_info_message', array());
+            $site_messages_data = apply_filters('blaze_wooless_additional_site_info_message', array());
             foreach ($site_messages_data as $key => $value) {
                 if (empty($value)) {
                     continue;
@@ -233,7 +233,7 @@ class SiteInfo extends BaseCollection
             $initial_additional_data['currencies'] = array( $currencies );
             $initial_additional_data['regions'] = RegionalSettings::get_selected_regions();
     
-            $additional_data = apply_filters('blaze_commerce_additional_site_info', $initial_additional_data);
+            $additional_data = apply_filters('blaze_wooless_additional_site_info', $initial_additional_data);
             foreach ($additional_data as $key => $value) {
                 if (empty($value)) {
                     continue;
@@ -252,7 +252,7 @@ class SiteInfo extends BaseCollection
 
             unset($additional_data);
     
-            do_action( 'blaze_commerce_after_site_info_sync' );
+            do_action( 'blaze_wooless_after_site_info_sync' );
     
             echo "Site info added successfully!";
         } catch (\Exception $e) {

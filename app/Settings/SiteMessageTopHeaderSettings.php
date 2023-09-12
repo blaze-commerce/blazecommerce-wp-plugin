@@ -1,8 +1,8 @@
 <?php
 
-namespace BlazeCommerce\Settings;
+namespace BlazeWooless\Settings;
 
-use BlazeCommerce\TypesenseClient;
+use BlazeWooless\TypesenseClient;
 
 class SiteMessageTopHeaderSettings extends BaseSettings {
     private static $instance = null;
@@ -12,7 +12,7 @@ class SiteMessageTopHeaderSettings extends BaseSettings {
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'blaze_commerce_site_message_top_header_settings_options' );
+            self::$instance = new self( 'wooless_site_message_top_header_settings_options' );
         }
 
         return self::$instance;
@@ -36,7 +36,7 @@ class SiteMessageTopHeaderSettings extends BaseSettings {
         }
 
         if (is_array($site_message_top_header)) {
-            update_option('blaze_commerce_site_message_top_header', $site_message_top_header);
+            update_option('blaze_wooless_site_message_top_header', $site_message_top_header);
 
             $this->update_typesense_data( $site_message_top_header );
         }
@@ -55,20 +55,20 @@ class SiteMessageTopHeaderSettings extends BaseSettings {
 
     public function register_hooks()
     {
-        add_action( 'blaze_commerce_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
-        add_action( 'blaze_commerce_after_site_info_sync', array( $this, 'add_site_settings_data' ), 10, 2 );
+        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_site_settings_data' ), 10, 2 );
     }
 
     public function footer_callback()
     {
-        require_once BLAZE_COMMERCE_PLUGIN_DIR . 'views/draggable-content-simple.php';
+        require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/draggable-content-simple.php';
     }
 
     public function default_draggable_data()
     {
         if (empty($_GET['tab']) || $this->tab_key !== $_GET['tab']) return;
 
-        $site_message_top_header = get_option('blaze_commerce_site_message_top_header', '');
+        $site_message_top_header = get_option('blaze_wooless_site_message_top_header', '');
         ?>
             <input type="hidden" id="draggable_result" name="site_message_top_header" value='<?php echo json_encode($site_message_top_header) ?>'/>
         <?php
@@ -76,7 +76,7 @@ class SiteMessageTopHeaderSettings extends BaseSettings {
 
     public function add_site_settings_data()
     {
-        $site_message_top_header = get_option('blaze_commerce_site_message_top_header', '');
+        $site_message_top_header = get_option('blaze_wooless_site_message_top_header', '');
         $this->update_typesense_data( $site_message_top_header );
     }
 }
