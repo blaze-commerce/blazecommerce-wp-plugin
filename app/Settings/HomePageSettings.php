@@ -28,12 +28,15 @@ class HomePageSettings extends BaseSettings {
         if (is_array($homepage_layout)) {
             update_option('blaze_wooless_homepage_layout', $homepage_layout);
 
-            TypesenseClient::get_instance()->site_info()->upsert([
-                'id' => '1000003',
+			$home_page_data = [
+				'id' => '1000003',
                 'name' => 'homepage_layout',
                 'value' => json_encode($homepage_layout),
                 'updated_at' => time(),
-            ]);
+			];
+            TypesenseClient::get_instance()->site_info()->upsert($home_page_data);
+
+			do_action( 'blaze_wooless_update_page_layout', $home_page_data );
         }
         
         return $options;
