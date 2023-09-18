@@ -126,17 +126,20 @@ class JudgeMe
                             $average_rating = $this->get_reviews_average_rating($value);
                             $rating_count = $this->get_reviews_rating_count($value);
                             $percentage = $this->get_reviews_rating_percentage($value);
+                            $content = $this->get_reviews_content($value);
                             $product_reviews[$product['handle']] = array(
                                 'id' => (int)$product['id'],
                                 'externalId' => (int)$product['external_id'],
                                 'average' => (float)$average_rating[1],
                                 'count' => (int)$rating_count[1],
                                 'percentage' => $percentage,
+                                'content' => $content,
                             );
 
                             unset($average_rating);
                             unset($rating_count);
                             unset($percentage);
+                            unset($content);
                         }
                     }
                 }
@@ -212,5 +215,47 @@ class JudgeMe
             unset($total_matches);
 
             return $ratings_and_percent;
+        }
+
+        public function get_reviews_content($html) {
+            $verified = "/data-verified-buyer='(.*?)'/m";
+            $icon = "/jdgm-rev__icon' >(.*?)<\/div>/m";
+            $rating = "/jdgm-rev__rating' data-score='(.*?)'/m";
+            $timestamp = "/timestamp jdgm-spinner' data-content='(.*?)'/m";
+            $author = "/jdgm-rev__author'>(.*?)<\/span>/m";
+            $title = "/jdgm-rev__title'>(.*?)<\/b>/m";
+            $body = "/jdgm-rev__body'><p>(.*?)<\/p>/m";
+
+            preg_match_all($verified, $html, $verified_matches, PREG_SET_ORDER, 0);
+            preg_match_all($icon, $html, $icon_matches, PREG_SET_ORDER, 0);
+            preg_match_all($rating, $html, $rating_matches, PREG_SET_ORDER, 0);
+            preg_match_all($timestamp, $html, $timestamp_matches, PREG_SET_ORDER, 0);
+            preg_match_all($author, $html, $author_matches, PREG_SET_ORDER, 0);
+            preg_match_all($title, $html, $title_matches, PREG_SET_ORDER, 0);
+            preg_match_all($body, $html, $body_matches, PREG_SET_ORDER, 0);
+
+            $reviews_content = array();
+
+            foreach($body_matches as $key => $value) {
+                $reviews_content[] = array(
+                    'verified' => (bool)$verified_matches[$key][1],
+                    'icon' => $icon_matches[$key][1],
+                    'rating' => (int)$rating_matches[$key][1],
+                    'timestamp' => $timestamp_matches[$key][1],
+                    'author' => $author_matches[$key][1],
+                    'title' => $title_matches[$key][1],
+                    'body' => $body_matches[$key][1],
+                );
+            }
+
+            unset($verified_matches);
+            unset($icon_matches);
+            unset($rating_matches);
+            unset($timestamp_matches);
+            unset($author_matches);
+            unset($title_matches);
+            unset($body_matches);
+
+            return $reviews_content;
         }
     }
