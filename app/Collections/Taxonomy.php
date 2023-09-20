@@ -183,6 +183,7 @@ class Taxonomy extends BaseCollection
 		try {
 
 			$this->upsert($document);
+			do_action('blaze_wooless_after_terms_update', $document);
 		} catch (\Exception $e) {
 			error_log("Error updating term '{$term->name}' in Typesense: " . $e->getMessage());
 		}
