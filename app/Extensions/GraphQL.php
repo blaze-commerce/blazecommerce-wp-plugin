@@ -28,6 +28,7 @@ class GraphQL
 			add_action('graphql_register_types', [$this, 'register_types']);
 
 			add_filter('graphql_response_headers_to_send', [$this, 'modify_response_headers'], 20);
+			add_filter('graphql_access_control_allow_headers', [$this, 'modify_access_control_allow_headers'], 20, 1);
 
 			add_action('init', [$this, 'maybe_save_jwt_secret']);
 		}
@@ -166,5 +167,11 @@ class GraphQL
 		$jwt_key = get_option('wooless_custom_jwt_secret_key', $auth_key);
 
 		return $jwt_key;
+	}
+
+	public function modify_access_control_allow_headers( $allowed_headers )
+	{
+		$allowed_headers[] = 'woocommerce-session';
+		return $allowed_headers;
 	}
 }
