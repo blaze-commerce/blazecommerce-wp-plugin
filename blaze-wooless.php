@@ -28,7 +28,12 @@ require_once plugin_dir_path(__FILE__) . 'lib/blaze-wooless-functions.php';
 
 
 // Initialize plugin
-\BlazeWooless\BlazeWooless::get_instance()->init();
+function BlazeCommerce()
+{
+	return \BlazeWooless\BlazeWooless::get_instance();
+}
+
+BlazeCommerce()->init();
 
 
 // function register_compatibilities()

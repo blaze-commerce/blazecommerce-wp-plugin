@@ -8,6 +8,7 @@ use BlazeWooless\Collections\Taxonomy;
 class BlazeWooless
 {
     private static $instance = null;
+	public $cookie;
 
     public static function get_instance()
     {
@@ -17,6 +18,11 @@ class BlazeWooless
 
         return self::$instance;
     }
+
+	public function __construct()
+	{
+		$this->cookie = \BlazeWooless\Core\Cookie::get_instance();
+	}
 
     public function init()
     {
@@ -66,6 +72,7 @@ class BlazeWooless
             '\\BlazeWooless\\Features\\CalculateShipping',
             '\\BlazeWooless\\Features\\DraggableContent',
             '\\BlazeWooless\\Features\\LoadCartFromSession',
+            '\\BlazeWooless\\Features\\Authentication',
         );
 
         foreach ( $features as $feature ) {
