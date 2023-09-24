@@ -72,6 +72,8 @@ class FooterThreeSettings extends BaseSettings {
     public function add_footer_three_data()
     {
         $footer_content_3 = get_option('blaze_wooless_footer_3_content', '');
+		if (empty($footer_content_3)) return;
+
         TypesenseClient::get_instance()->site_info()->upsert([
             'id' => '1000007',
             'name' => 'footer_content_3',

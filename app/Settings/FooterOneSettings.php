@@ -72,6 +72,8 @@ class FooterOneSettings extends BaseSettings {
     public function add_footer_one_data()
     {
         $footer_content_1 = get_option('blaze_wooless_footer_1_content', '');
+		if (empty($footer_content_1)) return;
+
         TypesenseClient::get_instance()->site_info()->upsert([
             'id' => '1000006',
             'name' => 'footer_content_1',

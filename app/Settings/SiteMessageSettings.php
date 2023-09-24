@@ -72,6 +72,8 @@ class SiteMessageSettings extends BaseSettings {
     public function add_site_settings_data()
     {
         $site_message = get_option('blaze_wooless_site_message', '');
+		if (empty($site_message)) return;
+		
         TypesenseClient::get_instance()->site_info()->upsert([
             'id' => '1000004',
             'name' => 'site_message',
