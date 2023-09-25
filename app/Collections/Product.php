@@ -107,7 +107,7 @@ class Product extends BaseCollection
 			// Set initial values for pagination and batch size
 			$finished = false;
 			$page = 1;
-			$batch_size = 100; // Adjust the batch size depending on your server's capacity
+			$batch_size = 250; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports = 0;
 
@@ -159,6 +159,10 @@ class Product extends BaseCollection
 					$logger->debug('TS Product Import Exception: ' . $e->getMessage(), $context);
 					error_log("Error importing products to Typesense: " . $e->getMessage());
 				}
+
+				unset($products);
+				unset($products_batch);
+				unset($result);
 			}
 
 			// After the while loop, print the number of imported products
