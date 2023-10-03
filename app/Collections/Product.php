@@ -55,6 +55,7 @@ class Product extends BaseCollection
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
 						['name' => 'stockStatus', 'type' => 'string', 'sort' => true],
+						['name' => 'shippingClass', 'type' => 'string'],
 						['name' => 'updatedAt', 'type' => 'int64'],
 						['name' => 'createdAt', 'type' => 'int64'],
 						['name' => 'publishedAt', 'type' => 'int64', 'optional' => true],
@@ -259,6 +260,7 @@ class Product extends BaseCollection
 					),
 					'stockQuantity' => empty($variation_obj->get_stock_quantity()) ? 0 : $variation_obj->get_stock_quantity(),
 					'stockStatus' => $variation_obj->get_stock_status(),
+					'shippingClass' => $product->get_shipping_class(),
 					'onSale' => $variation_obj->is_on_sale(),
 					'sku' => $variation_obj->get_sku(),
 					'image' => [
