@@ -260,7 +260,6 @@ class Product extends BaseCollection
 					),
 					'stockQuantity' => empty($variation_obj->get_stock_quantity()) ? 0 : $variation_obj->get_stock_quantity(),
 					'stockStatus' => $variation_obj->get_stock_status(),
-					'shippingClass' => $product->get_shipping_class(),
 					'onSale' => $variation_obj->is_on_sale(),
 					'sku' => $variation_obj->get_sku(),
 					'image' => [
@@ -338,6 +337,7 @@ class Product extends BaseCollection
 			'onSale' => $product->is_on_sale(),
 			'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
 			'stockStatus' => $product->get_stock_status(),
+			'shippingClass' => $product->get_shipping_class(),
 			'shippingClass' => $product->get_shipping_class(),
 			'updatedAt' => strtotime($product->get_date_modified()),
 			'createdAt' => strtotime($product->get_date_created()),
