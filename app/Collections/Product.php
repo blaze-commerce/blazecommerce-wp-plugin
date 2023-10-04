@@ -65,6 +65,7 @@ class Product extends BaseCollection
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
 						['name' => 'stockStatus', 'type' => 'string', 'sort' => true],
+						['name' => 'shippingClass', 'type' => 'string'],
 						['name' => 'updatedAt', 'type' => 'int64'],
 						['name' => 'createdAt', 'type' => 'int64'],
 						['name' => 'publishedAt', 'type' => 'int64', 'optional' => true],
@@ -328,18 +329,24 @@ class Product extends BaseCollection
 				}
 			}
 	
+			unset($additional_tabs);
+
 			$taxonomies = $this->get_taxonomies($product);
-	
+
 			$related_products = $this->get_related_products($product_id, $taxonomies);
-	
-			$published_at = strtotime(get_the_date('', $product_id));
-	
+
+			$product_slug = $product->get_slug();
+
+			$published_at = strtotime(get_the_date('', $product->get_id()));
+
+			$days_passed = $this->get_days_passed($published_at);
+
 			$product_data = [
-				'id' => strval($product_id),
-				'productId' => strval($product_id),
+				'id' => strval($product->get_id()),
+				'productId' => strval($product->get_id()),
 				'description' => wpautop( $description ),
 				'name' => $product->get_name(),
-				'permalink' => wp_make_link_relative(get_permalink($product_id)),
+				'permalink' => wp_make_link_relative(get_permalink($product->get_id())),
 				'slug' => $product->get_slug(),
 				'thumbnail' => $thumbnail,
 				'sku' => $product->get_sku(),
@@ -349,10 +356,12 @@ class Product extends BaseCollection
 				'onSale' => $product->is_on_sale(),
 				'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
 				'stockStatus' => $product->get_stock_status(),
+				'shippingClass' => $product->get_shipping_class(),
+				'shippingClass' => $product->get_shipping_class(),
 				'updatedAt' => strtotime($product->get_date_modified()),
 				'createdAt' => strtotime($product->get_date_created()),
 				'publishedAt' => $published_at,
-				'daysPassed' => $this->get_days_passed($published_at),
+				'daysPassed' => $days_passed,
 				'isFeatured' => $product->get_featured(),
 				'totalSales' => (int)$product->get_total_sales(),
 				'galleryImages' => $product_gallery,
@@ -366,7 +375,7 @@ class Product extends BaseCollection
 				'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
 				// 'attributes' => $attributes,
 				// 'additional_information_shipping' => $shipping,
-			];
+			]; 
 		
 			unset($shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_data, $variations_data, $formatted_additional_tabs, $upsell_data, $published_at);
 		}
