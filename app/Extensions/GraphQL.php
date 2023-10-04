@@ -52,6 +52,7 @@ class GraphQL
 		$allowed_origins = [
 			'http://localhost:3000',
 			'https://blaze-commerce-live-simulation.blz.onl',
+			home_url(),
 		];
 
 		// If the request is coming from an allowed origin (HEADLESS_FRONTEND_URL), tell the browser it can accept the response.
