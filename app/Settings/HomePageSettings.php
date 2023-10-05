@@ -78,6 +78,8 @@ class HomePageSettings extends BaseSettings
 	public function add_homepage_data()
 	{
 		$homepage_layout = get_option('blaze_wooless_homepage_layout', '');
+		if (empty($homepage_layout)) return;
+
 		TypesenseClient::get_instance()->site_info()->upsert([
 			'id' => '1000003',
 			'name' => 'homepage_layout',

@@ -202,7 +202,7 @@
       $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
     },
 
-    importData: function (collection, message, hideLoader = false) {
+    importData: function (collection, message, hideLoader = false, params = {}) {
       var _this = this;
       return new Promise(function(resolve, reject) {
         var data = {
@@ -213,7 +213,7 @@
         _this.renderLoader( message );
         _this.syncInProgress = true;
   
-        $.post(ajaxurl, data, function(response) {
+        $.post(ajaxurl, Object.assign({}, data, params), function(response) {
           $(_this.syncResultsContainer).append('<div>' + response + '</div>');
           if (hideLoader) {
             _this.hideLoader();
@@ -224,13 +224,49 @@
       })
     },
 
+    importProductData: function (prevData = {}, params = {}, message = false) {
+      var _this = this;
+      return new Promise(function(resolve, reject) {
+        var data = {
+          'action': 'index_data_to_typesense',
+          'collection_name': 'products',
+        };
+
+        if (message) {
+          _this.renderLoader( message );
+          _this.syncInProgress = true;
+        }
+  
+        $.post(ajaxurl, Object.assign({}, data, params), function(response) {
+          response = JSON.parse(response);
+          prevData.imported_products_count += response.imported_products_count;
+          prevData.total_imports += response.total_imports;
+          if (response.has_next_data) {
+            resolve(_this.importProductData(prevData, { page: response.next_page }))
+          } else {
+            console.log(prevData);
+            if (prevData.shouldHideLoader) {
+              _this.hideLoader();
+              _this.syncInProgress = false;
+            }
+            
+            $(_this.syncResultsContainer).append('<div>Imported products count: ' + prevData.imported_products_count + '/' + prevData.total_imports + '</div>');
+            resolve(true);
+          }
+        });
+      })
+    },
+
     importProducts: function(e) {
       e.preventDefault();
       if (this.syncInProgress) {
         return false;
       }
       this.clearResultContainer();
-      return this.importData( 'products', 'Product Syncing in progress...', true );
+      this.renderLoader( 'Product Syncing in progress...' );
+      this.syncInProgress = true;
+
+      return this.importProductData({ imported_products_count: 0, total_imports: 0, shouldHideLoader: true }, { page: 1 });
     },
 
     importTaxonomies: function(e) {
@@ -276,7 +312,7 @@
       }
       (async function() {
         _this.clearResultContainer();
-        await _this.importData( 'products', 'Product Syncing in progress...' );
+        await _this.importProductData({ imported_products_count: 0, total_imports: 0, shouldHideLoader: false }, { page: 1 }, 'Products Syncing in progress...');
         await _this.importData( 'taxonomy', 'Taxonomies Syncing in progress...' );
         await _this.importData( 'menu', 'Menus Syncing in progress...' );
         await _this.importData( 'page', 'Pages Syncing in progress...' );

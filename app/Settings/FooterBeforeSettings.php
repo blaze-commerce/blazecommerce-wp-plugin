@@ -72,6 +72,8 @@ class FooterBeforeSettings extends BaseSettings {
     public function add_footer_before_data()
     {
         $footer_content_before = get_option('blaze_wooless_footer_before_content', '');
+		if (empty($footer_content_before)) return;
+
         TypesenseClient::get_instance()->site_info()->upsert([
             'id' => '1000005',
             'name' => 'footer_content_before',

@@ -72,12 +72,14 @@ class FooterAfterSettings extends BaseSettings {
     public function add_footer_after_data()
     {
         $footer_content_after = get_option('blaze_wooless_footer_after_content', '');
-        TypesenseClient::get_instance()->site_info()->upsert([
-            'id' => '1000009',
-            'name' => 'footer_content_after',
-            'value' => json_encode($footer_content_after),
-            'updated_at' => time(),
-        ]);
+		if (empty($footer_content_after)) return;
+		
+		TypesenseClient::get_instance()->site_info()->upsert([
+			'id' => '1000009',
+			'name' => 'footer_content_after',
+			'value' => json_encode($footer_content_after),
+			'updated_at' => time(),
+		]);
     }
 }
 

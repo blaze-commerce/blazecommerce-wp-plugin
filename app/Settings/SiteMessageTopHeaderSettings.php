@@ -77,6 +77,8 @@ class SiteMessageTopHeaderSettings extends BaseSettings {
     public function add_site_settings_data()
     {
         $site_message_top_header = get_option('blaze_wooless_site_message_top_header', '');
+		if (empty($site_message_top_header)) return;
+
         $this->update_typesense_data( $site_message_top_header );
     }
 }
