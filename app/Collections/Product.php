@@ -64,7 +64,7 @@ class Product extends BaseCollection
 						['name' => 'salePrice.USD', 'type' => 'float', 'optional' => true ],
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
-						['name' => 'stockStatus', 'type' => 'string', 'sort' => true],
+						['name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true],
 						['name' => 'shippingClass', 'type' => 'string'],
 						['name' => 'updatedAt', 'type' => 'int64'],
 						['name' => 'createdAt', 'type' => 'int64'],
