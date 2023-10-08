@@ -32,6 +32,8 @@ class BlazeWooless
         // add_action('wp_update_nav_menu', array( Menu::get_instance(), 'update_typesense_document_on_menu_update' ), 10, 2);
         add_action('edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3);
 
+        add_filter('blaze_wooless_generate_breadcrumbs', array( Taxonomy::get_instance(), 'generate_breadcrumbs' ), 10, 2);
+
         TypesenseClient::get_instance();
 
         $this->register_settings();
@@ -47,6 +49,7 @@ class BlazeWooless
         $settings = array(
             '\\BlazeWooless\\Settings\\GeneralSettings',
             '\\BlazeWooless\\Settings\\RegionalSettings',
+            '\\BlazeWooless\\Settings\\ProductFilterSettings',
             '\\BlazeWooless\\Settings\\ProductPageSettings',
             '\\BlazeWooless\\Settings\\HomePageSettings',
             '\\BlazeWooless\\Settings\\SiteMessageTopHeaderSettings',

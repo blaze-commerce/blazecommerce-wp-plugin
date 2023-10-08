@@ -64,7 +64,7 @@ class Product extends BaseCollection
 						['name' => 'salePrice.USD', 'type' => 'float', 'optional' => true ],
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
-						['name' => 'stockStatus', 'type' => 'string', 'sort' => true],
+						['name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true],
 						['name' => 'shippingClass', 'type' => 'string'],
 						['name' => 'updatedAt', 'type' => 'int64'],
 						['name' => 'createdAt', 'type' => 'int64'],
@@ -82,6 +82,8 @@ class Product extends BaseCollection
 						['name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 						['name' => 'taxonomies.childAndParentTerm', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 						['name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true],
+						['name' => 'taxonomies.breadcrumbs', 'type' => 'object[]', 'optional' => true],
+						['name' => 'taxonomies.filters', 'type' => 'string[]', 'optional' => true, 'facet' => true],
 						['name' => 'judgemeReviews', 'type' => 'object', 'optional' => true],
 						['name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true],
 						['name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true],
@@ -401,19 +403,24 @@ class Product extends BaseCollection
 			if (!empty($product_terms) && !is_wp_error($product_terms)) {
 				foreach ($product_terms as $product_term) {
 
+					$term_name = $product_term->name;
+					$term_slug = $product_term->slug;
 					// Get Parent Term
 					$parentTerm = get_term($product_term->parent, $taxonomy);
+					$term_parent = $parentTerm->name ? $parentTerm->name : '';
 					$termOrder = is_plugin_active('taxonomy-terms-order/taxonomy-terms-order.php') ? $product_term->term_order : 0;
 
 					$taxonomies_data[] = [
-						'name' => $product_term_name,
+						'name' => $term_name,
 						'url' => get_term_link($product_term->term_id),
 						'type' => $taxonomy,
-						'slug' => $product_term->slug,
-						'nameAndType' => $product_term->name . '|' . $taxonomy . '|' . $termOrder,
-						'childAndParentTerm' => $parentTerm->name ? $product_term->name . '|' . $parentTerm->name . '|' . $termOrder : '',
-						'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
-
+						'slug' => $term_slug,
+						'nameAndType' => $product_term->name . '|' . $taxonomy,
+						'childAndParentTerm' => $term_parent ? $product_term->name . '|' . $term_parent : '',
+						'parentTerm' => $term_parent,
+						'breadcrumbs' => apply_filters('blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy),
+						// Search Parameter Filter Values
+						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder,
 					];
 
 					unset($parentTerm, $product_term_name, $child_and_parent_term, $parent_term_name);
