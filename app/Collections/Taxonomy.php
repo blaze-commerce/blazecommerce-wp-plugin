@@ -42,8 +42,10 @@ class Taxonomy extends BaseCollection
 				['name' => 'bannerThumbnail', 'type' => 'string'],
 				['name' => 'bannerText', 'type' => 'string'],
 				['name' => 'parentTerm', 'type' => 'string'],
+				['name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true],
 			],
 			'default_sorting_field' => 'updatedAt',
+			'enable_nested_fields' => true,
 		]);
 	}
 
@@ -95,6 +97,7 @@ class Taxonomy extends BaseCollection
 			'bannerText' => $bannerText,
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
 			'thumbnail' => $thumbnail,
+			'breadcrumbs' => $this->generate_breadcrumbs($term->term_id, $taxonomy),
 		];
 
 		return $document;
@@ -187,5 +190,32 @@ class Taxonomy extends BaseCollection
 		} catch (\Exception $e) {
 			error_log("Error updating term '{$term->name}' in Typesense: " . $e->getMessage());
 		}
+	}
+
+	public function generate_breadcrumbs($term_id, $taxonomy) {
+		$args = array(
+			'separator' => '[blz-commerce]',
+		);
+
+		// Get Term Parent, Child, and Grand Child 
+		$parents_list = get_term_parents_list( $term_id, $taxonomy, $args );
+
+		$parents_list_array = explode('[blz-commerce]', $parents_list);
+
+		// Removes null values
+		$parents_list_clean = array_filter($parents_list_array, function($value) { return !is_null($value) && $value !== ''; });
+
+		$breadcrumbs = array();
+
+		foreach($parents_list_clean as $key=>$value) {
+			preg_match_all('#\bhttps?://[^,\s()<>]+(?:\([\w\d]+\)|([^,[:punct:]\s]|/))#', $value, $match);
+
+			$breadcrumbs[] = array(
+				'name' => wp_strip_all_tags($value),
+				'permalink' => wp_make_link_relative($match[0][0]),
+			);
+		}
+
+		return $breadcrumbs;
 	}
 }
