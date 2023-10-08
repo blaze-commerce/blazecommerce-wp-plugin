@@ -403,14 +403,21 @@ class Product extends BaseCollection
 			if (!empty($product_terms) && !is_wp_error($product_terms)) {
 				foreach ($product_terms as $product_term) {
 
+					$term_name = $product_term->name;
+					$term_slug = $product_term->slug;
 					// Get Parent Term
 					$parentTerm = get_term($product_term->parent, $taxonomy);
+					$term_parent = $parentTerm->name ? $parentTerm->name : '';
 					$termOrder = is_plugin_active('taxonomy-terms-order/taxonomy-terms-order.php') ? $product_term->term_order : 0;
 
 					$taxonomies_data[] = [
-						'name' => $product_term_name,
+						'name' => $term_name,
 						'url' => get_term_link($product_term->term_id),
 						'type' => $taxonomy,
+						'slug' => $term_slug,
+						'nameAndType' => $product_term->name . '|' . $taxonomy,
+						'childAndParentTerm' => $term_parent ? $product_term->name . '|' . $term_parent : '',
+						'parentTerm' => $term_parent,
 						'breadcrumbs' => apply_filters('blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy),
 						// Search Parameter Filter Values
 						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder,
