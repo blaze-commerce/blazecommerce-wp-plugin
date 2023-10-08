@@ -82,6 +82,7 @@ class Product extends BaseCollection
 						['name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 						['name' => 'taxonomies.childAndParentTerm', 'type' => 'string[]', 'facet' => true, 'optional' => true],
 						['name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true],
+						['name' => 'taxonomies.breadcrumbs', 'type' => 'object[]', 'optional' => true],
 						['name' => 'judgemeReviews', 'type' => 'object', 'optional' => true],
 						['name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true],
 						['name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true],
@@ -409,11 +410,7 @@ class Product extends BaseCollection
 						'name' => $product_term_name,
 						'url' => get_term_link($product_term->term_id),
 						'type' => $taxonomy,
-						'slug' => $product_term->slug,
-						'nameAndType' => $product_term->name . '|' . $taxonomy . '|' . $termOrder,
-						'childAndParentTerm' => $parentTerm->name ? $product_term->name . '|' . $parentTerm->name . '|' . $termOrder : '',
-						'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
-
+						'breadcrumbs' => apply_filters('blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy),
 					];
 
 					unset($parentTerm, $product_term_name, $child_and_parent_term, $parent_term_name);
