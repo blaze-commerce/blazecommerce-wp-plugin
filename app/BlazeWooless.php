@@ -49,6 +49,7 @@ class BlazeWooless
         $settings = array(
             '\\BlazeWooless\\Settings\\GeneralSettings',
             '\\BlazeWooless\\Settings\\RegionalSettings',
+            '\\BlazeWooless\\Settings\\ProductFilterSettings',
             '\\BlazeWooless\\Settings\\ProductPageSettings',
             '\\BlazeWooless\\Settings\\HomePageSettings',
             '\\BlazeWooless\\Settings\\SiteMessageTopHeaderSettings',
