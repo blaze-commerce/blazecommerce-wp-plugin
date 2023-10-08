@@ -17,6 +17,21 @@
     },
   };
 
+  var commonFilterOption = {
+    classes: {
+      label: 'Classes',
+      name: 'filter-classes',
+    },
+    title: {
+      label: 'Title',
+      name: 'filter-title',
+    },
+    filterSlug: {
+      label: 'Filter Slug/s (separated by comma)',
+      name: 'filter-id',
+    },
+  }
+
   var repeaterFields = {
     banner: {
       image: {
@@ -82,6 +97,21 @@
         label: 'Redirect Url',
         name: 'list-redirect-url', 
       },
+    },
+    categoryFilters: commonFilterOption,
+    attributeFilters: {
+      classes: {
+        label: 'Classes',
+        name: 'filter-classes',
+      },
+      title: {
+        label: 'Title',
+        name: 'filter-title',
+      },
+      attributeType: {
+        label: 'Attribute Type/s (separated by comma)',
+        name: 'filter-type', 
+      }
     }
   }
 
@@ -151,6 +181,38 @@
         name: 'list-text', 
       }
     },
+    subCategoryFilters: commonFilterOption,
+    brandsFilters: commonFilterOption,
+    newFilters: {
+      classes: {
+        label: 'Classes',
+        name: 'filter-classes',
+      },
+      title: {
+        label: 'Title',
+        name: 'filter-title',
+      }
+    },
+    saleFilters: {
+      classes: {
+        label: 'Classes',
+        name: 'filter-classes',
+      },
+      title: {
+        label: 'Title',
+        name: 'filter-title',
+      }
+    },
+    availabilityFilters: {
+      classes: {
+        label: 'Classes',
+        name: 'filter-classes',
+      },
+      title: {
+        label: 'Title',
+        name: 'filter-title',
+      }
+    }
   }
 
   var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);
