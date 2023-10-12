@@ -71,7 +71,7 @@ class HomePageSettings extends BaseSettings
 
 		$homepage_layout = get_option('blaze_wooless_homepage_layout', '');
 		?>
-		<input type="hidden" id="draggable_result" name="homepage_layout" value='<?php echo json_encode($homepage_layout) ?>' />
+		<input type="hidden" id="draggable_result" name="homepage_layout" value='<?php echo htmlspecialchars(json_encode($homepage_layout), ENT_QUOTES) ?>' />
 		<?php
 	}
 
