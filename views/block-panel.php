@@ -8,6 +8,7 @@
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="newsletter"><div class="content">Newsletter</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="products"><div class="content">Featured Products</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="blogPosts"><div class="content">Recent Blog Posts</div></div>
+        <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="customerReviews"><div class="content">Customer Reviews</div></div>
         
         <h4>Multiple Blocks</h4>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="text"><div class="content">Text</div></div>

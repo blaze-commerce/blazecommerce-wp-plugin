@@ -234,7 +234,17 @@
         label: 'Title',
         name: 'filter-title',
       }
-    }
+    },
+    customerReviews: {
+      classes: {
+        label: 'Classes',
+        name: 'customer-reviews-classes',
+      },
+      title: {
+        label: 'Title',
+        name: 'customer-reviews-title',
+      }
+    },
   }
 
   var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);
