@@ -95,6 +95,8 @@ class Page extends BaseCollection
 					} catch (\Exception $e) {
 						echo "Error adding page/post to Typesense: " . $e->getMessage() . "\n";
 					}
+
+					unset($document);
 				}
 			}
 			// Restore original post data. 
