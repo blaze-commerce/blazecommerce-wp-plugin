@@ -109,7 +109,6 @@
     categories: commonImageLink,
     cardGroup: commonImageLink,
     cardGroupSlider: commonImageLink,
-    blogPosts: commonImageLink,
     list: {
       text: {
         label: 'Text',
@@ -243,6 +242,12 @@
       title: {
         label: 'Title',
         name: 'customer-reviews-title',
+      }
+    },
+    blogPosts: {
+      blogCount: {
+        label: 'Blog Count',
+        name: 'blog-count', 
       }
     },
   }
