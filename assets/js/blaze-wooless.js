@@ -55,6 +55,28 @@
         name: 'banner-cta-text', 
       },
     },
+    mobileBanner: {
+      image: {
+        label: 'Image Url',
+        name: 'mobile-banner-image', 
+      },
+      title: {
+        label: 'Title',
+        name: 'mobile-banner-title', 
+      },
+      subtitle: {
+        label: 'Subtitle',
+        name: 'mobile-banner-subtitle', 
+      },
+      CTAUrl: {
+        label: 'Call to action Url',
+        name: 'mobile-banner-cta-url', 
+      },
+      CTAText: {
+        label: 'Call to action text',
+        name: 'mobile-banner-cta-text', 
+      },
+    },
     clients: {
       image: {
         label: 'Image Url',

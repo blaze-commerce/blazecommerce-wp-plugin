@@ -2,6 +2,7 @@
     <div class="blaze-wooless-draggable-panel-container">
         <h4>Single Blocks</h4>
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="banner"><div class="content">Hero Banner</div></div>
+        <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="mobileBanner"><div class="content">Mobile Hero Banner</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="clients"><div class="content">Clients</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="testimonials"><div class="content">Testimonials</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="newsletter"><div class="content">Newsletter</div></div>
