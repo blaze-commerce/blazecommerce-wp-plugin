@@ -32,6 +32,25 @@
     },
   }
 
+  var commonImageContent = {
+    classes: {
+      label: 'Classes',
+      name: 'image-classes',
+    },
+    imageUrl: {
+      label: 'Image Url',
+      name: 'image-url',
+    },
+    redirectUrl: {
+      label: 'Redirect Url',
+      name: 'redirect-url',
+    },
+    redirectType: {
+      label: 'Redirect type',
+      name: 'redirect-type',
+    },
+  }
+
   var repeaterFields = {
     banner: {
       image: {
@@ -179,24 +198,7 @@
         name: 'cta-redirect-url',
       }
     },
-    singleImage: {
-      classes: {
-        label: 'Classes',
-        name: 'image-classes',
-      },
-      imageUrl: {
-        label: 'Image Url',
-        name: 'image-url',
-      },
-      redirectUrl: {
-        label: 'Redirect Url',
-        name: 'redirect-url',
-      },
-      redirectType: {
-        label: 'Redirect type',
-        name: 'redirect-type',
-      },
-    },
+    singleImage: commonImageContent,
     products: {
       productId: {
         label: 'Product Id',
