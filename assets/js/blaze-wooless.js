@@ -32,6 +32,25 @@
     },
   }
 
+  var commonImageContent = {
+    classes: {
+      label: 'Classes',
+      name: 'image-classes',
+    },
+    imageUrl: {
+      label: 'Image Url',
+      name: 'image-url',
+    },
+    redirectUrl: {
+      label: 'Redirect Url',
+      name: 'redirect-url',
+    },
+    redirectType: {
+      label: 'Redirect type',
+      name: 'redirect-type',
+    },
+  }
+
   var repeaterFields = {
     banner: {
       image: {
@@ -53,6 +72,28 @@
       CTAText: {
         label: 'Call to action text',
         name: 'banner-cta-text', 
+      },
+    },
+    mobileBanner: {
+      image: {
+        label: 'Image Url',
+        name: 'mobile-banner-image', 
+      },
+      title: {
+        label: 'Title',
+        name: 'mobile-banner-title', 
+      },
+      subtitle: {
+        label: 'Subtitle',
+        name: 'mobile-banner-subtitle', 
+      },
+      CTAUrl: {
+        label: 'Call to action Url',
+        name: 'mobile-banner-cta-url', 
+      },
+      CTAText: {
+        label: 'Call to action text',
+        name: 'mobile-banner-cta-text', 
       },
     },
     clients: {
@@ -87,7 +128,6 @@
     categories: commonImageLink,
     cardGroup: commonImageLink,
     cardGroupSlider: commonImageLink,
-    blogPosts: commonImageLink,
     list: {
       text: {
         label: 'Text',
@@ -112,7 +152,8 @@
         label: 'Attribute Type/s (separated by comma)',
         name: 'filter-type', 
       }
-    }
+    },
+    multipleImage: commonImageContent
   }
 
   var dynamicConfigFields = {
@@ -157,24 +198,7 @@
         name: 'cta-redirect-url',
       }
     },
-    singleImage: {
-      classes: {
-        label: 'Classes',
-        name: 'image-classes',
-      },
-      imageUrl: {
-        label: 'Image Url',
-        name: 'image-url',
-      },
-      redirectUrl: {
-        label: 'Redirect Url',
-        name: 'redirect-url',
-      },
-      redirectType: {
-        label: 'Redirect type',
-        name: 'redirect-type',
-      },
-    },
+    singleImage: commonImageContent,
     products: {
       productId: {
         label: 'Product Id',
@@ -212,7 +236,23 @@
         label: 'Title',
         name: 'filter-title',
       }
-    }
+    },
+    customerReviews: {
+      classes: {
+        label: 'Classes',
+        name: 'customer-reviews-classes',
+      },
+      title: {
+        label: 'Title',
+        name: 'customer-reviews-title',
+      }
+    },
+    blogPosts: {
+      blogCount: {
+        label: 'Blog Count',
+        name: 'blog-count', 
+      }
+    },
   }
 
   var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);

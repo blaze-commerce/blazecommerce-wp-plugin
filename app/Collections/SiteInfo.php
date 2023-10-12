@@ -123,6 +123,11 @@ class SiteInfo extends BaseCollection
                     'name' => 'woocommerce_prices_include_tax',
                     'value' => get_option( 'woocommerce_prices_include_tax', 'no' ),
                 ),
+                array(
+                    'name' => 'homepage_seo_fullhead',
+                    'value' => apply_filters('blaze_commerce_add_seo_to_homepage', array()) ?? '',
+                    'optional' => true,
+                ),
             );
 
             $datas[] = $this->site_logo_settings();
