@@ -38,6 +38,7 @@ class Page extends BaseCollection
 					['name' => 'updatedAt', 'type' => 'int64'],
 					['name' => 'createdAt', 'type' => 'int64'],
 					['name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true],
+					['name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true],
 				],
 				'default_sorting_field' => 'updatedAt',
 				'enable_nested_fields' => true
@@ -57,6 +58,10 @@ class Page extends BaseCollection
 
 		$published_at = strtotime(get_the_date('', $page_id));
 
+		$content = $page->post_content;
+		$strip_shortcode_content = preg_replace('#\[[^\]]+\]#', '',$content);
+		$page_content = wp_strip_all_tags(apply_filters('the_content', $strip_shortcode_content));
+
 		return apply_filters('blaze_wooless_page_data_for_typesense', [
 			'id' => (string) $page_id,
 			'slug' => $page->post_name,
@@ -68,6 +73,7 @@ class Page extends BaseCollection
 			'updatedAt' => (int) strtotime(get_the_modified_date('c', $page_id)),
 			'createdAt' => (int) strtotime(get_the_date('c', $page_id)),
 			'publishedAt' => $published_at,
+			'content' => $page_content,
 		], $page);
 	}
 
