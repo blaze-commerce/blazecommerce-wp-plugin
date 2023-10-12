@@ -133,7 +133,8 @@
         label: 'Attribute Type/s (separated by comma)',
         name: 'filter-type', 
       }
-    }
+    },
+    multipleImage: commonImageContent
   }
 
   var dynamicConfigFields = {
