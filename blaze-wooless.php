@@ -3,12 +3,13 @@
 Plugin Name: Blaze Commerce
 Plugin URI: https://www.blazecommerce.io
 Description: The official plugin that integrates your site with the Blaze Commerce service.
-Version: 1.4.4
+Version: 1.4.5
 Author: Blaze Commerce
 Author URI: https://www.blazecommerce.io
 */
 
 define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path(__FILE__) );
+define( 'BLAZE_COMMERCE_PLUGIN_VERSION', '1.4.5' );
 
 require 'vendor/autoload.php';
 require_once plugin_dir_path(__FILE__) . 'lib/regional-data-helper.php';
