@@ -20,6 +20,7 @@ class YoastSEO
 		if (\is_plugin_active('wordpress-seo/wp-seo.php')) {
 			add_filter('blaze_wooless_product_data_for_typesense', array($this, 'add_seo_to_product_schema'), 10, 2);
 			add_filter('blaze_wooless_page_data_for_typesense', array($this, 'add_seo_to_page_schema'), 10, 2);
+			add_filter('blaze_commerce_add_seo_to_homepage', array($this, 'add_seo_to_homepage'), 10, 1);
 		}
 	}
 
@@ -59,5 +60,21 @@ class YoastSEO
 		}
 
 		return '';
+	}
+
+	public function add_seo_to_homepage()
+	{
+		$fullHead = '';
+		$homepage_seo_fullhead = '';
+
+		if ($pageID = get_option('page_on_front')) {
+			// Generate full seo head
+			$meta = \YoastSEO()->meta->for_post($pageID);
+			$fullHead = $this->get_full_head($meta);
+
+			$homepage_seo_fullhead = htmlspecialchars($fullHead, ENT_QUOTES, 'UTF-8');
+		}
+
+		return $homepage_seo_fullhead;
 	}
 }
