@@ -118,7 +118,7 @@ class Product extends BaseCollection
 
 		try {
 			// Query judge.me product external_ids and update to options	
-			do_action('blaze_wooless_generate_product_data');
+			do_action('blaze_wooless_generate_product_reviews_data');
 			$page = $_POST['page'] ?? 1;
 
 			if ($page == 1) {
