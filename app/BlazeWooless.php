@@ -88,6 +88,7 @@ class BlazeWooless
         $extensions = array(
             '\\BlazeWooless\\Extensions\\CustomProductTabsForWoocommerce',
             '\\BlazeWooless\\Extensions\\JudgeMe',
+            '\\BlazeWooless\\Extensions\\Yotpo',
             '\\BlazeWooless\\Extensions\\ProductAddons',
             '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
             // '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',

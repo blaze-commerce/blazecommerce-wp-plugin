@@ -93,6 +93,9 @@ class Product extends BaseCollection
 						['name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true],
 						['name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true],
 						['name' => 'judgemeReviews.percentage', 'type' => 'object[]', 'optional' => true],
+						['name' => 'yotpoReviews', 'type' => 'object', 'optional' => true],
+						['name' => 'yotpoReviews.product_score', 'type' => 'float', 'optional' => true],
+						['name' => 'yotpoReviews.total_reviews', 'type' => 'int64', 'optional' => true],
 						['name' => 'thumbnail', 'type' => 'object'],
 						['name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true],
 						['name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true],
@@ -118,7 +121,7 @@ class Product extends BaseCollection
 
 		try {
 			// Query judge.me product external_ids and update to options	
-			do_action('blaze_wooless_generate_product_data');
+			do_action('blaze_wooless_generate_product_reviews_data');
 			$page = $_POST['page'] ?? 1;
 
 			if ($page == 1) {
