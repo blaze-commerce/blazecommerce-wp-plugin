@@ -153,6 +153,25 @@
         name: 'filter-type', 
       }
     },
+    multipleImage: commonImageContent,
+    socialIcons: {
+      classes: {
+        label: 'Classes',
+        name: 'social-icons-classes',
+      },
+      redirectUrl: {
+        label: 'Redirect URL',
+        name: 'social-icons-redirect-url',
+      },
+      redirectType: {
+        label: 'Redirect Type',
+        name: 'social-icons-redirect-type', 
+      },
+      icon: {
+        label: 'Icon',
+        name: 'social-icons', 
+      },
+    },
     subscriptionField: {
       classes: {
         label: 'Classes',
