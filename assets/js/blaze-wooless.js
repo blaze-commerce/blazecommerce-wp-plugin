@@ -153,7 +153,28 @@
         name: 'filter-type', 
       }
     },
-    multipleImage: commonImageContent
+    subscriptionField: {
+      classes: {
+        label: 'Classes',
+        name: 'subscription-field-classes',
+      },
+      label: {
+        label: 'Label',
+        name: 'subscription-field-label',
+      },
+      placeholder: {
+        label: 'Placeholder (Optional)',
+        name: 'subscription-field-placeholder',
+      },
+      icon: {
+        label: 'Icon',
+        name: 'subscription-field-icon',
+      },
+      type: {
+        label: 'Input Type',
+        name: 'subscription-field-type',
+      },
+    },
   }
 
   var dynamicConfigFields = {
