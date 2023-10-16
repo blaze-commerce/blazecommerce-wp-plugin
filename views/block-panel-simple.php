@@ -12,5 +12,6 @@
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="menu"><div class="content">Menu</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="subscriptionField"><div class="content">Subscription Field</div></div>
         <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="socialIcons"><div class="content">Social Icons</div></div>
+        <div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="multipleLinks"><div class="content">Multiple Links</div></div>
     </div>
 </div>

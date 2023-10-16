@@ -194,6 +194,20 @@
         name: 'subscription-field-type',
       },
     },
+    multipleLinks: {
+      classes: {
+        label: 'Classes',
+        name: 'multiple-links-classes',
+      },
+      text: {
+        label: 'Text',
+        name: 'multiple-links-text',
+      },
+      redirectUrl: {
+        label: 'Redirect Url',
+        name: 'multiple-links-redirect-url', 
+      },
+    },
   }
 
   var dynamicConfigFields = {
