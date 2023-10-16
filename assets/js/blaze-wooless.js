@@ -153,7 +153,61 @@
         name: 'filter-type', 
       }
     },
-    multipleImage: commonImageContent
+    multipleImage: commonImageContent,
+    socialIcons: {
+      classes: {
+        label: 'Classes',
+        name: 'social-icons-classes',
+      },
+      redirectUrl: {
+        label: 'Redirect URL',
+        name: 'social-icons-redirect-url',
+      },
+      redirectType: {
+        label: 'Redirect Type',
+        name: 'social-icons-redirect-type', 
+      },
+      icon: {
+        label: 'Icon',
+        name: 'social-icons', 
+      },
+    },
+    subscriptionField: {
+      classes: {
+        label: 'Classes',
+        name: 'subscription-field-classes',
+      },
+      label: {
+        label: 'Label',
+        name: 'subscription-field-label',
+      },
+      placeholder: {
+        label: 'Placeholder (Optional)',
+        name: 'subscription-field-placeholder',
+      },
+      icon: {
+        label: 'Icon',
+        name: 'subscription-field-icon',
+      },
+      type: {
+        label: 'Input Type',
+        name: 'subscription-field-type',
+      },
+    },
+    multipleLinks: {
+      classes: {
+        label: 'Classes',
+        name: 'multiple-links-classes',
+      },
+      text: {
+        label: 'Text',
+        name: 'multiple-links-text',
+      },
+      redirectUrl: {
+        label: 'Redirect Url',
+        name: 'multiple-links-redirect-url', 
+      },
+    },
   }
 
   var dynamicConfigFields = {
