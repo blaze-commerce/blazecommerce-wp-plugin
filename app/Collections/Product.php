@@ -413,7 +413,7 @@ class Product extends BaseCollection
 					$term_slug = $product_term->slug;
 					// Get Parent Term
 					$parentTerm = get_term($product_term->parent, $taxonomy);
-					$term_parent = $parentTerm->name ? $parentTerm->name : '';
+					$term_parent = isset($parentTerm->name) ? $parentTerm->name : '';
 					$termOrder = is_plugin_active('taxonomy-terms-order/taxonomy-terms-order.php') ? $product_term->term_order : 0;
 
 					$taxonomies_data[] = [

@@ -75,7 +75,9 @@ class Yotpo
         if(!empty($product_data) && $product_id) {
             $reviews = get_option('blaze_commerce_yotpo_product_reviews');
 
-            $product_data['yotpoReviews'] = $reviews[$product_id];
+            if(!empty($reviews[$product_id])) {
+                $product_data['yotpoReviews'] = $reviews[$product_id];
+            }
         }
 
         return $product_data;
