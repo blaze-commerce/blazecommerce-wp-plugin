@@ -429,7 +429,7 @@ class Product extends BaseCollection
 						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder,
 					];
 
-					unset($parentTerm, $product_term_name, $child_and_parent_term, $parent_term_name);
+					unset($parentTerm, $term_name, $term_slug, $term_parent, $termOrder);
 				}
 
 				unset($product_terms);
