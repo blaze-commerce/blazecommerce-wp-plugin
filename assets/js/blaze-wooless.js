@@ -172,28 +172,6 @@
         name: 'social-icons', 
       },
     },
-    subscriptionField: {
-      classes: {
-        label: 'Classes',
-        name: 'subscription-field-classes',
-      },
-      label: {
-        label: 'Label',
-        name: 'subscription-field-label',
-      },
-      placeholder: {
-        label: 'Placeholder (Optional)',
-        name: 'subscription-field-placeholder',
-      },
-      icon: {
-        label: 'Icon',
-        name: 'subscription-field-icon',
-      },
-      type: {
-        label: 'Input Type',
-        name: 'subscription-field-type',
-      },
-    },
     multipleLinks: {
       classes: {
         label: 'Classes',
@@ -306,6 +284,13 @@
         label: 'Blog Count',
         name: 'blog-count', 
       }
+    },
+    embedCode: {
+      text: {
+        label: 'HTML Embed Code',
+        name: 'html-embed-code',
+        fieldType: 'textarea',
+      },
     },
   }
 
