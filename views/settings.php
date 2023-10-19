@@ -51,7 +51,7 @@
         <label class="checkbox_Label">Show API Key</label>
     </div>
     <div class="item_wrapper_indexer_page">
-        <button id="index_products" onclick="indexData()" store-id="<?php echo $wooless_site_id; ?>" disabled>Manual
+        <button id="index_products" onclick="indexData()" store-id="<?php // echo $wooless_site_id; ?>" disabled>Manual
 
             <button id="index_products" onclick="indexData()" disabled>Manual Sync
 
