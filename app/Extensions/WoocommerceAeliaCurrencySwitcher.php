@@ -137,29 +137,32 @@ class WoocommerceAeliaCurrencySwitcher
         // var_dump($available_currencies); exit;
         $aelia_currency_switcher_options = get_option('wc_aelia_currency_switcher', false);
         $country_currency_mappings = $aelia_currency_switcher_options['currency_countries_mappings'];
-        $currencies = array();
-        foreach ($country_currency_mappings as $currency => $data) {
-            if ( $intersected_countries = array_intersect( $data['countries'], $available_countries ) ) {
-                $base_country = reset($intersected_countries);
-            } else {
-                $base_country = $data['countries'][0];
+        
+        if(!empty($country_currency_mappings)) {
+            $currencies = array();
+            foreach ($country_currency_mappings as $currency => $data) {
+                if ( $intersected_countries = array_intersect( $data['countries'], $available_countries ) ) {
+                    $base_country = reset($intersected_countries);
+                } else {
+                    $base_country = $data['countries'][0];
+                }
+
+                $currencies[] = array(
+                    'countries' => $data['countries'],
+                    'baseCountry' => $base_country,
+                    'currency' => $currency,
+                    'symbol' => html_entity_decode(get_woocommerce_currency_symbol($currency)),
+                    'symbolPosition' => $cs_settings->get_currency_symbol_position($currency),
+                    'thousandSeparator' => $cs_settings->get_currency_thousand_separator($currency),
+                    'decimalSeparator' => $cs_settings->get_currency_decimal_separator($currency),
+                    'precision' => $cs_settings->get_currency_decimals($currency),
+                    'priceFormat' => html_entity_decode($this->get_currency_price_format($currency)),
+                    'default'   => $currency === $default_currency,
+                );
             }
 
-            $currencies[] = array(
-                'countries' => $data['countries'],
-                'baseCountry' => $base_country,
-                'currency' => $currency,
-                'symbol' => html_entity_decode(get_woocommerce_currency_symbol($currency)),
-                'symbolPosition' => $cs_settings->get_currency_symbol_position($currency),
-                'thousandSeparator' => $cs_settings->get_currency_thousand_separator($currency),
-                'decimalSeparator' => $cs_settings->get_currency_decimal_separator($currency),
-                'precision' => $cs_settings->get_currency_decimals($currency),
-                'priceFormat' => html_entity_decode($this->get_currency_price_format($currency)),
-                'default'   => $currency === $default_currency,
-            );
+            $additional_settings['currencies'] = $currencies;
         }
-
-        $additional_settings['currencies'] = $currencies;
 
         return $additional_settings;
     }
