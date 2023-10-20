@@ -163,7 +163,7 @@ class JudgeMe
             return $product_data;
         }
 
-        public function get_cross_sell_reviews_data($product_data) {
+        public function get_cross_sell_reviews_data($product_data, $product_id) {
             $reviews = get_option('blaze_commerce_judgeme_product_reviews');
             $product = array();
 

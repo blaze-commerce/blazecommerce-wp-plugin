@@ -546,7 +546,7 @@ class Product extends BaseCollection
 							'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
 						);
 							
-						$cross_sell_product_data[] = apply_filters('blaze_wooless_cross_sell_data_for_typesense', $product_data);
+						$cross_sell_product_data[] = apply_filters('blaze_wooless_cross_sell_data_for_typesense', $product_data, $product_id);
 		
 						unset($product_data, $product, $attachment_ids, $product_gallery, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $currency, $default_price, $default_regular_price, $default_sale_price, $stockQuantity, $published_at);
 					}

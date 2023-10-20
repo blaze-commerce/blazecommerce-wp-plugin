@@ -83,7 +83,7 @@ class Yotpo
         return $product_data;
     }
 
-    public function generate_cross_sell_reviews_stats($product_data) {
+    public function generate_cross_sell_reviews_stats($product_data, $product_id) {
         $product = array();
 
         if(!empty($product_data)) {
