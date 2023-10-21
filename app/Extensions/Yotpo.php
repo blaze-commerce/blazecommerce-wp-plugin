@@ -75,13 +75,15 @@ class Yotpo
         if(!empty($product_data) && $product_id) {
             $reviews = get_option('blaze_commerce_yotpo_product_reviews');
 
-            $product_data['yotpoReviews'] = $reviews[$product_id];
+            if(!empty($reviews[$product_id])) {
+                $product_data['yotpoReviews'] = $reviews[$product_id];
+            }
         }
 
         return $product_data;
     }
 
-    public function generate_cross_sell_reviews_stats($product_data) {
+    public function generate_cross_sell_reviews_stats($product_data, $product_id) {
         $product = array();
 
         if(!empty($product_data)) {

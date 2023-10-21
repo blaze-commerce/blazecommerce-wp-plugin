@@ -55,16 +55,22 @@ class Product extends BaseCollection
 						['name' => 'price.NZD', 'type' => 'float', 'optional' => true ],
 						['name' => 'price.USD', 'type' => 'float', 'optional' => true ],
 						['name' => 'price.GBP', 'type' => 'float', 'optional' => true ],
+						['name' => 'price.CAD', 'type' => 'float', 'optional' => true ],
+						['name' => 'price.EUR', 'type' => 'float', 'optional' => true ],
 						['name' => 'regularPrice', 'type' => 'object'],
 						['name' => 'regularPrice.AUD', 'type' => 'float', 'optional' => true ],
 						['name' => 'regularPrice.NZD', 'type' => 'float', 'optional' => true ],
 						['name' => 'regularPrice.USD', 'type' => 'float', 'optional' => true ],
 						['name' => 'regularPrice.GBP', 'type' => 'float', 'optional' => true ],
+						['name' => 'regularPrice.CAD', 'type' => 'float', 'optional' => true ],
+						['name' => 'regularPrice.EUR', 'type' => 'float', 'optional' => true ],
 						['name' => 'salePrice', 'type' => 'object'],
 						['name' => 'salePrice.AUD', 'type' => 'float', 'optional' => true ],
 						['name' => 'salePrice.NZD', 'type' => 'float', 'optional' => true ],
 						['name' => 'salePrice.USD', 'type' => 'float', 'optional' => true ],
 						['name' => 'salePrice.GBP', 'type' => 'float', 'optional' => true ],
+						['name' => 'salePrice.CAD', 'type' => 'float', 'optional' => true ],
+						['name' => 'salePrice.EUR', 'type' => 'float', 'optional' => true ],
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
 						['name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true],
@@ -358,9 +364,9 @@ class Product extends BaseCollection
 				'slug' => $product->get_slug(),
 				'thumbnail' => $thumbnail,
 				'sku' => $product->get_sku(),
-				'price' => apply_filters('wooless_product_price', $default_price, $product_id),
-				'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
-				'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
+				'price' => $default_price,
+				'regularPrice' => $default_regular_price,
+				'salePrice' => $default_sale_price,
 				'onSale' => $product->is_on_sale(),
 				'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
 				'stockStatus' => $product->get_stock_status(),
@@ -413,7 +419,7 @@ class Product extends BaseCollection
 					$term_slug = $product_term->slug;
 					// Get Parent Term
 					$parentTerm = get_term($product_term->parent, $taxonomy);
-					$term_parent = $parentTerm->name ? $parentTerm->name : '';
+					$term_parent = isset($parentTerm->name) ? $parentTerm->name : '';
 					$termOrder = is_plugin_active('taxonomy-terms-order/taxonomy-terms-order.php') ? $product_term->term_order : 0;
 
 					$taxonomies_data[] = [
@@ -429,7 +435,7 @@ class Product extends BaseCollection
 						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder,
 					];
 
-					unset($parentTerm, $product_term_name, $child_and_parent_term, $parent_term_name);
+					unset($parentTerm, $term_name, $term_slug, $term_parent, $termOrder);
 				}
 
 				unset($product_terms);
@@ -527,9 +533,9 @@ class Product extends BaseCollection
 							'permalink' => wp_make_link_relative(get_permalink($product->get_id())),
 							'slug' => $product->get_slug(),
 							'thumbnail' => $thumbnail,
-							'price' => apply_filters('wooless_product_price', $default_price, $product_id),
-							'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
-							'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
+							'price' => $default_price,
+							'regularPrice' => $default_regular_price,
+							'salePrice' => $default_sale_price,
 							'onSale' => $product->is_on_sale(),
 							'stockStatus' => $product->get_stock_status(),
 							'createdAt' => strtotime($product->get_date_created()),
@@ -540,7 +546,7 @@ class Product extends BaseCollection
 							'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
 						);
 							
-						$cross_sell_product_data[] = apply_filters('blaze_wooless_cross_sell_data_for_typesense', $product_data);
+						$cross_sell_product_data[] = apply_filters('blaze_wooless_cross_sell_data_for_typesense', $product_data, $product_id);
 		
 						unset($product_data, $product, $attachment_ids, $product_gallery, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $currency, $default_price, $default_regular_price, $default_sale_price, $stockQuantity, $published_at);
 					}
