@@ -265,6 +265,19 @@ class SiteInfo extends BaseCollection
                 ]);
             }
     
+            $woographql_settings = apply_filters('blaze_wooless_additional_graphql_info', array());
+            foreach ($woographql_settings as $key => $value) {
+                if (empty($value)) {
+                    continue;
+                }
+    
+                $this->create([
+                    'name' => $key,
+                    'value' => $value,
+                    'updated_at' => time(),
+                ]);
+            }
+    
             do_action( 'blaze_wooless_after_site_info_sync' );
     
             echo "Site info added successfully!";

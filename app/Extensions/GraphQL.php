@@ -30,6 +30,8 @@ class GraphQL
 			add_filter('graphql_response_headers_to_send', [$this, 'modify_response_headers'], 20);
 			add_filter('graphql_access_control_allow_headers', [$this, 'modify_access_control_allow_headers'], 20, 1);
 
+			add_filter('blaze_wooless_additional_graphql_info', [$this, 'woographql_is_composite_enabled'], 10, 1);
+
 			add_action('init', [$this, 'maybe_save_jwt_secret']);
 		}
 	}
@@ -174,5 +176,15 @@ class GraphQL
 	{
 		$allowed_headers[] = 'woocommerce-session';
 		return $allowed_headers;
+	}
+
+	public function woographql_is_composite_enabled( $additional_settings ) {
+		if($woographql_settings = get_option('woographql_settings')) {
+			if($woographql_settings['composite_products'] === 'on') {
+				$additional_settings['woographql_is_composite_enabled'] = true;
+			}
+		}
+
+		return $additional_settings;
 	}
 }
