@@ -123,11 +123,6 @@ class SiteInfo extends BaseCollection
                     'name' => 'woocommerce_prices_include_tax',
                     'value' => get_option( 'woocommerce_prices_include_tax', 'no' ),
                 ),
-                array(
-                    'name' => 'homepage_seo_fullhead',
-                    'value' => apply_filters('blaze_commerce_add_seo_to_homepage', array()) ?? '',
-                    'optional' => true,
-                ),
             );
 
             $datas[] = $this->site_logo_settings();
@@ -256,6 +251,19 @@ class SiteInfo extends BaseCollection
             }
 
             unset($additional_data);
+    
+            $homepage_seo_settings = apply_filters('blaze_wooless_additional_homepage_seo_info', array());
+            foreach ($homepage_seo_settings as $key => $value) {
+                if (empty($value)) {
+                    continue;
+                }
+    
+                $this->create([
+                    'name' => $key,
+                    'value' => $value,
+                    'updated_at' => time(),
+                ]);
+            }
     
             do_action( 'blaze_wooless_after_site_info_sync' );
     
