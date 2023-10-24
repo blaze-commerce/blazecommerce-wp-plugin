@@ -20,12 +20,13 @@ class WoocommerceAeliaCurrencySwitcher
     public function __construct()
     {
         if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
-            // add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
+            add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
+            add_filter( 'blaze_wooless_cross_sell_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
             add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_multicurrency_site_info' ), 10, 1 );
 
-            add_filter('wooless_product_price', array( $this, 'wooless_product_regular_price'), 10, 2);
-            add_filter('wooless_product_regular_price', array( $this, 'wooless_product_regular_price'), 10, 2);
-            add_filter('wooless_product_sale_price', array( $this, 'wooless_product_sale_price'), 10, 2);
+            // add_filter('wooless_product_price', array( $this, 'wooless_product_regular_price'), 10, 2);
+            // add_filter('wooless_product_regular_price', array( $this, 'wooless_product_regular_price'), 10, 2);
+            // add_filter('wooless_product_sale_price', array( $this, 'wooless_product_sale_price'), 10, 2);
 
             add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
             add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
@@ -43,34 +44,38 @@ class WoocommerceAeliaCurrencySwitcher
         $sale_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_sale_prices($product_id);
         $product_data["salePrice"] = $sale_prices;
 
-        foreach ($available_currencies as $currency => $value) {
-            $converted_prices = array();
-            if (! isset( $product_data['regularPrice'][ $currency ]) || ! isset( $product_data['salePrice'][ $currency ]) ) {
-                $product = wc_get_product( $product_id );
-                $converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
-                $converted_prices = array(
-                    'regular_price' => $converted_product->get_regular_price(),
-                    'sale_price' => $converted_product->get_sale_price(),
-                );
+        if(!empty($available_currencies)) {
+            foreach ($available_currencies as $currency => $value) {
+                $converted_prices = array();
+                if (! isset( $product_data['regularPrice'][ $currency ]) || ! isset( $product_data['salePrice'][ $currency ]) ) {
+                    $product = wc_get_product( $product_id );
+                    $converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
+                    $converted_prices = array(
+                        'regular_price' => $converted_product->get_regular_price(),
+                        'sale_price' => $converted_product->get_sale_price(),
+                    );
+                }
+    
+                if ( ! isset( $product_data['regularPrice'][ $currency ]) ) {
+                    $product_data['regularPrice'][ $currency ] = $converted_prices['regular_price'];
+                }
+    
+                if ( ! isset( $product_data['salePrice'][ $currency ]) ) {
+                    $product_data['salePrice'][ $currency ] = $converted_prices['sale_price'];
+                }
+    
+                if ( ! isset( $product_data['price'][ $currency ]) ) {
+                    $_sale_price = $product_data['salePrice'][ $currency ];
+                    $_regular_price = $product_data['regularPrice'][ $currency ];
+                    $product_data['price'][ $currency ] = !empty( $_sale_price ) ? $_sale_price : $_regular_price;
+                }
+    
+                $product_data['regularPrice'][ $currency ] = floatval(number_format((float) $product_data['regularPrice'][ $currency ], 2));
+                $product_data['salePrice'][ $currency ] =  floatval(number_format((float) $product_data['salePrice'][ $currency ], 2));
+                $product_data['price'][ $currency ] =  floatval(number_format((float) $product_data['price'][ $currency ], 2));
+    
+                unset($converted_prices, $product, $converted_product, $_sale_price);
             }
-
-            if ( ! isset( $product_data['regularPrice'][ $currency ]) ) {
-                $product_data['regularPrice'][ $currency ] = $converted_prices['regular_price'];
-            }
-
-            if ( ! isset( $product_data['salePrice'][ $currency ]) ) {
-                $product_data['salePrice'][ $currency ] = $converted_prices['sale_price'];
-            }
-
-            if ( ! isset( $product_data['price'][ $currency ]) ) {
-                $_sale_price = $product_data['salePrice'][ $currency ];
-                $_regular_price = $product_data['regularPrice'][ $currency ];
-                $product_data['price'][ $currency ] = !empty( $_sale_price ) ? $_sale_price : $_regular_price;
-            }
-
-            $product_data['regularPrice'][ $currency ] = floatval(number_format((float) $product_data['regularPrice'][ $currency ], 2));
-            $product_data['salePrice'][ $currency ] =  floatval(number_format((float) $product_data['salePrice'][ $currency ], 2));
-            $product_data['price'][ $currency ] =  floatval(number_format((float) $product_data['price'][ $currency ], 2));
         }
 
         return $product_data;
@@ -133,29 +138,32 @@ class WoocommerceAeliaCurrencySwitcher
         // var_dump($available_currencies); exit;
         $aelia_currency_switcher_options = get_option('wc_aelia_currency_switcher', false);
         $country_currency_mappings = $aelia_currency_switcher_options['currency_countries_mappings'];
-        $currencies = array();
-        foreach ($country_currency_mappings as $currency => $data) {
-            if ( $intersected_countries = array_intersect( $data['countries'], $available_countries ) ) {
-                $base_country = reset($intersected_countries);
-            } else {
-                $base_country = $data['countries'][0];
+        
+        if(!empty($country_currency_mappings)) {
+            $currencies = array();
+            foreach ($country_currency_mappings as $currency => $data) {
+                if ( $intersected_countries = array_intersect( $data['countries'], $available_countries ) ) {
+                    $base_country = reset($intersected_countries);
+                } else {
+                    $base_country = $data['countries'][0];
+                }
+
+                $currencies[] = array(
+                    'countries' => $data['countries'],
+                    'baseCountry' => $base_country,
+                    'currency' => $currency,
+                    'symbol' => html_entity_decode(get_woocommerce_currency_symbol($currency)),
+                    'symbolPosition' => $cs_settings->get_currency_symbol_position($currency),
+                    'thousandSeparator' => $cs_settings->get_currency_thousand_separator($currency),
+                    'decimalSeparator' => $cs_settings->get_currency_decimal_separator($currency),
+                    'precision' => $cs_settings->get_currency_decimals($currency),
+                    'priceFormat' => html_entity_decode($this->get_currency_price_format($currency)),
+                    'default'   => $currency === $default_currency,
+                );
             }
 
-            $currencies[] = array(
-                'countries' => $data['countries'],
-                'baseCountry' => $base_country,
-                'currency' => $currency,
-                'symbol' => html_entity_decode(get_woocommerce_currency_symbol($currency)),
-                'symbolPosition' => $cs_settings->get_currency_symbol_position($currency),
-                'thousandSeparator' => $cs_settings->get_currency_thousand_separator($currency),
-                'decimalSeparator' => $cs_settings->get_currency_decimal_separator($currency),
-                'precision' => $cs_settings->get_currency_decimals($currency),
-                'priceFormat' => html_entity_decode($this->get_currency_price_format($currency)),
-                'default'   => $currency === $default_currency,
-            );
+            $additional_settings['currencies'] = $currencies;
         }
-
-        $additional_settings['currencies'] = $currencies;
 
         return $additional_settings;
     }

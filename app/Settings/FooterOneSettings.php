@@ -65,7 +65,7 @@ class FooterOneSettings extends BaseSettings {
 
         $footer_content = get_option('blaze_wooless_footer_1_content', '');
         ?>
-            <input type="hidden" id="draggable_result" name="footer_content_1" value='<?php echo json_encode($footer_content) ?>'/>
+            <input type="hidden" id="draggable_result" name="footer_content_1" value='<?php echo htmlspecialchars(json_encode($footer_content), ENT_QUOTES) ?>'/>
         <?php
     }
 

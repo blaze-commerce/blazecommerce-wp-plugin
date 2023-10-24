@@ -23,7 +23,7 @@ class JudgeMe
             if ( is_plugin_active( 'judgeme-product-reviews-woocommerce/judgeme.php' ) ) {
                 add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_review_config_to_site_info' ), 10, 2 );
 
-                add_action('blaze_wooless_generate_product_data', array( $this, 'generate_product_data' ), 10, 1);
+                add_action('blaze_wooless_generate_product_reviews_data', array( $this, 'generate_product_data' ), 10, 1);
 
                 add_filter('blaze_wooless_product_data_for_typesense', array( $this, 'get_product_reviews_data' ), 10, 2);
 
@@ -84,7 +84,7 @@ class JudgeMe
 
             $product_reviews = $this->generate_product_reviews($products_batch);
 
-            update_option('judgeme_product_reviews', $product_reviews);
+            update_option('blaze_commerce_judgeme_product_reviews', $product_reviews);
         }
 
         public function reformat_url( $url ) {
@@ -152,7 +152,7 @@ class JudgeMe
         }
 
         public function get_product_reviews_data($product_data, $product_id) {
-            $reviews = get_option('judgeme_product_reviews');
+            $reviews = get_option('blaze_commerce_judgeme_product_reviews');
                 
             if(!empty($reviews[$product_data['slug']])) {
                 $product_data['judgemeReviews'] = $reviews[$product_data['slug']];
@@ -163,8 +163,8 @@ class JudgeMe
             return $product_data;
         }
 
-        public function get_cross_sell_reviews_data($product_data) {
-            $reviews = get_option('judgeme_product_reviews');
+        public function get_cross_sell_reviews_data($product_data, $product_id) {
+            $reviews = get_option('blaze_commerce_judgeme_product_reviews');
             $product = array();
 
             foreach($product_data as $product) {

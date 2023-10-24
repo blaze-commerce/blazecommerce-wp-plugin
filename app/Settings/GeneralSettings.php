@@ -70,7 +70,7 @@ class GeneralSettings extends BaseSettings {
                         'label' => 'API Key',
                         'type' => 'password',
                         'args' => array(
-                            'description' => 'API Key generated from the wooless admin portal.'
+                            'description' => 'API Key generated from the Blaze Commerce Admin Portal.'
                         ),
                     ),
                     array(
