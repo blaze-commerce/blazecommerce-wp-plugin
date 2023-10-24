@@ -3,7 +3,7 @@
 Plugin Name: Blaze Commerce
 Plugin URI: https://www.blazecommerce.io
 Description: The official plugin that integrates your site with the Blaze Commerce service.
-Version: 1.4.4
+Version: 1.4.5
 Author: Blaze Commerce
 Author URI: https://www.blazecommerce.io
 */

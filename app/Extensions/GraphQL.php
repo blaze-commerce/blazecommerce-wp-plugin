@@ -56,6 +56,7 @@ class GraphQL
 			'http://localhost:3000',
 			'https://blaze-commerce-live-simulation.blz.onl',
 			home_url(),
+			site_url(),
 		];
 
 		// If the request is coming from an allowed origin (HEADLESS_FRONTEND_URL), tell the browser it can accept the response.
@@ -65,6 +66,7 @@ class GraphQL
 
 		// Tells browsers to expose the response to frontend JavaScript code when the request credentials mode is "include".
 		$headers['Access-Control-Allow-Credentials'] = 'true';
+		$headers['Access-Control-Expose-Headers'] = $headers['Access-Control-Expose-Headers'] . ', set-cookie, woocommerce-session';
 
 		return $headers;
 	}
@@ -93,6 +95,7 @@ class GraphQL
 				),
 				'mutateAndGetPayload' => function () {
 					// Logout and destroy session.
+					wp_set_auth_cookie(0);
 					wp_logout();
 
 					return array('status' => 'SUCCESS');
@@ -175,6 +178,7 @@ class GraphQL
 	public function modify_access_control_allow_headers( $allowed_headers )
 	{
 		$allowed_headers[] = 'woocommerce-session';
+		$allowed_headers[] = 'x-requested-with';
 		return $allowed_headers;
 	}
 

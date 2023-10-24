@@ -18,8 +18,8 @@ class Cookie
 
 	public function main_domain()
 	{
-		$domain_parts = explode('.', $_SERVER['HTTP_HOST']);
-		$main_domain = implode('.', array_slice($domain_parts, -2));
+		$domain_parts = get_home_url();
+		$main_domain = preg_replace('/^https?:\/\//mi', '', $domain_parts);
 		return $main_domain;
 	}
 
@@ -48,9 +48,12 @@ class Cookie
 	{
 		$cookie_domain = apply_filters( 'blaze_commerce_cookie_domain', $this->cookie_domain() );
 		setcookie($name, "", array(
-			'expires' => apply_filters( 'blaze_commerce_cookie_expiry', time() + 3600 ), 
-			'path' => "/", 
-			'domain' => $cookie_domain,
+			"expires" => apply_filters( 'blaze_commerce_cookie_expiry', time() - 3600 ),
+			'domain' 	=> $cookie_domain,
+		));
+		setcookie($name, "", array(
+			"expires" => apply_filters( 'blaze_commerce_cookie_expiry', time() - 3600 ),
+			'domain' 	=> preg_replace('/^https?:\/\//mi', '', get_home_url()),
 		));
 	}
 }

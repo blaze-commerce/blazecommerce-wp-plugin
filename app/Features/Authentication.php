@@ -18,9 +18,7 @@ class Authentication
 
     public function __construct()
     {
-		if (class_exists('WPGraphQL\JWT_Authentication\Auth')) {
-			add_action('wp_login', array( $this, 'login_hook' ), 10, 2);
-		}
+		add_action('wp_login', array( $this, 'login_hook' ), 10, 2);
         add_filter('graphql_jwt_auth_secret_key', array( $this, 'auth_secret_key' ), 20);
         add_filter('graphql_woocommerce_secret_key', array( $this, 'auth_secret_key' ), 20);
         add_action( 'wp_footer', array( $this, 'ajax_sign_in_script' ), 40);
@@ -58,7 +56,7 @@ class Authentication
             (function($) {
                 var $form = $('form.woocommerce-form.woocommerce-form-login.login');
                 var submitButton = $('button.woocommerce-button.button.woocommerce-form-login__submit');
-                if ( ! $(document.body).hasClass('woocommerce-checkout') && ! $(document.body).hasClass('woocommerce-account') ) {
+				if ( ! $(document.body).hasClass('woocommerce-checkout') && ! $(document.body).hasClass('woocommerce-account') ) {
                     submitButton.on('click', function(e) {
                         $form = $(this).closest('form.woocommerce-form.woocommerce-form-login.login')
                         e.preventDefault();
