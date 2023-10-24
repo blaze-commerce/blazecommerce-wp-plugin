@@ -91,6 +91,7 @@ class BlazeWooless
             '\\BlazeWooless\\Extensions\\Yotpo',
             '\\BlazeWooless\\Extensions\\ProductAddons',
             '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
+            '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
             // '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
             '\\BlazeWooless\\Extensions\\YoastSEO',
             '\\BlazeWooless\\Extensions\\GraphQL',

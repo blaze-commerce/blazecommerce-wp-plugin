@@ -278,6 +278,19 @@ class SiteInfo extends BaseCollection
                 ]);
             }
     
+            $woocommerce_afterpay_settings = apply_filters('blaze_wooless_woocommerce_afterpay_settings', array());
+            foreach ($woocommerce_afterpay_settings as $key => $value) {
+                if (empty($value)) {
+                    continue;
+                }
+    
+                $this->create([
+                    'name' => $key,
+                    'value' => $value,
+                    'updated_at' => time(),
+                ]);
+            }
+    
             do_action( 'blaze_wooless_after_site_info_sync' );
     
             echo "Site info added successfully!";
