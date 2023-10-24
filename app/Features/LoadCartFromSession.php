@@ -21,6 +21,15 @@ class LoadCartFromSession
 		add_action('woocommerce_load_cart_from_session', array($this, 'woocommerce_load_cart_from_session'));
 		add_action('init', array($this, 'load_user_from_session'));
 		add_action('wp_footer', array($this, 'remove_session_id_from_url_script'));
+		
+		add_filter('woocommerce_session_cookie', array( $this, 'custom_woocommerce_session_cookie' ), 10, 5);
+	}
+
+	public function custom_woocommerce_session_cookie($cookie, $session_id, $expires, $expiration, $user_id) {
+		$domain = BlazeCommerce()->cookie->cookie_domain(); // Replace with your actual domain
+		$cookie .= '; domain=' . $domain;
+	
+		return $cookie;
 	}
 
 	public function woocommerce_load_cart_from_session()
@@ -58,7 +67,6 @@ class LoadCartFromSession
 			$handler = new \WC_Session_Handler();
 			$session_data = $handler->get_session($session_id);
 
-
 			// We were passed a session ID, yet no session was found. Let's log this and bail.
 			if (empty($session_data)) {
 				throw new \Exception('Could not locate WooCommerce session on checkout');
@@ -73,7 +81,6 @@ class LoadCartFromSession
 			foreach ($session_data as $key => $value) {
 				$session_value = unserialize($value);
 				$session->set($key, $session_value);
-
 				if ($is_guest && in_array($key, $data_to_store)) {
 					BlazeCommerce()->cookie->set( 'guest_session_' . $key,  urlencode($value) );
 				}
@@ -85,7 +92,6 @@ class LoadCartFromSession
 
 	public function load_user_from_session()
     {
-        // Bail if there isn't any data
 		if (!isset($_COOKIE['woocommerce_customer_session_id']) || is_user_logged_in()) {
 			return;
 		}
@@ -129,6 +135,12 @@ class LoadCartFromSession
             wp_redirect(home_url( $_SERVER['REQUEST_URI'] ));
             exit;
         }
+
+		if (isset($_COOKIE['isLoggedIn']) && $_COOKIE['isLoggedIn'] === 'false' && is_user_logged_in()) {
+			wp_set_auth_cookie(0);
+			wp_redirect(home_url( $_SERVER['REQUEST_URI'] ));
+            exit;
+		}
 
         // if (!class_exists('WooCommerce') || (!isset($_COOKIE['woocommerce_customer_session_id']) && !isset($_GET['from_wooless']))) {
         //     return;
