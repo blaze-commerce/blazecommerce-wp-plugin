@@ -92,6 +92,7 @@ class BlazeWooless
             '\\BlazeWooless\\Extensions\\ProductAddons',
             '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
             '\\BlazeWooless\\Extensions\\WoocommerceAfterpay',
+            '\\BlazeWooless\\Extensions\\WoocommerceGiftCards',
             // '\\BlazeWooless\\Extensions\\WoocommercePriceBasedOnCountry',
             '\\BlazeWooless\\Extensions\\YoastSEO',
             '\\BlazeWooless\\Extensions\\GraphQL',
