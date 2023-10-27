@@ -33,4 +33,15 @@ class WoocommerceGiftCards
 				$currency => floatval(get_post_meta($product_id, '_price', true))
 			];
         }
+
+		return $this->giftcard_multicurrency_prices( $product_data, $product_id );
+	}
+
+    public function giftcard_multicurrency_prices( $product_data, $product_id ) {
+        if( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
+            return apply_filters('blaze_commerce_giftcard_multicurrency_prices', $product_data, $product_id);
+    }
+
+        return $product_data;
+    }
 }

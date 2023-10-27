@@ -27,6 +27,8 @@ class WoocommerceAeliaCurrencySwitcher
             // add_filter('wooless_product_price', array( $this, 'wooless_product_regular_price'), 10, 2);
             // add_filter('wooless_product_regular_price', array( $this, 'wooless_product_regular_price'), 10, 2);
             // add_filter('wooless_product_sale_price', array( $this, 'wooless_product_sale_price'), 10, 2);
+            
+            add_filter( 'blaze_commerce_giftcard_multicurrency_prices', array( $this, 'giftcard_multicurrency_prices' ), 10, 2 );
 
             add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
             add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
@@ -239,5 +241,21 @@ class WoocommerceAeliaCurrencySwitcher
         // }
 
         return $result;
+    }
+
+    public function giftcard_multicurrency_prices( $product_data, $product_id )
+    {
+        $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+        $cs_settings = \Aelia\WC\CurrencySwitcher\WC_Aelia_CurrencySwitcher::settings();
+        $default_currency = $cs_settings->default_geoip_currency();
+
+        if(!empty($available_currencies)) {
+            foreach ($available_currencies as $currency => $value) {
+                $product_data['regularPrice'][ $currency ] = floatval(number_format((float) $product_data['regularPrice'][ $default_currency ], 2));
+                $product_data['price'][ $currency ] =  floatval(number_format((float) $product_data['price'][ $default_currency ], 2));
+            }
+        }
+
+        return $product_data;
     }
 }
