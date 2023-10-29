@@ -44,6 +44,7 @@ class Product extends BaseCollection
 					'fields' => array(
 						['name' => 'id', 'type' => 'string', 'facet' => true],
 						['name' => 'productId', 'type' => 'string', 'facet' => true],
+						['name' => 'shortDescription', 'type' => 'string', 'optional' => true],
 						['name' => 'description', 'type' => 'string'],
 						['name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true],
 						['name' => 'permalink', 'type' => 'string'],
@@ -358,6 +359,7 @@ class Product extends BaseCollection
 			$product_data = [
 				'id' => strval($product->get_id()),
 				'productId' => strval($product->get_id()),
+				'shortDescription' => wpautop( $shortDescription ),
 				'description' => wpautop( $description ),
 				'name' => $product->get_name(),
 				'permalink' => wp_make_link_relative(get_permalink($product->get_id())),
