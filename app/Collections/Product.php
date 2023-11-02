@@ -269,7 +269,7 @@ class Product extends BaseCollection
 	
 			// Get variations if the product is a variable product
 			$variations_data = $default_attributes = [];
-			if ($product_type === 'variable') {
+			if ($product_type === 'variable' || $product_type === 'pw-gift-card') {
 				$variations = $product->get_available_variations();
 				foreach ($variations as $variation) {
 					$variation_obj = wc_get_product($variation['variation_id']);
@@ -279,7 +279,7 @@ class Product extends BaseCollection
 					$variant_thumbnail_alt_text = get_post_meta($variant_thumbnail_id, '_wp_attachment_image_alt', true);
 					$variant_thumbnail_src = get_the_post_thumbnail_url($variation['variation_id']);
 	
-					$variations_data[] = [
+					$variations_items = [
 						'variationId' => $variation['variation_id'],
 						'attributes' => $variation['attributes'],
 						'price' => array(
@@ -303,7 +303,9 @@ class Product extends BaseCollection
 						],
 					];
 
-					unset($variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src);
+					$variations_data[] = apply_filters('blaze_commerce_variation_multicurrency_prices', $variations_items, $variation['variation_id']);
+
+					unset($variations_items, $variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src);
 				}
 				
 				unset($variations);
