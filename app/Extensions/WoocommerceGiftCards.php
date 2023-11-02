@@ -18,30 +18,19 @@ class WoocommerceGiftCards
     public function __construct()
     {
         if ( is_plugin_active( 'pw-gift-cards/pw-gift-cards.php' ) ) {
-            add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'woocommerce_giftcard_price' ), 10, 2 );
+            add_filter( 'blaze_commerce_giftcard_info', array( $this, 'giftcard_email_content' ), 10, 1 );
         }
     }
 
-	public function woocommerce_giftcard_price( $product_data, $product_id ) {
-        if($product_data['productType'] === 'pw-gift-card') {
-			$currency = get_option('woocommerce_currency');
+    public function giftcard_email_content( $additional_settings ) {
+		if($ec_supreme_all_header_logo = get_option('ec_supreme_all_header_logo')) {
+			$additional_settings['ec_supreme_all_header_logo'] = $ec_supreme_all_header_logo;
+		}
 
-            $product_data['price'] = [
-				$currency => floatval(get_post_meta($product_id, '_price', true))
-			];
-			$product_data['regularPrice'] = [
-				$currency => floatval(get_post_meta($product_id, '_price', true))
-			];
-        }
+		if($ec_supreme_all_footer_text = get_option('ec_supreme_all_footer_text')) {
+			$additional_settings['ec_supreme_all_footer_text'] = wpautop( $ec_supreme_all_footer_text );
+		}
 
-		return $this->giftcard_multicurrency_prices( $product_data, $product_id );
-	}
-
-    public function giftcard_multicurrency_prices( $product_data, $product_id ) {
-        if( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
-            return apply_filters('blaze_commerce_giftcard_multicurrency_prices', $product_data, $product_id);
-    }
-
-        return $product_data;
+		return $additional_settings;
     }
 }
