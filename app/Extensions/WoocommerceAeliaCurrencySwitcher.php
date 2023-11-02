@@ -27,18 +27,22 @@ class WoocommerceAeliaCurrencySwitcher
             // add_filter('wooless_product_price', array( $this, 'wooless_product_regular_price'), 10, 2);
             // add_filter('wooless_product_regular_price', array( $this, 'wooless_product_regular_price'), 10, 2);
             // add_filter('wooless_product_sale_price', array( $this, 'wooless_product_sale_price'), 10, 2);
-            
-            add_filter( 'blaze_commerce_giftcard_multicurrency_prices', array( $this, 'giftcard_multicurrency_prices' ), 10, 2 );
 
             add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
             add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
             add_filter( 'graphql_RootQuery_fields', array($this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
+
+            add_filter( 'blaze_commerce_variation_multicurrency_prices', array( $this, 'variation_multicurrency_prices' ), 10, 2 );
         }
     }
 
     public function add_multicurrency_prices( $product_data, $product_id )
     {
         $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+
+        if($product_data['productType'] === 'pw-gift-card') {
+            return $this->giftcard_multicurrency_prices($product_data, $product_id, $available_currencies);
+        }
 
         $regular_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices($product_id);
         $product_data['regularPrice'] = $regular_prices;
@@ -76,7 +80,7 @@ class WoocommerceAeliaCurrencySwitcher
                 $product_data['salePrice'][ $currency ] =  floatval(number_format((float) $product_data['salePrice'][ $currency ], 2));
                 $product_data['price'][ $currency ] =  floatval(number_format((float) $product_data['price'][ $currency ], 2));
     
-                unset($converted_prices, $product, $converted_product, $_sale_price);
+                unset($converted_prices, $product, $converted_product, $_sale_price, $_regular_price);
             }
         }
 
@@ -243,19 +247,61 @@ class WoocommerceAeliaCurrencySwitcher
         return $result;
     }
 
-    public function giftcard_multicurrency_prices( $product_data, $product_id )
+    public function giftcard_multicurrency_prices( $product_data, $product_id, $available_currencies )
     {
-        $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
-        $cs_settings = \Aelia\WC\CurrencySwitcher\WC_Aelia_CurrencySwitcher::settings();
-        $default_currency = $cs_settings->default_geoip_currency();
-
         if(!empty($available_currencies)) {
             foreach ($available_currencies as $currency => $value) {
-                $product_data['regularPrice'][ $currency ] = floatval(number_format((float) $product_data['regularPrice'][ $default_currency ], 2));
-                $product_data['price'][ $currency ] =  floatval(number_format((float) $product_data['price'][ $default_currency ], 2));
+                $product_data['regularPrice'][ $currency ] = floatval(number_format((float) $product_data['variations'][0]['regularPrice'][ $currency ], 2));
+                $product_data['price'][ $currency ] =  floatval(number_format((float) $product_data['variations'][0]['price'][ $currency ], 2));
             }
         }
 
         return $product_data;
+    }
+
+    public function variation_multicurrency_prices( $variations_data, $variation_id ) {
+        $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+        
+        $variation_regular_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_variation_regular_prices($variation_id);
+        $variations_data['regularPrice'] = $variation_regular_prices;
+
+        $variation_sale_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_variation_sale_prices($variation_id);
+        $variations_data["salePrice"] = $variation_sale_prices;
+
+        if(!empty($available_currencies)) {
+            foreach ($available_currencies as $currency => $value) {
+                $converted_variation_prices = array();
+                if (! isset( $variations_data['regularPrice'][ $currency ]) || ! isset( $variations_data['salePrice'][ $currency ]) ) {
+                    $variation_obj = wc_get_product( $variation_id );
+                    $converted_variation = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_variation_product_prices( $variation_obj, $currency );
+                    $converted_variation_prices = array(
+                        'regular_price' => $converted_variation->get_regular_price(),
+                        'sale_price' => $converted_variation->get_sale_price(),
+                    );
+                }
+    
+                if ( ! isset( $variations_data['regularPrice'][ $currency ]) ) {
+                    $variations_data['regularPrice'][ $currency ] = $converted_variation_prices['regular_price'];
+                }
+    
+                if ( ! isset( $variations_data['salePrice'][ $currency ]) ) {
+                    $variations_data['salePrice'][ $currency ] = $converted_variation_prices['sale_price'];
+                }
+    
+                if ( ! isset( $variations_data['price'][ $currency ]) ) {
+                    $_variation_sale_price = $variations_data['salePrice'][ $currency ];
+                    $_variation_regular_price = $variations_data['regularPrice'][ $currency ];
+                    $variations_data['price'][ $currency ] = !empty( $_variation_sale_price ) ? $_variation_sale_price : $_variation_regular_price;
+                }
+    
+                $variations_data['regularPrice'][ $currency ] = floatval(number_format((float) $variations_data['regularPrice'][ $currency ], 2));
+                $variations_data['salePrice'][ $currency ] =  floatval(number_format((float) $variations_data['salePrice'][ $currency ], 2));
+                $variations_data['price'][ $currency ] =  floatval(number_format((float) $variations_data['price'][ $currency ], 2));
+    
+                unset($converted_variation_prices, $variation_obj, $converted_variation, $_variation_sale_price, $_variation_regular_price);
+            }
+        }
+
+        return $variations_data;
     }
 }
