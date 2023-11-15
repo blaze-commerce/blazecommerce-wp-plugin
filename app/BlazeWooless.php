@@ -89,6 +89,7 @@ class BlazeWooless
             '\\BlazeWooless\\Extensions\\CustomProductTabsForWoocommerce',
             '\\BlazeWooless\\Extensions\\JudgeMe',
             '\\BlazeWooless\\Extensions\\Yotpo',
+            '\\BlazeWooless\\Extensions\\YithWishList',
             '\\BlazeWooless\\Extensions\\ProductAddons',
             '\\BlazeWooless\\Extensions\\WoocommerceAeliaCurrencySwitcher',
             '\\BlazeWooless\\Extensions\\WoocommerceAfterpay',
