@@ -75,6 +75,7 @@ class Product extends BaseCollection
 						['name' => 'onSale', 'type' => 'bool', 'facet' => true],
 						['name' => 'stockQuantity', 'type' => 'int64'],
 						['name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true],
+						['name' => 'status', 'type' => 'string', 'sort' => true, 'facet' => true],
 						['name' => 'shippingClass', 'type' => 'string'],
 						['name' => 'updatedAt', 'type' => 'int64'],
 						['name' => 'createdAt', 'type' => 'int64'],
@@ -139,7 +140,7 @@ class Product extends BaseCollection
 			$imported_products_count = 0;
 			$total_imports = 0;
 			// wp_die();
-			$products = \wc_get_products(array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page ));
+			$products = \wc_get_products(array('limit' => $batch_size, 'page' => $page ));
 
 			$products_batch = array();
 
@@ -192,7 +193,7 @@ class Product extends BaseCollection
 			// echo "Imported products count: " . $imported_products_count ."/" . $total_imports . "\n";
 
 			$next_page = $page + 1;
-			$has_next_data =  !empty(\wc_get_products(array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $next_page )));
+			$has_next_data =  !empty(\wc_get_products(array( 'limit' => $batch_size, 'page' => $next_page )));
 			echo json_encode(array(
 				'imported_products_count' => count($successful_imports),
 				'total_imports' => $total_imports,
@@ -375,7 +376,6 @@ class Product extends BaseCollection
 				'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
 				'stockStatus' => $product->get_stock_status(),
 				'shippingClass' => $product->get_shipping_class(),
-				'shippingClass' => $product->get_shipping_class(),
 				'updatedAt' => strtotime($product->get_date_modified()),
 				'createdAt' => strtotime($product->get_date_created()),
 				'publishedAt' => $published_at,
@@ -391,8 +391,7 @@ class Product extends BaseCollection
 				'crossSellData' => empty($cross_sell_data) ? $related_products : $cross_sell_data,
 				'upsellData' => $upsell_data,
 				'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
-				// 'attributes' => $attributes,
-				// 'additional_information_shipping' => $shipping,
+				'status' => $product->get_status()
 			]; 
 		
 			unset($shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_data, $variations_data, $formatted_additional_tabs, $upsell_data, $published_at);
