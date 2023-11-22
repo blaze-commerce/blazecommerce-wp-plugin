@@ -46,22 +46,29 @@ if (!class_exists('Blaze_Wooless_Revalidate')) {
 			$wooless_frontend_url = get_option('wooless_frontend_url', '');
 			$typesense_private_key = get_option('typesense_api_key');
 
+			if (empty($wooless_frontend_url) || empty($typesense_private_key)) {
+				// Dont revalidate because there is no secret token and frontend url for the request. 
+				return null;
+			}
+
 			$curl = curl_init();
-			curl_setopt_array($curl, array(
-				CURLOPT_URL => $wooless_frontend_url . '/api/revalidate',
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => '["' . implode('","', $urls) . '"]',
-				CURLOPT_HTTPHEADER => array(
-					'api-secret-token: ' . $typesense_private_key,
-					'Content-Type: text/plain'
-				),
-			)
+			curl_setopt_array(
+				$curl,
+				array(
+					CURLOPT_URL => $wooless_frontend_url . '/api/revalidate',
+					CURLOPT_RETURNTRANSFER => true,
+					CURLOPT_ENCODING => '',
+					CURLOPT_MAXREDIRS => 10,
+					CURLOPT_TIMEOUT => 0,
+					CURLOPT_FOLLOWLOCATION => true,
+					CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+					CURLOPT_CUSTOMREQUEST => 'POST',
+					CURLOPT_POSTFIELDS => '["' . implode('","', $urls) . '"]',
+					CURLOPT_HTTPHEADER => array(
+						'api-secret-token: ' . $typesense_private_key,
+						'Content-Type: text/plain'
+					),
+				)
 			);
 
 			$response = curl_exec($curl);
