@@ -42,9 +42,12 @@ if ( !class_exists( 'Blaze_Wooless_Revalidate' ) ) {
          */
         public function request_frontend_page_revalidation($urls)
         {
+			$wooless_frontend_url = get_option('wooless_frontend_url', '');
+            $typesense_private_key = get_option('typesense_api_key');
+
             $curl = curl_init();
             curl_setopt_array($curl, array(
-            CURLOPT_URL => 'http://localhost:3000/api/revalidate',
+            CURLOPT_URL => $wooless_frontend_url . '/api/revalidate',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => '',
             CURLOPT_MAXREDIRS => 10,
@@ -54,7 +57,7 @@ if ( !class_exists( 'Blaze_Wooless_Revalidate' ) ) {
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_POSTFIELDS =>'["'.implode('","', $urls).'"]',
             CURLOPT_HTTPHEADER => array(
-                'secrettoken: 06182a9709e45ec2d66a9b929bbede68',
+                'api-secret-token: ' . $typesense_private_key,
                 'Content-Type: text/plain'
             ),
             ));
