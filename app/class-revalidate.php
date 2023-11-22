@@ -20,10 +20,18 @@ if (!class_exists('Blaze_Wooless_Revalidate')) {
 			add_action('next_js_revalidation_event', array($this, 'do_next_js_revalidation_event'), 10, 2);
 		}
 
+		public function get_object_permalink($id)
+		{
+			list($permalink, $post_name) = get_sample_permalink($id);
+			$view_link = str_replace(array('%pagename%', '%postname%'), $post_name, $permalink);
+
+			return $view_link;
+		}
+
 		public function revalidate_product_page($product_id)
 		{
 			$product_url = array(
-				wp_make_link_relative(get_permalink($product_id))
+				wp_make_link_relative($this->get_object_permalink($product_id))
 			);
 			wp_schedule_single_event(time() + 15, 'next_js_revalidation_event', [$product_url, time() + 1]);
 		}
