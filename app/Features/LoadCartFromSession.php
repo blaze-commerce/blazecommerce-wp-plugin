@@ -58,10 +58,16 @@ class LoadCartFromSession
 
 		// Bail if there isn't any data
 		if (!isset($_COOKIE['woocommerce_customer_session_id'])) {
-			return;
+			if(isset( $_GET['session_id'] )) {
+				$_COOKIE['woocommerce_customer_session_id'] = $_GET['session_id'];
+			}
 		}
 
 		$session_id = sanitize_text_field($_COOKIE['woocommerce_customer_session_id']);
+		// Bail if there isn't any data
+		if(empty($session_id)) {
+			return;
+		}
 
 		try {
 			$handler = new \WC_Session_Handler();
