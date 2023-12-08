@@ -139,6 +139,7 @@
       },
     },
     categoryFilters: commonFilterOption,
+    refinedSelection: commonFilterOption,
     attributeFilters: {
       classes: {
         label: 'Classes',
