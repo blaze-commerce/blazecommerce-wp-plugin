@@ -52,16 +52,20 @@ class Woocommerce
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
 	public function on_product_save($product_id, $wc_product)
 	{
-		try {
-			$document_data = Product::get_instance()->generate_typesense_data($wc_product);
-			Product::get_instance()->upsert($document_data);
-			do_action('ts_product_update', $product_id, $wc_product);
-		} catch (\Exception $e) {
-			$logger = wc_get_logger();
-			$context = array('source' => 'wooless-product-update');
+		// Check if the product is published before updating typesense data
+		if ($wc_product->get_status() == 'publish') {
+			try {
+				$document_data = Product::get_instance()->generate_typesense_data($wc_product);
+				// exit('<pre>'.print_r($document_data,1).'</pre>');
+				Product::get_instance()->upsert($document_data);
+				do_action('ts_product_update', $product_id, $wc_product);
+			} catch (\Exception $e) {
+				$logger = wc_get_logger();
+				$context = array('source' => 'wooless-product-update');
 
-			$logger->debug('TS Product Update Exception: ' . $e->getMessage(), $context);
-			error_log("Error updating product in Typesense: " . $e->getMessage());
+				$logger->debug('TS Product Update Exception: ' . $e->getMessage(), $context);
+				error_log("Error updating product in Typesense: " . $e->getMessage());
+			}
 		}
 	}
 
@@ -77,14 +81,16 @@ class Woocommerce
 		foreach ($items as $item) {
 			$product_id = $item->get_product_id();
 			$wc_product = wc_get_product($product_id);
-			try {
-				$document_data = Product::get_instance()->generate_typesense_data($wc_product);
-				Product::get_instance()->update(strval($product_id), $document_data);
-				do_action('ts_product_update', $product_id, $wc_product);
-			} catch (\Exception $e) {
-				error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
+
+			if ($wc_product->get_status() == 'publish') {
+				try {
+					$document_data = Product::get_instance()->generate_typesense_data($wc_product);
+					Product::get_instance()->update(strval($product_id), $document_data);
+					do_action('ts_product_update', $product_id, $wc_product);
+				} catch (\Exception $e) {
+					error_log("Error updating product in Typesense during checkout: " . $e->getMessage());
+				}
 			}
-			
 		}
 	}
 }
