@@ -30,7 +30,7 @@ class GraphQL
 			add_filter('graphql_response_headers_to_send', [$this, 'modify_response_headers'], 20);
 			add_filter('graphql_access_control_allow_headers', [$this, 'modify_access_control_allow_headers'], 20, 1);
 
-			add_filter('blaze_wooless_additional_graphql_info', [$this, 'woographql_is_composite_enabled'], 10, 1);
+			add_filter('blaze_wooless_additional_site_info', [$this, 'woographql_is_composite_enabled'], 10, 1);
 
 			add_action('init', [$this, 'maybe_save_jwt_secret']);
 		}
