@@ -21,53 +21,48 @@ class LoadCartFromSession
 		add_action('woocommerce_load_cart_from_session', array($this, 'woocommerce_load_cart_from_session'));
 		add_action('init', array($this, 'load_user_from_session'));
 		add_action('wp_footer', array($this, 'remove_session_id_from_url_script'));
+		add_action( 'woocommerce_before_thankyou', array($this, 'clear_cart_data') );
 		
-		add_filter('woocommerce_session_cookie', array( $this, 'custom_woocommerce_session_cookie' ), 10, 5);
 	}
 
-	public function custom_woocommerce_session_cookie($cookie, $session_id, $expires, $expiration, $user_id) {
-		$domain = BlazeCommerce()->cookie->cookie_domain(); // Replace with your actual domain
-		$cookie .= '; domain=' . $domain;
-	
-		return $cookie;
-	}
 
 	public function woocommerce_load_cart_from_session()
 	{
+		if ($_SERVER['REQUEST_URI'] === '/graphql') {
+			return;
+		}
 		$data_to_store = ['cart', 'applied_coupons', 'coupon_discount_totals', 'coupon_discount_tax_totals'];
 
 		if (is_user_logged_in()) {
+			$current_session = WC()->session;
+
 			foreach ($data_to_store as $key) {
 				$cookie_name = 'guest_session_' . $key;
 				if ( isset( $_COOKIE[$cookie_name] ) ) {
 					$unserialized_data = unserialize(urldecode($_COOKIE[$cookie_name]));
 					if ('cart' === $key) {
 						$account_cart_data = WC()->cart->get_cart();
+						$merged_cart_data = array_merge($account_cart_data, $unserialized_data);
 
-						$merged_cart_data = array_merge($unserialized_data, $account_cart_data);
-
-						WC()->session->set($key, $merged_cart_data);
+						$current_session->set($key, $merged_cart_data);
 					} else {
-						WC()->session->set($key, $unserialized_data);
+						$current_session->set($key, $unserialized_data);
 					}
-					
-					BlazeCommerce()->cookie->delete($cookie_name);
+
+					wc_setcookie( $cookie_name, '', time() - YEAR_IN_SECONDS );
 				}
 			}
+
+			WC()->session = $current_session;
+			return;
 		}
 
 		// Bail if there isn't any data
 		if (!isset($_COOKIE['woocommerce_customer_session_id'])) {
-			if(isset( $_GET['session_id'] )) {
-				$_COOKIE['woocommerce_customer_session_id'] = $_GET['session_id'];
-			}
+			return;
 		}
 
 		$session_id = sanitize_text_field($_COOKIE['woocommerce_customer_session_id']);
-		// Bail if there isn't any data
-		if(empty($session_id)) {
-			return;
-		}
 
 		try {
 			$handler = new \WC_Session_Handler();
@@ -88,7 +83,7 @@ class LoadCartFromSession
 				$session_value = unserialize($value);
 				$session->set($key, $session_value);
 				if ($is_guest && in_array($key, $data_to_store)) {
-					BlazeCommerce()->cookie->set( 'guest_session_' . $key,  urlencode($value) );
+					wc_setcookie( 'guest_session_' . $key,  urlencode($value) );
 				}
 			}
 		} catch (\Exception $exception) {
@@ -98,6 +93,10 @@ class LoadCartFromSession
 
 	public function load_user_from_session()
     {
+		if ($_SERVER['REQUEST_URI'] === '/graphql') {
+			return;
+		}
+
 		if (!isset($_COOKIE['woocommerce_customer_session_id']) || is_user_logged_in()) {
 			return;
 		}
@@ -142,10 +141,12 @@ class LoadCartFromSession
             exit;
         }
 
-		if (isset($_COOKIE['isLoggedIn']) && $_COOKIE['isLoggedIn'] === 'false' && is_user_logged_in()) {
-			wp_set_auth_cookie(0);
-			wp_redirect(home_url( $_SERVER['REQUEST_URI'] ));
-            exit;
+		if (isset($_COOKIE['isLoggedIn']) && $_COOKIE['isLoggedIn'] === 'false') {
+			if (is_user_logged_in()) {
+				wp_set_auth_cookie(0);
+				wp_redirect(home_url( $_SERVER['REQUEST_URI'] ));
+				exit;
+			}
 		}
 
         // if (!class_exists('WooCommerce') || (!isset($_COOKIE['woocommerce_customer_session_id']) && !isset($_GET['from_wooless']))) {
@@ -155,5 +156,12 @@ class LoadCartFromSession
 		// $url = remove_query_arg(['session_id', 'from_wooless'], $_SERVER['REQUEST_URI']);
 		// wp_redirect(apply_filters('blaze_wooless_destination_url_from_frontend', $url));
 		// exit;
+	}
+
+	function clear_cart_data( $order_id ){
+		wc_setcookie( 'woocommerce_total_product_in_cart', '', time() - YEAR_IN_SECONDS );
+		if (!is_user_logged_in()) {
+			wc_setcookie( 'woo-session', '', time() - YEAR_IN_SECONDS );
+		}
 	}
 }
