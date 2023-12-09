@@ -128,6 +128,7 @@
     categories: commonImageLink,
     cardGroup: commonImageLink,
     cardGroupSlider: commonImageLink,
+    blogPosts: commonImageLink,
     list: {
       text: {
         label: 'Text',
