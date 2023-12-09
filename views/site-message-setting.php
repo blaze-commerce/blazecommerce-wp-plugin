@@ -98,7 +98,7 @@ if (!class_exists('Blaze_Wooless_Site_Message_Compatibility')) {
 
         public function __construct()
         {
-            add_filter('blaze_wooless_additional_site_info_message', array($this, 'add_site_messages'), 10, 1);
+            add_filter('blaze_wooless_additional_site_info', array($this, 'add_site_messages'), 10, 1);
         }
 
         public function add_site_messages($site_messages_settings)

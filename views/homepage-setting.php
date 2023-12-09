@@ -420,7 +420,7 @@ if (!class_exists('Blaze_Wooless_Homepage_Settings_Compatibility')) {
 
         public function __construct()
         {
-            add_filter('blaze_wooless_additional_homepage_info', array($this, 'add_homepage_settings'), 10, 1);
+            add_filter('blaze_wooless_additional_site_info', array($this, 'add_homepage_settings'), 10, 1);
         }
 
         public function add_homepage_settings($additional_settings)

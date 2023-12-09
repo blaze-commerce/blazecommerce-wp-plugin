@@ -180,41 +180,6 @@ class SiteInfo extends BaseCollection
             // }
             // add_action('update_option_date_format', 'my_date_format_updated_callback', 10, 3);
     
-            $homepage_data = apply_filters('blaze_wooless_additional_homepage_info', array());
-            foreach ($homepage_data as $key => $value) {
-                if (empty($value)) {
-                    continue;
-                }
-    
-                // If it's 'popular_categories', decode it from a JSON string
-                if ($key == 'popular_categories') {
-                    $value = json_decode($value, true);
-                }
-    
-                $this->create([
-                    'name' => $key,
-                    'value' => (string) $value,
-                    'updated_at' => time(),
-                ]);
-            }
-
-            unset($homepage_data);
-    
-            $site_messages_data = apply_filters('blaze_wooless_additional_site_info_message', array());
-            foreach ($site_messages_data as $key => $value) {
-                if (empty($value)) {
-                    continue;
-                }
-    
-                $this->create([
-                    'name' => $key,
-                    'value' => $value,
-                    'updated_at' => time(),
-                ]);
-            }
-
-            unset($site_messages_data);
-    
             $initial_additional_data = array();
             
             $site_currency = get_woocommerce_currency();
@@ -241,6 +206,8 @@ class SiteInfo extends BaseCollection
     
                 if ( is_array( $value ) ) {
                     $value = json_encode( $value );
+                } else if ($key == 'popular_categories') {
+                    $value = json_decode($value, true);
                 }
     
                 $this->create([
@@ -251,58 +218,6 @@ class SiteInfo extends BaseCollection
             }
 
             unset($additional_data);
-    
-            $homepage_seo_settings = apply_filters('blaze_wooless_additional_homepage_seo_info', array());
-            foreach ($homepage_seo_settings as $key => $value) {
-                if (empty($value)) {
-                    continue;
-                }
-    
-                $this->create([
-                    'name' => $key,
-                    'value' => $value,
-                    'updated_at' => time(),
-                ]);
-            }
-    
-            $woographql_settings = apply_filters('blaze_wooless_additional_graphql_info', array());
-            foreach ($woographql_settings as $key => $value) {
-                if (empty($value)) {
-                    continue;
-                }
-    
-                $this->create([
-                    'name' => $key,
-                    'value' => $value,
-                    'updated_at' => time(),
-                ]);
-            }
-    
-            $woocommerce_afterpay_settings = apply_filters('blaze_wooless_woocommerce_afterpay_settings', array());
-            foreach ($woocommerce_afterpay_settings as $key => $value) {
-                if (empty($value)) {
-                    continue;
-                }
-    
-                $this->create([
-                    'name' => $key,
-                    'value' => $value,
-                    'updated_at' => time(),
-                ]);
-            }
-    
-            $gift_card_info = apply_filters('blaze_commerce_giftcard_info', array());
-            foreach ($gift_card_info as $key => $value) {
-                if (empty($value)) {
-                    continue;
-                }
-    
-                $this->create([
-                    'name' => $key,
-                    'value' => $value,
-                    'updated_at' => time(),
-                ]);
-            }
     
             do_action( 'blaze_wooless_after_site_info_sync' );
     

@@ -18,7 +18,7 @@ class WoocommerceGiftCards
     public function __construct()
     {
         if ( is_plugin_active( 'pw-gift-cards/pw-gift-cards.php' ) ) {
-            add_filter( 'blaze_commerce_giftcard_info', array( $this, 'giftcard_email_content' ), 10, 1 );
+            add_filter( 'blaze_wooless_additional_site_info', array( $this, 'giftcard_email_content' ), 10, 1 );
         }
     }
 
