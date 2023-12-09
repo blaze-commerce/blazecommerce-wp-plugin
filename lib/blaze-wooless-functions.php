@@ -17,3 +17,15 @@ function blaze_commerce_change_my_account_endpoint_urls( $url, $endpoint, $value
     return $url;
 }
 add_filter('woocommerce_get_endpoint_url', 'blaze_commerce_change_my_account_endpoint_urls', 10, 4);
+
+add_action('wp_footer', 'blaze_commerce_my_account_scripts' );
+function blaze_commerce_my_account_scripts() {
+	?>
+	<script>
+		(function($) {
+			var logoutUrl = $('.blz-logout-links').attr('href');
+			jQuery('.woocommerce-MyAccount-navigation-link--customer-logout > a').attr('href', logoutUrl);
+		})(jQuery)
+	</script>
+	<?php
+}
