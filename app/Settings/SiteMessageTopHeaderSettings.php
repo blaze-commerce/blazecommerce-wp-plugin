@@ -70,7 +70,7 @@ class SiteMessageTopHeaderSettings extends BaseSettings {
 
         $site_message_top_header = get_option('blaze_wooless_site_message_top_header', '');
         ?>
-            <input type="hidden" id="draggable_result" name="site_message_top_header" value='<?php echo json_encode($site_message_top_header) ?>'/>
+            <input type="hidden" id="draggable_result" name="site_message_top_header" value='<?php echo htmlspecialchars(json_encode($site_message_top_header), ENT_QUOTES) ?>'/>
         <?php
     }
 
