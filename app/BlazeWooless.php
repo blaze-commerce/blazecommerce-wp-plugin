@@ -86,6 +86,7 @@ class BlazeWooless
     public function register_extensions()
     {
         $extensions = array(
+            '\\BlazeWooless\\Extensions\\CustomProductTabsManager',
             '\\BlazeWooless\\Extensions\\CustomProductTabsForWoocommerce',
             '\\BlazeWooless\\Extensions\\JudgeMe',
             '\\BlazeWooless\\Extensions\\Yotpo',
