@@ -76,6 +76,7 @@ class BlazeWooless
             '\\BlazeWooless\\Features\\DraggableContent',
             '\\BlazeWooless\\Features\\LoadCartFromSession',
             '\\BlazeWooless\\Features\\Authentication',
+            '\\BlazeWooless\\Features\\CategoryBanner',
         );
 
         foreach ( $features as $feature ) {
