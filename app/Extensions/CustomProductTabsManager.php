@@ -144,16 +144,16 @@ class CustomProductTabsManager
         );
         $allcustomtabs = get_posts($args);
         foreach ($allcustomtabs as $alltabs_id) {
-            $custom_tab_tittle = get_post_meta($alltabs_id, 'tabetittle', true);
-
+            
             if ('checkbox' !== get_post_meta($alltabs_id, 'enablecheckbox', true)) {
                 continue;
             }
-
+            
             if (!$this->check_product_tabs_rule($alltabs_id, $product->get_id())) {
                 continue;
             }
-
+            
+            $custom_tab_tittle   = get_post_meta($alltabs_id, 'tabetittle', true);
             $newtab[$alltabs_id] = array(
                 'title' => $custom_tab_tittle,
                 'callback' => array($this, 'tab_content'),
