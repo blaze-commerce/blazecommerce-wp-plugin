@@ -33,33 +33,34 @@ class CustomProductTabsManager
     {
 
         $product_tabs = $this->get_custom_tabs($product);
-
-        if (!empty($product_tabs)) {
-
-            if (isset($product_tabs['description'])) {
-                // We are removing desription because this is processed by the frontend separately 
-                unset($product_tabs['description']);
-            }
-
-            $formatted_additional_tabs = []; // resets or initialize the data to empty array
-            foreach ($product_tabs as $key => $product_tab) {
-                $content = '';
-                if (isset($product_tab['callback'])) {
-                    ob_start();
-                    call_user_func($product_tab['callback'], $key, $product_tab);
-                    $content = ob_get_clean();
-                }
-
-                $tab_item = [
-                    'title' => wp_kses_post(apply_filters('woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key)),
-                    'content' => $content,
-                    'isOpen' => 0,
-                    'location' => 'side'
-                ];
-
-                $formatted_additional_tabs[] = apply_filters('wooless_tab_' . $key, $tab_item, $product_tab, $product);
-            }
+        if (empty($product_tabs)) {
+            return $formatted_additional_tabs;
         }
+
+        if (isset($product_tabs['description'])) {
+            // We are removing desription because this is processed by the frontend separately 
+            unset($product_tabs['description']);
+        }
+
+        $formatted_additional_tabs = []; // resets or initialize the data to empty array
+        foreach ($product_tabs as $key => $product_tab) {
+            $content = '';
+            if (isset($product_tab['callback'])) {
+                ob_start();
+                call_user_func($product_tab['callback'], $key, $product_tab);
+                $content = ob_get_clean();
+            }
+
+            $tab_item = [
+                'title' => wp_kses_post(apply_filters('woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key)),
+                'content' => $content,
+                'isOpen' => 0,
+                'location' => 'side'
+            ];
+
+            $formatted_additional_tabs[] = apply_filters('wooless_tab_' . $key, $tab_item, $product_tab, $product);
+        }
+
 
         return $formatted_additional_tabs;
     }
@@ -144,16 +145,16 @@ class CustomProductTabsManager
         );
         $allcustomtabs = get_posts($args);
         foreach ($allcustomtabs as $alltabs_id) {
-            
+
             if ('checkbox' !== get_post_meta($alltabs_id, 'enablecheckbox', true)) {
                 continue;
             }
-            
+
             if (!$this->check_product_tabs_rule($alltabs_id, $product->get_id())) {
                 continue;
             }
-            
-            $custom_tab_tittle   = get_post_meta($alltabs_id, 'tabetittle', true);
+
+            $custom_tab_tittle = get_post_meta($alltabs_id, 'tabetittle', true);
             $newtab[$alltabs_id] = array(
                 'title' => $custom_tab_tittle,
                 'callback' => array($this, 'tab_content'),
