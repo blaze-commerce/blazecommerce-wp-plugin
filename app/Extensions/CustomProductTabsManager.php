@@ -130,13 +130,8 @@ class CustomProductTabsManager
         $sorting_additional_information = get_option('ka_tabs_additional_information_field');
         $enable_additional_information = get_option('ka_tabs_enable_additional_information_field');
 
-        if (isset($sorting_additional_information) && !empty($sorting_additional_information)) {
+        if (!empty($sorting_additional_information) && empty($enable_additional_information)) {
             $newtab['additional_information']['title'] = esc_html($sorting_additional_information);
-        }
-
-
-        if (empty($enable_additional_information)) {
-            unset($newtab['additional_information']);
         }
 
         $args = array(
