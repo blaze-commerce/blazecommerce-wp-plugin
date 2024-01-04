@@ -198,19 +198,20 @@ class CustomProductTabsManager
 
 	public function tab_content($tabid, $tab)
 	{
-		// Source of this code can be found on /wp-content/plugins/custom-product-tabs-manager/class-custom-product-tabs-front.php method name is ka_customized_custom_tabs_content
+		  // Source of this code can be found on /wp-content/plugins/custom-product-tabs-manager/class-custom-product-tabs-front.php method name is ka_customized_custom_tabs_content
 		if (!isset($tab['ka_custom_tabs_id'])) {
             return;
 		}
 
         $new_tab_id = $tab['ka_custom_tabs_id'];
 
-		if ('checkbox' === get_post_meta($new_tab_id, 'enablecheckbox', true)) {
-			if ('editor' === get_post_meta($new_tab_id, 'tabcallback_select', true)) {
-				$af_tab_content = get_post_meta($new_tab_id, 'cpt_tab_content', true);
-				echo wp_kses_post(apply_filters('the_content', $af_tab_content));
-			}
-		}
+		if (
+            'checkbox' === get_post_meta($new_tab_id, 'enablecheckbox', true) &&
+            'editor'   === get_post_meta($new_tab_id, 'tabcallback_select', true)
+        ) {
+            $af_tab_content = get_post_meta($new_tab_id, 'cpt_tab_content', true);
+            echo wp_kses_post(apply_filters('the_content', $af_tab_content));
+        }
 	}
 
 }
