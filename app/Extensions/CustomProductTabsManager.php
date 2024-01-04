@@ -199,11 +199,11 @@ class CustomProductTabsManager
 	public function tab_content($tabid, $tab)
 	{
 		// Source of this code can be found on /wp-content/plugins/custom-product-tabs-manager/class-custom-product-tabs-front.php method name is ka_customized_custom_tabs_content
-		$new_tab_id = $tab['ka_custom_tabs_id'];
-
 		if (!isset($tab['ka_custom_tabs_id'])) {
-			return;
+            return;
 		}
+
+        $new_tab_id = $tab['ka_custom_tabs_id'];
 
 		if ('checkbox' === get_post_meta($new_tab_id, 'enablecheckbox', true)) {
 			if ('editor' === get_post_meta($new_tab_id, 'tabcallback_select', true)) {
