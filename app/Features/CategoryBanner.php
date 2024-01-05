@@ -36,26 +36,6 @@ class CategoryBanner
                 <h3><?php esc_html_e('Blaze Commerce', 'blaze-commerce'); ?></h3>
             </th>
         </tr>
-        
-        <!-- <tr class="form-field">
-            <th scope="row" valign="top"><label for="blaze_commerce_category_show_thumbnail">Show thumbnail banner</label></th>
-            <td>
-                <label>
-                    <input type="checkbox" name="blaze_commerce_category_show_thumbnail" id="blaze_commerce_category_show_thumbnail" <?php checked($blaze_commerce_category_show_thumbnail, 'on'); ?> />
-                </label>
-                <p class="description">Check this if you want the thumbnail to be the banner image on the front-end.</p>
-            </td>
-        </tr>
-
-        <tr class="form-field">
-            <th scope="row" valign="top"><label for="blaze_commerce_category_blurred_thumbnail">Blurred thumbnail?</label></th>
-            <td>
-                <label>
-                    <input type="checkbox" name="blaze_commerce_category_blurred_thumbnail" id="blaze_commerce_category_blurred_thumbnail" <?php checked($blaze_commerce_category_blurred_thumbnail, 'on'); ?> />
-                </label>
-                <p class="description">Check this if you want the thumbnail to be blurred. Only works if Show thumbnail banner is checked.</p>
-            </td>
-        </tr> -->
 
         <tr class="form-field">
             <th scope="row" valign="top"><label for="blaze_commerce_category_subtitle">Subtitle</label></th>
@@ -75,12 +55,6 @@ class CategoryBanner
             return;
         }
 
-        // $blaze_commerce_category_show_thumbnail_value = isset($_POST['blaze_commerce_category_show_thumbnail']) ? 'on' : 'off';
-        // update_term_meta($term_id, 'blaze_commerce_category_show_thumbnail', $blaze_commerce_category_show_thumbnail_value);
-
-        // $blaze_commerce_category_blurred_thumbnail_value = isset($_POST['blaze_commerce_category_blurred_thumbnail']) ? 'on' : 'off';
-        // update_term_meta($term_id, 'blaze_commerce_category_blurred_thumbnail', $blaze_commerce_category_blurred_thumbnail_value);
-
         if (isset($_POST['blaze_commerce_category_subtitle'])) {
             update_term_meta($term_id, 'blaze_commerce_category_subtitle', $_POST['blaze_commerce_category_subtitle']);
         }
@@ -93,16 +67,6 @@ class CategoryBanner
     }
 
     public function register_taxonomy_meta_datas_to_typesense($meta_data, $term_id) {
-        // $show_thumbnail = get_term_meta($term_id, 'blaze_commerce_category_show_thumbnail', true);
-        // if ($show_thumbnail) {
-        //     $meta_data[] = array('name' => 'show_thumbnail', 'value' => $show_thumbnail);
-        // }
-
-        // $blurred_thumbnail = get_term_meta($term_id, 'blaze_commerce_category_blurred_thumbnail', true);
-        // if ($blurred_thumbnail) {
-        //     $meta_data[] = array('name' => 'blurred_thumbnail', 'value' => $blurred_thumbnail);
-        // }
-
         $subtitle = get_term_meta($term_id, 'blaze_commerce_category_subtitle', true);
         if ($subtitle) {
             $meta_data[] = array('name' => 'subtitle', 'value' => $subtitle);
