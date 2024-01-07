@@ -315,7 +315,8 @@ class WoocommerceAeliaCurrencySwitcher
 
             $opposing_currency = reset(array_diff($enabled_currencies, array( $site_currency )));
 
-            $switch_currency_template = '<p class="checkout-switch-currency" data-currency="%1$s"><a style="cursor: pointer;">Switch to %1$s</a></p>';
+            $switch_to_currency_text = apply_filters( 'blaze_commerce_checkout_switch_currency_text', 'Switch to ' . $opposing_currency, $opposing_currency, $site_currency );
+            $switch_currency_template = '<p class="checkout-switch-currency" data-currency="%1$s"><a style="cursor: pointer;">' . esc_html__($switch_to_currency_text) . '</a></p>';
             ?>
                 <script type="text/javascript">
                     (function($) {
