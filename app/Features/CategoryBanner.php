@@ -26,8 +26,6 @@ class CategoryBanner
     }
 
     public function register_category_fields($tag) {
-        $blaze_commerce_category_show_thumbnail = get_term_meta($tag->term_id, 'blaze_commerce_category_show_thumbnail', true);
-        $blaze_commerce_category_blurred_thumbnail = get_term_meta($tag->term_id, 'blaze_commerce_category_blurred_thumbnail', true);
         $blaze_commerce_category_subtitle = get_term_meta($tag->term_id, 'blaze_commerce_category_subtitle', true);
         ?>
 
