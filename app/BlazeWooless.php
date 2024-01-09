@@ -26,10 +26,7 @@ class BlazeWooless
 
     public function init()
     {
-        // add_action('ts_product_update', array( $this, 'revalidate_frontend_path' ), 10, 1);
-        // add_action('next_js_revalidation_event', array( $this, 'do_next_js_revalidation_event' ), 10, 2);
         add_action( 'init', array( $this, 'register_extensions' ) );
-        // add_action('wp_update_nav_menu', array( Menu::get_instance(), 'update_typesense_document_on_menu_update' ), 10, 2);
         add_action('edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3);
 
         add_filter('blaze_wooless_generate_breadcrumbs', array( Taxonomy::get_instance(), 'generate_breadcrumbs' ), 10, 2);
@@ -76,6 +73,7 @@ class BlazeWooless
             '\\BlazeWooless\\Features\\DraggableContent',
             '\\BlazeWooless\\Features\\LoadCartFromSession',
             '\\BlazeWooless\\Features\\Authentication',
+            '\\BlazeWooless\\Features\\CategoryBanner',
         );
 
         foreach ( $features as $feature ) {
