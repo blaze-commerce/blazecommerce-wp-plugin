@@ -128,19 +128,45 @@ class ProductPageSettings extends BaseSettings
 
     public function update_fields($options)
     {
-        TypesenseClient::get_instance()->site_info()->upsert([
+        $site_info = TypesenseClient::get_instance()->site_info();
+
+        $site_info->upsert([
+            'id' => '10089551',
+            'name' => 'product_page_information_1',
+            'value' => json_encode([
+                'title' => $options['information_1_title'],
+                'icon' => $options['information_1_icon'],
+                'content' => $options['privacy_policy']
+            ]),
+            'updated_at' => time(),
+        ]);
+
+        $site_info->upsert([
+            'id' => '10089552',
+            'name' => 'product_page_information_2',
+            'value' => json_encode([
+                'title' => $options['information_2_title'],
+                'icon' => $options['information_2_icon'],
+                'content' => $options['returns_policy']
+            ]),
+            'updated_at' => time(),
+        ]);
+
+        $site_info->upsert([
             'id' => '1000001',
             'name' => 'privacy_policy_content',
             'value' => $options['privacy_policy'],
             'updated_at' => time(),
         ]);
-        TypesenseClient::get_instance()->site_info()->upsert([
+
+        $site_info->upsert([
             'id' => '1000002',
             'name' => 'returns_policy_content',
             'value' => $options['returns_policy'],
             'updated_at' => time(),
         ]);
-        TypesenseClient::get_instance()->site_info()->upsert([
+
+        $site_info->upsert([
             'id' => '1008955',
             'name' => 'description_after_content',
             'value' => $options['description_after_content'],
@@ -149,7 +175,7 @@ class ProductPageSettings extends BaseSettings
 
         $free_shipping_threshold = get_option('free_shipping_threshold', '');
         if (!empty($free_shipping_threshold)) {
-            TypesenseClient::get_instance()->site_info()->upsert([
+            $site_info->upsert([
                 'id' => '1000482',
                 'name' => 'free_shipping_threshold',
                 'value' => json_encode($free_shipping_threshold),
