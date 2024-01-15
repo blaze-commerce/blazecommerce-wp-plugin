@@ -5,7 +5,7 @@ namespace BlazeWooless\Settings;
 use BlazeWooless\Features\AttributeSettings;
 use BlazeWooless\TypesenseClient;
 
-class ProductPageSettings extends BaseSettings 
+class ProductPageSettings extends BaseSettings
 {
     private static $instance = null;
     public $tab_key = 'product';
@@ -14,21 +14,21 @@ class ProductPageSettings extends BaseSettings
     public static function get_instance()
     {
         if (self::$instance === null) {
-            self::$instance = new self( 'wooless_settings_product_page_options' );
+            self::$instance = new self('wooless_settings_product_page_options');
         }
 
         return self::$instance;
     }
-    
-    public function settings_callback( $options )
+
+    public function settings_callback($options)
     {
         try {
-            $this->update_fields( $options );
+            $this->update_fields($options);
         } catch (\Throwable $th) {
-            
+
         }
 
-        $homepage_layout = json_decode( stripslashes($_POST['homepage_layout']), true );
+        $homepage_layout = json_decode(stripslashes($_POST['homepage_layout']), true);
 
         if (is_array($homepage_layout)) {
             update_option('blaze_wooless_homepage_layout', $homepage_layout);
@@ -43,46 +43,90 @@ class ProductPageSettings extends BaseSettings
 
     public function settings()
     {
-        $product_page_settings = array(
-            'wooless_settings_product_page_section' => array(
+        $icons = [
+            'select' => 'Select',
+            'CiDeliveryTruck' => 'CiDeliveryTruck',
+            'CiViewList' => 'CiViewList',
+            'FiTruck' => 'FiTruck',
+            'FiLock' => 'FiLock',
+            'FiPackage' => 'FiPackage',
+            'CiCircleInfo' => 'CiCircleInfo',
+        ];
+        $product_page_settings = [
+            'wooless_settings_product_page_section' => [
                 'label' => 'Product Page',
-                'options' => array(
-                    array(
+                'options' => [
+                    [
+                        'id' => 'information_1_title',
+                        'label' => 'Information 1 Title',
+                        'type' => 'text',
+                        'args' => [
+                            'description' => 'Set the title for information 1.',
+                        ],
+                    ],
+                    [
                         'id' => 'privacy_policy',
-                        'label' => 'Privacy Policy',
+                        'label' => 'Information 1 Content',
                         'type' => 'html',
+                        'args' => [
+                            'description' => 'Set the content for information 1.',
+                        ],
+                    ],
+                    [
+                        'id' => 'information_1_icon',
+                        'label' => 'Information 1 Icon',
+                        'type' => 'select',
                         'args' => array(
-                            'description' => 'Set the privacy policy content.',
+                            'options' => $icons,
+                            'description' => 'Set the icon for information 1',
                         ),
-                    ),
-                    array(
+                    ],
+                    [
+                        'id' => 'information_2_title',
+                        'label' => 'Information 2 Title',
+                        'type' => 'text',
+                        'args' => [
+                            'description' => 'Set the title for information 2.',
+                        ],
+                    ],
+                    [
                         'id' => 'returns_policy',
-                        'label' => 'Returns Policy',
+                        'label' => 'Information 2 Content',
                         'type' => 'html',
-                        'args' => array(
+                        'args' => [
                             'description' => 'Set the returns policy content.'
+                        ],
+                    ],
+                    [
+                        'id' => 'information_2_icon',
+                        'label' => 'Information 2 Icon',
+                        'type' => 'select',
+                        'args' => array(
+                            'options' => $icons,
+                            'description' => 'Set the icon for information 2',
                         ),
-                    ),
-                    array(
+                    ],
+                    [
                         'id' => 'description_after_content',
                         'label' => 'Description After Content',
                         'type' => 'html',
-                        'args' => array(
+                        'args' => [
                             'description' => 'This will be displayed after the description on all products.'
-                        ),
-                    ),
-                )
-            ),
-        );
+                        ],
+                    ],
+                ]
+            ],
+        ];
 
-        return apply_filters( 'blaze_wooless_product_page_settings', $product_page_settings );
+        return apply_filters('blaze_wooless_product_page_settings', $product_page_settings);
     }
 
-    public function section_callback() {
+    public function section_callback()
+    {
         echo '<p>Select which areas of content you wish to display.</p>';
     }
 
-    public function update_fields( $options )
+    public function update_fields($options)
     {
         TypesenseClient::get_instance()->site_info()->upsert([
             'id' => '1000001',
@@ -103,68 +147,72 @@ class ProductPageSettings extends BaseSettings
             'updated_at' => time(),
         ]);
 
-		$free_shipping_threshold = get_option('free_shipping_threshold', '');
-		if (!empty($free_shipping_threshold)) {
-			TypesenseClient::get_instance()->site_info()->upsert([
-				'id' => '1000482',
-				'name' => 'free_shipping_threshold',
-				'value' => json_encode($free_shipping_threshold),
-				'updated_at' => time(),
-			]);
-		}
+        $free_shipping_threshold = get_option('free_shipping_threshold', '');
+        if (!empty($free_shipping_threshold)) {
+            TypesenseClient::get_instance()->site_info()->upsert([
+                'id' => '1000482',
+                'name' => 'free_shipping_threshold',
+                'value' => json_encode($free_shipping_threshold),
+                'updated_at' => time(),
+            ]);
+        }
 
-        do_action( 'blaze_wooless_save_product_page_settings', $options );
+        do_action('blaze_wooless_save_product_page_settings', $options);
     }
 
     public function register_hooks()
     {
-        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'sync_additional_data' ), 10 );
+        add_action('blaze_wooless_after_site_info_sync', array($this, 'sync_additional_data'), 10);
     }
 
     public function sync_additional_data()
     {
         $options = $this->get_option();
-        $this->update_fields( $options );
+        $this->update_fields($options);
 
-		if (isset($_POST['free_shipping_threshold'])) {
-			update_option('free_shipping_threshold', $_POST['free_shipping_threshold']);
-			TypesenseClient::get_instance()->site_info()->upsert([
-				'id' => '1000482',
-				'name' => 'free_shipping_threshold',
-				'value' => json_encode($_POST['free_shipping_threshold']),
-				'updated_at' => time(),
-			]);
-		}
+        if (isset($_POST['free_shipping_threshold'])) {
+            update_option('free_shipping_threshold', $_POST['free_shipping_threshold']);
+            TypesenseClient::get_instance()->site_info()->upsert([
+                'id' => '1000482',
+                'name' => 'free_shipping_threshold',
+                'value' => json_encode($_POST['free_shipping_threshold']),
+                'updated_at' => time(),
+            ]);
+        }
     }
 
-	public function footer_callback()
-	{
-		if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
+    public function footer_callback()
+    {
+        if (is_plugin_active('woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php')) {
             $available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
         } else {
-            $base_currency =  get_woocommerce_currency();
+            $base_currency = get_woocommerce_currency();
             $available_currencies = [
                 $base_currency => ''
             ];
         }
 
-		$free_shipping_threshold = get_option( 'free_shipping_threshold', []);
+        $free_shipping_threshold = get_option('free_shipping_threshold', []);
         ?>
-            <h2>Free Shipping Threshold</h2>
-            <table class="form-table" role="presentation"> 
-                <tbody>
-                <?php foreach ($available_currencies as $currency => $value) : ?>
+        <h2>Free Shipping Threshold</h2>
+        <table class="form-table" role="presentation">
+            <tbody>
+                <?php foreach ($available_currencies as $currency => $value): ?>
                     <tr>
-                        <th><?php echo $currency ?></th>
+                        <th>
+                            <?php echo $currency ?>
+                        </th>
                         <td>
-                            <input type="text" id="free_shipping_threshold_<?php echo $currency ?>" name="free_shipping_threshold[<?php echo $currency ?>]" value="<?php echo $free_shipping_threshold[$currency] ?? ''; ?>">
+                            <input type="text" id="free_shipping_threshold_<?php echo $currency ?>"
+                                name="free_shipping_threshold[<?php echo $currency ?>]"
+                                value="<?php echo $free_shipping_threshold[$currency] ?? ''; ?>">
                         </td>
                     </tr>
                 <?php endforeach; ?>
-                </tbody>
-            </table>
+            </tbody>
+        </table>
         <?php
-	}
+    }
 }
 
 ProductPageSettings::get_instance();
