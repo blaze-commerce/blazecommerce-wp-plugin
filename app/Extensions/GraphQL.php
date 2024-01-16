@@ -127,6 +127,20 @@ class GraphQL
                             return $payload['status'];
                         },
                     ),
+                    'email' => array(
+                        'type' => 'String',
+                        'description' => 'Logged in user email',
+                        'resolve' => function ($payload) {
+                            return $payload['email'];
+                        },
+                    ),
+                    'user_id' => array(
+                        'type' => 'String',
+                        'description' => 'Logged in user id',
+                        'resolve' => function ($payload) {
+                            return $payload['user_id'];
+                        },
+                    ),
                 ),
                 'mutateAndGetPayload' => function ($input) {
                     $user = wp_signon(
@@ -141,7 +155,12 @@ class GraphQL
                         throw new UserError(!empty($user->get_error_code()) ? $user->get_error_code() : 'invalid login');
                     }
 
-                    return array('status' => 'SUCCESS');
+
+                    return array(
+                        'status' => 'SUCCESS',
+                        'email' => esc_html($user->user_email),
+                        'user_id' => esc_html($user->ID)
+                    );
                 },
             )
         );
