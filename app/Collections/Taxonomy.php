@@ -8,7 +8,7 @@ class Taxonomy extends BaseCollection
 	public $collection_name = 'taxonomy';
 
 	public static function get_instance()
-	{
+	{ 
 		if (self::$instance === null) {
 			self::$instance = new self();
 		}
@@ -43,6 +43,7 @@ class Taxonomy extends BaseCollection
 				['name' => 'bannerText', 'type' => 'string'],
 				['name' => 'parentTerm', 'type' => 'string'],
 				['name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true],
+				['name' => 'metaData', 'type' => 'object[]', 'optional' => true],
 			],
 			'default_sorting_field' => 'updatedAt',
 			'enable_nested_fields' => true,
@@ -98,6 +99,7 @@ class Taxonomy extends BaseCollection
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
 			'thumbnail' => $thumbnail,
 			'breadcrumbs' => $this->generate_breadcrumbs($term->term_id, $taxonomy),
+			'metaData'	=> apply_filters('blaze_commerce_taxonomy_meta_data', array(), $term->term_id),
 		];
 
 		return $document;

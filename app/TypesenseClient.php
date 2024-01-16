@@ -13,6 +13,11 @@ class TypesenseClient
     public $store_id = null;
     private $client = null;
 
+    /**
+     * Returns the current class
+     *
+     * @return TypesenseClient
+     */
     public static function get_instance()
     {
         if (self::$instance === null) {
@@ -91,6 +96,11 @@ class TypesenseClient
     public function site_info()
     {
         return $this->get_documents( 'site_info-' . $this->store_id );
+    }
+
+    public function taxonomy()
+    {
+        return $this->get_documents( 'taxonomy-' . $this->store_id );
     }
 
     public function product()
