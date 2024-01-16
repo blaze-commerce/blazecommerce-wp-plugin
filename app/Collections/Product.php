@@ -390,7 +390,7 @@ class Product extends BaseCollection
 				// Add variations data
 				'crossSellData' => empty($cross_sell_data) ? $related_products : $cross_sell_data,
 				'upsellData' => $upsell_data,
-				'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id),
+				'additionalTabs' => apply_filters('wooless_product_tabs', $formatted_additional_tabs, $product_id, $product),
 				'status' => $product->get_status()
 			]; 
 		
