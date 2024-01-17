@@ -139,8 +139,9 @@ class Product extends BaseCollection
 			$batch_size = 250; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports = 0;
-			// wp_die();
-			$products = \wc_get_products(array('limit' => $batch_size, 'page' => $page ));
+			$query_args = array('status' => 'publish', 'limit' => $batch_size, 'page' => $page );
+
+			$products = \wc_get_products($query_args);
 
 			$products_batch = array();
 
@@ -193,7 +194,8 @@ class Product extends BaseCollection
 			// echo "Imported products count: " . $imported_products_count ."/" . $total_imports . "\n";
 
 			$next_page = $page + 1;
-			$has_next_data =  !empty(\wc_get_products(array( 'limit' => $batch_size, 'page' => $next_page )));
+			$query_args['page'] = $next_page;
+			$has_next_data =  !empty(\wc_get_products($query_args));
 			echo json_encode(array(
 				'imported_products_count' => count($successful_imports),
 				'total_imports' => $total_imports,
