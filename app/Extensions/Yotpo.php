@@ -2,103 +2,100 @@
 
 namespace BlazeWooless\Extensions;
 
-class Yotpo 
-{
-    private static $instance = null;
-    public static $API_URL = 'https://api.yotpo.com/v1';
+class Yotpo {
+	private static $instance = null;
+	public static $API_URL = 'https://api.yotpo.com/v1';
 
-    public static function get_instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
+	public static function get_instance() {
+		if ( self::$instance === null ) {
+			self::$instance = new self();
+		}
 
-        return self::$instance;
-    }
+		return self::$instance;
+	}
 
-    public function __construct()
-    {
-        if ( is_plugin_active( 'yotpo-social-reviews-for-woocommerce/wc_yotpo.php' ) ) {
-            add_action('blaze_wooless_generate_product_reviews_data', array( $this, 'generate_product_data' ), 10, 1);
+	public function __construct() {
+		if ( is_plugin_active( 'yotpo-social-reviews-for-woocommerce/wc_yotpo.php' ) ) {
+			add_action( 'blaze_wooless_generate_product_reviews_data', array( $this, 'generate_product_data' ), 10, 1 );
 
-            add_filter('blaze_wooless_product_data_for_typesense', array( $this, 'generate_product_reviews_stats' ), 10, 2);
+			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'generate_product_reviews_stats' ), 10, 2 );
 
-            add_filter('blaze_wooless_cross_sell_data_for_typesense', array( $this, 'generate_cross_sell_reviews_stats' ), 10, 2);
-        }
-    }
+			add_filter( 'blaze_wooless_cross_sell_data_for_typesense', array( $this, 'generate_cross_sell_reviews_stats' ), 10, 2 );
+		}
+	}
 
-    public function get_api_key() {
-        $yotpo_settings = get_option('yotpo_settings');
+	public function get_api_key() {
+		$yotpo_settings = get_option( 'yotpo_settings' );
 
-        return $yotpo_settings['app_key'];
-    }
+		return $yotpo_settings['app_key'];
+	}
 
-    public function generate_product_data() {
-        $page = 1;
-        $batch_size = 100;
-        $finished = false;
-        $product_reviews = array();
+	public function generate_product_data() {
+		$page            = 1;
+		$batch_size      = 100;
+		$finished        = false;
+		$product_reviews = array();
 
-        while(!$finished) {
-            $params = array(
-                'page' => $page,
-                'count' => $batch_size,
-            );
+		while ( ! $finished ) {
+			$params = array(
+				'page' => $page,
+				'count' => $batch_size,
+			);
 
-            $QUERY_PARAMETERS = http_build_query( $params );
-            
-            $result = wp_remote_get( self::$API_URL . '/apps/' . $this->get_api_key() . '/bottom_lines?' . $QUERY_PARAMETERS );
+			$QUERY_PARAMETERS = http_build_query( $params );
 
-            $response = json_decode( wp_remote_retrieve_body($result), true );
+			$result = wp_remote_get( self::$API_URL . '/apps/' . $this->get_api_key() . '/bottom_lines?' . $QUERY_PARAMETERS );
 
-            if(empty($response['response']['bottomlines'])) {
-                $finished = true;
-                continue;
-            }
+			$response = json_decode( wp_remote_retrieve_body( $result ), true );
 
-            foreach($response['response']['bottomlines'] as $stats) {
-                $product_reviews[$stats['domain_key']] = array(
-                    'product_score' => (float)$stats['product_score'],
-                    'total_reviews' => (int)$stats['total_reviews'],
-                );
-            }
+			if ( empty( $response['response']['bottomlines'] ) ) {
+				$finished = true;
+				continue;
+			}
 
-            $page++;
+			foreach ( $response['response']['bottomlines'] as $stats ) {
+				$product_reviews[ $stats['domain_key'] ] = array(
+					'product_score' => (float) $stats['product_score'],
+					'total_reviews' => (int) $stats['total_reviews'],
+				);
+			}
 
-            unset($params, $QUERY_PARAMETERS, $result, $response);
-        }
+			$page++;
 
-        update_option('blaze_commerce_yotpo_product_reviews', $product_reviews);
-    }
+			unset( $params, $QUERY_PARAMETERS, $result, $response );
+		}
 
-    public function generate_product_reviews_stats($product_data, $product_id) {
-        if(!empty($product_data) && $product_id) {
-            $reviews = get_option('blaze_commerce_yotpo_product_reviews');
+		update_option( 'blaze_commerce_yotpo_product_reviews', $product_reviews );
+	}
 
-            if(!empty($reviews[$product_id])) {
-                $product_data['yotpoReviews'] = $reviews[$product_id];
-            }
-        }
+	public function generate_product_reviews_stats( $product_data, $product_id ) {
+		if ( ! empty( $product_data ) && $product_id ) {
+			$reviews = get_option( 'blaze_commerce_yotpo_product_reviews' );
 
-        return $product_data;
-    }
+			if ( ! empty( $reviews[ $product_id ] ) ) {
+				$product_data['yotpoReviews'] = $reviews[ $product_id ];
+			}
+		}
 
-    public function generate_cross_sell_reviews_stats($product_data, $product_id) {
-        $product = array();
+		return $product_data;
+	}
 
-        if(!empty($product_data)) {
-            $reviews = get_option('blaze_commerce_yotpo_product_reviews');
+	public function generate_cross_sell_reviews_stats( $product_data, $product_id ) {
+		$product = array();
 
-            foreach($product_data as $product) {
-                if(!empty($reviews[$product['id']])) {
-                    $product['yotpoReviews'] = $reviews[$product['id']];
-                }
-            }
-        }
+		if ( ! empty( $product_data ) ) {
+			$reviews = get_option( 'blaze_commerce_yotpo_product_reviews' );
 
-        unset($product_data);
-        unset($reviews);
+			foreach ( $product_data as $product ) {
+				if ( ! empty( $reviews[ $product['id'] ] ) ) {
+					$product['yotpoReviews'] = $reviews[ $product['id'] ];
+				}
+			}
+		}
 
-        return $product;
-    }
+		unset( $product_data );
+		unset( $reviews );
+
+		return $product;
+	}
 }
