@@ -105,6 +105,8 @@ class Product extends BaseCollection {
 						[ 'name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true ],
 						[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
+						[ 'name' => 'metaData', 'type' => 'object', 'optional' => true ],
+						[ 'name' => 'metaData.productLabel', 'type' => 'string[]', 'optional' => true ],
 					),
 					'default_sorting_field' => 'updatedAt',
 					'enable_nested_fields' => true
