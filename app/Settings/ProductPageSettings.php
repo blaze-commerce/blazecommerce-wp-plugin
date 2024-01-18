@@ -39,37 +39,72 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		$product_page_settings = array(
+		$icons                 = array(
+			'select' => 'Select',
+			'CiDeliveryTruck' => 'CiDeliveryTruck',
+			'CiViewList' => 'CiViewList',
+			'FiTruck' => 'FiTruck',
+			'FiLock' => 'FiLock',
+			'FiPackage' => 'FiPackage',
+			'CiCircleInfo' => 'CiCircleInfo',
+		);
+		$product_page_settings = [ 
 			'wooless_settings_product_page_section' => array(
 				'label' => 'Product Page',
 				'options' => array(
 					array(
-						'id' => 'privacy_policy',
-						'label' => 'Privacy Policy',
+						'id' => 'information_1_title',
+						'label' => 'Information 1 Title',
+						'type' => 'text',
+						'args' => array( 'description' => 'Set the title for information 1.', ),
+					),
+					array(
+						'id' => 'information_1_content',
+						'label' => 'Information 1 Content',
 						'type' => 'html',
 						'args' => array(
-							'description' => 'Set the privacy policy content.',
+							'description' => 'Set the content for information 1.',
 						),
 					),
 					array(
-						'id' => 'returns_policy',
-						'label' => 'Returns Policy',
-						'type' => 'html',
+						'id' => 'information_1_icon',
+						'label' => 'Information 1 Icon',
+						'type' => 'select',
 						'args' => array(
-							'description' => 'Set the returns policy content.'
+							'options' => $icons,
+							'description' => 'Set the icon for information 1',
+						),
+					),
+					array(
+						'id' => 'information_2_title',
+						'label' => 'Information 2 Title',
+						'type' => 'text',
+						'args' => array( 'description' => 'Set the title for information 2.', ),
+					),
+					array(
+						'id' => 'information_2_content',
+						'label' => 'Information 2 Content',
+						'type' => 'html',
+						'args' => array( 'description' => 'Set the returns policy content.' ),
+					),
+					array(
+						'id' => 'information_2_icon',
+						'label' => 'Information 2 Icon',
+						'type' => 'select',
+						'args' => array(
+							'options' => $icons,
+							'description' => 'Set the icon for information 2',
 						),
 					),
 					array(
 						'id' => 'description_after_content',
 						'label' => 'Description After Content',
 						'type' => 'html',
-						'args' => array(
-							'description' => 'This will be displayed after the description on all products.'
-						),
+						'args' => array( 'description' => 'This will be displayed after the description on all products.' ),
 					),
 				)
 			),
-		);
+		];
 
 		return apply_filters( 'blaze_wooless_product_page_settings', $product_page_settings );
 	}
@@ -79,33 +114,53 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function update_fields( $options ) {
-		TypesenseClient::get_instance()->site_info()->upsert( [ 
-			'id' => '1000001',
-			'name' => 'privacy_policy_content',
-			'value' => $options['privacy_policy'],
-			'updated_at' => time(),
-		] );
-		TypesenseClient::get_instance()->site_info()->upsert( [ 
-			'id' => '1000002',
-			'name' => 'returns_policy_content',
-			'value' => $options['returns_policy'],
-			'updated_at' => time(),
-		] );
-		TypesenseClient::get_instance()->site_info()->upsert( [ 
-			'id' => '1008955',
-			'name' => 'description_after_content',
-			'value' => $options['description_after_content'],
-			'updated_at' => time(),
-		] );
+		$site_info = TypesenseClient::get_instance()->site_info();
+
+		$site_info->upsert(
+			array(
+				'id' => '10089551',
+				'name' => 'product_page_information_1',
+				'value' => json_encode( array(
+					'title' => $options['information_1_title'],
+					'icon' => $options['information_1_icon'],
+					'content' => $options['information_1_content']
+				) ),
+				'updated_at' => time(),
+			)
+		);
+
+		$site_info->upsert(
+			array(
+				'id' => '10089552',
+				'name' => 'product_page_information_2',
+				'value' => json_encode( array(
+					'title' => $options['information_2_title'],
+					'icon' => $options['information_2_icon'],
+					'content' => $options['information_2_content']
+				) ),
+				'updated_at' => time(),
+			)
+		);
+
+		$site_info->upsert(
+			array(
+				'id' => '1000001',
+				'name' => 'privacy_policy_content',
+				'value' => $options['privacy_policy'],
+				'updated_at' => time(),
+			)
+		);
 
 		$free_shipping_threshold = get_option( 'free_shipping_threshold', '' );
 		if ( ! empty( $free_shipping_threshold ) ) {
-			TypesenseClient::get_instance()->site_info()->upsert( [ 
-				'id' => '1000482',
-				'name' => 'free_shipping_threshold',
-				'value' => json_encode( $free_shipping_threshold ),
-				'updated_at' => time(),
-			] );
+			$site_info->upsert(
+				array(
+					'id' => '1000482',
+					'name' => 'free_shipping_threshold',
+					'value' => json_encode( $free_shipping_threshold ),
+					'updated_at' => time(),
+				)
+			);
 		}
 
 		do_action( 'blaze_wooless_save_product_page_settings', $options );
