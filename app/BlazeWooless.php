@@ -59,7 +59,7 @@ class BlazeWooless {
 			$setting::get_instance();
 		}
 	}
-
+	
 	public function register_features() {
 		$features = array(
 			'\\BlazeWooless\\Features\\AttributeSettings',
@@ -90,6 +90,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\YoastSEO',
 			'\\BlazeWooless\\Extensions\\GraphQL',
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
+            '\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 		);
 
 		foreach ( $extensions as $extension ) {
