@@ -74,6 +74,10 @@ class GraphQL {
 					return $shipping instanceof \WC_Shipping_Free_Shipping;
 				}));
 
+				$show_free_shipping_banner = bw_get_general_settings( 'show_free_shipping_banner' );
+
+				if ( empty( $show_free_shipping_banner )) return null;
+
 				return new \WC_Shipping_Rate(
 					'free_shipping:' . $free_shipping_method->instance_id,
 					$free_shipping_method->title,
