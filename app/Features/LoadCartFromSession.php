@@ -3,13 +3,11 @@
 
 namespace BlazeWooless\Features;
 
-class LoadCartFromSession
-{
+class LoadCartFromSession {
 	private static $instance = null;
 
-	public static function get_instance()
-	{
-		if (self::$instance === null) {
+	public static function get_instance() {
+		if ( self::$instance === null ) {
 			self::$instance = new self();
 		}
 
@@ -38,9 +36,9 @@ class LoadCartFromSession
 
 			foreach ($data_to_store as $key) {
 				$cookie_name = 'guest_session_' . $key;
-				if ( isset( $_COOKIE[$cookie_name] ) ) {
-					$unserialized_data = unserialize(urldecode($_COOKIE[$cookie_name]));
-					if ('cart' === $key) {
+				if ( isset( $_COOKIE[ $cookie_name ] ) ) {
+					$unserialized_data = unserialize( urldecode( $_COOKIE[ $cookie_name ] ) );
+					if ( 'cart' === $key ) {
 						$account_cart_data = WC()->cart->get_cart();
 						$merged_cart_data = array_merge($account_cart_data, $unserialized_data);
 
@@ -65,18 +63,18 @@ class LoadCartFromSession
 		$session_id = sanitize_text_field($_COOKIE['woocommerce_customer_session_id']);
 
 		try {
-			$handler = new \WC_Session_Handler();
-			$session_data = $handler->get_session($session_id);
+			$handler      = new \WC_Session_Handler();
+			$session_data = $handler->get_session( $session_id );
 
 			// We were passed a session ID, yet no session was found. Let's log this and bail.
-			if (empty($session_data)) {
-				throw new \Exception('Could not locate WooCommerce session on checkout');
+			if ( empty( $session_data ) ) {
+				throw new \Exception( 'Could not locate WooCommerce session on checkout' );
 			}
 
 			// Go get the session instance (WC_Session) from the Main WC Class
 			$session = WC()->session;
 
-			$is_guest = unserialize($session_data['customer'])['id'] == 0;
+			$is_guest = unserialize( $session_data['customer'] )['id'] == 0;
 
 			// Set the session variable
 			foreach ($session_data as $key => $value) {
@@ -101,31 +99,31 @@ class LoadCartFromSession
 			return;
 		}
 
-		$session_id = sanitize_text_field($_COOKIE['woocommerce_customer_session_id']);
+		$session_id = sanitize_text_field( $_COOKIE['woocommerce_customer_session_id'] );
 
 		try {
-			$handler = new \WC_Session_Handler();
-			$session_data = $handler->get_session($session_id);
+			$handler      = new \WC_Session_Handler();
+			$session_data = $handler->get_session( $session_id );
 
 
 			// We were passed a session ID, yet no session was found. Let's log this and bail.
-			if (empty($session_data)) {
-				throw new \Exception('Could not locate WooCommerce session on checkout');
+			if ( empty( $session_data ) ) {
+				throw new \Exception( 'Could not locate WooCommerce session on checkout' );
 			}
 
-            if ($customer = $session_data['customer']) {
-                $customer_data = unserialize($customer);
-                $customer_id = $customer_data['id'];
+			if ( $customer = $session_data['customer'] ) {
+				$customer_data = unserialize( $customer );
+				$customer_id   = $customer_data['id'];
 
-                if ($customer_id) {
-                    // Authenticate the user and set the authentication cookies
-                    wp_set_auth_cookie($customer_id);
-                }
-            }
+				if ( $customer_id ) {
+					// Authenticate the user and set the authentication cookies
+					wp_set_auth_cookie( $customer_id );
+				}
+			}
 		} catch (\Exception $exception) {
 			// ErrorHandling::capture( $exception );
 		}
-    }
+	}
 
 	public function remove_session_id_from_url_script()
 	{
@@ -149,9 +147,21 @@ class LoadCartFromSession
 			}
 		}
 
-        // if (!class_exists('WooCommerce') || (!isset($_COOKIE['woocommerce_customer_session_id']) && !isset($_GET['from_wooless']))) {
-        //     return;
-        // }
+		$pages_should_redirect_to_frontend = apply_filters( 'blaze_wooless_pages_should_redirect_to_frontend', is_shop() || is_product_category() || is_product() );
+		if ( $pages_should_redirect_to_frontend ) {
+			wp_redirect( home_url( $_SERVER['REQUEST_URI'] ) );
+			exit;
+		}
+
+		if ( isset( $_COOKIE['isLoggedIn'] ) && $_COOKIE['isLoggedIn'] === 'false' && is_user_logged_in() ) {
+			wp_set_auth_cookie( 0 );
+			wp_redirect( home_url( $_SERVER['REQUEST_URI'] ) );
+			exit;
+		}
+
+		// if (!class_exists('WooCommerce') || (!isset($_COOKIE['woocommerce_customer_session_id']) && !isset($_GET['from_wooless']))) {
+		//     return;
+		// }
 
 		// $url = remove_query_arg(['session_id', 'from_wooless'], $_SERVER['REQUEST_URI']);
 		// wp_redirect(apply_filters('blaze_wooless_destination_url_from_frontend', $url));
