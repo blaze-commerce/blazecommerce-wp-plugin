@@ -367,9 +367,9 @@ class Product extends BaseCollection {
 				'slug' => $product->get_slug(),
 				'thumbnail' => $thumbnail,
 				'sku' => $product->get_sku(),
-				'price' => $default_price,
-				'regularPrice' => $default_regular_price,
-				'salePrice' => $default_sale_price,
+				'price' => apply_filters('wooless_product_price', $default_price, $product_id),
+				'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
+				'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
 				'onSale' => $product->is_on_sale(),
 				'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
 				'stockStatus' => $product->get_stock_status(),
@@ -495,12 +495,58 @@ class Product extends BaseCollection {
 						}, $attachment_ids );
 
 						// Get the thumbnail
-						$thumbnail_id       = get_post_thumbnail_id( $product_id );
-						$attachment         = get_post( $thumbnail_id );
-						$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
-						$thumbnail_src      = get_the_post_thumbnail_url( $product_id );
+						$thumbnail_id = get_post_thumbnail_id($product_id);
+						$attachment = get_post($thumbnail_id);
+						$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
+						$thumbnail_src = get_the_post_thumbnail_url($product_id);
+						$currency = get_option('woocommerce_currency');
 
-						$thumbnail = [ 
+						$product_type = $product->get_type();
+						// Get variations if the product is a variable product
+						$variations_data = $default_attributes = [];
+						if ($product_type === 'variable' || $product_type === 'pw-gift-card') {
+							$variations = $product->get_available_variations();
+							foreach ($variations as $variation) {
+								$variation_obj = wc_get_product($variation['variation_id']);
+				
+								$variant_thumbnail_id = get_post_thumbnail_id($variation['variation_id']);
+								$variant_attachment = get_post($variant_thumbnail_id);
+								$variant_thumbnail_alt_text = get_post_meta($variant_thumbnail_id, '_wp_attachment_image_alt', true);
+								$variant_thumbnail_src = get_the_post_thumbnail_url($variation['variation_id']);
+				
+								$variations_items = [
+									'variationId' => $variation['variation_id'],
+									'attributes' => $variation['attributes'],
+									'price' => array(
+										$currency => floatval($variation_obj->get_price()),
+									),
+									'regularPrice' => array(
+										$currency => floatval($variation_obj->get_regular_price()),
+									),
+									'salePrice' => array(
+										$currency => floatval($variation_obj->get_sale_price()),
+									),
+									'stockQuantity' => empty($variation_obj->get_stock_quantity()) ? 0 : $variation_obj->get_stock_quantity(),
+									'stockStatus' => $variation_obj->get_stock_status(),
+									'onSale' => $variation_obj->is_on_sale(),
+									'sku' => $variation_obj->get_sku(),
+									'image' => [
+										'id' => $variant_thumbnail_id,
+										'title' => $variant_attachment->post_title,
+										'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
+										'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
+									],
+								];
+
+								$variations_data[] = apply_filters('blaze_commerce_variation_multicurrency_prices', $variations_items, $variation['variation_id']);
+
+								unset($variations_items, $variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src);
+							}
+							
+							unset($variations);
+						}
+				
+						$thumbnail = [
 							'id' => $thumbnail_id,
 							'title' => $attachment->post_title,
 							'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
@@ -529,9 +575,9 @@ class Product extends BaseCollection {
 							'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
 							'slug' => $product->get_slug(),
 							'thumbnail' => $thumbnail,
-							'price' => $default_price,
-							'regularPrice' => $default_regular_price,
-							'salePrice' => $default_sale_price,
+							'price' => apply_filters('wooless_product_price', $default_price, $product_id),
+							'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
+							'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
 							'onSale' => $product->is_on_sale(),
 							'stockStatus' => $product->get_stock_status(),
 							'createdAt' => strtotime( $product->get_date_created() ),
@@ -539,7 +585,8 @@ class Product extends BaseCollection {
 							'daysPassed' => $this->get_days_passed( $published_at ),
 							'galleryImages' => $product_gallery,
 							'productType' => $product->get_type(),
-							'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
+							'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
+							'variations' => $variations_data,
 						);
 
 						$cross_sell_product_data[] = apply_filters( 'blaze_wooless_cross_sell_data_for_typesense', $product_data, $product_id );
