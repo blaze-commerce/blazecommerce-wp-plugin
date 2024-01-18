@@ -19,11 +19,14 @@ class Ajax {
 		return self::$instance;
 	}
 
-	public function __construct() {
-		add_action( 'wp_ajax_index_data_to_typesense', array( $this, 'index_data_to_typesense' ) );
-		add_action( 'wp_ajax_get_typesense_collections', array( $this, 'get_typesense_collections' ) );
-		add_action( 'wp_ajax_save_typesense_api_key', 'save_typesense_api_key' );
-	}
+    public function __construct()
+    {
+        add_action( 'wp_ajax_index_data_to_typesense', array( $this, 'index_data_to_typesense' ) );
+        add_action( 'wp_ajax_get_typesense_collections', array( $this, 'get_typesense_collections' ) );
+        add_action( 'wp_ajax_save_typesense_api_key', 'save_typesense_api_key' );
+        add_action( 'wp_ajax_login_to_client', array( $this, 'login_to_client' ) );
+        add_action( 'wp_ajax_nopriv_login_to_client', array( $this, 'login_to_client' ) );
+    }
 
 	public function get_typesense_collections() {
 		if ( isset( $_POST['api_key'] ) ) {
@@ -73,6 +76,50 @@ class Ajax {
 		} else {
 			echo "Collection name not found";
 		}
+		wp_die();
+	}
+
+	public function login_to_client()
+	{
+		$login = $_POST['login'];
+		$password = $_POST['password'];
+
+		$url = get_home_url() . '/api/login-with-cookies';
+
+		$curl = curl_init();
+
+		curl_setopt_array($curl, array(
+			CURLOPT_URL => $url,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'POST',
+			CURLOPT_POSTFIELDS =>'{
+				"login": "' . $login . '",
+				"password": "' . $password . '"
+			}',
+			CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
+		));
+
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($curl, CURLOPT_HEADER, 1);
+
+		$response = curl_exec($curl);
+
+		$header_size = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
+		$header = substr($response, 0, $header_size);
+		$body = substr($response, $header_size);
+
+		$re = '/^Set-Cookie.*$/m';
+		preg_match_all($re, $header, $matches, PREG_SET_ORDER, 0);
+		foreach ($matches as $matchedHeader) {
+			header(trim($matchedHeader[0]));
+		}
+
+		curl_close($curl);
 		wp_die();
 	}
 }

@@ -22,7 +22,7 @@ class SiteInfo extends BaseCollection {
 
 	public function index_to_typesense() {
 		// Fetch the store ID from the saved options
-		$wooless_site_id      = get_option( 'store_id' );
+		$wooless_site_id = get_option( 'store_id' );
 		$collection_site_info = 'site_info-' . $wooless_site_id;
 		//Indexing Site Info
 		try {
@@ -140,43 +140,6 @@ class SiteInfo extends BaseCollection {
 
 			unset( $datas );
 
-			// Get the favicon last updated timestamp
-			// if ($site_icon_id) {
-			//     $favicon_updated_at = strtotime(get_the_modified_date('Y-m-d H:i:s', $site_icon_id));
-			// } else {
-			//     $favicon_updated_at = 0;
-			// }
-
-
-			//admin email
-			// function my_admin_email_updated_callback($old_value, $new_value, $option)
-			// {
-			//     update_option('admin_email_last_updated', time());
-			// }
-			// add_action('update_option_admin_email', 'my_admin_email_updated_callback', 10, 3);
-
-			// add_action('update_option_admin_email', 'my_admin_email_updated_callback', 10, 3);
-
-			//language
-			// function my_locale_updated_callback($old_value, $new_value, $option)
-			// {
-			//     update_option('locale_last_updated', time());
-			// }
-			// add_action('update_option_WPLANG', 'my_locale_updated_callback', 10, 3);
-			//timezone
-			// function my_timezone_updated_callback($old_value, $new_value, $option)
-			// {
-			//     update_option('timezone_last_updated', time());
-			// }
-			// add_action('update_option_timezone_string', 'my_timezone_updated_callback', 10, 3);
-
-			//Date format
-			// function my_date_format_updated_callback($old_value, $new_value, $option)
-			// {
-			//     update_option('date_format_last_updated', time());
-			// }
-			// add_action('update_option_date_format', 'my_date_format_updated_callback', 10, 3);
-
 			$homepage_data = apply_filters( 'blaze_wooless_additional_homepage_info', array() );
 			foreach ( $homepage_data as $key => $value ) {
 				if ( empty( $value ) ) {
@@ -214,9 +177,9 @@ class SiteInfo extends BaseCollection {
 
 			$initial_additional_data = array();
 
-			$site_currency                         = get_woocommerce_currency();
-			$base_currency                         = \RegionalDataHelper::$currency_country_map[ $site_currency ];
-			$currencies                            = array(
+			$site_currency = get_woocommerce_currency();
+			$base_currency = \RegionalDataHelper::$currency_country_map[ $site_currency ];
+			$currencies = array(
 				'countries' => [ $base_currency ],
 				'baseCountry' => $base_currency,
 				'currency' => $site_currency,
@@ -228,7 +191,7 @@ class SiteInfo extends BaseCollection {
 				'default' => true,
 			);
 			$initial_additional_data['currencies'] = array( $currencies );
-			$initial_additional_data['regions']    = RegionalSettings::get_selected_regions();
+			$initial_additional_data['regions'] = RegionalSettings::get_selected_regions();
 
 			$additional_data = apply_filters( 'blaze_wooless_additional_site_info', $initial_additional_data );
 			foreach ( $additional_data as $key => $value ) {
@@ -338,15 +301,15 @@ class SiteInfo extends BaseCollection {
 
 	public function get_permalink_structure() {
 		$permalink_structure = get_option( 'woocommerce_permalinks' );
-		$product_base        = $permalink_structure['product_base'] ?: '';
+		$product_base = $permalink_structure['product_base'] ?: '';
 
 		// If the product base does not start with a slash, add one
 		if ( $product_base && $product_base[0] !== '/' ) {
 			$product_base = '/' . $product_base;
 		}
 
-		$category_base            = get_option( 'category_base', 'category' );
-		$tag_base                 = get_option( 'tag_base', 'tag' );
+		$category_base = get_option( 'category_base', 'category' );
+		$tag_base = get_option( 'tag_base', 'tag' );
 		$base_permalink_structure = get_option( 'permalink_structure' );
 
 		return array(
@@ -364,7 +327,7 @@ class SiteInfo extends BaseCollection {
 
 		// Fetch the 'active_plugins' option from the WordPress options table
 		$active_plugins_serialized = $wpdb->get_var( "SELECT option_value FROM " . $wpdb->options . " WHERE option_name = 'active_plugins'" );
-		$active_plugins            = unserialize( $active_plugins_serialized );
+		$active_plugins = unserialize( $active_plugins_serialized );
 
 		// List of known review plugin slugs
 		$review_plugin_slugs = array(
@@ -419,9 +382,9 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function site_logo_settings() {
-		$logo_id         = get_theme_mod( 'custom_logo' );
-		$logo_image      = wp_get_attachment_image_src( $logo_id, 'full' );
-		$logo_metadata   = wp_get_attachment_metadata( $logo_id );
+		$logo_id = get_theme_mod( 'custom_logo' );
+		$logo_image = wp_get_attachment_image_src( $logo_id, 'full' );
+		$logo_metadata = wp_get_attachment_metadata( $logo_id );
 		$logo_updated_at = isset( $logo_metadata['file'] ) ? strtotime( date( "Y-m-d H:i:s", filemtime( get_attached_file( $logo_id ) ) ) ) : null;
 
 		return array(
@@ -434,7 +397,7 @@ class SiteInfo extends BaseCollection {
 	public function store_notice_settings() {
 		global $wpdb;
 
-		$store_notice            = get_option( 'woocommerce_demo_store_notice' );
+		$store_notice = get_option( 'woocommerce_demo_store_notice' );
 		$store_notice_updated_at = $wpdb->get_var( "SELECT UNIX_TIMESTAMP(option_value) FROM {$wpdb->options} WHERE option_name = '_transient_timeout_woocommerce_demo_store_notice'" ) ?: time();
 
 		return array(
@@ -446,7 +409,7 @@ class SiteInfo extends BaseCollection {
 
 	public function favicon_settings() {
 		$site_icon_id = get_option( 'site_icon' );
-		$favicon_url  = $site_icon_id ? wp_get_attachment_image_url( $site_icon_id, 'full' ) : '';
+		$favicon_url = $site_icon_id ? wp_get_attachment_image_url( $site_icon_id, 'full' ) : '';
 
 		if ( $site_icon_id ) {
 			$favicon_updated_at = strtotime( get_the_modified_date( 'Y-m-d H:i:s', $site_icon_id ) );
@@ -460,30 +423,4 @@ class SiteInfo extends BaseCollection {
 			'updated_at' => intval( $favicon_updated_at ),
 		);
 	}
-
-	// Function to be called when an option is updated
-	// public function site_info_update($option_name, $old_value, $new_value)
-	// {
-	//     // Array of target General Settings options
-	//     $target_settings = array(
-	//         'blogname',
-	//         'blogdescription',
-	//         'siteurl',
-	//         'home',
-	//         'admin_email',
-	//         'users_can_register',
-	//         'default_role',
-	//         'timezone_string',
-	//         'date_format',
-	//         'time_format',
-	//         'start_of_week',
-	//         'WPLANG',
-	//         'woocommerce_demo_store',
-	//     );
-
-	//     // Check if the updated option is in the array of target settings
-	//     if (in_array($option_name, $target_settings)) {
-	//         $this->site_info_index_to_typesense();
-	//     }
-	// }
 }

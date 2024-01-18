@@ -5,9 +5,9 @@ namespace BlazeWooless;
 use BlazeWooless\Collections\Menu;
 use BlazeWooless\Collections\Taxonomy;
 
-class BlazeWooless {
-	private static $instance = null;
-	public $cookie;
+class BlazeWooless
+{
+    private static $instance = null;
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -17,13 +17,10 @@ class BlazeWooless {
 		return self::$instance;
 	}
 
-	public function __construct() {
-		$this->cookie = \BlazeWooless\Core\Cookie::get_instance();
-	}
-
-	public function init() {
-		add_action( 'init', array( $this, 'register_extensions' ) );
-		add_action( 'edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3 );
+    public function init()
+    {
+        add_action( 'init', array( $this, 'register_extensions' ) );
+        add_action('edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3);
 
 		add_filter( 'blaze_wooless_generate_breadcrumbs', array( Taxonomy::get_instance(), 'generate_breadcrumbs' ), 10, 2 );
 
