@@ -39,7 +39,7 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		$icons                 = [ 
+		$icons                 = array(
 			'select' => 'Select',
 			'CiDeliveryTruck' => 'CiDeliveryTruck',
 			'CiViewList' => 'CiViewList',
@@ -47,7 +47,7 @@ class ProductPageSettings extends BaseSettings {
 			'FiLock' => 'FiLock',
 			'FiPackage' => 'FiPackage',
 			'CiCircleInfo' => 'CiCircleInfo',
-		];
+		);
 		$product_page_settings = [ 
 			'wooless_settings_product_page_section' => array(
 				'label' => 'Product Page',
@@ -120,11 +120,11 @@ class ProductPageSettings extends BaseSettings {
 			array(
 				'id' => '10089551',
 				'name' => 'product_page_information_1',
-				'value' => json_encode( [ 
+				'value' => json_encode( array(
 					'title' => $options['information_1_title'],
 					'icon' => $options['information_1_icon'],
 					'content' => $options['information_1_content']
-				] ),
+				) ),
 				'updated_at' => time(),
 			)
 		);
@@ -133,11 +133,11 @@ class ProductPageSettings extends BaseSettings {
 			array(
 				'id' => '10089552',
 				'name' => 'product_page_information_2',
-				'value' => json_encode( [ 
+				'value' => json_encode( array(
 					'title' => $options['information_2_title'],
 					'icon' => $options['information_2_icon'],
 					'content' => $options['information_2_content']
-				] ),
+				) ),
 				'updated_at' => time(),
 			)
 		);

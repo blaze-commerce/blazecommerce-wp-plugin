@@ -5,82 +5,78 @@ namespace BlazeWooless\Settings;
 use BlazeWooless\TypesenseClient;
 
 class FooterOneSettings extends BaseSettings {
-    private static $instance = null;
-    public $tab_key = 'footer_1';
-    public $page_label = 'Footer 1';
+	private static $instance = null;
+	public $tab_key = 'footer_1';
+	public $page_label = 'Footer 1';
 
-    public static function get_instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self( 'wooless_footer_1_settings_options' );
-        }
+	public static function get_instance() {
+		if ( self::$instance === null ) {
+			self::$instance = new self( 'wooless_footer_1_settings_options' );
+		}
 
-        return self::$instance;
-    }
-    
-    public function settings_callback( $options )
-    {
-        $footer_content_1 = array();
-        if (isset($_POST['footer_content_1'])) {
-            $footer_content_1 = json_decode( stripslashes($_POST['footer_content_1']), true );
-        }
+		return self::$instance;
+	}
 
-        if (is_array($footer_content_1)) {
-            update_option('blaze_wooless_footer_1_content', $footer_content_1);
+	public function settings_callback( $options ) {
+		$footer_content_1 = array();
+		if ( isset( $_POST['footer_content_1'] ) ) {
+			$footer_content_1 = json_decode( stripslashes( $_POST['footer_content_1'] ), true );
+		}
 
-            TypesenseClient::get_instance()->site_info()->upsert([
-                'id' => '1000006',
-                'name' => 'footer_content_1',
-                'value' => json_encode($footer_content_1),
-                'updated_at' => time(),
-            ]);
-        }
-        
-        return $options;
-    }
+		if ( is_array( $footer_content_1 ) ) {
+			update_option( 'blaze_wooless_footer_1_content', $footer_content_1 );
 
-    public function settings()
-    {
-        return array();
-    }
+			TypesenseClient::get_instance()->site_info()->upsert( [ 
+				'id' => '1000006',
+				'name' => 'footer_content_1',
+				'value' => json_encode( $footer_content_1 ),
+				'updated_at' => time(),
+			] );
+		}
 
-    public function section_callback() {
-        echo '<p>Select which areas of content you wish to display.</p>';
-    }
+		return $options;
+	}
 
-    public function register_hooks()
-    {
-        add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
-        add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_footer_one_data' ), 10, 2 );
-    }
+	public function settings() {
+		return array();
+	}
 
-    public function footer_callback()
-    {
-        require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/draggable-content-simple.php';
-    }
+	public function section_callback() {
+		echo '<p>Select which areas of content you wish to display.</p>';
+	}
 
-    public function default_draggable_data()
-    {
-        if (empty($_GET['tab']) || $this->tab_key !== $_GET['tab']) return;
+	public function register_hooks() {
+		add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_footer_one_data' ), 10, 2 );
+	}
 
-        $footer_content = get_option('blaze_wooless_footer_1_content', '');
-        ?>
-            <input type="hidden" id="draggable_result" name="footer_content_1" value='<?php echo htmlspecialchars(json_encode($footer_content), ENT_QUOTES) ?>'/>
-        <?php
-    }
+	public function footer_callback() {
+		require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/draggable-content-simple.php';
+	}
 
-    public function add_footer_one_data()
-    {
-        $footer_content_1 = get_option('blaze_wooless_footer_1_content', '');
-		if (empty($footer_content_1)) return;
+	public function default_draggable_data() {
+		if ( empty( $_GET['tab'] ) || $this->tab_key !== $_GET['tab'] )
+			return;
 
-        TypesenseClient::get_instance()->site_info()->upsert([
-            'id' => '1000006',
-            'name' => 'footer_content_1',
-            'value' => json_encode($footer_content_1),
-            'updated_at' => time(),
-        ]);
-    }
+		$footer_content = get_option( 'blaze_wooless_footer_1_content', '' );
+		?>
+		<input type="hidden" id="draggable_result" name="footer_content_1"
+			value='<?php echo htmlspecialchars( json_encode( $footer_content ), ENT_QUOTES ) ?>' />
+		<?php
+	}
+
+	public function add_footer_one_data() {
+		$footer_content_1 = get_option( 'blaze_wooless_footer_1_content', '' );
+		if ( empty( $footer_content_1 ) )
+			return;
+
+		TypesenseClient::get_instance()->site_info()->upsert( [ 
+			'id' => '1000006',
+			'name' => 'footer_content_1',
+			'value' => json_encode( $footer_content_1 ),
+			'updated_at' => time(),
+		] );
+	}
 }
 
 FooterOneSettings::get_instance();
