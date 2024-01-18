@@ -105,6 +105,8 @@ class Product extends BaseCollection {
 						[ 'name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true ],
 						[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
+						[ 'name' => 'metaData', 'type' => 'object', 'optional' => true ],
+						[ 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ],
 					),
 					'default_sorting_field' => 'updatedAt',
 					'enable_nested_fields' => true
@@ -393,7 +395,7 @@ class Product extends BaseCollection {
 			unset( $shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_data, $variations_data, $formatted_additional_tabs, $upsell_data, $published_at );
 		}
 
-		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id );
+		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
 	}
 
 	public function get_taxonomies( $product ) {
