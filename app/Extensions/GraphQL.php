@@ -88,58 +88,6 @@ class GraphQL {
 		return $fields;
 	}
 
-	public function register_min_amount_to_shipping_rates()
-	{
-		register_graphql_field('ShippingRate', 'min_amount', [
-			'type' => 'String',
-			'description' => __( 'Shipping rate min order amount if free shipping', 'wp-graphql-woocommerce' ),
-			'resolve'     => static function ( $source ) {
-				if ( $source->get_method_id() !== 'free_shipping' ) return null;
-
-				$rate_settings = get_option( 'woocommerce_' . $source->get_method_id() . '_' . $source->get_instance_id() . '_settings' );
-				return ! empty( $rate_settings['min_amount'] ) ? $rate_settings['min_amount'] : null;
-			},
-		]);
-	}
-
-	public function graphql_cart_fields( $fields )
-	{
-		$fields['freeShippingMethods'] = array(
-			'type'        => 'ShippingRate',
-			'description' => __( 'Available free shipping methods for this order.', 'wp-graphql-woocommerce' ),
-			'resolve'     => static function ( $source ) {
-				$available_packages = $source->needs_shipping()
-					? \WC()->shipping()->calculate_shipping( $source->get_shipping_packages() )
-					: [];
-				
-				/**
-				 * @var \WC_Shipping_Zone
-				 */
-				$shipping_zone = null;
-
-				foreach ( $available_packages as $index => $package ) {
-					$shipping_zone = wc_get_shipping_zone($package);
-				}
-
-				$all_shipping_methods = $shipping_zone->get_shipping_methods();
-				$free_shipping_method = reset(array_filter($all_shipping_methods, function($shipping) {
-					return $shipping instanceof \WC_Shipping_Free_Shipping;
-				}));
-
-				return new \WC_Shipping_Rate(
-					'free_shipping:' . $free_shipping_method->instance_id,
-					$free_shipping_method->title,
-					0,
-					array(),
-					'free_shipping',
-					$free_shipping_method->instance_id,
-				);
-			},
-		);
-
-		return $fields;
-	}
-
 	public function maybe_save_jwt_secret() {
 		$jwt_key = get_option( 'wooless_custom_jwt_secret_key' );
 
