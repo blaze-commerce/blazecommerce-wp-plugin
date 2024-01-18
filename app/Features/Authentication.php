@@ -3,18 +3,16 @@
 
 namespace BlazeWooless\Features;
 
-class Authentication
-{
-    private static $instance = null;
+class Authentication {
+	private static $instance = null;
 
-    public static function get_instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
+	public static function get_instance() {
+		if ( self::$instance === null ) {
+			self::$instance = new self();
+		}
 
-        return self::$instance;
-    }
+		return self::$instance;
+	}
 
     public function __construct()
     {
@@ -28,11 +26,10 @@ class Authentication
         // add_action( 'wp_footer', array( $this, 'ajax_sign_in_script' ), 40);
     }
 
-	public function login_hook( $user_login, $user )
-    {
-        add_filter( 'graphql_jwt_auth_token_before_sign', array( $this, 'modify_jwt_auth_token_before_sign' ), 10, 2);
-        add_filter('graphql_jwt_auth_secret_key', array( $this, 'auth_secret_key' ), 20);
-        $token = \WPGraphQL\JWT_Authentication\Auth::get_token($user, false);
+	public function login_hook( $user_login, $user ) {
+		add_filter( 'graphql_jwt_auth_token_before_sign', array( $this, 'modify_jwt_auth_token_before_sign' ), 10, 2 );
+		add_filter( 'graphql_jwt_auth_secret_key', array( $this, 'auth_secret_key' ), 20 );
+		$token = \WPGraphQL\JWT_Authentication\Auth::get_token( $user, false );
 
         // Set the cookie with a specific domain
 		wc_setcookie( 'woo-session', $token );
@@ -74,8 +71,7 @@ class Authentication
 	}
 
 
-    public function auth_secret_key()
-	{
+	public function auth_secret_key() {
 		return 'graphql_woocommerce_secret_key';
 	}
 
@@ -92,21 +88,20 @@ class Authentication
     }
 
 
-    public function ajax_sign_in_script()
-    {
-        ?>
-        <script>
-            (function($) {
-                var $form = $('form.woocommerce-form.woocommerce-form-login.login');
-                var submitButton = $('button.woocommerce-button.button.woocommerce-form-login__submit');
-				if ( ! $(document.body).hasClass('woocommerce-checkout') && ! $(document.body).hasClass('woocommerce-account') ) {
-                    submitButton.on('click', function(e) {
-                        $form = $(this).closest('form.woocommerce-form.woocommerce-form-login.login')
-                        e.preventDefault();
-                        var username = $form.find('input#username');
-                        var password = $form.find('input#password');
+	public function ajax_sign_in_script() {
+		?>
+		<script>
+			(function ($) {
+				var $form = $('form.woocommerce-form.woocommerce-form-login.login');
+				var submitButton = $('button.woocommerce-button.button.woocommerce-form-login__submit');
+				if (!$(document.body).hasClass('woocommerce-checkout') && !$(document.body).hasClass('woocommerce-account')) {
+					submitButton.on('click', function (e) {
+						$form = $(this).closest('form.woocommerce-form.woocommerce-form-login.login')
+						e.preventDefault();
+						var username = $form.find('input#username');
+						var password = $form.find('input#password');
 
-                        submitButton.attr('disabled', true).css({ opacity: '0.5' });
+						submitButton.attr('disabled', true).css({ opacity: '0.5' });
 
                         $.post('https://<?php echo site_url(); ?>/api/login-with-cookies', {
                             login: username.val(),
