@@ -78,6 +78,14 @@ class GeneralSettings extends BaseSettings {
 								'description' => 'Live site domain. (e.g. website.com.au)'
 							),
 					),
+					array(
+						'id' => 'show_free_shipping_banner',
+						'label' => 'Show free shipping banner',
+						'type' => 'checkbox',
+						'args' => array(
+							'description' => 'Check this to show shipping banner dynamically based on nearest free shipping rate.'
+						),
+					),
 				)
 			),
 		);
