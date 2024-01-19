@@ -39,120 +39,115 @@
  */
 namespace BlazeWooless\Features;
 
-class CalculateShipping
-{
-    private static $instance = null;
+class CalculateShipping {
+	private static $instance = null;
 
-    public static function get_instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
+	public static function get_instance() {
+		if ( self::$instance === null ) {
+			self::$instance = new self();
+		}
 
-        return self::$instance;
-    }
+		return self::$instance;
+	}
 
-    public function __construct()
-    {
-        add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
-    }
+	public function __construct() {
+		add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
+	}
 
-    public function register_rest_endpoints()
-    {
-        register_rest_route(
-            'wooless-wc/v1',
-            '/available-shipping-methods',
-            array(
-                'methods' => 'POST',
-                'callback' => array( $this, 'get_available_shipping_methods_callback'),
-                'args' => array(
-                    'products' => array(
-                        'required' => true,
-                    ),
-                    'country' => array(
-                        'required' => true,
-                    ),
-                    'state' => array(
-                        'required' => true,
-                    ),
-                ),
-            )
-        );
-    }
+	public function register_rest_endpoints() {
+		register_rest_route(
+			'wooless-wc/v1',
+			'/available-shipping-methods',
+			array(
+				'methods' => 'POST',
+				'callback' => array( $this, 'get_available_shipping_methods_callback' ),
+				'args' => array(
+					'products' => array(
+						'required' => true,
+					),
+					'country' => array(
+						'required' => true,
+					),
+					'state' => array(
+						'required' => true,
+					),
+				),
+			)
+		);
+	}
 
-    public function get_available_shipping_methods_callback( \WP_REST_Request $request )
-    {
-        $products = $request->get_param( 'products' );
-        $country = $request->get_param( 'country' );
-        $state = $request->get_param( 'state' );
-        $post_code = $request->get_param( 'post_code' );
+	public function get_available_shipping_methods_callback( \WP_REST_Request $request ) {
+		$products  = $request->get_param( 'products' );
+		$country   = $request->get_param( 'country' );
+		$state     = $request->get_param( 'state' );
+		$post_code = $request->get_param( 'post_code' );
 
-        if ( ! class_exists('WooCommerce') ) {
-            $response = new \WP_REST_Response( 'Error: Woocommerce is not active!' );
-            $response->set_status( 400 );
-            return;
-        }
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			$response = new \WP_REST_Response( 'Error: Woocommerce is not active!' );
+			$response->set_status( 400 );
+			return;
+		}
 
-        require_once WC_ABSPATH . 'includes/wc-notice-functions.php';
-        require_once WC_ABSPATH . 'includes/class-wc-customer.php';
-        require_once WC_ABSPATH . 'includes/abstracts/abstract-wc-session.php';
-        require_once WC_ABSPATH . 'includes/class-wc-cart-session.php';
-        require_once WC_ABSPATH . 'includes/wc-cart-functions.php';
-        require_once WC_ABSPATH . 'includes/class-wc-cart.php';
-        require_once WC_ABSPATH . 'includes/class-wc-shipping.php';
-        require_once WC_ABSPATH . 'includes/class-wc-customer.php';
+		require_once WC_ABSPATH . 'includes/wc-notice-functions.php';
+		require_once WC_ABSPATH . 'includes/class-wc-customer.php';
+		require_once WC_ABSPATH . 'includes/abstracts/abstract-wc-session.php';
+		require_once WC_ABSPATH . 'includes/class-wc-cart-session.php';
+		require_once WC_ABSPATH . 'includes/wc-cart-functions.php';
+		require_once WC_ABSPATH . 'includes/class-wc-cart.php';
+		require_once WC_ABSPATH . 'includes/class-wc-shipping.php';
+		require_once WC_ABSPATH . 'includes/class-wc-customer.php';
 
-        
-        \WC()->session = new \WC_Session_Handler();
-        \WC()->session->init();
-        WC()->session->destroy_session();
-        
-        $customer = new \WC_Customer();
-        WC()->customer = $customer;
 
-        // Create a new cart object
-        $cart = new \WC_Cart();
-        \WC()->cart = $cart;
+		\WC()->session = new \WC_Session_Handler();
+		\WC()->session->init();
+		WC()->session->destroy_session();
 
-        foreach ($products as $product) {
-            $variation_id = 0;
-            $variation_data = array();
-            if (isset($product['variation'])) {
-                $variation_id = $product['variation']['id'];
-                unset($product['variation']['id']);
-                $variation_data = $product['variation'];
-            }
-            $cart->add_to_cart($product['id'], $product['quantity'], $variation_id, $variation_data);
-        }
+		$customer      = new \WC_Customer();
+		WC()->customer = $customer;
 
-        WC()->customer->set_shipping_country($country);
-        WC()->customer->set_shipping_state($state);
-        WC()->customer->set_shipping_postcode($post_code);
+		// Create a new cart object
+		$cart       = new \WC_Cart();
+		\WC()->cart = $cart;
 
-        $packages = WC()->cart->get_shipping_packages(); // Prepare the packages
-        $shipping_methods = WC()->shipping()->calculate_shipping($packages); // Calculate shipping
+		foreach ( $products as $product ) {
+			$variation_id   = 0;
+			$variation_data = array();
+			if ( isset( $product['variation'] ) ) {
+				$variation_id = $product['variation']['id'];
+				unset( $product['variation']['id'] );
+				$variation_data = $product['variation'];
+			}
+			$cart->add_to_cart( $product['id'], $product['quantity'], $variation_id, $variation_data );
+		}
 
-        $available_methods = $shipping_methods[0];
+		WC()->customer->set_shipping_country( $country );
+		WC()->customer->set_shipping_state( $state );
+		WC()->customer->set_shipping_postcode( $post_code );
 
-        $rates = array_map( function( \WC_Shipping_Rate $rate ) {
-            return array(
-                'id' => $rate->id,
-                'method_id' => $rate->method_id,
-                'instance_id' => $rate->instance_id,
-                'label' => $rate->label,
-                'cost' => $rate->cost,
-                'taxes' => $rate->taxes,
-            );
-        }, $available_methods['rates'] );
+		$packages         = WC()->cart->get_shipping_packages(); // Prepare the packages
+		$shipping_methods = WC()->shipping()->calculate_shipping( $packages ); // Calculate shipping
 
-        $response = new \WP_REST_Response( array(
-            'subtotal' => WC()->cart->subtotal,
-            'rates' => $rates,
-        ) );
+		$available_methods = $shipping_methods[0];
 
-        // Add a custom status code
-        $response->set_status( 201 );
+		$rates = array_map( function (\WC_Shipping_Rate $rate) {
+			return array(
+				'id' => $rate->id,
+				'method_id' => $rate->method_id,
+				'instance_id' => $rate->instance_id,
+				'label' => $rate->label,
+				'cost' => $rate->cost,
+				'taxes' => $rate->taxes,
+			);
+		}, $available_methods['rates'] );
 
-        return $response;
-    }
+		$response = new \WP_REST_Response( array(
+			'subtotal' => WC()->cart->subtotal,
+			'rates' => $rates,
+		) );
+
+		// Add a custom status code
+		$response->set_status( 201 );
+
+		return $response;
+	}
 }
