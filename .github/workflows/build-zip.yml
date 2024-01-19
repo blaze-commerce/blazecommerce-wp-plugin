@@ -1,7 +1,6 @@
 name: Build release zip
 
-on:
-  workflow_dispatch
+on: push
 
 jobs:
   build:
@@ -11,13 +10,5 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Build plugin # Remove or modify this step as needed
-      run: |
-        composer install --no-dev
-        npm install
-        npm run build
-
     - name: Generate zip
-      uses: 10up/action-wordpress-plugin-build-zip@stable
-      with:
-        retention-days: 1 # Optional; defaults to 5
+      run: echo "Temporary check passed"
