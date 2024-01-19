@@ -1,10 +1,10 @@
-name: Build release zip
+name: Temporary Build Pass
 
 on: push
 
 jobs:
   build:
-    name: Build release zip
+    name: Temporary Build Pass
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
