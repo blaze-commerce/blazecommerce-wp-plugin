@@ -30,9 +30,11 @@ class WoocommerceAeliaCurrencySwitcher {
 			// add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
 			add_filter( 'graphql_RootQuery_fields', array( $this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
 
-			add_filter( 'blaze_commerce_variation_multicurrency_prices', array( $this, 'variation_multicurrency_prices' ), 10, 2 );
-		}
-	}
+            add_filter( 'blaze_commerce_variation_multicurrency_prices', array( $this, 'variation_multicurrency_prices' ), 10, 2 );
+
+            add_action( 'wp_footer', array($this, 'add_currency_switcher_after_country_field'), 50 );
+        }
+    }
 
 	public function add_multicurrency_prices( $product_data, $product_id ) {
 		$available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
@@ -237,6 +239,37 @@ class WoocommerceAeliaCurrencySwitcher {
 
 		return $result;
 	}
+
+	function add_currency_switcher_after_country_field() {
+        if (\is_checkout() && !\is_wc_endpoint_url('order-received')) {
+            $currency_switcher_options = get_option( 'wc_aelia_currency_switcher' );
+            $enabled_currencies = $currency_switcher_options['enabled_currencies'];
+            $site_currency = \get_woocommerce_currency();
+
+            $opposing_currency = reset(array_diff($enabled_currencies, array( $site_currency )));
+
+            $switch_to_currency_text = apply_filters( 'blaze_commerce_checkout_switch_currency_text', 'Switch to ' . $opposing_currency, $opposing_currency, $site_currency );
+            $switch_currency_template = '<p class="checkout-switch-currency" data-currency="%1$s"><a style="cursor: pointer;">' . esc_html__($switch_to_currency_text) . '</a></p>';
+            ?>
+                <script type="text/javascript">
+                    (function($) {
+                        $(document).ready(function() {
+                            var currency_switch = $('<?php echo sprintf($switch_currency_template, $opposing_currency) ?>');
+                            currency_switch.on('click', function(e) {
+                                e.preventDefault();
+
+                                var currency = $(this).data('currency');
+                                document.cookie = "aelia_cs_selected_currency=" + currency + "; path=/; domain=<?php echo COOKIE_DOMAIN ?>";
+                                window.location.reload();
+                            });
+                            $('#billing_country').after(currency_switch)
+                            $('#shipping_country').after(currency_switch.clone(true, true))
+                        });
+                    })(jQuery);
+                </script>
+            <?php
+        }
+    }
 
 	public function giftcard_multicurrency_prices( $product_data, $product_id, $available_currencies ) {
 		if ( ! empty( $available_currencies ) ) {
