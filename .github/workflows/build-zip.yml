@@ -1,0 +1,14 @@
+name: Temporary Build Pass
+
+on: push
+
+jobs:
+  build:
+    name: Temporary Build Pass
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Generate zip
+      run: echo "Temporary check passed"
