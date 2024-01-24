@@ -69,6 +69,8 @@ class GraphQL {
 					$shipping_zone = wc_get_shipping_zone($package);
 				}
 
+				if ( empty( $shipping_zone ) ) return null;
+
 				$all_shipping_methods = $shipping_zone->get_shipping_methods();
 				$free_shipping_method = reset(array_filter($all_shipping_methods, function($shipping) {
 					return $shipping instanceof \WC_Shipping_Free_Shipping;
