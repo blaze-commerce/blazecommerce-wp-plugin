@@ -185,6 +185,20 @@ class GraphQL {
 							return $payload['email'];
 						},
 					),
+					'username' => array(
+						'type' => 'String',
+						'description' => 'Logged in username',
+						'resolve' => function ($payload) {
+							return $payload['username'];
+						},
+					),
+					'name' => array(
+						'type' => 'String',
+						'description' => 'Logged in name',
+						'resolve' => function ($payload) {
+							return $payload['name'];
+						},
+					),
 					'user_id' => array(
 						'type' => 'Integer',
 						'description' => 'Logged in user id',
@@ -210,7 +224,9 @@ class GraphQL {
 					return array(
 						'status' => 'SUCCESS',
 						'email' => esc_html( $user->user_email ),
-						'user_id' => esc_html( $user->ID )
+						'user_id' => esc_html( $user->ID ),
+						'username' => esc_html( $user->user_login ),
+						'name' => esc_html( $user->display_name ),
 					);
 				},
 			)
