@@ -27,7 +27,7 @@ class FooterFiveSettings extends BaseSettings {
 			update_option( 'blaze_wooless_footer_5_content', $footer_content_5 );
 
 			TypesenseClient::get_instance()->site_info()->upsert( [ 
-				'id' => '1000007',
+				'id' => '1000012',
 				'name' => 'footer_content_5',
 				'value' => json_encode( $footer_content_5 ),
 				'updated_at' => time(),
@@ -71,7 +71,7 @@ class FooterFiveSettings extends BaseSettings {
 			return;
 
 		TypesenseClient::get_instance()->site_info()->upsert( [ 
-			'id' => '1000007',
+			'id' => '1000012',
 			'name' => 'footer_content_5',
 			'value' => json_encode( $footer_content_5 ),
 			'updated_at' => time(),
