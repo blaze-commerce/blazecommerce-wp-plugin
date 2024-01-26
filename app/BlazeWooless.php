@@ -47,6 +47,8 @@ class BlazeWooless
 			'\\BlazeWooless\\Settings\\FooterOneSettings',
 			'\\BlazeWooless\\Settings\\FooterTwoSettings',
 			'\\BlazeWooless\\Settings\\FooterThreeSettings',
+			'\\BlazeWooless\\Settings\\FooterFourSettings',
+			'\\BlazeWooless\\Settings\\FooterFiveSettings',
 			'\\BlazeWooless\\Settings\\FooterAfterSettings',
 		);
 
