@@ -27,56 +27,56 @@ class GraphQL {
 			add_filter( 'graphql_response_headers_to_send', [ $this, 'modify_response_headers' ], 20 );
 			add_filter( 'graphql_access_control_allow_headers', [ $this, 'modify_access_control_allow_headers' ], 20, 1 );
 
-			add_filter('blaze_wooless_additional_site_info', [$this, 'woographql_is_composite_enabled'], 10, 1);
+			add_filter( 'blaze_wooless_additional_site_info', [ $this, 'woographql_is_composite_enabled' ], 10, 1 );
 
 			add_action( 'init', [ $this, 'maybe_save_jwt_secret' ] );
 
-			add_action('graphql_register_types', array($this, 'register_min_amount_to_shipping_rates'));
-			add_filter('woographql_cart_field_definitions', array($this, 'graphql_cart_fields'), 10, 1);
+			add_action( 'graphql_register_types', array( $this, 'register_min_amount_to_shipping_rates' ) );
+			add_filter( 'woographql_cart_field_definitions', array( $this, 'graphql_cart_fields' ), 10, 1 );
 		}
 	}
 
-	public function register_min_amount_to_shipping_rates()
-	{
-		register_graphql_field('ShippingRate', 'min_amount', [
+	public function register_min_amount_to_shipping_rates() {
+		register_graphql_field( 'ShippingRate', 'min_amount', [ 
 			'type' => 'String',
 			'description' => __( 'Shipping rate min order amount if free shipping', 'wp-graphql-woocommerce' ),
-			'resolve'     => static function ( $source ) {
-				if ( $source->get_method_id() !== 'free_shipping' ) return null;
+			'resolve' => static function ($source) {
+				if ( $source->get_method_id() !== 'free_shipping' )
+					return null;
 
 				$rate_settings = get_option( 'woocommerce_' . $source->get_method_id() . '_' . $source->get_instance_id() . '_settings' );
 				return ! empty( $rate_settings['min_amount'] ) ? $rate_settings['min_amount'] : null;
 			},
-		]);
+		] );
 	}
 
-	public function graphql_cart_fields( $fields )
-	{
+	public function graphql_cart_fields( $fields ) {
 		$fields['freeShippingMethods'] = array(
-			'type'        => 'ShippingRate',
+			'type' => 'ShippingRate',
 			'description' => __( 'Available free shipping methods for this order.', 'wp-graphql-woocommerce' ),
-			'resolve'     => static function ( $source ) {
+			'resolve' => static function ($source) {
 				$available_packages = $source->needs_shipping()
 					? \WC()->shipping()->calculate_shipping( $source->get_shipping_packages() )
 					: [];
-				
+
 				/**
 				 * @var \WC_Shipping_Zone
 				 */
 				$shipping_zone = null;
 
 				foreach ( $available_packages as $index => $package ) {
-					$shipping_zone = wc_get_shipping_zone($package);
+					$shipping_zone = wc_get_shipping_zone( $package );
 				}
 
 				$all_shipping_methods = $shipping_zone->get_shipping_methods();
-				$free_shipping_method = reset(array_filter($all_shipping_methods, function($shipping) {
+				$free_shipping_method = reset( array_filter( $all_shipping_methods, function ($shipping) {
 					return $shipping instanceof \WC_Shipping_Free_Shipping;
-				}));
+				} ) );
 
 				$show_free_shipping_banner = bw_get_general_settings( 'show_free_shipping_banner' );
 
-				if ( empty( $show_free_shipping_banner )) return null;
+				if ( empty( $show_free_shipping_banner ) )
+					return null;
 
 				return new \WC_Shipping_Rate(
 					'free_shipping:' . $free_shipping_method->instance_id,
@@ -185,6 +185,20 @@ class GraphQL {
 							return $payload['email'];
 						},
 					),
+					'username' => array(
+						'type' => 'String',
+						'description' => 'Logged in username',
+						'resolve' => function ($payload) {
+							return $payload['username'];
+						},
+					),
+					'name' => array(
+						'type' => 'String',
+						'description' => 'Logged in name',
+						'resolve' => function ($payload) {
+							return $payload['name'];
+						},
+					),
 					'user_id' => array(
 						'type' => 'Integer',
 						'description' => 'Logged in user id',
@@ -210,7 +224,9 @@ class GraphQL {
 					return array(
 						'status' => 'SUCCESS',
 						'email' => esc_html( $user->user_email ),
-						'user_id' => esc_html( $user->ID )
+						'user_id' => esc_html( $user->ID ),
+						'username' => esc_html( $user->user_login ),
+						'name' => esc_html( $user->display_name ),
 					);
 				},
 			)
