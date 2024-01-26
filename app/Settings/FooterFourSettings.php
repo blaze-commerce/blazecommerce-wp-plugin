@@ -47,7 +47,7 @@ class FooterFourSettings extends BaseSettings {
 
 	public function register_hooks() {
 		add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
-		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_footer_three_data' ), 10, 2 );
+		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_footer_four_data' ), 10, 2 );
 	}
 
 	public function footer_callback() {
@@ -65,7 +65,7 @@ class FooterFourSettings extends BaseSettings {
 		<?php
 	}
 
-	public function add_footer_three_data() {
+	public function add_footer_four_data() {
 		$footer_content_4 = get_option( 'blaze_wooless_footer_4_content', '' );
 		if ( empty( $footer_content_4 ) )
 			return;
@@ -79,4 +79,4 @@ class FooterFourSettings extends BaseSettings {
 	}
 }
 
-FooterThreeSettings::get_instance();
+FooterFourSettings::get_instance();
