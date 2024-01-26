@@ -103,6 +103,15 @@ class GraphQL {
 		}
 	}
 
+	public function is_vercel_staging($url)
+	{
+		$re = '/.vercel.app\/?$/m';
+
+		preg_match_all($re, $url, $is_vercel_staging, PREG_SET_ORDER, 0);
+
+		return $is_vercel_staging;
+	}
+
 	/**
 	 * Tells the browser to accept the custom cookie when loggin in from headless site
 	 */
@@ -116,7 +125,7 @@ class GraphQL {
 		];
 
 		// If the request is coming from an allowed origin (HEADLESS_FRONTEND_URL), tell the browser it can accept the response.
-		if ( in_array( $http_origin, $allowed_origins, true ) ) {
+		if ( in_array( $http_origin, $allowed_origins, true ) || $this->is_vercel_staging($http_origin) ) {
 			$headers['Access-Control-Allow-Origin'] = $http_origin;
 		}
 
