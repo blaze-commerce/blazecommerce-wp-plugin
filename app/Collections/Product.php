@@ -105,6 +105,7 @@ class Product extends BaseCollection {
 						[ 'name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true ],
 						[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
+						[ 'name' => 'crossSellData', 'type' => 'object[]', 'optional' => true ],
 						[ 'name' => 'metaData', 'type' => 'object', 'optional' => true ],
 						[ 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ],
 					),
@@ -569,7 +570,7 @@ class Product extends BaseCollection {
 
 						$published_at = strtotime( get_the_date( '', $product_id ) );
 
-						$product_data[] = array(
+						$product_data = array(
 							'id' => $product->get_id(),
 							'name' => $product->get_name(),
 							'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
