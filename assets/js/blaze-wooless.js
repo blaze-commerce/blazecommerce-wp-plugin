@@ -53,26 +53,28 @@
 
     var repeaterFields = {
         banner: {
-            image: {
-                label: 'Image Url',
-                name: 'banner-image',
-            },
-            title: {
-                label: 'Title',
-                name: 'banner-title',
-            },
-            subtitle: {
-                label: 'Subtitle',
-                name: 'banner-subtitle',
-            },
-            CTAUrl: {
-                label: 'Call to action Url',
-                name: 'banner-cta-url',
-            },
-            CTAText: {
-                label: 'Call to action text',
-                name: 'banner-cta-text',
-            },
+            fields: {
+                image: {
+                    label: 'Image Url',
+                    name: 'banner-image',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'banner-title',
+                },
+                subtitle: {
+                    label: 'Subtitle',
+                    name: 'banner-subtitle',
+                },
+                CTAUrl: {
+                    label: 'Call to action Url',
+                    name: 'banner-cta-url',
+                },
+                CTAText: {
+                    label: 'Call to action text',
+                    name: 'banner-cta-text',
+                },
+            }
         },
         mobileBanner: {
             image: {
@@ -126,7 +128,14 @@
             },
         },
         categories: commonImageLink,
-        cardGroup: commonImageLink,
+        cardGroup: {
+            config: [
+                { name: 'containerClass', label: 'Container Classes' },
+                { name: 'cardContainerClass', label: 'Card Container Classes' },
+                { name: 'cardImageClass', label: 'Card Image Classes' },
+            ],
+            fields: commonImageLink,
+        },
         cardGroupSlider: commonImageLink,
         list: {
             text: {
@@ -505,6 +514,14 @@
             }
         },
 
+        hasConfig: function(blockId) {
+            if (REPEATER_FIELD_KEYS.includes(blockId)) {
+                return repeaterFields[blockId].hasOwnProperty('config');
+            }
+
+            return dynamicConfigFields[blockId].hasOwnProperty('config');
+        },
+
 
         addCollapsedConfig: function (element) {
             var blockElement = $(element);
@@ -514,6 +531,14 @@
             if (blockElement.find('.configuration').length > 0) {
                 return;
             }
+
+            if (this.hasConfig(blockId)) {
+                var configButton = $('<span class="dashicons dashicons-admin-generic config-button">')
+                if (blockElement.find('.content .config-button').length == 0) {
+                    blockElement.find('.content').append(configButton)
+                }
+            }
+
             var caretState = $('<span class="caret-status dashicons"></span>')
             if (blockElement.find('.content .caret-status').length == 0) {
                 blockElement.find('.content').append(caretState)
@@ -563,12 +588,14 @@
                 var blockType = $el.data('block_type');
                 var blockId = $el.data('block_id');
                 var metaData = $el.data('block_metadata');
+                var config = $el.data('block_config');
                 var index = $el.index();
                 console.log(blockId, metaData, $el);
                 return {
                     position: index,
                     blockType: blockType,
                     blockId: blockId,
+                    config: config,
                     metaData: metaData,
                 };
             })
@@ -589,6 +616,8 @@
             datas.forEach(function (element) {
                 var blockElement = $('.blaze-wooless-draggable-block[data-block_id="' + element.blockId + '"]').first().clone();
                 blockElement.data('block_metadata', element.metaData)
+                blockElement.data('block_config', element.config)
+                console.log('load init data', element)
                 if (element.blockType === BLOCK_TYPE_SINGLE) {
                     blazeWooless.disableDroppedElement(blockElement);
                 }
@@ -638,10 +667,11 @@
         var generatedFields = [];
         var defaultData = {};
         var initialFieldValues = {};
-        for (var key in repeaterFields[blockId]) {
-            var label = repeaterFields[blockId][key].label;
-            var name = repeaterFields[blockId][key].name;
-            var fieldType = repeaterFields[blockId][key].fieldType;
+        var fields = repeaterFields[blockId].fields;
+        for (var key in fields) {
+            var label = fields[key].label;
+            var name = fields[key].name;
+            var fieldType = fields[key].fieldType;
             generatedFields.push('<div class="input-wrapper"><label>' + label + '</label>: ' + getFormField(name, fieldType) + '</div>');
 
             initialFieldValues[key] = '';
@@ -681,26 +711,26 @@
         return itemEl;
     }
 
-    function getFormField(name, fieldType) {
+    function getFormField(name, fieldType, value = '') {
         var field;
         switch (fieldType) {
             case 'textarea':
-                field = '<textarea class="input ' + name + '"></textarea>'
+                field = '<textarea class="input ' + name + '">' + value + '</textarea>'
                 break;
             default:
-                field = '<input type="text" class="input ' + name + '" />'
+                field = '<input type="text" class="input ' + name + '" value="' + value + '" />'
                 break;
         }
 
         return field;
     }
 
-    function addConfigFields(element, blockId, metaData = false) {
+    function addMetaDataFields(element, blockId, metaData = false) {
         if (typeof dynamicConfigFields[blockId] === 'undefined') return '';
 
         var itemEl = dynamicConfigRowTemplate(blockId);
 
-        element.data('block_metadata', metaData)
+        element.data('block_metadata', metaData);
 
         element.find('.configuration').prepend(itemEl);
     }
@@ -715,9 +745,10 @@
                 metaData.forEach(function (data) {
                     var itemEl = rowItemTemplate(blockId);
                     itemEl.data('row-data', data);
+                    var fields = repeaterFields[blockId].fields;
 
-                    for (var key in repeaterFields[blockId]) {
-                        var name = repeaterFields[blockId][key].name;
+                    for (var key in fields) {
+                        var name = fields[key].name;
                         itemEl.find('.input.' + name).val(data[selectedCountry][key]);
                     }
 
@@ -737,7 +768,7 @@
 
                 itemEl.insertBefore(element.find('.configuration .footer'));
             } else {
-                addConfigFields(element, blockId, metaData);
+                addMetaDataFields(element, blockId, metaData);
             }
         }
     }
@@ -753,7 +784,7 @@
             var items = elementBlock.find('.items');
             data = generateRowItemsData(elementBlock, items);
         } else {
-            data = generateDynamicConfigData(elementBlock);
+            data = generateDynamicMetaData(elementBlock);
         }
 
         console.log(elementBlock);
@@ -772,9 +803,10 @@
         const data = $.map(itemsElement.find('.row-item'), function (item) {
             var itemEl = $(item);
             var rowData = itemEl.data('row-data');
+            var fields = repeaterFields[blockId].fields;
             var _data = {};
-            for (var key in repeaterFields[blockId]) {
-                var name = repeaterFields[blockId][key].name;
+            for (var key in fields) {
+                var name = fields[key].name;
                 _data[key] = itemEl.find('.input.' + name).val();
             }
 
@@ -788,7 +820,7 @@
         return data;
     }
 
-    function generateDynamicConfigData(element) {
+    function generateDynamicMetaData(element) {
         var selectedCountry = $('select#region_selector').val();
         var blockId = element.data('block_id')
         var blockMetadata = element.data('block_metadata')
@@ -810,7 +842,7 @@
         }
 
         blockMetadata[selectedCountry] = _data;
-        console.log('generateDynamicConfigData', blockMetadata);
+        console.log('generateDynamicMetaData', blockMetadata);
 
         return blockMetadata;
     }
@@ -872,8 +904,9 @@
                         var itemEl = $(item)
                         var rowData = itemEl.data('row-data');
                         if (rowData && rowData[selectedRegion]) {
-                            for (var key in repeaterFields[blockId]) {
-                                var name = repeaterFields[blockId][key].name;
+                            var fields = repeaterFields[blockId].fields;
+                            for (var key in fields) {
+                                var name = fields[key].name;
                                 itemEl.find('.input.' + name).val(rowData[selectedRegion][key]);
                             }
                         }
@@ -890,6 +923,56 @@
                 }
 
             });
+        });
+
+        $(document.body).on('click', '.config-button', function(e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            
+            var block = $(this).closest('.blaze-wooless-draggable-block');
+            var blockId = block.data('block_id');
+            var blockConfig = block.data('block_config') || {};
+
+            var configFields = [];
+            if (REPEATER_FIELD_KEYS.includes(blockId)) {
+                var config = repeaterFields[blockId].config;
+                $.each(config, function(index, configField) {
+                    var value = typeof blockConfig[configField.name] !== 'undefined' ? blockConfig[configField.name] : '';
+                    configFields.push('<div class="input-wrapper"><label>' + configField.label + '</label>: ' + getFormField(configField.name, 'input', value) + '</div>')
+                })
+            }
+            $(configFields.join('')).appendTo('#block-config .content');
+            window.currentBlock = block;
+            $('#block-config').modal();
+        })
+
+        $('#block-config').on($.modal.BEFORE_CLOSE, function(event, modal) {
+            $(this).find('.content').html('');
+            window.currentBlock = undefined;
+            console.log('before close', $(this).find('.content'))
+        });
+
+        $('#block-config').on('click', 'button.save-config', function(e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+
+            var block = window.currentBlock;
+            var blockId = block.data('block_id');
+
+            var data = {}
+
+            if (REPEATER_FIELD_KEYS.includes(blockId)) {
+                var config = repeaterFields[blockId].config;
+                data = config.reduce(function(result, currentConfig) {
+                    result[currentConfig.name] = $('#block-config .content').find('input.' + currentConfig.name).val();
+                    return result;
+                }, data)
+            }
+
+
+            block.data('block_config', data);
+            blazeWooless.generateSaveData();
+            $.modal.close();
         });
     });
 })(jQuery);
