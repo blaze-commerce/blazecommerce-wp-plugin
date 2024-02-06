@@ -38,6 +38,8 @@ class Authentication {
 	}
 
 	public function destroy_cookies() {
+		wc_setcookie( 'isLoggedIn', 'false' );
+		wc_setcookie( 'didFetchUser', 'false' );
 		wc_setcookie( 'woo-session', '', time() - YEAR_IN_SECONDS );
 		wc_setcookie( 'woocommerce_customer_session_id', '', time() - YEAR_IN_SECONDS );
 		wc_setcookie( 'woocommerce_total_product_in_cart', '', time() - YEAR_IN_SECONDS );
