@@ -113,6 +113,12 @@ class Taxonomy extends BaseCollection
 		$import_logger = wc_get_logger();
 		$import_context = array('source' => 'wooless-taxonomy-import');
 
+		$batch_size = 250; // Adjust the batch size depending on your server's capacity
+		$current_batch_count = 0;
+		$taxonomy_datas = array();
+		$imported_products_count = 0;
+		$successful_imports_count = 0;
+
 
 		//indexing taxonmy terms
 		try {
@@ -138,19 +144,28 @@ class Taxonomy extends BaseCollection
 				if (!empty($terms) && !is_wp_error($terms)) {
 					foreach ($terms as $term) {
 						// Prepare the data to be indexed
-						$document = $this->generate_typesense_data($term);
+						$taxonomy_datas[] = $this->generate_typesense_data($term);
+						$current_batch_count++;
 
-						// Index the term data in Typesense
-						try {
-							$result = $this->create($document);
-							$successful_imports = array_filter($result, function ($batch_result) {
-								return isset($batch_result['success']) && $batch_result['success'] == true;
-							});
-							$import_logger->debug('TS Taxonomy Import result: ' . print_r($result, 1), $import_context);
-						} catch (\Exception $e) {
-							$logger->debug('TS Taxonomy Import Exception: ' . $e->getMessage(), $context);
+						if ($current_batch_count >= $batch_size) {
+							// Index the term data in Typesense
+							try {
+								$result = $this->import($taxonomy_datas);
+								$successful_imports = array_filter($result, function ($batch_result) {
+									return isset($batch_result['success']) && $batch_result['success'] == true;
+								});
+								$successful_imports_count += count($successful_imports);
+								$imported_products_count += $current_batch_count;
+								$taxonomy_datas = array();
+								$current_batch_count = 0;
+								$import_logger->debug('TS Taxonomy Import result: ' . print_r($result, 1), $import_context);
+							} catch (\Exception $e) {
+								$logger->debug('TS Taxonomy Import Exception: ' . $e->getMessage(), $context);
 
-							echo "Error adding term '{$term->name}' to Typesense: " . $e->getMessage() . "\n";
+								echo "Error adding term '{$term->name}' to Typesense: " . $e->getMessage() . "\n";
+								$taxonomy_datas = array();
+								$current_batch_count = 0;
+							}
 						}
 					}
 				}
@@ -160,7 +175,25 @@ class Taxonomy extends BaseCollection
 
 			unset($taxonomies);
 
-			echo "taxonomy added successfully!\n";
+			if ( count($taxonomy_datas) > 0) {
+				try {
+					$result = $this->import($taxonomy_datas);
+					$successful_imports = array_filter($result, function ($batch_result) {
+						return isset($batch_result['success']) && $batch_result['success'] == true;
+					});
+					$successful_imports_count += count($successful_imports);
+					$imported_products_count += $current_batch_count;
+					$import_logger->debug('TS Taxonomy Import result: ' . print_r($result, 1), $import_context);
+				} catch (\Exception $e) {
+					$logger->debug('TS Taxonomy Import Exception: ' . $e->getMessage(), $context);
+
+					echo "Error adding term '{$term->name}' to Typesense: " . $e->getMessage() . "\n";
+				}
+			}
+
+			unset($taxonomy_datas);
+
+			echo "Taxonomies synced: {$successful_imports_count}/{$imported_products_count}\n";
 		} catch (\Exception $e) {
 			$logger->debug('TS Taxonomy collection intialize Exception: ' . $e->getMessage(), $context);
 
