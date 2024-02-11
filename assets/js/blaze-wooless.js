@@ -2,6 +2,10 @@
     var BLOCK_TYPE_SINGLE = 'single';
     var BLOCK_TYPE_MULTIPLE = 'multiple';
 
+    var commonConfig = [
+        { name: 'rowClass', label: 'Row Class' },
+    ];
+
     var commonImageLink = {
         imageUrl: {
             label: 'Image Url',
@@ -53,6 +57,9 @@
 
     var repeaterFields = {
         banner: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+            ]),
             fields: {
                 image: {
                     label: 'Image Url',
@@ -77,229 +84,321 @@
             }
         },
         mobileBanner: {
-            image: {
-                label: 'Image Url',
-                name: 'mobile-banner-image',
-            },
-            title: {
-                label: 'Title',
-                name: 'mobile-banner-title',
-            },
-            subtitle: {
-                label: 'Subtitle',
-                name: 'mobile-banner-subtitle',
-            },
-            CTAUrl: {
-                label: 'Call to action Url',
-                name: 'mobile-banner-cta-url',
-            },
-            CTAText: {
-                label: 'Call to action text',
-                name: 'mobile-banner-cta-text',
+            config: commonConfig,
+            fields: {
+                image: {
+                    label: 'Image Url',
+                    name: 'mobile-banner-image',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'mobile-banner-title',
+                },
+                subtitle: {
+                    label: 'Subtitle',
+                    name: 'mobile-banner-subtitle',
+                },
+                CTAUrl: {
+                    label: 'Call to action Url',
+                    name: 'mobile-banner-cta-url',
+                },
+                CTAText: {
+                    label: 'Call to action text',
+                    name: 'mobile-banner-cta-text',
+                }
             },
         },
         clients: {
-            image: {
-                label: 'Image Url',
-                name: 'company-image',
-            },
-            redirectUrl: {
-                label: 'Redirect Url',
-                name: 'company-redirect-url',
-            },
-            name: {
-                label: 'Name',
-                name: 'company-name',
+            config: commonConfig,
+            fields: {
+                image: {
+                    label: 'Image Url',
+                    name: 'company-image',
+                },
+                redirectUrl: {
+                    label: 'Redirect Url',
+                    name: 'company-redirect-url',
+                },
+                name: {
+                    label: 'Name',
+                    name: 'company-name',
+                }
             },
         },
         testimonials: {
-            authorName: {
-                label: 'Author Name',
-                name: 'testimony-author-name',
-            },
-            authorPosition: {
-                label: 'Author Position',
-                name: 'testimony-author-position',
-            },
-            text: {
-                label: 'Text',
-                name: 'testimony-text',
-                fieldType: 'textarea',
+            config: commonConfig,
+            fields: {
+                authorName: {
+                    label: 'Author Name',
+                    name: 'testimony-author-name',
+                },
+                authorPosition: {
+                    label: 'Author Position',
+                    name: 'testimony-author-position',
+                },
+                text: {
+                    label: 'Text',
+                    name: 'testimony-text',
+                    fieldType: 'textarea',
+                },
             },
         },
-        categories: commonImageLink,
+        categories: {
+            config: commonConfig,
+            fields: commonImageLink
+        },
         cardGroup: {
-            config: [
+            config: commonConfig.concat([
                 { name: 'containerClass', label: 'Container Classes' },
                 { name: 'cardContainerClass', label: 'Card Container Classes' },
                 { name: 'cardImageClass', label: 'Card Image Classes' },
-            ],
+            ]),
             fields: commonImageLink,
         },
-        cardGroupSlider: commonImageLink,
-        list: {
-            text: {
-                label: 'Text',
-                name: 'list-text',
-            },
-            redirectUrl: {
-                label: 'Redirect Url',
-                name: 'list-redirect-url',
-            },
+        cardGroupSlider: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+                { name: 'cardContainerClass', label: 'Card Container Classes' },
+                { name: 'cardImageClass', label: 'Card Image Classes' },
+            ]),
+            fields: commonImageLink,
         },
-        categoryFilters: commonFilterOption,
-        refinedSelection: commonFilterOption,
-        attributeFilters: {
-            classes: {
-                label: 'Classes',
-                name: 'filter-classes',
-            },
-            title: {
-                label: 'Title',
-                name: 'filter-title',
-            },
-            attributeType: {
-                label: 'Attribute Type/s (separated by comma)',
-                name: 'filter-type',
+        list: {
+            config: commonConfig.concat([
+                { name: 'listClass', label: 'List Class' },
+            ]),
+            fields: {
+                text: {
+                    label: 'Text',
+                    name: 'list-text',
+                },
+                redirectUrl: {
+                    label: 'Redirect Url',
+                    name: 'list-redirect-url',
+                }
             }
         },
-        multipleImage: commonImageContent,
+        categoryFilters: {
+            config: commonConfig,
+            fields: commonFilterOption
+        },
+        refinedSelection: {
+            config: commonConfig,
+            fields: commonFilterOption
+        },
+        attributeFilters: {
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'filter-classes',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'filter-title',
+                },
+                attributeType: {
+                    label: 'Attribute Type/s (separated by comma)',
+                    name: 'filter-type',
+                }
+            }
+        },
+        multipleImage: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+            ]),
+            fields: commonImageContent
+        },
         socialIcons: {
-            classes: {
-                label: 'Classes',
-                name: 'social-icons-classes',
-            },
-            redirectUrl: {
-                label: 'Redirect URL',
-                name: 'social-icons-redirect-url',
-            },
-            redirectType: {
-                label: 'Redirect Type',
-                name: 'social-icons-redirect-type',
-            },
-            icon: {
-                label: 'Icon',
-                name: 'social-icons',
-            },
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'social-icons-classes',
+                },
+                redirectUrl: {
+                    label: 'Redirect URL',
+                    name: 'social-icons-redirect-url',
+                },
+                redirectType: {
+                    label: 'Redirect Type',
+                    name: 'social-icons-redirect-type',
+                },
+                icon: {
+                    label: 'Icon',
+                    name: 'social-icons',
+                }
+            }
         },
         multipleLinks: {
-            classes: {
-                label: 'Classes',
-                name: 'multiple-links-classes',
-            },
-            text: {
-                label: 'Text',
-                name: 'multiple-links-text',
-            },
-            redirectUrl: {
-                label: 'Redirect Url',
-                name: 'multiple-links-redirect-url',
-            },
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'multiple-links-classes',
+                },
+                text: {
+                    label: 'Text',
+                    name: 'multiple-links-text',
+                },
+                redirectUrl: {
+                    label: 'Redirect Url',
+                    name: 'multiple-links-redirect-url',
+                },
+            }
         },
     }
 
     var dynamicConfigFields = {
         text: {
-            classes: {
-                label: 'Classes',
-                name: 'text-classes',
+            config: commonConfig.concat([
+                { name: 'style', label: 'Style', description: 'Values: style-1' },
+                { name: 'styleColor', label: 'Style Color', description: 'Values: any valid hash' },
+            ]),
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'text-classes',
+                },
+                text: {
+                    label: 'Content',
+                    name: 'text-content',
+                }
             },
-            text: {
-                label: 'Content',
-                name: 'text-content',
-            }
         },
         textarea: {
-            classes: {
-                label: 'Classes',
-                name: 'text-classes',
-            },
-            text: {
-                label: 'Content',
-                name: 'text-content',
-                fieldType: 'textarea'
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'text-classes',
+                },
+                text: {
+                    label: 'Content',
+                    name: 'text-content',
+                    fieldType: 'textarea'
+                }
             }
         },
         menu: {
-            menuId: {
-                label: 'Menu ID',
-                name: 'menu-id',
-            }
+            config: commonConfig,
+            fields: {
+                menuId: {
+                    label: 'Menu ID',
+                    name: 'menu-id',
+                },
+            },
         },
         callToAction: {
-            classes: {
-                label: 'Classes',
-                name: 'text-classes',
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'text-classes',
+                },
+                text: {
+                    label: 'Text',
+                    name: 'cta-text',
+                },
+                redirectUrl: {
+                    label: 'Redirect Url',
+                    name: 'cta-redirect-url',
+                },
             },
-            text: {
-                label: 'Text',
-                name: 'cta-text',
-            },
-            redirectUrl: {
-                label: 'Redirect Url',
-                name: 'cta-redirect-url',
-            }
         },
-        singleImage: commonImageContent,
+        singleImage: {
+            config: commonConfig,
+            fields: commonImageContent,
+        },
         products: {
-            productId: {
-                label: 'Product Id',
-                name: 'list-text',
+            config: commonConfig.concat([
+                { name: 'slidesToShow', label: 'Slides to show' },
+                { name: 'containerClass', label: 'Container Classes' },
+            ]),
+            fields: {
+                productId: {
+                    label: 'Product Id',
+                    name: 'list-text',
+                }
             }
         },
-        subCategoryFilters: commonFilterOption,
-        brandsFilters: commonFilterOption,
+        subCategoryFilters: {
+            config: commonConfig,
+            fields: commonFilterOption,
+        },
+        brandsFilters: {
+            config: commonConfig,
+            fields: commonFilterOption,
+        },
         newFilters: {
-            classes: {
-                label: 'Classes',
-                name: 'filter-classes',
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'filter-classes',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'filter-title',
+                },
             },
-            title: {
-                label: 'Title',
-                name: 'filter-title',
-            }
         },
         saleFilters: {
-            classes: {
-                label: 'Classes',
-                name: 'filter-classes',
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'filter-classes',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'filter-title',
+                },
             },
-            title: {
-                label: 'Title',
-                name: 'filter-title',
-            }
         },
         availabilityFilters: {
-            classes: {
-                label: 'Classes',
-                name: 'filter-classes',
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'filter-classes',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'filter-title',
+                },
             },
-            title: {
-                label: 'Title',
-                name: 'filter-title',
-            }
         },
         customerReviews: {
-            classes: {
-                label: 'Classes',
-                name: 'customer-reviews-classes',
+            config: commonConfig,
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'customer-reviews-classes',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'customer-reviews-title',
+                },
             },
-            title: {
-                label: 'Title',
-                name: 'customer-reviews-title',
-            }
         },
         blogPosts: {
-            blogCount: {
-                label: 'Blog Count',
-                name: 'blog-count',
-            }
+            config: commonConfig,
+            fields: {
+                blogCount: {
+                    label: 'Blog Count',
+                    name: 'blog-count',
+                },
+            },
         },
         embedCode: {
-            text: {
-                label: 'HTML Embed Code',
-                name: 'html-embed-code',
-                fieldType: 'textarea',
+            config: commonConfig,
+            fields: {
+                text: {
+                    label: 'HTML Embed Code',
+                    name: 'html-embed-code',
+                    fieldType: 'textarea',
+                },
             },
         },
     }
@@ -497,23 +596,6 @@
             }
         },
 
-        addRemoveButtonToDroppedElement: function (element) {
-            var droppedElement = $(element);
-            var blockId = droppedElement.data('block_id');
-            var blockElement = $('.blaze-wooless-draggable-panel').find('.blaze-wooless-draggable-block[data-block_id="' + blockId + '"]');
-
-            if (droppedElement.find('.remove').length === 0) {
-                var removeButton = $('<span class="remove">✕</span>');
-                removeButton.on('click', function () {
-                    droppedElement.remove();
-                    blockElement.draggable('enable');
-                    blockElement.removeClass('disabled');
-                    blazeWooless.generateSaveData();
-                });
-                droppedElement.find('.content').append(removeButton)
-            }
-        },
-
         hasConfig: function(blockId) {
             if (REPEATER_FIELD_KEYS.includes(blockId)) {
                 return repeaterFields[blockId].hasOwnProperty('config');
@@ -583,7 +665,7 @@
         },
 
         generateSaveData: function () {
-            const data = $.map($('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block'), function (el) {
+            var data = $.map($('.blaze-wooless-draggable-canvas').find('.blaze-wooless-draggable-block'), function (el) {
                 var $el = $(el);
                 var blockType = $el.data('block_type');
                 var blockId = $el.data('block_id');
@@ -679,7 +761,7 @@
         if (!data) {
             data = initialFieldValues;
         }
-        var itemEl = $('<div class="row-item"><span class="remove">✕</span>' + generatedFields.join('') + '</div>')
+        var itemEl = $('<div class="row-item"><span class="duplicate dashicons dashicons-admin-page"></span><span class="remove">✕</span>' + generatedFields.join('') + '</div>')
 
         countries.forEach(function (country) {
             defaultData[country] = data;
@@ -699,10 +781,12 @@
     function dynamicConfigRowTemplate(blockId) {
         var generatedFields = [];
         var initialFieldValues = {};
-        for (var key in dynamicConfigFields[blockId]) {
-            var label = dynamicConfigFields[blockId][key].label;
-            var name = dynamicConfigFields[blockId][key].name;
-            var fieldType = dynamicConfigFields[blockId][key].fieldType;
+        var fields = dynamicConfigFields[blockId].fields;
+        console.log(fields)
+        for (var key in fields) {
+            var label = fields[key].label;
+            var name = fields[key].name;
+            var fieldType = fields[key].fieldType;
             generatedFields.push('<div class="input-wrapper"><label>' + label + '</label>: ' + getFormField(name, fieldType) + '</div>');
 
             initialFieldValues[key] = '';
@@ -761,8 +845,9 @@
             if (typeof metaData !== 'undefined') {
                 var itemEl = dynamicConfigRowTemplate(blockId);
 
-                for (var key in dynamicConfigFields[blockId]) {
-                    var name = dynamicConfigFields[blockId][key].name;
+                var fields = dynamicConfigFields[blockId].fields;
+                for (var key in fields) {
+                    var name = fields[key].name;
                     itemEl.find('.input.' + name).val(metaData[selectedCountry] ? metaData[selectedCountry][key] : '');
                 }
 
@@ -800,7 +885,7 @@
         var selectedCountry = $('select#region_selector').val();
         var blockId = element.data('block_id')
 
-        const data = $.map(itemsElement.find('.row-item'), function (item) {
+        var data = $.map(itemsElement.find('.row-item'), function (item) {
             var itemEl = $(item);
             var rowData = itemEl.data('row-data');
             var fields = repeaterFields[blockId].fields;
@@ -827,8 +912,9 @@
 
         var _data = {};
         var initialFieldValue = {};
-        for (var key in dynamicConfigFields[blockId]) {
-            var name = dynamicConfigFields[blockId][key].name;
+        var fields = dynamicConfigFields[blockId].fields;
+        for (var key in fields) {
+            var name = fields[key].name;
             console.log('.input.' + name);
             _data[key] = element.find('.input.' + name).val();
             initialFieldValue[key] = '';
@@ -868,6 +954,13 @@
         $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .row-item .remove', function (e) {
             var items = $(this).closest('.items');
             $(this).closest('.row-item').remove();
+            generateMetaDataFromElement(items);
+        });
+
+        $(document.body).on('click', '.blaze-wooless-draggable-block .configuration .row-item .duplicate', function (e) {
+            var items = $(this).closest('.items');
+            var itemRowData = $(this).closest('.row-item').data('rowData');
+            $(this).closest('.row-item').clone().data('rowData', Object.assign({}, itemRowData)).appendTo(items);
             generateMetaDataFromElement(items);
         });
 
@@ -915,8 +1008,9 @@
                     var itemEl = $(block).find('.configuration .row-item');
                     var metaData = $(block).data('block_metadata');
                     if (metaData && metaData[selectedRegion]) {
-                        for (var key in dynamicConfigFields[blockId]) {
-                            var name = dynamicConfigFields[blockId][key].name;
+                        var fields = dynamicConfigFields[blockId].fields;
+                        for (var key in fields) {
+                            var name = fields[key].name;
                             itemEl.find('.input.' + name).val(metaData[selectedRegion][key]);
                         }
                     }
@@ -934,13 +1028,18 @@
             var blockConfig = block.data('block_config') || {};
 
             var configFields = [];
+            var fieldGroup = dynamicConfigFields;
+
             if (REPEATER_FIELD_KEYS.includes(blockId)) {
-                var config = repeaterFields[blockId].config;
-                $.each(config, function(index, configField) {
-                    var value = typeof blockConfig[configField.name] !== 'undefined' ? blockConfig[configField.name] : '';
-                    configFields.push('<div class="input-wrapper"><label>' + configField.label + '</label>: ' + getFormField(configField.name, 'input', value) + '</div>')
-                })
+                fieldGroup = repeaterFields;
             }
+
+            var config = fieldGroup[blockId].config;
+            $.each(config, function(index, configField) {
+                var value = typeof blockConfig[configField.name] !== 'undefined' ? blockConfig[configField.name] : '';
+                var description = typeof configField.description !== 'undefined' ? '<span>' + configField.description + '</span>' : '';
+                configFields.push('<div class="input-wrapper"><label>' + configField.label + '</label>: ' + getFormField(configField.name, 'input', value) + description + '</div>')
+            })
             $(configFields.join('')).appendTo('#block-config .content');
             window.currentBlock = block;
             $('#block-config').modal();
@@ -961,13 +1060,18 @@
 
             var data = {}
 
+            var fieldGroup = dynamicConfigFields;
+
             if (REPEATER_FIELD_KEYS.includes(blockId)) {
-                var config = repeaterFields[blockId].config;
-                data = config.reduce(function(result, currentConfig) {
-                    result[currentConfig.name] = $('#block-config .content').find('input.' + currentConfig.name).val();
-                    return result;
-                }, data)
+                fieldGroup = repeaterFields;
             }
+
+            var config = fieldGroup[blockId].config;
+            console.log(fieldGroup[blockId])
+            data = config.reduce(function(result, currentConfig) {
+                result[currentConfig.name] = $('#block-config .content').find('input.' + currentConfig.name).val();
+                return result;
+            }, data)
 
 
             block.data('block_config', data);
