@@ -21,7 +21,7 @@ class WoocommerceProductLabel {
 	}
 
 	public function product_label_html( $product_data, $product_id ) {
-		if(!empty(product_data) && !empty($product) && $product_id) {
+		if(!empty($product_data) && $product_id) {
 			ob_start();
 			setup_postdata( $product_id );
 			do_action( 'blaze_get_advance_custom_labels_html' );
