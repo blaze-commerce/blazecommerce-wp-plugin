@@ -123,6 +123,29 @@ class Page extends BaseCollection {
 			];
 		}
 
+		// If there is no featured image, get the first image attachment from the post content
+		$content = get_the_content();
+		$image_id = '';
+		$output = preg_match_all('/image="(.*?)"/m', $content, $matches);
+		if (!empty($matches[1][0])) {
+			$image_id = $matches[1][0];
+		}
+
+		// Use the first image found in the post content
+		if (!empty($image_id) && $image_src = wp_get_attachment_image_src($image_id, 'full')) {
+			$attachment = get_post( $image_id );
+			$thumbnail = [ 
+				'id' => $image_id,
+				'title' => is_object( $attachment ) ? $attachment->post_title : '',
+				'altText' => get_post_meta( $image_id, '_wp_attachment_image_alt', true ),
+				'src' => $image_src[0],
+			];
+
+			if(empty($thumbnail['altText'])) {
+				$thumbnail['altText'] = $attachment->post_title;
+			}
+		}
+
 		return $thumbnail;
 	}
 
