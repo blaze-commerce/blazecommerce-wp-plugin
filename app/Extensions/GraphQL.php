@@ -76,8 +76,9 @@ class GraphQL {
 				} ) );
 
 				$show_free_shipping_banner = bw_get_general_settings( 'show_free_shipping_banner' );
+				$show_free_shipping_minicart_component = bw_get_general_settings( 'show_free_shipping_minicart_component' );
 
-				if ( empty( $show_free_shipping_banner ) )
+				if ( empty( $show_free_shipping_banner ) && empty( $show_free_shipping_minicart_component ) )
 					return null;
 
 				return new \WC_Shipping_Rate(
