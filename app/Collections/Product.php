@@ -420,6 +420,19 @@ class Product extends BaseCollection {
 					$parentTerm  = get_term( $product_term->parent, $taxonomy );
 					$term_parent = isset( $parentTerm->name ) ? $parentTerm->name : '';
 					$termOrder   = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
+					$term_permalink = wp_make_link_relative( get_term_link( $product_term->term_id ) );
+					$term_parent_slug = $parentTerm->slug;
+
+					// Get the thumbnail
+					$term_thumbnail_id = get_term_meta($product_term->term_id, 'thumbnail_id', true);
+					$term_attachment = get_post($term_thumbnail_id);
+
+					$term_thumbnail = [
+						'id' => $term_thumbnail_id,
+						'title' => $term_attachment->post_title,
+						'altText' => get_post_meta($term_thumbnail_id, '_wp_attachment_image_alt', true),
+						'src' => wp_get_attachment_url($term_thumbnail_id),
+					];
 
 					$taxonomies_data[] = [ 
 						'name' => $term_name,
@@ -431,7 +444,7 @@ class Product extends BaseCollection {
 						'parentTerm' => $term_parent,
 						'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
 						// Search Parameter Filter Values
-						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder,
+						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
 					];
 
 					unset( $parentTerm, $term_name, $term_slug, $term_parent, $termOrder );
