@@ -92,6 +92,7 @@ class BlazeWooless
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
             '\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WooDiscountRules',
+			'\\BlazeWooless\\Extensions\\Gutenberg',
 		);
 
 		foreach ( $extensions as $extension ) {
