@@ -21,6 +21,8 @@ class Yotpo {
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'generate_product_reviews_stats' ), 10, 2 );
 
 			add_filter( 'blaze_wooless_cross_sell_data_for_typesense', array( $this, 'generate_cross_sell_reviews_stats' ), 10, 2 );
+
+			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'map_top_reviews_per_product' ), 10, 1 );
 		}
 	}
 
@@ -97,5 +99,11 @@ class Yotpo {
 		unset( $reviews );
 
 		return $product;
+	}
+
+	public function map_top_reviews_per_product( $product_data ) {
+		if( ! empty( $product_data ) ) {
+			
+		}
 	}
 }

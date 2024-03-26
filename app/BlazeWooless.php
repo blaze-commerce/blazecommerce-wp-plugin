@@ -68,6 +68,7 @@ class BlazeWooless
 			'\\BlazeWooless\\Features\\LoadCartFromSession',
 			'\\BlazeWooless\\Features\\Authentication',
 			'\\BlazeWooless\\Features\\CategoryBanner',
+			'\\BlazeWooless\\Features\\ProductReviews',
 		);
 
 		foreach ( $features as $feature ) {
