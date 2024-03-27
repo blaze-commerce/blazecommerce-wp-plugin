@@ -103,7 +103,7 @@ class ProductReviews {
 			if( ! empty( $products ) ) {
 				foreach( $products as $product ) {
 					$woocommerce_product_id = $product->get_id();
-					$review_data = $reviews_response[$product_id]['response']['reviews'];
+					$review_data = $reviews_response[$woocommerce_product_id]['response']['reviews'];
 					$top_reviews = $this->get_review_with_long_content( $review_data );
 					$product_name = $product->get_name();
 
