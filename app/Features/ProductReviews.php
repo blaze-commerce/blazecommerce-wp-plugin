@@ -74,13 +74,14 @@ class ProductReviews {
 	}
 
 	public function get_review_with_long_content( $reviews ) {
+		if( empty ( $reviews ) ) return null;
 		foreach( $reviews as $review ) {
 			if( strlen( $review['content'] ) > 10 ) {
 				return $review;
 			}
 		}
 
-		return;
+		return null;
 	}
 
 	public function get_product_reviews_callback( \WP_REST_Request $request ) {
@@ -112,8 +113,7 @@ class ProductReviews {
 					$product_permalink = wp_make_link_relative( get_permalink( $woocommerce_product_id ) );
 
 					foreach ( $product_ids_arrays as $product_id ) {
-
-						if( $woocommerce_product_id == $product_id) {
+						if( $woocommerce_product_id == $product_id && ! empty( $top_reviews )) {
 							$response[] = array(
 								'score' => $top_reviews['score'],
 								'content' => $top_reviews['content'],
