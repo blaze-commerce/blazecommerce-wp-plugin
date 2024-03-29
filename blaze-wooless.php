@@ -61,6 +61,24 @@ function typesense_enqueue_google_fonts( $hook ) {
 		true,
 	);
 	wp_enqueue_script( 'chosen' );
+
+
+	wp_register_style(
+		'jquery.modal',
+		'https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css',
+		array(),
+		null,
+		'all',
+	);
+	wp_enqueue_style( 'jquery.modal' );
+	wp_register_script(
+		'jquery.modal',
+		'https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js',
+		array( 'jquery' ),
+		null,
+		true,
+	);
+	wp_enqueue_script( 'jquery.modal' );
 }
 
 add_action( 'admin_enqueue_scripts', 'typesense_enqueue_google_fonts' );

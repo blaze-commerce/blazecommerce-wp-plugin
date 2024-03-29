@@ -70,7 +70,6 @@
 }
 
 .blaze-wooless-draggable-canvas .blaze-wooless-draggable-block span.caret-status {
-    margin-left: auto;
     cursor: pointer;
 }
 
@@ -130,4 +129,12 @@
 /* Region Selector */
 #region_selector {
     margin-bottom: 20px;
+}
+
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block span:first-of-type {
+    margin-left: auto;
+}
+
+.blaze-wooless-draggable-canvas .blaze-wooless-draggable-block span.config-button {
+    cursor: pointer;
 }
