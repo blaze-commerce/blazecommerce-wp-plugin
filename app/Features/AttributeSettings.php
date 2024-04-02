@@ -79,6 +79,9 @@ class AttributeSettings {
 			$generated_attributes = array();
 
 			foreach ( $attributes as $key => $attribute ) {
+				if ( !$attribute->get_variation() ) {
+					continue;
+				}
 				$attribute_to_register = array(
 					'slug' => $key,
 					'name' => $key,
