@@ -422,6 +422,7 @@
         syncMenusLink: '#sync-menus-link',
         syncPagesLink: '#sync-pages-link',
         syncSiteInfoLink: '#sync-site-info-link',
+        syncGpElements: '#sync-site-gp-elements',
         syncAllLink: '#sync-all-link',
 
         syncInProgress: false,
@@ -452,6 +453,7 @@
             $(document.body).on('click', this.syncTaxonomiesLink, this.importTaxonomies.bind(this));
             $(document.body).on('click', this.syncMenusLink, this.importMenus.bind(this));
             $(document.body).on('click', this.syncPagesLink, this.importPages.bind(this));
+            $(document.body).on('click', this.syncGpElements, this.importGpElements.bind(this));
             $(document.body).on('click', this.syncSiteInfoLink, this.importSiteInfo.bind(this));
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
         },
@@ -550,6 +552,15 @@
             return this.importData('page', 'Pages Syncing in progress...', true);
         },
 
+        importGpElements: function (e) {
+            e.preventDefault();
+            if (this.syncInProgress) {
+                return false;
+            }
+            this.clearResultContainer();
+            return this.importData('page-element', 'Page elements Syncing in progress...', true);
+        },
+
         importSiteInfo: function (e) {
             e.preventDefault();
             if (this.syncInProgress) {
@@ -600,7 +611,7 @@
             }
         },
 
-        hasConfig: function(blockId) {
+        hasConfig: function (blockId) {
             if (REPEATER_FIELD_KEYS.includes(blockId)) {
                 return repeaterFields[blockId].hasOwnProperty('config');
             }
@@ -1023,10 +1034,10 @@
             });
         });
 
-        $(document.body).on('click', '.config-button', function(e) {
+        $(document.body).on('click', '.config-button', function (e) {
             e.preventDefault();
             e.stopImmediatePropagation();
-            
+
             var block = $(this).closest('.blaze-wooless-draggable-block');
             var blockId = block.data('block_id');
             var blockConfig = block.data('block_config') || {};
@@ -1039,7 +1050,7 @@
             }
 
             var config = fieldGroup[blockId].config;
-            $.each(config, function(index, configField) {
+            $.each(config, function (index, configField) {
                 var value = typeof blockConfig[configField.name] !== 'undefined' ? blockConfig[configField.name] : '';
                 var description = typeof configField.description !== 'undefined' ? '<span>' + configField.description + '</span>' : '';
                 configFields.push('<div class="input-wrapper"><label>' + configField.label + '</label>: ' + getFormField(configField.name, 'input', value) + description + '</div>')
@@ -1049,13 +1060,13 @@
             $('#block-config').modal();
         })
 
-        $('#block-config').on($.modal.BEFORE_CLOSE, function(event, modal) {
+        $('#block-config').on($.modal.BEFORE_CLOSE, function (event, modal) {
             $(this).find('.content').html('');
             window.currentBlock = undefined;
             console.log('before close', $(this).find('.content'))
         });
 
-        $('#block-config').on('click', 'button.save-config', function(e) {
+        $('#block-config').on('click', 'button.save-config', function (e) {
             e.preventDefault();
             e.stopImmediatePropagation();
 
@@ -1072,7 +1083,7 @@
 
             var config = fieldGroup[blockId].config;
             console.log(fieldGroup[blockId])
-            data = config.reduce(function(result, currentConfig) {
+            data = config.reduce(function (result, currentConfig) {
                 result[currentConfig.name] = $('#block-config .content').find('input.' + currentConfig.name).val();
                 return result;
             }, data)
