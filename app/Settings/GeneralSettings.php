@@ -55,28 +55,28 @@ class GeneralSettings extends BaseSettings {
 						'label' => 'Environment',
 						'type' => 'select',
 						'args' => array(
-								'description' => 'Select which environment to use.',
-								'options' => array(
-									'test' => 'Test',
-									'live' => 'Live',
-								),
+							'description' => 'Select which environment to use.',
+							'options' => array(
+								'test' => 'Test',
+								'live' => 'Live',
 							),
+						),
 					),
 					array(
 						'id' => 'api_key',
 						'label' => 'API Key',
 						'type' => 'password',
 						'args' => array(
-								'description' => 'API Key generated from the Blaze Commerce Admin Portal.'
-							),
+							'description' => 'API Key generated from the Blaze Commerce Admin Portal.'
+						),
 					),
 					array(
 						'id' => 'shop_domain',
 						'label' => 'Shop Domain',
 						'type' => 'text',
 						'args' => array(
-								'description' => 'Live site domain. (e.g. website.com.au)'
-							),
+							'description' => 'Live site domain. (e.g. website.com.au)'
+						),
 					),
 					array(
 						'id' => 'show_free_shipping_banner',
@@ -104,6 +104,7 @@ class GeneralSettings extends BaseSettings {
 			<a href="#" id="sync-menus-link">Sync Menus</a><br />
 			<a href="#" id="sync-pages-link">Sync Pages</a><br />
 			<a href="#" id="sync-site-info-link">Sync Site Info</a><br />
+			<a href="#" id="sync-site-gp-elements">Sync Gutenberg Elements</a><br />
 			<a href="#" id="sync-all-link">Sync All</a>
 			<div id="sync-results-container"></div>
 			<?php
