@@ -150,11 +150,11 @@ class Product extends BaseCollection {
 				$product_data = array();
 
 				// Get the product data
-				if ( ! empty ( $product ) ) {
+				if ( ! empty( $product ) ) {
 					$product_data = $this->generate_typesense_data( $product );
 				}
 
-				if ( empty ( $product_data ) ) {
+				if ( empty( $product_data ) ) {
 					error_log( "Skipping product ID: " . $product->get_id() );
 					continue; // Skip this product if no product data is found
 				}
@@ -194,7 +194,7 @@ class Product extends BaseCollection {
 
 			$next_page          = $page + 1;
 			$query_args['page'] = $next_page;
-			$has_next_data      = ! empty ( \wc_get_products( $query_args ) );
+			$has_next_data      = ! empty( \wc_get_products( $query_args ) );
 			echo json_encode( array(
 				'imported_products_count' => count( $successful_imports ),
 				'total_imports' => $total_imports,
@@ -221,7 +221,7 @@ class Product extends BaseCollection {
 		$product_data = array();
 		$product_id   = '';
 
-		if ( ! empty ( $product ) ) {
+		if ( ! empty( $product ) ) {
 			$product_id       = $product->get_id();
 			$shortDescription = $product->get_short_description();
 			$description      = $product->get_description();
@@ -292,7 +292,7 @@ class Product extends BaseCollection {
 						'salePrice' => array(
 							$currency => floatval( $variation_obj->get_sale_price() ),
 						),
-						'stockQuantity' => empty ( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
+						'stockQuantity' => empty( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
 						'stockStatus' => $variation_obj->get_stock_status(),
 						'onSale' => $variation_obj->is_on_sale(),
 						'sku' => $variation_obj->get_sku(),
@@ -314,13 +314,13 @@ class Product extends BaseCollection {
 
 			$cross_sell_ids  = $product->get_cross_sell_ids();
 			$cross_sell_data = [];
-			if ( ! empty ( $cross_sell_ids ) ) {
+			if ( ! empty( $cross_sell_ids ) ) {
 				$cross_sell_data = $this->get_cross_sell_products( $cross_sell_ids );
 			}
 
 			$upsell_ids  = $product->get_upsell_ids();
 			$upsell_data = array();
-			if ( ! empty ( $upsell_ids ) ) {
+			if ( ! empty( $upsell_ids ) ) {
 				foreach ( $upsell_ids as $upsell_id ) {
 					$upsell_product = wc_get_product( $upsell_id );
 					if ( $upsell_product ) {
@@ -338,7 +338,7 @@ class Product extends BaseCollection {
 			$additional_tabs           = get_post_meta( $product_id, '_additional_tabs', true );
 			$formatted_additional_tabs = array();
 
-			if ( ! empty ( $additional_tabs ) ) {
+			if ( ! empty( $additional_tabs ) ) {
 				foreach ( $additional_tabs as $tab ) {
 					$formatted_additional_tabs[] = array(
 						'title' => $tab['tab_title'],
@@ -373,7 +373,7 @@ class Product extends BaseCollection {
 				'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
 				'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
 				'onSale' => $product->is_on_sale(),
-				'stockQuantity' => empty ( $stockQuantity ) ? 0 : $stockQuantity,
+				'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
 				'stockStatus' => $product->get_stock_status(),
 				'shippingClass' => $product->get_shipping_class(),
 				'updatedAt' => strtotime( $product->get_date_modified() ),
@@ -388,7 +388,7 @@ class Product extends BaseCollection {
 				// Add product type
 				'variations' => $variations_data,
 				// Add variations data
-				'crossSellData' => empty ( $cross_sell_data ) ? $related_products : $cross_sell_data,
+				'crossSellData' => empty( $cross_sell_data ) ? $related_products : $cross_sell_data,
 				'upsellData' => $upsell_data,
 				'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product ),
 				'status' => $product->get_status(),
@@ -413,14 +413,14 @@ class Product extends BaseCollection {
 
 			$product_terms = get_the_terms( $product->get_id(), $taxonomy );
 
-			if ( ! empty ( $product_terms ) && ! is_wp_error( $product_terms ) ) {
+			if ( ! empty( $product_terms ) && ! is_wp_error( $product_terms ) ) {
 				foreach ( $product_terms as $product_term ) {
 
 					$term_name = $product_term->name;
 					$term_slug = $product_term->slug;
 					// Get Parent Term
 					$parentTerm  = get_term( $product_term->parent, $taxonomy );
-					$term_parent = isset ( $parentTerm->name ) ? $parentTerm->name : '';
+					$term_parent = isset( $parentTerm->name ) ? $parentTerm->name : '';
 					$termOrder   = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
 
 					$taxonomies_data[] = [ 
@@ -477,7 +477,7 @@ class Product extends BaseCollection {
 		$product_data            = array();
 		$cross_sell_product_data = array();
 
-		if ( ! empty ( $product_ids ) ) {
+		if ( ! empty( $product_ids ) ) {
 			foreach ( $product_ids as $product_id ) {
 				if ( $product_id ) {
 					$product = wc_get_product( $product_id );
@@ -529,7 +529,7 @@ class Product extends BaseCollection {
 									'salePrice' => array(
 										$currency => floatval( $variation_obj->get_sale_price() ),
 									),
-									'stockQuantity' => empty ( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
+									'stockQuantity' => empty( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
 									'stockStatus' => $variation_obj->get_stock_status(),
 									'onSale' => $variation_obj->is_on_sale(),
 									'sku' => $variation_obj->get_sku(),
@@ -588,7 +588,7 @@ class Product extends BaseCollection {
 							'daysPassed' => $this->get_days_passed( $published_at ),
 							'galleryImages' => $product_gallery,
 							'productType' => $product->get_type(),
-							'stockQuantity' => empty ( $stockQuantity ) ? 0 : $stockQuantity,
+							'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
 							'variations' => $variations_data,
 						);
 
