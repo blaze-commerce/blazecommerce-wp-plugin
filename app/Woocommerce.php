@@ -20,6 +20,28 @@ class Woocommerce {
 		add_action( 'woocommerce_new_product', array( $this, 'on_product_save' ), 10, 2 );
 		add_action( 'woocommerce_update_product', array( $this, 'on_product_save' ), 10, 2 );
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'on_checkout_update_order_meta' ), 10, 2 );
+		add_action( 'woocommerce_after_product_ordering', array( $this, 'product_reordering' ), 10, 2 );
+
+	}
+
+	public function product_reordering( $product_id, $menu_orders ) {
+
+		$menu_orders_for_import = array();
+		if ( ! empty ( $menu_orders ) ) {
+			foreach ( $menu_orders as $product_id => $menu_order ) {
+				$menu_orders_for_import[] = array(
+					'id' => (string) $product_id,
+					'menuOrder' => intval( $menu_order )
+				);
+			}
+			$response = Product::get_instance()->collection()->documents->import( $menu_orders_for_import, array(
+				'action' => 'update'
+			) );
+
+			$logger  = wc_get_logger();
+			$context = array( 'source' => 'wooless-product-menu-ordering' );
+			$logger->debug( 'TS Product import response : ' . print_r( $response, 1 ), $context );
+		}
 	}
 
 	public function on_order_status_changed( $order_id, $old_status, $new_status, $order ) {
