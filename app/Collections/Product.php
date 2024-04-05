@@ -103,6 +103,7 @@ class Product extends BaseCollection {
 						[ 'name' => 'thumbnail', 'type' => 'object' ],
 						[ 'name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true ],
+						[ 'name' => 'menuOrder', 'type' => 'int64', 'optional' => true ],
 						[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'crossSellData', 'type' => 'object[]', 'optional' => true ],
@@ -172,7 +173,7 @@ class Product extends BaseCollection {
 				$result = $this->import( $products_batch );
 				// echo "<pre>"; print_r($result); echo "</pre>";
 				$successful_imports = array_filter( $result, function ($batch_result) {
-					$successful_import = isset( $batch_result['success'] ) && $batch_result['success'] == true;
+					$successful_import = isset ( $batch_result['success'] ) && $batch_result['success'] == true;
 					if ( ! $successful_import ) {
 						$this->log_failed_product_import( $batch_result );
 					}
@@ -289,8 +290,8 @@ class Product extends BaseCollection {
 							$currency => floatval( $variation_obj->get_regular_price() ),
 						),
 						'salePrice' => array(
-								$currency => floatval( $variation_obj->get_sale_price() ),
-							),
+							$currency => floatval( $variation_obj->get_sale_price() ),
+						),
 						'stockQuantity' => empty( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
 						'stockStatus' => $variation_obj->get_stock_status(),
 						'onSale' => $variation_obj->is_on_sale(),
@@ -368,9 +369,9 @@ class Product extends BaseCollection {
 				'slug' => $product->get_slug(),
 				'thumbnail' => $thumbnail,
 				'sku' => $product->get_sku(),
-				'price' => apply_filters('wooless_product_price', $default_price, $product_id),
-				'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
-				'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
+				'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
+				'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
+				'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
 				'onSale' => $product->is_on_sale(),
 				'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
 				'stockStatus' => $product->get_stock_status(),
@@ -390,7 +391,8 @@ class Product extends BaseCollection {
 				'crossSellData' => empty( $cross_sell_data ) ? $related_products : $cross_sell_data,
 				'upsellData' => $upsell_data,
 				'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product ),
-				'status' => $product->get_status()
+				'status' => $product->get_status(),
+				'menuOrder' => $product->get_menu_order()
 			];
 
 			unset( $shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_data, $variations_data, $formatted_additional_tabs, $upsell_data, $published_at );
@@ -496,42 +498,42 @@ class Product extends BaseCollection {
 						}, $attachment_ids );
 
 						// Get the thumbnail
-						$thumbnail_id = get_post_thumbnail_id($product_id);
-						$attachment = get_post($thumbnail_id);
-						$thumbnail_alt_text = get_post_meta($thumbnail_id, '_wp_attachment_image_alt', true);
-						$thumbnail_src = get_the_post_thumbnail_url($product_id);
-						$currency = get_option('woocommerce_currency');
+						$thumbnail_id       = get_post_thumbnail_id( $product_id );
+						$attachment         = get_post( $thumbnail_id );
+						$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
+						$thumbnail_src      = get_the_post_thumbnail_url( $product_id );
+						$currency           = get_option( 'woocommerce_currency' );
 
 						$product_type = $product->get_type();
 						// Get variations if the product is a variable product
 						$variations_data = $default_attributes = [];
-						if ($product_type === 'variable' || $product_type === 'pw-gift-card') {
+						if ( $product_type === 'variable' || $product_type === 'pw-gift-card' ) {
 							$variations = $product->get_available_variations();
-							foreach ($variations as $variation) {
-								$variation_obj = wc_get_product($variation['variation_id']);
-				
-								$variant_thumbnail_id = get_post_thumbnail_id($variation['variation_id']);
-								$variant_attachment = get_post($variant_thumbnail_id);
-								$variant_thumbnail_alt_text = get_post_meta($variant_thumbnail_id, '_wp_attachment_image_alt', true);
-								$variant_thumbnail_src = get_the_post_thumbnail_url($variation['variation_id']);
-				
-								$variations_items = [
+							foreach ( $variations as $variation ) {
+								$variation_obj = wc_get_product( $variation['variation_id'] );
+
+								$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
+								$variant_attachment         = get_post( $variant_thumbnail_id );
+								$variant_thumbnail_alt_text = get_post_meta( $variant_thumbnail_id, '_wp_attachment_image_alt', true );
+								$variant_thumbnail_src      = get_the_post_thumbnail_url( $variation['variation_id'] );
+
+								$variations_items = [ 
 									'variationId' => $variation['variation_id'],
 									'attributes' => $variation['attributes'],
 									'price' => array(
-										$currency => floatval($variation_obj->get_price()),
+										$currency => floatval( $variation_obj->get_price() ),
 									),
 									'regularPrice' => array(
-										$currency => floatval($variation_obj->get_regular_price()),
+										$currency => floatval( $variation_obj->get_regular_price() ),
 									),
 									'salePrice' => array(
-										$currency => floatval($variation_obj->get_sale_price()),
+										$currency => floatval( $variation_obj->get_sale_price() ),
 									),
-									'stockQuantity' => empty($variation_obj->get_stock_quantity()) ? 0 : $variation_obj->get_stock_quantity(),
+									'stockQuantity' => empty( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
 									'stockStatus' => $variation_obj->get_stock_status(),
 									'onSale' => $variation_obj->is_on_sale(),
 									'sku' => $variation_obj->get_sku(),
-									'image' => [
+									'image' => [ 
 										'id' => $variant_thumbnail_id,
 										'title' => $variant_attachment->post_title,
 										'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
@@ -539,15 +541,15 @@ class Product extends BaseCollection {
 									],
 								];
 
-								$variations_data[] = apply_filters('blaze_commerce_variation_multicurrency_prices', $variations_items, $variation['variation_id']);
+								$variations_data[] = apply_filters( 'blaze_commerce_variation_multicurrency_prices', $variations_items, $variation['variation_id'] );
 
-								unset($variations_items, $variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src);
+								unset( $variations_items, $variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src );
 							}
-							
-							unset($variations);
+
+							unset( $variations );
 						}
-				
-						$thumbnail = [
+
+						$thumbnail = [ 
 							'id' => $thumbnail_id,
 							'title' => $attachment->post_title,
 							'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
@@ -576,9 +578,9 @@ class Product extends BaseCollection {
 							'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
 							'slug' => $product->get_slug(),
 							'thumbnail' => $thumbnail,
-							'price' => apply_filters('wooless_product_price', $default_price, $product_id),
-							'regularPrice' => apply_filters('wooless_product_regular_price', $default_regular_price, $product_id),
-							'salePrice' => apply_filters('wooless_product_sale_price', $default_sale_price, $product_id),
+							'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
+							'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
+							'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
 							'onSale' => $product->is_on_sale(),
 							'stockStatus' => $product->get_stock_status(),
 							'createdAt' => strtotime( $product->get_date_created() ),
@@ -586,7 +588,7 @@ class Product extends BaseCollection {
 							'daysPassed' => $this->get_days_passed( $published_at ),
 							'galleryImages' => $product_gallery,
 							'productType' => $product->get_type(),
-							'stockQuantity' => empty($stockQuantity) ? 0 : $stockQuantity,
+							'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
 							'variations' => $variations_data,
 						);
 
