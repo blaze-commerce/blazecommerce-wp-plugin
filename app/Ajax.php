@@ -73,8 +73,6 @@ class Ajax {
 			Menu::get_instance()->index_to_typesense();
 		} else if ( $collection_name == 'page' ) {
 			Page::get_instance()->index_to_typesense();
-		} else if ( $collection_name == 'page-element' ) {
-			GPElement::get_instance()->index_to_typesense();
 		} else {
 			echo "Collection name not found";
 		}
