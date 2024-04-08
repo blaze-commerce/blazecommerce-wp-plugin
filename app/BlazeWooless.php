@@ -40,6 +40,7 @@ class BlazeWooless
 			'\\BlazeWooless\\Settings\\RegionalSettings',
 			'\\BlazeWooless\\Settings\\ProductFilterSettings',
 			'\\BlazeWooless\\Settings\\ProductPageSettings',
+			'\\BlazeWooless\\Settings\\CategoryPageSettings',
 			'\\BlazeWooless\\Settings\\HomePageSettings',
 			'\\BlazeWooless\\Settings\\SiteMessageTopHeaderSettings',
 			'\\BlazeWooless\\Settings\\SiteMessageSettings',

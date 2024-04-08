@@ -380,6 +380,10 @@
                     label: 'Title',
                     name: 'customer-reviews-title',
                 },
+                productId: {
+                    label: 'Product Id',
+                    name: 'list-text',
+                },
             },
         },
         blogPosts: {
