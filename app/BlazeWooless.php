@@ -5,9 +5,8 @@ namespace BlazeWooless;
 use BlazeWooless\Collections\Menu;
 use BlazeWooless\Collections\Taxonomy;
 
-class BlazeWooless
-{
-    private static $instance = null;
+class BlazeWooless {
+	private static $instance = null;
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -17,10 +16,9 @@ class BlazeWooless
 		return self::$instance;
 	}
 
-    public function init()
-    {
-        add_action( 'init', array( $this, 'register_extensions' ) );
-        add_action('edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3);
+	public function init() {
+		add_action( 'init', array( $this, 'register_extensions' ) );
+		add_action( 'edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3 );
 
 		add_filter( 'blaze_wooless_generate_breadcrumbs', array( Taxonomy::get_instance(), 'generate_breadcrumbs' ), 10, 2 );
 
@@ -59,7 +57,7 @@ class BlazeWooless
 			$setting::get_instance();
 		}
 	}
-	
+
 	public function register_features() {
 		$features = array(
 			'\\BlazeWooless\\Features\\AttributeSettings',
@@ -90,8 +88,9 @@ class BlazeWooless
 			'\\BlazeWooless\\Extensions\\YoastSEO',
 			'\\BlazeWooless\\Extensions\\GraphQL',
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
-            '\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
+			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WooDiscountRules',
+			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Footer',
 		);
 
 		foreach ( $extensions as $extension ) {
