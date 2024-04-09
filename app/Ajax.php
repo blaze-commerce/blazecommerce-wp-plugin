@@ -2,7 +2,6 @@
 
 namespace BlazeWooless;
 
-use BlazeWooless\Collections\GPElement;
 use BlazeWooless\Collections\Product;
 use BlazeWooless\Collections\SiteInfo;
 use BlazeWooless\Collections\Taxonomy;
