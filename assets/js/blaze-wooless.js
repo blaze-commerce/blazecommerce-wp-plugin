@@ -422,7 +422,6 @@
         syncMenusLink: '#sync-menus-link',
         syncPagesLink: '#sync-pages-link',
         syncSiteInfoLink: '#sync-site-info-link',
-        syncGpElements: '#sync-site-gp-elements',
         syncAllLink: '#sync-all-link',
 
         syncInProgress: false,
@@ -453,7 +452,6 @@
             $(document.body).on('click', this.syncTaxonomiesLink, this.importTaxonomies.bind(this));
             $(document.body).on('click', this.syncMenusLink, this.importMenus.bind(this));
             $(document.body).on('click', this.syncPagesLink, this.importPages.bind(this));
-            $(document.body).on('click', this.syncGpElements, this.importGpElements.bind(this));
             $(document.body).on('click', this.syncSiteInfoLink, this.importSiteInfo.bind(this));
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
         },
@@ -550,15 +548,6 @@
             }
             this.clearResultContainer();
             return this.importData('page', 'Pages Syncing in progress...', true);
-        },
-
-        importGpElements: function (e) {
-            e.preventDefault();
-            if (this.syncInProgress) {
-                return false;
-            }
-            this.clearResultContainer();
-            return this.importData('page-element', 'Page elements Syncing in progress...', true);
         },
 
         importSiteInfo: function (e) {

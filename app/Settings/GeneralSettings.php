@@ -104,7 +104,6 @@ class GeneralSettings extends BaseSettings {
 			<a href="#" id="sync-menus-link">Sync Menus</a><br />
 			<a href="#" id="sync-pages-link">Sync Pages</a><br />
 			<a href="#" id="sync-site-info-link">Sync Site Info</a><br />
-			<a href="#" id="sync-site-gp-elements">Sync Gutenberg Elements</a><br />
 			<a href="#" id="sync-all-link">Sync All</a>
 			<div id="sync-results-container"></div>
 			<?php
