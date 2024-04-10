@@ -46,24 +46,6 @@ class GeneralSettings extends BaseSettings {
 			}
 		}
 
-		if ($this->connected()) {
-			$show_free_shipping_banner = $options['show_free_shipping_banner'] == 1 ?: false;
-			TypesenseClient::get_instance()->site_info()->upsert( [ 
-				'id' => '1066630',
-				'name' => 'show_free_shipping_banner',
-				'value' => json_encode( $show_free_shipping_banner ),
-				'updated_at' => time(),
-			] );
-
-			$show_free_shipping_minicart_component = $options['show_free_shipping_minicart_component'] == 1 ?: false;
-			TypesenseClient::get_instance()->site_info()->upsert( [ 
-				'id' => '1066631',
-				'name' => 'show_free_shipping_minicart_component',
-				'value' => json_encode( $show_free_shipping_minicart_component ),
-				'updated_at' => time(),
-			] );
-		}
-
 		return $options;
 	}
 
@@ -166,8 +148,8 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner'] = $this->get_option( 'show_free_shipping_banner' );
-		$additional_data['show_free_shipping_minicart_component'] = $this->get_option( 'show_free_shipping_minicart_component' );
+		$additional_data['show_free_shipping_banner'] = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 
 		return $additional_data;
 	}
