@@ -81,21 +81,11 @@ class Yotpo {
 	}
 
 	public function generate_cross_sell_reviews_stats( $product_data, $product_id ) {
-		$product = array();
-
-		if ( ! empty( $product_data ) ) {
-			$reviews = get_option( 'blaze_commerce_yotpo_product_reviews' );
-
-			foreach ( $product_data as $product ) {
-				if ( ! empty( $reviews[ $product['id'] ] ) ) {
-					$product['yotpoReviews'] = $reviews[ $product['id'] ];
-				}
-			}
+		$reviews = get_option( 'blaze_commerce_yotpo_product_reviews' );
+		if ( ! empty( $reviews[ $product_data['id'] ] ) ) {
+			$product_data['yotpoReviews'] = $reviews[ $product_data['id'] ];
 		}
 
-		unset( $product_data );
-		unset( $reviews );
-
-		return $product;
+		return $product_data;
 	}
 }
