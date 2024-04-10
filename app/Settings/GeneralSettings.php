@@ -17,6 +17,10 @@ class GeneralSettings extends BaseSettings {
 		return self::$instance;
 	}
 
+	public function register_hooks() {
+		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
+	}
+
 	public function settings_callback( $options ) {
 		if ( isset( $options['api_key'] ) ) {
 			$encoded_api_key   = sanitize_text_field( $options['api_key'] );
@@ -159,6 +163,13 @@ class GeneralSettings extends BaseSettings {
 			<div id="sync-results-container"></div>
 			<?php
 		endif;
+	}
+
+	public function register_additional_site_info( $additional_data ) {
+		$additional_data['show_free_shipping_banner'] = $this->get_option( 'show_free_shipping_banner' );
+		$additional_data['show_free_shipping_minicart_component'] = $this->get_option( 'show_free_shipping_minicart_component' );
+
+		return $additional_data;
 	}
 }
 
