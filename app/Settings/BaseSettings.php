@@ -39,7 +39,7 @@ class BaseSettings {
 					$this->option_key,
 					$section_key,
 					array_merge(
-						$setting['args'],
+						$setting['args'] ?? [],
 						array(
 							'id' => $setting['id'],
 						),
@@ -118,6 +118,9 @@ class BaseSettings {
 		$html  = '<input type="password" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" />';
 		$html .= $this->render_field_description( $args );
 		echo $html;
+	}
+
+	public function field_callback_heading( $args ) {
 	}
 
 	public function field_callback_select( $args ) {
