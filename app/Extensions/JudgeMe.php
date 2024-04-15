@@ -161,18 +161,12 @@ class JudgeMe {
 
 	public function get_cross_sell_reviews_data( $product_data, $product_id ) {
 		$reviews = get_option( 'blaze_commerce_judgeme_product_reviews' );
-		$product = array();
 
-		foreach ( $product_data as $product ) {
-			if ( ! empty( $reviews[ $product['slug'] ] ) ) {
-				$product['judgemeReviews'] = $reviews[ $product['slug'] ];
-			}
+		if ( ! empty( $reviews[ $product_data['slug'] ] ) ) {
+			$product_data['judgemeReviews'] = $reviews[ $product_data['slug'] ];
 		}
 
-		unset( $product_data );
-		unset( $reviews );
-
-		return $product;
+		return $product_data;
 	}
 
 	public function get_reviews_average_rating( $html ) {
