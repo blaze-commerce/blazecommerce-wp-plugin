@@ -59,28 +59,28 @@ class GeneralSettings extends BaseSettings {
 						'label' => 'Environment',
 						'type' => 'select',
 						'args' => array(
-								'description' => 'Select which environment to use.',
-								'options' => array(
-									'test' => 'Test',
-									'live' => 'Live',
-								),
+							'description' => 'Select which environment to use.',
+							'options' => array(
+								'test' => 'Test',
+								'live' => 'Live',
 							),
+						),
 					),
 					array(
 						'id' => 'api_key',
 						'label' => 'API Key',
 						'type' => 'password',
 						'args' => array(
-								'description' => 'API Key generated from the Blaze Commerce Admin Portal.'
-							),
+							'description' => 'API Key generated from the Blaze Commerce Admin Portal.'
+						),
 					),
 					array(
 						'id' => 'shop_domain',
 						'label' => 'Shop Domain',
 						'type' => 'text',
 						'args' => array(
-								'description' => 'Live site domain. (e.g. website.com.au)'
-							),
+							'description' => 'Live site domain. (e.g. website.com.au)'
+						),
 					),
 				)
 			),
