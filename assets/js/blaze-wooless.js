@@ -19,6 +19,10 @@
             label: 'Title',
             name: 'title',
         },
+        shortDescription: {
+            label: 'Short Description',
+            name: 'short-description',
+        },
     };
 
     var commonFilterOption = {
