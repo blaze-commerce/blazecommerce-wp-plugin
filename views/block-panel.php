@@ -25,6 +25,9 @@
 		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="customerReviews">
 			<div class="content">Customer Reviews</div>
 		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="videoBanner">
+			<div class="content">YouTube Banner</div>
+		</div>
 
 		<h4>Multiple Blocks</h4>
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="text">
@@ -42,8 +45,17 @@
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="cardGroup">
 			<div class="content">Card Group</div>
 		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="cardGroupCentered">
+			<div class="content">Card Group Centered</div>
+		</div>
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="cardGroupSlider">
 			<div class="content">Card Group Slider</div>
+		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="cardGroupSliderPagination">
+			<div class="content">Card Group Slider with Pagination</div>
+		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="cardGroupSliderBorder">
+			<div class="content">Card Group Slider with Border</div>
 		</div>
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="singleImage">
 			<div class="content">Single Image</div>
@@ -56,6 +68,9 @@
 		</div>
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="menu">
 			<div class="content">Menu</div>
+		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="customBanner">
+			<div class="content">Custom Banner</div>
 		</div>
 	</div>
 </div>

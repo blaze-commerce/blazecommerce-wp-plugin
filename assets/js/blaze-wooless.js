@@ -159,7 +159,31 @@
             ]),
             fields: commonImageLink,
         },
+        cardGroupCentered: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+                { name: 'cardContainerClass', label: 'Card Container Classes' },
+                { name: 'cardImageClass', label: 'Card Image Classes' },
+            ]),
+            fields: commonImageLink,
+        },
         cardGroupSlider: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+                { name: 'cardContainerClass', label: 'Card Container Classes' },
+                { name: 'cardImageClass', label: 'Card Image Classes' },
+            ]),
+            fields: commonImageLink,
+        },
+        cardGroupSliderPagination: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+                { name: 'cardContainerClass', label: 'Card Container Classes' },
+                { name: 'cardImageClass', label: 'Card Image Classes' },
+            ]),
+            fields: commonImageLink,
+        },
+        cardGroupSliderBorder: {
             config: commonConfig.concat([
                 { name: 'containerClass', label: 'Container Classes' },
                 { name: 'cardContainerClass', label: 'Card Container Classes' },
@@ -408,6 +432,44 @@
                     fieldType: 'textarea',
                 },
             },
+        },
+        videoBanner: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+            ]),
+            fields: {
+                video: {
+                    label: 'Video URL',
+                    name: 'videoBanner',
+                }
+            }
+        },
+        customBanner: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+            ]),
+            fields: {
+                image: {
+                    label: 'Image Url',
+                    name: 'custom-banner-image',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'custom-banner-title',
+                },
+                subtitle: {
+                    label: 'Subtitle',
+                    name: 'custom-banner-subtitle',
+                },
+                CTAUrl: {
+                    label: 'Call to action Url',
+                    name: 'custom-banner-cta-url',
+                },
+                CTAText: {
+                    label: 'Call to action text',
+                    name: 'custom-banner-cta-text',
+                },
+            }
         },
     }
 
