@@ -65,6 +65,18 @@
                 { name: 'containerClass', label: 'Container Classes' },
             ]),
             fields: {
+                TitleClasses: {
+                    label: 'Title Classes',
+                    name: 'banner-title-classes',
+                },
+                SubtitleClasses: {
+                    label: 'Subtitle Classes',
+                    name: 'banner-subtitle-classes',
+                },
+                CTATextClasses: {
+                    label: 'Button Classes',
+                    name: 'banner-button-classes',
+                },
                 image: {
                     label: 'Image Url',
                     name: 'banner-image',
@@ -90,6 +102,18 @@
         mobileBanner: {
             config: commonConfig,
             fields: {
+                TitleClasses: {
+                    label: 'Title Classes',
+                    name: 'mobile-banner-title-classes',
+                },
+                SubtitleClasses: {
+                    label: 'Subtitle Classes',
+                    name: 'mobile-banner-subtitle-classes',
+                },
+                CTATextClasses: {
+                    label: 'Button Classes',
+                    name: 'mobile-banner-button-classes',
+                },
                 image: {
                     label: 'Image Url',
                     name: 'mobile-banner-image',
@@ -449,6 +473,18 @@
                 { name: 'containerClass', label: 'Container Classes' },
             ]),
             fields: {
+                TitleClasses: {
+                    label: 'Title Classes',
+                    name: 'custom-banner-title-classes',
+                },
+                SubtitleClasses: {
+                    label: 'Subtitle Classes',
+                    name: 'custom-banner-subtitle-classes',
+                },
+                CTATextClasses: {
+                    label: 'Button Classes',
+                    name: 'custom-banner-button-classes',
+                },
                 image: {
                     label: 'Image Url',
                     name: 'custom-banner-image',
