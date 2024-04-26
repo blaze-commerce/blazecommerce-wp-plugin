@@ -118,12 +118,17 @@ class GraphQL {
 	 */
 	public function modify_response_headers( $headers ) {
 		$http_origin     = get_http_origin();
+		
 		$allowed_origins = [ 
 			'http://localhost:3000',
-			'https://blaze-commerce-live-simulation.blz.onl',
 			home_url(),
 			site_url(),
 		];
+
+		if ( function_exists( 'wpgraphql_cors_allowed_origins' ) ) {
+			$possible_origins = wpgraphql_cors_allowed_origins();
+			$allowed_origins = array_merge( $allowed_origins, $possible_origins );
+		}
 
 		// If the request is coming from an allowed origin (HEADLESS_FRONTEND_URL), tell the browser it can accept the response.
 		if ( in_array( $http_origin, $allowed_origins, true ) || $this->is_vercel_staging($http_origin) ) {
