@@ -89,6 +89,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Footer',
+			'\\BlazeWooless\\Extensions\\MegaMenu',
 		);
 
 		foreach ( $extensions as $extension ) {
