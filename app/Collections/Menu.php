@@ -69,10 +69,19 @@ class Menu extends BaseCollection {
 				//$menu_items = wp_get_nav_menu_items($menu->term_id);
 				$menu_items = isset( $menu->menu_items ) ? $menu->menu_items : wp_get_nav_menu_items( $menu->term_id );
 
+				$menu_items = apply_filters( 'blaze_wooless_menu_items', $menu_items, $menu );
+
 				// Initialize an empty array to hold the menu item data
 				$menu_item_data = [];
 
 				foreach ( $menu_items as $item ) {
+					$should_generate_menu_item_data = apply_filters( 'blaze_wooless_should_generate_menu_item_data', true, $item );
+
+					if ( ! $should_generate_menu_item_data ) {
+						$menu_item_data = apply_filters( 'blaze_wooless_menu_item_data', $menu_item_data, $item );
+						continue;
+					}
+
 					if ( ! $item->menu_item_parent ) {
 						// If there's no parent, add it to the top level of the nested array
 						$menu_item_data[ $item->ID ] = array(
