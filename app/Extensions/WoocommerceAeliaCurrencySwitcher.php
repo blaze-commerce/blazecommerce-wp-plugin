@@ -29,7 +29,7 @@ class WoocommerceAeliaCurrencySwitcher {
             // add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
 			// add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
 
-            add_filter( 'blaze_commerce_variation_multicurrency_prices', array( $this, 'variation_multicurrency_prices' ), 10, 2 );
+            add_filter( 'blaze_commerce_variation_data', array( $this, 'variation_multicurrency_prices' ), 10, 2 );
 
             add_action( 'wp_footer', array($this, 'add_currency_switcher_after_country_field'), 50 );
         }
