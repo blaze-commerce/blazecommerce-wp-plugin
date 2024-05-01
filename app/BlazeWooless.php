@@ -30,6 +30,17 @@ class BlazeWooless {
 
 		Ajax::get_instance();
 		Woocommerce::get_instance();
+
+		add_action( 'template_redirect', array( $this, 'search_redirect' ) );
+	}
+
+	public function search_redirect() {
+		if (
+			isset( $_GET['s'] ) && ! empty( $_GET['s'] )
+		) {
+			wp_redirect( site_url( '/search-results?s=' . urlencode( $_GET['s'] ) ) );
+			exit();
+		}
 	}
 
 	public function register_settings() {
