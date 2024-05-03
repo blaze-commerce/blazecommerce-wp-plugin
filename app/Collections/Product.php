@@ -304,9 +304,10 @@ class Product extends BaseCollection {
 							'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
 							'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
 						],
+						'metaData' => array(),
 					];
 
-					$variations_data[] = apply_filters( 'blaze_commerce_variation_multicurrency_prices', $variations_items, $variation['variation_id'] );
+					$variations_data[] = apply_filters( 'blaze_commerce_variation_data', $variations_items, $variation['variation_id'], $variation_obj );
 
 					unset( $variations_items, $variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src );
 				}
@@ -395,7 +396,8 @@ class Product extends BaseCollection {
 				'upsellData' => $upsell_data,
 				'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product ),
 				'status' => $product->get_status(),
-				'menuOrder' => $product->get_menu_order()
+				'menuOrder' => $product->get_menu_order(),
+				'metaData' => array(),
 			];
 
 			unset( $shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_data, $variations_data, $formatted_additional_tabs, $upsell_data, $published_at );
@@ -558,7 +560,7 @@ class Product extends BaseCollection {
 									],
 								];
 
-								$variations_data[] = apply_filters( 'blaze_commerce_variation_multicurrency_prices', $variations_items, $variation['variation_id'] );
+								$variations_data[] = apply_filters( 'blaze_commerce_variation_data', $variations_items, $variation['variation_id'], $variation_obj );
 
 								unset( $variations_items, $variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src );
 							}
@@ -610,7 +612,7 @@ class Product extends BaseCollection {
 							'variations' => $variations_data,
 						);
 
-						$cross_sell_product_data[] = apply_filters( 'blaze_wooless_cross_sell_data_for_typesense', $product_data, $product_id );
+						$cross_sell_product_data[] = apply_filters( 'blaze_wooless_cross_sell_data_for_typesense', $product_data, $product_id, $product );
 
 						unset( $product_data, $product, $attachment_ids, $product_gallery, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $currency, $default_price, $default_regular_price, $default_sale_price, $stockQuantity, $published_at );
 					}

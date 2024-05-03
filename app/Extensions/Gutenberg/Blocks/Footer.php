@@ -47,11 +47,11 @@ class Footer {
 		$block_type     = get_post_meta( $post_id, '_generate_block_type', true );
 
 		if (
-			'site-footer' === $block_type ||
+			'site-footer' === $block_type &&
 			$post_id === $site_footer_id
 		) {
 
-			$site_footer = $this->get_site_footer( $post_id );
+			$site_footer = $this->get_site_footer( $site_footer_id );
 			if ( ! empty( $site_footer ) ) {
 				TypesenseClient::get_instance()->site_info()->upsert( $site_footer );
 			}
