@@ -40,6 +40,7 @@ class Taxonomy extends BaseCollection {
 				[ 'name' => 'bannerText', 'type' => 'string' ],
 				[ 'name' => 'parentTerm', 'type' => 'string' ],
 				[ 'name' => 'parentSlug', 'type' => 'string', 'facet' => true ],
+				[ 'name' => 'productCount', 'type' => 'int64' ],
 				[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ],
 				[ 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ],
 			],
@@ -77,8 +78,8 @@ class Taxonomy extends BaseCollection {
 		$thumbnail = [ 
 			'id' => $thumbnail_id,
 			'title' => $attachment->post_title,
-			'altText' => get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ),
-			'src' => wp_get_attachment_url( $thumbnail_id ),
+			'altText' => get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) ?: '',
+			'src' => wp_get_attachment_url( $thumbnail_id ) ?: '',
 		];
 
 		// Prepare the data to be indexed
@@ -95,6 +96,7 @@ class Taxonomy extends BaseCollection {
 			'bannerText' => $bannerText,
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
 			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '',
+			'productCount' => intval($term->count),
 			'thumbnail' => $thumbnail,
 			'breadcrumbs' => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
 			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
