@@ -39,6 +39,7 @@ class Taxonomy extends BaseCollection {
 				[ 'name' => 'bannerThumbnail', 'type' => 'string' ],
 				[ 'name' => 'bannerText', 'type' => 'string' ],
 				[ 'name' => 'parentTerm', 'type' => 'string' ],
+				[ 'name' => 'parentSlug', 'type' => 'string', 'facet' => true ],
 				[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ],
 				[ 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ],
 			],
@@ -93,6 +94,7 @@ class Taxonomy extends BaseCollection {
 			'bannerThumbnail' => (string) $bannerThumbnail,
 			'bannerText' => $bannerText,
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
+			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '',
 			'thumbnail' => $thumbnail,
 			'breadcrumbs' => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
 			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
@@ -233,7 +235,8 @@ class Taxonomy extends BaseCollection {
 
 		// Removes null values
 		$parents_list_clean = array_filter( $parents_list_array, function ($value) {
-			return ! is_null( $value ) && $value !== ''; } );
+			return ! is_null( $value ) && $value !== '';
+		} );
 
 		$breadcrumbs = array();
 
