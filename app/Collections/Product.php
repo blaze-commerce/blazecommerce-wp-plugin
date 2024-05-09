@@ -108,7 +108,7 @@ class Product extends BaseCollection {
 						[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'crossSellData', 'type' => 'object[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.price', 'type' => 'object'],
+						[ 'name' => 'crossSellData.price', 'type' => 'object' ],
 						[ 'name' => 'crossSellData.price.AUD', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.price.NZD', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.price.USD', 'type' => 'float[]', 'optional' => true ],
@@ -151,7 +151,7 @@ class Product extends BaseCollection {
 		try {
 			// Query judge.me product external_ids and update to options	
 			do_action( 'blaze_wooless_generate_product_reviews_data' );
-			$page = $_POST['page'] ?? 1;
+			$page = $_REQUEST['page'] ?? 1;
 
 			if ( $page == 1 ) {
 				$this->initialize();
@@ -296,6 +296,9 @@ class Product extends BaseCollection {
 				$variations = $product->get_available_variations();
 				foreach ( $variations as $variation ) {
 					$variation_obj = wc_get_product( $variation['variation_id'] );
+					if ( ! $variation_obj ) {
+						continue;
+					}
 
 					$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
 					$variant_attachment         = get_post( $variant_thumbnail_id );
@@ -445,21 +448,21 @@ class Product extends BaseCollection {
 					$term_name = $product_term->name;
 					$term_slug = $product_term->slug;
 					// Get Parent Term
-					$parentTerm  = get_term( $product_term->parent, $taxonomy );
-					$term_parent = isset( $parentTerm->name ) ? $parentTerm->name : '';
-					$termOrder   = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
-					$term_permalink = wp_make_link_relative( get_term_link( $product_term->term_id ) );
+					$parentTerm       = get_term( $product_term->parent, $taxonomy );
+					$term_parent      = isset( $parentTerm->name ) ? $parentTerm->name : '';
+					$termOrder        = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
+					$term_permalink   = wp_make_link_relative( get_term_link( $product_term->term_id ) );
 					$term_parent_slug = $parentTerm->slug;
 
 					// Get the thumbnail
-					$term_thumbnail_id = get_term_meta($product_term->term_id, 'thumbnail_id', true);
-					$term_attachment = get_post($term_thumbnail_id);
+					$term_thumbnail_id = get_term_meta( $product_term->term_id, 'thumbnail_id', true );
+					$term_attachment   = get_post( $term_thumbnail_id );
 
-					$term_thumbnail = [
+					$term_thumbnail = [ 
 						'id' => $term_thumbnail_id,
 						'title' => $term_attachment->post_title,
-						'altText' => get_post_meta($term_thumbnail_id, '_wp_attachment_image_alt', true),
-						'src' => wp_get_attachment_url($term_thumbnail_id),
+						'altText' => get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ),
+						'src' => wp_get_attachment_url( $term_thumbnail_id ),
 					];
 
 					$taxonomies_data[] = [ 
@@ -550,6 +553,9 @@ class Product extends BaseCollection {
 							$variations = $product->get_available_variations();
 							foreach ( $variations as $variation ) {
 								$variation_obj = wc_get_product( $variation['variation_id'] );
+								if ( ! $variation_obj ) {
+									continue;
+								}
 
 								$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
 								$variant_attachment         = get_post( $variant_thumbnail_id );
