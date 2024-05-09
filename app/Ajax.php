@@ -61,7 +61,7 @@ class Ajax {
 	}
 
 	public function index_data_to_typesense() {
-		$collection_name = ! ( empty( $_POST['collection_name'] ) ) ? $_POST['collection_name'] : '';
+		$collection_name = ! ( empty( $_REQUEST['collection_name'] ) ) ? $_REQUEST['collection_name'] : '';
 		if ( $collection_name == 'products' ) {
 			Product::get_instance()->index_to_typesense();
 		} else if ( $collection_name == 'site_info' ) {
