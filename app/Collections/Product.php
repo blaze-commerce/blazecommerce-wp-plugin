@@ -296,6 +296,9 @@ class Product extends BaseCollection {
 				$variations = $product->get_available_variations();
 				foreach ( $variations as $variation ) {
 					$variation_obj = wc_get_product( $variation['variation_id'] );
+					if ( ! $variation_obj ) {
+						continue;
+					}
 
 					$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
 					$variant_attachment         = get_post( $variant_thumbnail_id );
@@ -550,6 +553,9 @@ class Product extends BaseCollection {
 							$variations = $product->get_available_variations();
 							foreach ( $variations as $variation ) {
 								$variation_obj = wc_get_product( $variation['variation_id'] );
+								if ( ! $variation_obj ) {
+									continue;
+								}
 
 								$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
 								$variant_attachment         = get_post( $variant_thumbnail_id );
