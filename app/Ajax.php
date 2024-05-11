@@ -30,6 +30,30 @@ class Ajax {
 		add_action( 'wp_ajax_check_deployment', array( $this, 'check_deployment' ) );
 	}
 
+	public function get_headers() {
+		$api_key = bw_get_general_settings( 'api_key' );
+		return array(
+			'x-wooless-secret-token: ' . $api_key
+		);
+	}
+
+	public function prepare_curl( $url_endpoint, $method ) {
+		$curl = curl_init();
+		curl_setopt_array( $curl, array(
+			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/' . $url_endpoint,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => $method,
+			CURLOPT_HTTPHEADER => $this->get_headers(),
+		) );
+
+		return $curl;
+	}
+
 	public function check_deployment() {
 		$api_key = bw_get_general_settings( 'api_key' );
 		if ( empty( $api_key ) ) {
@@ -38,21 +62,8 @@ class Ajax {
 				'message' => 'Empty api key.'
 			) );
 		}
-		$curl = curl_init();
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments?checkDeployment=1',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'GET',
-			CURLOPT_HTTPHEADER => array(
-				'x-wooless-secret-token: ZzFEbmc4UzQ0ZnVkaGtPTjNsNXB5V1l2NnBXSDVYTlQ6NDY='
-			),
-		) );
 
+		$curl     = $this->prepare_curl( 'api/deployments?checkDeployment=1', 'GET' );
 		$response = curl_exec( $curl );
 		curl_close( $curl );
 		wp_send_json( json_decode( $response ) );
@@ -66,23 +77,7 @@ class Ajax {
 				'message' => 'Empty api key.'
 			) );
 		}
-
-		$curl = curl_init();
-
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_HTTPHEADER => array(
-				'x-wooless-secret-token: ' . $api_key
-			),
-		) );
-
+		$curl     = $this->prepare_curl( 'api/deployments', 'POST' );
 		$response = curl_exec( $curl );
 		curl_close( $curl );
 		wp_send_json( json_decode( $response ) );
