@@ -25,6 +25,67 @@ class Ajax {
 		add_action( 'wp_ajax_save_typesense_api_key', 'save_typesense_api_key' );
 		add_action( 'wp_ajax_login_to_client', array( $this, 'login_to_client' ) );
 		add_action( 'wp_ajax_nopriv_login_to_client', array( $this, 'login_to_client' ) );
+
+		add_action( 'wp_ajax_redeploy_store_front', array( $this, 'redeploy_store_front' ) );
+		add_action( 'wp_ajax_check_deployment', array( $this, 'check_deployment' ) );
+	}
+
+	public function check_deployment() {
+		$api_key = bw_get_general_settings( 'api_key' );
+		if ( empty( $api_key ) ) {
+			wp_send_json( array(
+				'error' => 'Empty api key.',
+				'message' => 'Empty api key.'
+			) );
+		}
+		$curl = curl_init();
+		curl_setopt_array( $curl, array(
+			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments?checkDeployment=1',
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'GET',
+			CURLOPT_HTTPHEADER => array(
+				'x-wooless-secret-token: ZzFEbmc4UzQ0ZnVkaGtPTjNsNXB5V1l2NnBXSDVYTlQ6NDY='
+			),
+		) );
+
+		$response = curl_exec( $curl );
+		curl_close( $curl );
+		wp_send_json( json_decode( $response ) );
+	}
+
+	public function redeploy_store_front() {
+		$api_key = bw_get_general_settings( 'api_key' );
+		if ( empty( $api_key ) ) {
+			wp_send_json( array(
+				'error' => 'Empty api key.',
+				'message' => 'Empty api key.'
+			) );
+		}
+
+		$curl = curl_init();
+
+		curl_setopt_array( $curl, array(
+			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments',
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'POST',
+			CURLOPT_HTTPHEADER => array(
+				'x-wooless-secret-token: ' . $api_key
+			),
+		) );
+
+		$response = curl_exec( $curl );
+		curl_close( $curl );
+		wp_send_json( json_decode( $response ) );
 	}
 
 	public function get_typesense_collections() {
