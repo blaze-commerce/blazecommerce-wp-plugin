@@ -108,7 +108,35 @@ class Product extends BaseCollection {
 						[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
 						[ 'name' => 'crossSellData', 'type' => 'object[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.price', 'type' => 'object' ],
+						[ 'name' => 'crossSellData.price.AUD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.price.NZD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.price.USD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.price.GBP', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.price.CAD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.price.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.regularPrice', 'type' => 'object' ],
+						[ 'name' => 'crossSellData.regularPrice.AUD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.regularPrice.NZD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.regularPrice.USD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.regularPrice.GBP', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.regularPrice.CAD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.regularPrice.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice', 'type' => 'object', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice.AUD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice.NZD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice.USD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice.GBP', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice.CAD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice.EUR', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'metaData', 'type' => 'object', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax', 'type' => 'object', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax.AUD', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax.NZD', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax.USD', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax.GBP', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax.CAD', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax.EUR', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ],
 					),
 					'default_sorting_field' => 'updatedAt',
@@ -130,7 +158,7 @@ class Product extends BaseCollection {
 		try {
 			// Query judge.me product external_ids and update to options	
 			do_action( 'blaze_wooless_generate_product_reviews_data' );
-			$page = $_POST['page'] ?? 1;
+			$page = $_REQUEST['page'] ?? 1;
 
 			if ( $page == 1 ) {
 				$this->initialize();
@@ -275,6 +303,9 @@ class Product extends BaseCollection {
 				$variations = $product->get_available_variations();
 				foreach ( $variations as $variation ) {
 					$variation_obj = wc_get_product( $variation['variation_id'] );
+					if ( ! $variation_obj ) {
+						continue;
+					}
 
 					$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
 					$variant_attachment         = get_post( $variant_thumbnail_id );
@@ -424,21 +455,21 @@ class Product extends BaseCollection {
 					$term_name = $product_term->name;
 					$term_slug = $product_term->slug;
 					// Get Parent Term
-					$parentTerm  = get_term( $product_term->parent, $taxonomy );
-					$term_parent = isset( $parentTerm->name ) ? $parentTerm->name : '';
-					$termOrder   = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
-					$term_permalink = wp_make_link_relative( get_term_link( $product_term->term_id ) );
+					$parentTerm       = get_term( $product_term->parent, $taxonomy );
+					$term_parent      = isset( $parentTerm->name ) ? $parentTerm->name : '';
+					$termOrder        = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
+					$term_permalink   = wp_make_link_relative( get_term_link( $product_term->term_id ) );
 					$term_parent_slug = $parentTerm->slug;
 
 					// Get the thumbnail
-					$term_thumbnail_id = get_term_meta($product_term->term_id, 'thumbnail_id', true);
-					$term_attachment = get_post($term_thumbnail_id);
+					$term_thumbnail_id = get_term_meta( $product_term->term_id, 'thumbnail_id', true );
+					$term_attachment   = get_post( $term_thumbnail_id );
 
-					$term_thumbnail = [
+					$term_thumbnail = [ 
 						'id' => $term_thumbnail_id,
 						'title' => $term_attachment->post_title,
-						'altText' => get_post_meta($term_thumbnail_id, '_wp_attachment_image_alt', true),
-						'src' => wp_get_attachment_url($term_thumbnail_id),
+						'altText' => get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ),
+						'src' => wp_get_attachment_url( $term_thumbnail_id ),
 					];
 
 					$taxonomies_data[] = [ 
@@ -529,6 +560,9 @@ class Product extends BaseCollection {
 							$variations = $product->get_available_variations();
 							foreach ( $variations as $variation ) {
 								$variation_obj = wc_get_product( $variation['variation_id'] );
+								if ( ! $variation_obj ) {
+									continue;
+								}
 
 								$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
 								$variant_attachment         = get_post( $variant_thumbnail_id );
@@ -597,9 +631,9 @@ class Product extends BaseCollection {
 							'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
 							'slug' => $product->get_slug(),
 							'thumbnail' => $thumbnail,
-							'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
-							'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
-							'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
+							'price' => floatval( apply_filters( 'wooless_product_price', $default_price, $product_id ) ),
+							'regularPrice' => floatval( apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ) ),
+							'salePrice' => floatval( apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ) ),
 							'onSale' => $product->is_on_sale(),
 							'stockStatus' => $product->get_stock_status(),
 							'backorder' => $product->get_backorders(),
