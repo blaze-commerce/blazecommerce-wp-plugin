@@ -19,6 +19,10 @@
             label: 'Title',
             name: 'title',
         },
+        shortDescription: {
+            label: 'Short Description',
+            name: 'short-description',
+        },
     };
 
     var commonFilterOption = {
@@ -61,6 +65,18 @@
                 { name: 'containerClass', label: 'Container Classes' },
             ]),
             fields: {
+                TitleClasses: {
+                    label: 'Title Classes',
+                    name: 'banner-title-classes',
+                },
+                SubtitleClasses: {
+                    label: 'Subtitle Classes',
+                    name: 'banner-subtitle-classes',
+                },
+                CTATextClasses: {
+                    label: 'Button Classes',
+                    name: 'banner-button-classes',
+                },
                 image: {
                     label: 'Image Url',
                     name: 'banner-image',
@@ -86,6 +102,18 @@
         mobileBanner: {
             config: commonConfig,
             fields: {
+                TitleClasses: {
+                    label: 'Title Classes',
+                    name: 'mobile-banner-title-classes',
+                },
+                SubtitleClasses: {
+                    label: 'Subtitle Classes',
+                    name: 'mobile-banner-subtitle-classes',
+                },
+                CTATextClasses: {
+                    label: 'Button Classes',
+                    name: 'mobile-banner-button-classes',
+                },
                 image: {
                     label: 'Image Url',
                     name: 'mobile-banner-image',
@@ -155,7 +183,31 @@
             ]),
             fields: commonImageLink,
         },
+        cardGroupCentered: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+                { name: 'cardContainerClass', label: 'Card Container Classes' },
+                { name: 'cardImageClass', label: 'Card Image Classes' },
+            ]),
+            fields: commonImageLink,
+        },
         cardGroupSlider: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+                { name: 'cardContainerClass', label: 'Card Container Classes' },
+                { name: 'cardImageClass', label: 'Card Image Classes' },
+            ]),
+            fields: commonImageLink,
+        },
+        cardGroupSliderPagination: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+                { name: 'cardContainerClass', label: 'Card Container Classes' },
+                { name: 'cardImageClass', label: 'Card Image Classes' },
+            ]),
+            fields: commonImageLink,
+        },
+        cardGroupSliderBorder: {
             config: commonConfig.concat([
                 { name: 'containerClass', label: 'Container Classes' },
                 { name: 'cardContainerClass', label: 'Card Container Classes' },
@@ -405,6 +457,56 @@
                 },
             },
         },
+        videoBanner: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+            ]),
+            fields: {
+                video: {
+                    label: 'Video URL',
+                    name: 'videoBanner',
+                }
+            }
+        },
+        customBanner: {
+            config: commonConfig.concat([
+                { name: 'containerClass', label: 'Container Classes' },
+            ]),
+            fields: {
+                TitleClasses: {
+                    label: 'Title Classes',
+                    name: 'custom-banner-title-classes',
+                },
+                SubtitleClasses: {
+                    label: 'Subtitle Classes',
+                    name: 'custom-banner-subtitle-classes',
+                },
+                CTATextClasses: {
+                    label: 'Button Classes',
+                    name: 'custom-banner-button-classes',
+                },
+                image: {
+                    label: 'Image Url',
+                    name: 'custom-banner-image',
+                },
+                title: {
+                    label: 'Title',
+                    name: 'custom-banner-title',
+                },
+                subtitle: {
+                    label: 'Subtitle',
+                    name: 'custom-banner-subtitle',
+                },
+                CTAUrl: {
+                    label: 'Call to action Url',
+                    name: 'custom-banner-cta-url',
+                },
+                CTAText: {
+                    label: 'Call to action text',
+                    name: 'custom-banner-cta-text',
+                },
+            }
+        },
     }
 
     var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);
@@ -423,6 +525,8 @@
         syncPagesLink: '#sync-pages-link',
         syncSiteInfoLink: '#sync-site-info-link',
         syncAllLink: '#sync-all-link',
+        redeployButton: '#redeploy',
+        redeployResultContainer: '#redeploy-result',
 
         syncInProgress: false,
 
@@ -454,6 +558,50 @@
             $(document.body).on('click', this.syncPagesLink, this.importPages.bind(this));
             $(document.body).on('click', this.syncSiteInfoLink, this.importSiteInfo.bind(this));
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
+            $(document.body).on('click', this.redeployButton, this.redeployStoreFront.bind(this));
+        },
+
+        checkDeployment: function () {
+            var _this = this;
+            _this.renderLoader('Checking Deployment..');
+            _this.syncInProgress = true;
+
+            var data = {
+                'action': 'check_deployment',
+            };
+
+            $.post(ajaxurl, data).done(function (response) {
+                if (response.state === 'BUILDING') {
+                    _this.renderLoader('Store front is deploying..');
+                    setTimeout(function () {
+                        _this.checkDeployment();
+                    }, 120000);
+
+                } else if (response.state === 'READY') {
+                    $(_this.redeployButton).prop("disabled", false);
+                    _this.hideLoader();
+                    $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
+                }
+
+            });
+        },
+
+        redeployStoreFront: function (e) {
+            var _this = this;
+            e.preventDefault();
+            $(this.redeployButton).prop("disabled", true);
+
+            _this.renderLoader('Triggering redeploy');
+            _this.syncInProgress = true;
+
+            var data = {
+                'action': 'redeploy_store_front',
+            };
+
+            $.post(ajaxurl, data).done(function (response) {
+                _this.renderLoader(response.message);
+                _this.checkDeployment();
+            });
         },
 
         importData: function (collection, message, hideLoader = false, params = {}) {
