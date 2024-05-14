@@ -601,8 +601,6 @@
             $.post(ajaxurl, data).done(function (response) {
                 _this.renderLoader(response.message);
                 _this.checkDeployment();
-
-
             });
         },
 
