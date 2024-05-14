@@ -72,8 +72,8 @@
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="customBanner">
 			<div class="content">Custom Banner</div>
 		</div>
-		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="h1Text">
-			<div class="content">H1 Text</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="htmlContent">
+			<div class="content">HTML Content</div>
 		</div>
 	</div>
 </div>
