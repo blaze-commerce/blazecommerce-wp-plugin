@@ -89,6 +89,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\GraphQL',
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
+			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Footer',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 		);

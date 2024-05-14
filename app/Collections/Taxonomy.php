@@ -102,7 +102,7 @@ class Taxonomy extends BaseCollection {
 			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
 		];
 
-		return $document;
+		return apply_filters( 'blaze_commerce_taxonomy_data', $document, $term );
 	}
 
 	public function index_to_typesense() {
