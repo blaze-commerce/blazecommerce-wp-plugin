@@ -507,6 +507,22 @@
                 },
             }
         },
+        h1Text: {
+            config: commonConfig.concat([
+                { name: 'style', label: 'Style', description: 'Values: style-1' },
+                { name: 'styleColor', label: 'Style Color', description: 'Values: any valid hash' },
+            ]),
+            fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'h1-text-classes',
+                },
+                text: {
+                    label: 'Content',
+                    name: 'h1-text-content',
+                }
+            },
+        },
     }
 
     var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);
