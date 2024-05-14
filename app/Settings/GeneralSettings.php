@@ -86,7 +86,7 @@ class GeneralSettings extends BaseSettings {
 			),
 		);
 
-		if ($this->connected()) {
+		if ( $this->connected() ) {
 			$fields['wooless_general_settings_section']['options'][] = array(
 				'id' => 'show_free_shipping_banner',
 				'label' => 'Show free shipping banner',
@@ -106,15 +106,15 @@ class GeneralSettings extends BaseSettings {
 			);
 		}
 
-		
+
 
 		return $fields;
 	}
 
 	public function connected() {
 		$typesense_api_key = get_option( 'typesense_api_key' );
-		$store_id = get_option( 'store_id' );
-		$environment = bw_get_general_settings( 'environment' );
+		$store_id          = get_option( 'store_id' );
+		$environment       = bw_get_general_settings( 'environment' );
 
 		if ( empty( $typesense_api_key ) || empty( $store_id ) || empty( $environment ) ) {
 			return false;
@@ -143,12 +143,14 @@ class GeneralSettings extends BaseSettings {
 			<a href="#" id="sync-site-info-link">Sync Site Info</a><br />
 			<a href="#" id="sync-all-link">Sync All</a>
 			<div id="sync-results-container"></div>
+
+			<button id="redeploy" class="button button-primary">Redeploy Store Front</button>
 			<?php
 		endif;
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner'] = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner']             = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
 		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 
 		return $additional_data;
