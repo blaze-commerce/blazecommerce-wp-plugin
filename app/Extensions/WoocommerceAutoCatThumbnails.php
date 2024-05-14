@@ -5,8 +5,7 @@ namespace BlazeWooless\Extensions;
 class WoocommerceAutoCatThumbnails {
     public static $instance = null;
 
-    public static function get_instance()
-    {
+    public static function get_instance() {
         if ( self::$instance === null ) {
             self::$instance = new self();
         }
@@ -14,15 +13,13 @@ class WoocommerceAutoCatThumbnails {
         return self::$instance;
     }
 
-    public function __construct()
-    {
+    public function __construct() {
         if ( is_plugin_active( 'woocommerce-auto-category-thumbnails/woocommerce-auto-cat-thumbnails.php' ) ) {
             add_filter( 'blaze_commerce_taxonomy_data', array( $this, 'set_default_taxonomy_thumbnail'), 10, 2 );
         }
     }
 
-    public function set_default_taxonomy_thumbnail( $taxonomy_data, $term )
-    {
+    public function set_default_taxonomy_thumbnail( $taxonomy_data, $term ) {
         // If there's no thumbnail then we will get the thumbnail from the first product it hits
         if ( ! get_woocommerce_term_meta( $term->term_id, 'thumbnail_id', true ) ) {
             $query_args = array(
