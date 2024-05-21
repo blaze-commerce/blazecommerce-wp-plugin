@@ -70,11 +70,9 @@ class WoocommerceAeliaCurrencySwitcher {
 					$product_data['salePrice'][ $currency ] = $converted_prices['sale_price'];
 				}
 
-				if ( ! isset( $product_data['price'][ $currency ] ) ) {
-					$_sale_price                        = $product_data['salePrice'][ $currency ];
-					$_regular_price                     = $product_data['regularPrice'][ $currency ];
-					$product_data['price'][ $currency ] = ! empty( $_sale_price ) ? $_sale_price : $_regular_price;
-				}
+				$_sale_price                        = $product_data['salePrice'][ $currency ];
+				$_regular_price                     = $product_data['regularPrice'][ $currency ];
+				$product_data['price'][ $currency ] = ! empty( $_sale_price ) ? $_sale_price : $_regular_price;
 
 				$product_data['regularPrice'][ $currency ] = floatval( number_format( (float) $product_data['regularPrice'][ $currency ], 2 ) );
 				$product_data['salePrice'][ $currency ]    = floatval( number_format( (float) $product_data['salePrice'][ $currency ], 2 ) );
