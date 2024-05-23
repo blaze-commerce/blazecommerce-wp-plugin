@@ -23,6 +23,7 @@ class BlazeWooless {
 		add_filter( 'blaze_wooless_generate_breadcrumbs', array( Taxonomy::get_instance(), 'generate_breadcrumbs' ), 10, 2 );
 
 		TypesenseClient::get_instance();
+		Revalidate::get_instance();
 
 		$this->register_settings();
 
