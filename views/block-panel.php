@@ -25,6 +25,9 @@
 		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="videoBanner">
 			<div class="content">YouTube Banner</div>
 		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="instagramFeed">
+			<div class="content">Instagram Feed</div>
+		</div>
 
 		<h4>Multiple Blocks</h4>
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="text">

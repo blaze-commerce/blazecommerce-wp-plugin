@@ -524,6 +524,15 @@
                 }
             },
         },
+        instagramFeed: {
+            config: commonConfig,
+            fields: {
+                postCount: {
+                    label: 'Number of Posts',
+                    name: 'instagram-post-count',
+                }
+            }
+        },
     }
 
     var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);
