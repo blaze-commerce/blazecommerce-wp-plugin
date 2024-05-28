@@ -19,6 +19,11 @@ class Woocommerce {
 		add_action( 'woocommerce_order_status_changed', array( $this, 'on_order_status_changed' ), 10, 4 );
 		add_action( 'woocommerce_new_product', array( $this, 'on_product_save' ), 10, 2 );
 		add_action( 'woocommerce_update_product', array( $this, 'on_product_save' ), 10, 2 );
+
+		add_action( 'woocommerce_trash_product', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
+		add_action( 'trashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
+		add_action( 'untrashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
+
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'on_checkout_update_order_meta' ), 10, 2 );
 		add_action( 'woocommerce_after_product_ordering', array( $this, 'product_reordering' ), 10, 2 );
 
@@ -27,7 +32,7 @@ class Woocommerce {
 	public function product_reordering( $product_id, $menu_orders ) {
 
 		$menu_orders_for_import = array();
-		if ( ! empty ( $menu_orders ) ) {
+		if ( ! empty( $menu_orders ) ) {
 			foreach ( $menu_orders as $product_id => $menu_order ) {
 				$menu_orders_for_import[] = array(
 					'id' => (string) $product_id,
@@ -65,6 +70,15 @@ class Woocommerce {
 				}
 			}
 		}
+	}
+
+	public function on_product_trash_or_untrash( $product_id ) {
+
+		$wc_product = wc_get_product( $product_id );
+		if ( $wc_product ) {
+			$this->on_product_save( $product_id, $wc_product );
+		}
+
 	}
 
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
