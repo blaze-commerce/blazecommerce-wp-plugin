@@ -178,7 +178,7 @@ class SiteInfo extends BaseCollection {
 			$initial_additional_data = array();
 
 			$site_currency = get_woocommerce_currency();
-			$base_currency = \RegionalDataHelper::$currency_country_map[ $site_currency ];
+			$base_currency = \RegionalDataHelper::get_country_code_from_currency( $site_currency );
 			$currencies = array(
 				'countries' => [ $base_currency ],
 				'baseCountry' => $base_currency,
