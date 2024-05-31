@@ -44,7 +44,7 @@ class BaseCollection {
 		$batch_files = array_map( function ($data) {
 			return json_encode( $data );
 		}, $batch );
-		$to_jsonl    = implode( PHP_EOL, $batch_files );
+		$to_jsonl = implode( PHP_EOL, $batch_files );
 
 		$curl = curl_init();
 

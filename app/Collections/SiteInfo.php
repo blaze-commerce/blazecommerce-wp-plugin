@@ -1,4 +1,5 @@
 <?php
+
 namespace BlazeWooless\Collections;
 
 use BlazeWooless\Settings\RegionalSettings;
@@ -178,7 +179,7 @@ class SiteInfo extends BaseCollection {
 			$initial_additional_data = array();
 
 			$site_currency = get_woocommerce_currency();
-			$base_currency = \RegionalDataHelper::$currency_country_map[ $site_currency ];
+			$base_currency = WC()->countries->get_base_country();
 			$currencies = array(
 				'countries' => [ $base_currency ],
 				'baseCountry' => $base_currency,
@@ -270,7 +271,6 @@ class SiteInfo extends BaseCollection {
 		} catch (\Exception $e) {
 			echo $e->getMessage();
 		}
-
 	}
 
 	public function get_stock_display_format() {
