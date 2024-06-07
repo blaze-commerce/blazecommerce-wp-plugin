@@ -51,6 +51,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Settings\\ProductFilterSettings',
 			'\\BlazeWooless\\Settings\\ProductPageSettings',
 			'\\BlazeWooless\\Settings\\CategoryPageSettings',
+			'\\BlazeWooless\\Settings\\HeaderSettings',
 			'\\BlazeWooless\\Settings\\HomePageSettings',
 			'\\BlazeWooless\\Settings\\SiteMessageTopHeaderSettings',
 			'\\BlazeWooless\\Settings\\SiteMessageSettings',
@@ -72,6 +73,7 @@ class BlazeWooless {
 
 	public function register_features() {
 		$features = array(
+			'\\BlazeWooless\\Features\\ContentBuilder',
 			'\\BlazeWooless\\Features\\AttributeSettings',
 			'\\BlazeWooless\\Features\\CalculateShipping',
 			'\\BlazeWooless\\Features\\DraggableContent',
