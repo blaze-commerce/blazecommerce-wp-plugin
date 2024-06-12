@@ -56,6 +56,15 @@ class Product extends BaseCollection {
 			array( 'name' => "{$schema_name}.salePrice.GBP", 'type' => 'float[]', 'optional' => true ),
 			array( 'name' => "{$schema_name}.salePrice.CAD", 'type' => 'float[]', 'optional' => true ),
 			array( 'name' => "{$schema_name}.salePrice.EUR", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData", 'type' => 'object', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData.priceWithTax", 'type' => 'object', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData.priceWithTax.AUD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData.priceWithTax.NZD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData.priceWithTax.USD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData.priceWithTax.GBP", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData.priceWithTax.CAD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData.priceWithTax.EUR", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.metaData.productLabel", 'type' => 'string', 'optional' => true ),
 		);
 
 	}
