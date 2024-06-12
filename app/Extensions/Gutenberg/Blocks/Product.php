@@ -27,17 +27,6 @@ class Product {
 
 			$site_product = $this->get_site_product( $post_id );
 
-			do_action(
-				"inspect",
-				[ 
-					"sync_product_to_typesense",
-					[ 
-						"post_id" => $post_id,
-						"site_product_id" => $site_product
-					]
-				]
-			);
-
 			if ( ! empty( $site_product ) ) {
 				TypesenseClient::get_instance()->site_info()->upsert( $site_product );
 			}
@@ -56,17 +45,6 @@ class Product {
 		}
 
 		$site_product_id = $this->get_site_product_id();
-
-		do_action(
-			"inspect",
-			[ 
-				"upsert_site_product",
-				[ 
-					"post_id" => $post_id,
-					"site_product_id" => $site_product_id
-				]
-			]
-		);
 
 		if (
 			$post_id === $site_product_id
