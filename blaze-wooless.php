@@ -14,6 +14,7 @@ require 'vendor/autoload.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/regional-data-helper.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/setting-helper.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/blaze-wooless-functions.php';
+require_once plugin_dir_path( __FILE__ ) . 'blocks/blocks.php';
 
 
 // Initialize plugin
