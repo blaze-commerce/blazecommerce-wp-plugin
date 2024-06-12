@@ -23,6 +23,43 @@ class Product extends BaseCollection {
 		$logger->debug( $message, $context );
 	}
 
+	public function get_product_recommendation_schema( $type = 'cross-sell' ) {
+		$schema_name = 'crossSellProducts';
+		if ( 'related' === $type ) {
+			$schema_name = 'relatedProducts';
+		}
+
+		if ( 'upsell' === $type ) {
+			$schema_name = 'upsellProducts';
+		}
+
+		return array(
+			array( 'name' => $schema_name, 'type' => 'object[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.price", 'type' => 'object' ),
+			array( 'name' => "{$schema_name}.price.AUD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.price.NZD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.price.USD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.price.GBP", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.price.CAD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.price.EUR", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.regularPrice", 'type' => 'object' ),
+			array( 'name' => "{$schema_name}.regularPrice.AUD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.regularPrice.NZD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.regularPrice.USD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.regularPrice.GBP", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.regularPrice.CAD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.regularPrice.EUR", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.salePrice", 'type' => 'object', 'optional' => true ),
+			array( 'name' => "{$schema_name}.salePrice.AUD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.salePrice.NZD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.salePrice.USD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.salePrice.GBP", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.salePrice.CAD", 'type' => 'float[]', 'optional' => true ),
+			array( 'name' => "{$schema_name}.salePrice.EUR", 'type' => 'float[]', 'optional' => true ),
+		);
+
+	}
+
 	public function initialize() {
 		$logger  = wc_get_logger();
 		$context = array( 'source' => 'wooless-product-collection-initialize' );
@@ -33,112 +70,103 @@ class Product extends BaseCollection {
 
 		try {
 
+
 			$logger->debug( 'TS Product collection: ' . $this->collection_name(), $context );
+			$fields = array(
+				[ 'name' => 'id', 'type' => 'string', 'facet' => true ],
+				[ 'name' => 'productId', 'type' => 'string', 'facet' => true ],
+				[ 'name' => 'shortDescription', 'type' => 'string', 'optional' => true ],
+				[ 'name' => 'description', 'type' => 'string' ],
+				[ 'name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true ],
+				[ 'name' => 'permalink', 'type' => 'string' ],
+				[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
+				[ 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ],
+				[ 'name' => 'sku', 'type' => 'string' ],
+				[ 'name' => 'price', 'type' => 'object', 'facet' => true ],
+				[ 'name' => 'price.AUD', 'type' => 'float', 'optional' => true, 'facet' => true ],
+				[ 'name' => 'price.NZD', 'type' => 'float', 'optional' => true, 'facet' => true ],
+				[ 'name' => 'price.USD', 'type' => 'float', 'optional' => true, 'facet' => true ],
+				[ 'name' => 'price.GBP', 'type' => 'float', 'optional' => true, 'facet' => true ],
+				[ 'name' => 'price.CAD', 'type' => 'float', 'optional' => true, 'facet' => true ],
+				[ 'name' => 'price.EUR', 'type' => 'float', 'optional' => true, 'facet' => true ],
+				[ 'name' => 'regularPrice', 'type' => 'object' ],
+				[ 'name' => 'regularPrice.AUD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'regularPrice.NZD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'regularPrice.USD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'regularPrice.GBP', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'regularPrice.CAD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'regularPrice.EUR', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'salePrice', 'type' => 'object' ],
+				[ 'name' => 'salePrice.AUD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'salePrice.NZD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'salePrice.USD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'salePrice.GBP', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'salePrice.CAD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'salePrice.EUR', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'onSale', 'type' => 'bool', 'facet' => true ],
+				[ 'name' => 'stockQuantity', 'type' => 'int64' ],
+				[ 'name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true ],
+				[ 'name' => 'backorder', 'type' => 'string', 'sort' => true, 'facet' => true ],
+				[ 'name' => 'status', 'type' => 'string', 'sort' => true, 'facet' => true ],
+				[ 'name' => 'shippingClass', 'type' => 'string' ],
+				[ 'name' => 'updatedAt', 'type' => 'int64' ],
+				[ 'name' => 'createdAt', 'type' => 'int64' ],
+				[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
+				[ 'name' => 'daysPassed', 'type' => 'int64', 'optional' => true, 'facet' => true ],
+				[ 'name' => 'isFeatured', 'type' => 'bool', 'facet' => true ],
+				[ 'name' => 'totalSales', 'type' => 'int64' ],
+				[ 'name' => 'productType', 'type' => 'string', 'facet' => true ],
+				[ 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ],
+				// Had to use string[] to type base on https://github.com/typesense/typesense/issues/227#issuecomment-1364072388 because ts is throwing errors after updgrade that the data is not an array
+				[ 'name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
+				[ 'name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true ],
+				[ 'name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
+				[ 'name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
+				[ 'name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
+				[ 'name' => 'taxonomies.childAndParentTerm', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
+				[ 'name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true ],
+				[ 'name' => 'taxonomies.breadcrumbs', 'type' => 'object[]', 'optional' => true ],
+				[ 'name' => 'taxonomies.filters', 'type' => 'string[]', 'optional' => true, 'facet' => true ],
+				//@TODO - Transfer to judme extension
+				[ 'name' => 'judgemeReviews', 'type' => 'object', 'optional' => true ],
+				[ 'name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true ],
+				[ 'name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true ],
+				[ 'name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true ],
+				[ 'name' => 'judgemeReviews.percentage', 'type' => 'object[]', 'optional' => true ],
+				//@TODO - Transfer to yotpo extentions
+				[ 'name' => 'yotpoReviews', 'type' => 'object', 'optional' => true ],
+				[ 'name' => 'yotpoReviews.product_score', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'yotpoReviews.total_reviews', 'type' => 'int64', 'optional' => true ],
+				[ 'name' => 'thumbnail', 'type' => 'object' ],
+				[ 'name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true ],
+				[ 'name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true ],
+				[ 'name' => 'menuOrder', 'type' => 'int64', 'optional' => true ],
+				[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
+				[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
+				[ 'name' => 'metaData', 'type' => 'object', 'optional' => true ],
+				[ 'name' => 'metaData.priceWithTax', 'type' => 'object', 'optional' => true ],
+				[ 'name' => 'metaData.priceWithTax.AUD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'metaData.priceWithTax.NZD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'metaData.priceWithTax.USD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'metaData.priceWithTax.GBP', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'metaData.priceWithTax.CAD', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'metaData.priceWithTax.EUR', 'type' => 'float', 'optional' => true ],
+				[ 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ],
+			);
+
+			$cross_sell = $this->get_product_recommendation_schema( 'cross-sell' );
+			$related    = $this->get_product_recommendation_schema( 'related' );
+			$upsell     = $this->get_product_recommendation_schema( 'upsell' );
+
+			$recommendation_schema = array_merge( $cross_sell, $related, $upsell );
+
+			$fields = array_merge_recursive( $fields, $recommendation_schema );
+
 			$this->create_collection(
 				array(
 					'name' => $this->collection_name(),
-					'fields' => array(
-						[ 'name' => 'id', 'type' => 'string', 'facet' => true ],
-						[ 'name' => 'productId', 'type' => 'string', 'facet' => true ],
-						[ 'name' => 'shortDescription', 'type' => 'string', 'optional' => true ],
-						[ 'name' => 'description', 'type' => 'string' ],
-						[ 'name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true ],
-						[ 'name' => 'permalink', 'type' => 'string' ],
-						[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
-						[ 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ],
-						[ 'name' => 'sku', 'type' => 'string' ],
-						[ 'name' => 'price', 'type' => 'object', 'facet' => true ],
-						[ 'name' => 'price.AUD', 'type' => 'float', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'price.NZD', 'type' => 'float', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'price.USD', 'type' => 'float', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'price.GBP', 'type' => 'float', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'price.CAD', 'type' => 'float', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'price.EUR', 'type' => 'float', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'regularPrice', 'type' => 'object' ],
-						[ 'name' => 'regularPrice.AUD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'regularPrice.NZD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'regularPrice.USD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'regularPrice.GBP', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'regularPrice.CAD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'regularPrice.EUR', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'salePrice', 'type' => 'object' ],
-						[ 'name' => 'salePrice.AUD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'salePrice.NZD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'salePrice.USD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'salePrice.GBP', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'salePrice.CAD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'salePrice.EUR', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'onSale', 'type' => 'bool', 'facet' => true ],
-						[ 'name' => 'stockQuantity', 'type' => 'int64' ],
-						[ 'name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true ],
-						[ 'name' => 'backorder', 'type' => 'string', 'sort' => true, 'facet' => true ],
-						[ 'name' => 'status', 'type' => 'string', 'sort' => true, 'facet' => true ],
-						[ 'name' => 'shippingClass', 'type' => 'string' ],
-						[ 'name' => 'updatedAt', 'type' => 'int64' ],
-						[ 'name' => 'createdAt', 'type' => 'int64' ],
-						[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'daysPassed', 'type' => 'int64', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'isFeatured', 'type' => 'bool', 'facet' => true ],
-						[ 'name' => 'totalSales', 'type' => 'int64' ],
-						[ 'name' => 'productType', 'type' => 'string', 'facet' => true ],
-						[ 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ],
-						// Had to use string[] to type base on https://github.com/typesense/typesense/issues/227#issuecomment-1364072388 because ts is throwing errors after updgrade that the data is not an array
-						[ 'name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-						[ 'name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true ],
-						[ 'name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-						[ 'name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-						[ 'name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-						[ 'name' => 'taxonomies.childAndParentTerm', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-						[ 'name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true ],
-						[ 'name' => 'taxonomies.breadcrumbs', 'type' => 'object[]', 'optional' => true ],
-						[ 'name' => 'taxonomies.filters', 'type' => 'string[]', 'optional' => true, 'facet' => true ],
-						[ 'name' => 'judgemeReviews', 'type' => 'object', 'optional' => true ],
-						[ 'name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true ],
-						[ 'name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true ],
-						[ 'name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true ],
-						[ 'name' => 'judgemeReviews.percentage', 'type' => 'object[]', 'optional' => true ],
-						[ 'name' => 'yotpoReviews', 'type' => 'object', 'optional' => true ],
-						[ 'name' => 'yotpoReviews.product_score', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'yotpoReviews.total_reviews', 'type' => 'int64', 'optional' => true ],
-						[ 'name' => 'thumbnail', 'type' => 'object' ],
-						[ 'name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true ],
-						[ 'name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true ],
-						[ 'name' => 'menuOrder', 'type' => 'int64', 'optional' => true ],
-						[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
-						[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
-						[ 'name' => 'crossSellData', 'type' => 'object[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.price', 'type' => 'object' ],
-						[ 'name' => 'crossSellData.price.AUD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.price.NZD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.price.USD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.price.GBP', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.price.CAD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.price.EUR', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.regularPrice', 'type' => 'object' ],
-						[ 'name' => 'crossSellData.regularPrice.AUD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.regularPrice.NZD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.regularPrice.USD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.regularPrice.GBP', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.regularPrice.CAD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.regularPrice.EUR', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.salePrice', 'type' => 'object', 'optional' => true ],
-						[ 'name' => 'crossSellData.salePrice.AUD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.salePrice.NZD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.salePrice.USD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.salePrice.GBP', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.salePrice.CAD', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'crossSellData.salePrice.EUR', 'type' => 'float[]', 'optional' => true ],
-						[ 'name' => 'metaData', 'type' => 'object', 'optional' => true ],
-						[ 'name' => 'metaData.priceWithTax', 'type' => 'object', 'optional' => true ],
-						[ 'name' => 'metaData.priceWithTax.AUD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'metaData.priceWithTax.NZD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'metaData.priceWithTax.USD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'metaData.priceWithTax.GBP', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'metaData.priceWithTax.CAD', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'metaData.priceWithTax.EUR', 'type' => 'float', 'optional' => true ],
-						[ 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ],
-					),
+					'fields' => apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields ),
 					'default_sorting_field' => 'updatedAt',
 					'enable_nested_fields' => true
 				)
@@ -164,7 +192,7 @@ class Product extends BaseCollection {
 				$this->initialize();
 			}
 
-			$batch_size              = 250; // Adjust the batch size depending on your server's capacity
+			$batch_size              = 100; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
 			$query_args              = array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page );
@@ -202,7 +230,7 @@ class Product extends BaseCollection {
 				$result = $this->import( $products_batch );
 				// echo "<pre>"; print_r($result); echo "</pre>";
 				$successful_imports = array_filter( $result, function ($batch_result) {
-					$successful_import = isset ( $batch_result['success'] ) && $batch_result['success'] == true;
+					$successful_import = isset( $batch_result['success'] ) && $batch_result['success'] == true;
 					if ( ! $successful_import ) {
 						$this->log_failed_product_import( $batch_result );
 					}
@@ -346,26 +374,16 @@ class Product extends BaseCollection {
 				unset( $variations );
 			}
 
-			$cross_sell_ids  = $product->get_cross_sell_ids();
-			$cross_sell_data = [];
+			$cross_sell_ids      = $product->get_cross_sell_ids();
+			$cross_sell_products = array();
 			if ( ! empty( $cross_sell_ids ) ) {
-				$cross_sell_data = $this->get_cross_sell_products( $cross_sell_ids );
+				$cross_sell_products = $this->get_products_by_ids( $cross_sell_ids );
 			}
 
-			$upsell_ids  = $product->get_upsell_ids();
-			$upsell_data = array();
+			$upsell_ids      = $product->get_upsell_ids();
+			$upsell_products = array();
 			if ( ! empty( $upsell_ids ) ) {
-				foreach ( $upsell_ids as $upsell_id ) {
-					$upsell_product = wc_get_product( $upsell_id );
-					if ( $upsell_product ) {
-						$upsell_data[] = array(
-							'id' => $upsell_product->get_id(),
-							'name' => $upsell_product->get_name(),
-						);
-					}
-
-					unset( $upsell_product );
-				}
+				$upsell_products = $this->get_products_by_ids( $upsell_ids );
 			}
 
 			// Get the additional product tabs
@@ -386,8 +404,6 @@ class Product extends BaseCollection {
 			$taxonomies = $this->get_taxonomies( $product );
 
 			$related_products = $this->get_related_products( $product_id, $taxonomies );
-
-			$product_slug = $product->get_slug();
 
 			$published_at = strtotime( get_the_date( '', $product->get_id() ) );
 
@@ -420,18 +436,17 @@ class Product extends BaseCollection {
 				'galleryImages' => $product_gallery,
 				'taxonomies' => $taxonomies,
 				'productType' => $product_type,
-				// Add product type
 				'variations' => $variations_data,
-				// Add variations data
-				'crossSellData' => empty( $cross_sell_data ) ? $related_products : $cross_sell_data,
-				'upsellData' => $upsell_data,
+				'crossSellProducts' => $cross_sell_products,
+				'relatedProducts' => $related_products,
+				'upsellProducts' => $upsell_products,
 				'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product ),
 				'status' => $product->get_status(),
 				'menuOrder' => $product->get_menu_order(),
 				'metaData' => array(),
 			];
 
-			unset( $shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_data, $variations_data, $formatted_additional_tabs, $upsell_data, $published_at );
+			unset( $shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_products, $variations_data, $formatted_additional_tabs, $upsell_products, $published_at );
 		}
 
 		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
@@ -481,7 +496,6 @@ class Product extends BaseCollection {
 						'childAndParentTerm' => $term_parent ? $product_term->name . '|' . $term_parent : '',
 						'parentTerm' => $term_parent,
 						'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
-						// Search Parameter Filter Values
 						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
 					];
 
@@ -519,10 +533,10 @@ class Product extends BaseCollection {
 		);
 		$product_ids = wc_get_products( $args );
 
-		return $this->get_cross_sell_products( $product_ids );
+		return $this->get_products_by_ids( $product_ids );
 	}
 
-	public function get_cross_sell_products( $product_ids ) {
+	public function get_products_by_ids( $product_ids ) {
 		$product_data            = array();
 		$cross_sell_product_data = array();
 
