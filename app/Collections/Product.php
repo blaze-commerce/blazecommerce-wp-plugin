@@ -54,6 +54,8 @@ class Product extends BaseCollection {
 						[ 'name' => 'price.GBP', 'type' => 'float', 'optional' => true, 'facet' => true ],
 						[ 'name' => 'price.CAD', 'type' => 'float', 'optional' => true, 'facet' => true ],
 						[ 'name' => 'price.EUR', 'type' => 'float', 'optional' => true, 'facet' => true ],
+						[ 'name' => 'price.RUB', 'type' => 'float', 'optional' => true, 'facet' => true ],
+						[ 'name' => 'price.SEK', 'type' => 'float', 'optional' => true, 'facet' => true ],
 						[ 'name' => 'regularPrice', 'type' => 'object' ],
 						[ 'name' => 'regularPrice.AUD', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'regularPrice.NZD', 'type' => 'float', 'optional' => true ],
@@ -61,6 +63,8 @@ class Product extends BaseCollection {
 						[ 'name' => 'regularPrice.GBP', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'regularPrice.CAD', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'regularPrice.EUR', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'regularPrice.RUB', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'regularPrice.SEK', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'salePrice', 'type' => 'object' ],
 						[ 'name' => 'salePrice.AUD', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'salePrice.NZD', 'type' => 'float', 'optional' => true ],
@@ -68,6 +72,8 @@ class Product extends BaseCollection {
 						[ 'name' => 'salePrice.GBP', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'salePrice.CAD', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'salePrice.EUR', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'salePrice.RUB', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'salePrice.SEK', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'onSale', 'type' => 'bool', 'facet' => true ],
 						[ 'name' => 'stockQuantity', 'type' => 'int64' ],
 						[ 'name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true ],
@@ -115,6 +121,8 @@ class Product extends BaseCollection {
 						[ 'name' => 'crossSellData.price.GBP', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.price.CAD', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.price.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.price.RUB', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.price.SEK', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.regularPrice', 'type' => 'object' ],
 						[ 'name' => 'crossSellData.regularPrice.AUD', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.regularPrice.NZD', 'type' => 'float[]', 'optional' => true ],
@@ -122,6 +130,8 @@ class Product extends BaseCollection {
 						[ 'name' => 'crossSellData.regularPrice.GBP', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.regularPrice.CAD', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.regularPrice.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.regularPrice.RUB', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.regularPrice.SEK', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.salePrice', 'type' => 'object', 'optional' => true ],
 						[ 'name' => 'crossSellData.salePrice.AUD', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.salePrice.NZD', 'type' => 'float[]', 'optional' => true ],
@@ -129,6 +139,48 @@ class Product extends BaseCollection {
 						[ 'name' => 'crossSellData.salePrice.GBP', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.salePrice.CAD', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'crossSellData.salePrice.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice.RUB', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.salePrice.SEK', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations', 'type' => 'object[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.price', 'type' => 'object' ],
+						[ 'name' => 'crossSellData.variations.price.AUD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.price.NZD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.price.USD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.price.GBP', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.price.CAD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.price.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.price.RUB', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.price.SEK', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.regularPrice', 'type' => 'object' ],
+						[ 'name' => 'crossSellData.variations.regularPrice.AUD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.regularPrice.NZD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.regularPrice.USD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.regularPrice.GBP', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.regularPrice.CAD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.regularPrice.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.regularPrice.RUB', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.regularPrice.SEK', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice', 'type' => 'object', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice.AUD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice.NZD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice.USD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice.GBP', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice.CAD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice.RUB', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.salePrice.SEK', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.image', 'type' => 'object[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.variations.image.altText', 'type' => 'string[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData', 'type' => 'object', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax', 'type' => 'object[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax.AUD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax.NZD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax.USD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax.GBP', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax.CAD', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax.EUR', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax.RUB', 'type' => 'float[]', 'optional' => true ],
+						[ 'name' => 'crossSellData.metaData.priceWithTax.SEK', 'type' => 'float[]', 'optional' => true ],
 						[ 'name' => 'metaData', 'type' => 'object', 'optional' => true ],
 						[ 'name' => 'metaData.priceWithTax', 'type' => 'object', 'optional' => true ],
 						[ 'name' => 'metaData.priceWithTax.AUD', 'type' => 'float', 'optional' => true ],
@@ -137,6 +189,8 @@ class Product extends BaseCollection {
 						[ 'name' => 'metaData.priceWithTax.GBP', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'metaData.priceWithTax.CAD', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'metaData.priceWithTax.EUR', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax.RUB', 'type' => 'float', 'optional' => true ],
+						[ 'name' => 'metaData.priceWithTax.SEK', 'type' => 'float', 'optional' => true ],
 						[ 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ],
 					),
 					'default_sorting_field' => 'updatedAt',
@@ -164,7 +218,7 @@ class Product extends BaseCollection {
 				$this->initialize();
 			}
 
-			$batch_size              = 250; // Adjust the batch size depending on your server's capacity
+			$batch_size              = 5; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
 			$query_args              = array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page );
@@ -263,7 +317,7 @@ class Product extends BaseCollection {
 				return [ 
 					'id' => $attachment_id,
 					'title' => $attachment->post_title,
-					'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+					'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
 					'src' => $thumbnail_src ? $thumbnail_src : '',
 				];
 			}, $attachment_ids );
@@ -277,7 +331,7 @@ class Product extends BaseCollection {
 			$thumbnail = [ 
 				'id' => $thumbnail_id,
 				'title' => $attachment->post_title,
-				'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+				'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
 				'src' => $thumbnail_src ? $thumbnail_src : '',
 			];
 
@@ -332,7 +386,7 @@ class Product extends BaseCollection {
 						'image' => [ 
 							'id' => $variant_thumbnail_id,
 							'title' => $variant_attachment->post_title,
-							'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
+							'altText' => strval($variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title),
 							'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
 						],
 						'metaData' => array(),
@@ -468,7 +522,7 @@ class Product extends BaseCollection {
 					$term_thumbnail = [ 
 						'id' => $term_thumbnail_id,
 						'title' => $term_attachment->post_title,
-						'altText' => get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ),
+						'altText' => strval(get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true )),
 						'src' => wp_get_attachment_url( $term_thumbnail_id ),
 					];
 
@@ -541,7 +595,7 @@ class Product extends BaseCollection {
 							return [ 
 								'id' => $attachment_id,
 								'title' => $attachment->post_title,
-								'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+								'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
 								'src' => $thumbnail_src ? $thumbnail_src : '',
 							];
 						}, $attachment_ids );
@@ -589,7 +643,7 @@ class Product extends BaseCollection {
 									'image' => [ 
 										'id' => $variant_thumbnail_id,
 										'title' => $variant_attachment->post_title,
-										'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
+										'altText' => strval($variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title),
 										'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
 									],
 								];
@@ -605,7 +659,7 @@ class Product extends BaseCollection {
 						$thumbnail = [ 
 							'id' => $thumbnail_id,
 							'title' => $attachment->post_title,
-							'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+							'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
 							'src' => $thumbnail_src ? $thumbnail_src : '',
 						];
 
