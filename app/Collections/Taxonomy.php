@@ -41,6 +41,7 @@ class Taxonomy extends BaseCollection {
 				[ 'name' => 'parentTerm', 'type' => 'string' ],
 				[ 'name' => 'parentSlug', 'type' => 'string', 'facet' => true ],
 				[ 'name' => 'productCount', 'type' => 'int64' ],
+				[ 'name' => 'order', 'type' => 'int64' ],
 				[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ],
 				[ 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ],
 			],
@@ -55,6 +56,7 @@ class Taxonomy extends BaseCollection {
 		// Get the custom fields (bannerThumbnail and bannerText)
 		$bannerThumbnail = get_term_meta( $term->term_id, 'wpcf-image', true );
 		$bannerText      = get_term_meta( $term->term_id, 'wpcf-term-banner-text', true );
+		$order           = get_term_meta( $term->term_id, 'order', true );
 
 
 
@@ -92,7 +94,8 @@ class Taxonomy extends BaseCollection {
 			'bannerText' => $bannerText,
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
 			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '',
-			'productCount' => intval( $term->count ),
+			'productCount' => (int) $term->count,
+			'order' => (int) $order,
 			'thumbnail' => $thumbnail,
 			'breadcrumbs' => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
 			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
