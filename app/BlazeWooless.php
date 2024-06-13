@@ -100,6 +100,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\YoastSEO',
 			'\\BlazeWooless\\Extensions\\GraphQL',
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
+			'\\BlazeWooless\\Extensions\\WoocommercePhotoReviews',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Footer',
