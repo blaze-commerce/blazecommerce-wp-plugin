@@ -14,6 +14,28 @@ class Taxonomy extends BaseCollection {
 		return self::$instance;
 	}
 
+	public function get_fields() {
+		$fields = array(
+			array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true, 'sort' => true ),
+			array( 'name' => 'description', 'type' => 'string' ),
+			array( 'name' => 'type', 'type' => 'string', 'facet' => true, 'infix' => true ),
+			array( 'name' => 'seoFullHead', 'type' => 'string', 'facet' => true, 'infix' => true ),
+			array( 'name' => 'permalink', 'type' => 'string' ),
+			array( 'name' => 'updatedAt', 'type' => 'int64' ),
+			array( 'name' => 'bannerThumbnail', 'type' => 'string' ),
+			array( 'name' => 'bannerText', 'type' => 'string' ),
+			array( 'name' => 'parentTerm', 'type' => 'string' ),
+			array( 'name' => 'parentSlug', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'productCount', 'type' => 'int64' ),
+			array( 'name' => 'order', 'type' => 'int64' ),
+			array( 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ),
+			array( 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ),
+		);
+		return apply_filters( 'blaze_commerce_taxonomy_fields', $fields );
+	}
+
 	public function initialize() {
 		// Fetch the store ID from the saved options
 		$wooless_site_id     = get_option( 'store_id' );
@@ -27,24 +49,7 @@ class Taxonomy extends BaseCollection {
 
 		$this->create_collection( [ 
 			'name' => $collection_taxonomy,
-			'fields' => [ 
-				[ 'name' => 'id', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true, 'sort' => true ],
-				[ 'name' => 'description', 'type' => 'string' ],
-				[ 'name' => 'type', 'type' => 'string', 'facet' => true, 'infix' => true ],
-				[ 'name' => 'seoFullHead', 'type' => 'string', 'facet' => true, 'infix' => true ],
-				[ 'name' => 'permalink', 'type' => 'string' ],
-				[ 'name' => 'updatedAt', 'type' => 'int64' ],
-				[ 'name' => 'bannerThumbnail', 'type' => 'string' ],
-				[ 'name' => 'bannerText', 'type' => 'string' ],
-				[ 'name' => 'parentTerm', 'type' => 'string' ],
-				[ 'name' => 'parentSlug', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'productCount', 'type' => 'int64' ],
-				[ 'name' => 'order', 'type' => 'int64' ],
-				[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ],
-				[ 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ],
-			],
+			'fields' => $this->get_fields(),
 			'default_sorting_field' => 'updatedAt',
 			'enable_nested_fields' => true,
 		] );
