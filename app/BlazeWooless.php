@@ -98,6 +98,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommerceAfterpay',
 			'\\BlazeWooless\\Extensions\\WoocommerceGiftCards',
 			'\\BlazeWooless\\Extensions\\YoastSEO',
+			'\\BlazeWooless\\Extensions\\RankMath',
 			'\\BlazeWooless\\Extensions\\GraphQL',
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
