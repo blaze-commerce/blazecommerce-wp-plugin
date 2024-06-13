@@ -57,9 +57,6 @@ class Taxonomy extends BaseCollection {
 		$bannerText      = get_term_meta( $term->term_id, 'wpcf-term-banner-text', true );
 
 
-		$yoastMeta   = is_plugin_active( 'wordpress-seo/wp-seo.php' ) ? \YoastSEO()->meta->for_term( $term->term_id ) : [];
-		$termHead    = is_object( $yoastMeta ) ? $yoastMeta->get_head() : '';
-		$seoFullHead = is_string( $termHead ) ? $termHead : ( isset( $termHead->html ) ? $termHead->html : '' );
 
 		// Get Parent Term
 		$parentTerm = get_term( $term->parent, $taxonomy );
@@ -90,13 +87,12 @@ class Taxonomy extends BaseCollection {
 			'description' => $term->description,
 			'type' => $taxonomy,
 			'permalink' => wp_make_link_relative( get_term_link( $term ) ),
-			'seoFullHead' => $seoFullHead,
 			'updatedAt' => time(),
 			'bannerThumbnail' => (string) $bannerThumbnail,
 			'bannerText' => $bannerText,
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
 			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '',
-			'productCount' => intval($term->count),
+			'productCount' => intval( $term->count ),
 			'thumbnail' => $thumbnail,
 			'breadcrumbs' => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
 			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
@@ -151,7 +147,7 @@ class Taxonomy extends BaseCollection {
 							try {
 								$result                   = $this->import( $taxonomy_datas );
 								$successful_imports       = array_filter( $result, function ($batch_result) {
-									return isset ( $batch_result['success'] ) && $batch_result['success'] == true;
+									return isset( $batch_result['success'] ) && $batch_result['success'] == true;
 								} );
 								$successful_imports_count += count( $successful_imports );
 								$imported_products_count += $current_batch_count;
@@ -178,7 +174,7 @@ class Taxonomy extends BaseCollection {
 				try {
 					$result                   = $this->import( $taxonomy_datas );
 					$successful_imports       = array_filter( $result, function ($batch_result) {
-						return isset ( $batch_result['success'] ) && $batch_result['success'] == true;
+						return isset( $batch_result['success'] ) && $batch_result['success'] == true;
 					} );
 					$successful_imports_count += count( $successful_imports );
 					$imported_products_count += $current_batch_count;
