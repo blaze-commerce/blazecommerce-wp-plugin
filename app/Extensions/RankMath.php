@@ -34,7 +34,6 @@ class RankMath {
 
 
 	public function add_seo_to_product_schema( $product_data, $product_id ) {
-
 		$product_data['seoFullHead'] = $this->get_full_head( get_permalink( $product_id ) );
 		return $product_data;
 
