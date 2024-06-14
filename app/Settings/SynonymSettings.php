@@ -9,6 +9,8 @@ class SynonymSettings extends BaseSettings {
 	public $tab_key = 'synonyms';
 	public $page_label = 'Synonyms Settings';
 
+	public $key = 'wooless_synonyms';
+
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self( 'wooless_synonym_settings_options' );
@@ -18,13 +20,26 @@ class SynonymSettings extends BaseSettings {
 	}
 
 	public function register_hooks() {
-		// add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
+		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
+	}
+
+	public static function get_option_key() {
+		return self::get_instance()->key;
+	}
+
+	public function update_typesense_synonyms( $synonyms ) {
+
 	}
 
 	public function settings_callback( $options ) {
 
 		if ( $_POST['synonym'] ) {
+
 			$synonyms = array();
+
+			TypesenseClient::get_instance()->delete_all_synonyms();
+
+
 			foreach ( $_POST['synonym'] as $synonym ) {
 
 				$words = array_map( 'trim', explode( ',', $synonym['words'] ) );
@@ -35,13 +50,13 @@ class SynonymSettings extends BaseSettings {
 				$synonyms[] = array(
 					'type' => $synonym['type'],
 					'key' => $synonym['key'],
-					'words' => array_map( 'trim', explode( ',', $synonym['words'] ) )
+					'words' => $words
 				);
 
 				TypesenseClient::get_instance()->set_synonym( $synonym['type'], $words, $synonym['key'] );
 			}
 
-			update_option( 'wooless_synonyms', $synonyms );
+			update_option( $this->key, $synonyms );
 		}
 
 		return $options;
@@ -60,12 +75,18 @@ class SynonymSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_site_info ) {
-		$synonyms = $this->get_option( 'synonyms' );
-		if ( count( $additional_site_info ) > 0 ) {
-			$additional_site_info['synonyms'] = array();
-			foreach ( $synonyms as $region ) {
-				$region_mappings = $this->get_option( 'region_' . $region );
-				$additional_site_info['synonyms'][ $region ] = $region_mappings ?? [];
+
+		$synonyms = $this->get_option( $this->key );
+
+		if ( count( $additional_site_info ) > 0 && is_array( $synonyms ) && count( $synonyms ) > 0 ) {
+
+			TypesenseClient::get_instance()->delete_all_synonyms();
+
+			foreach ( $synonyms as $synonym ) {
+				if ( count( $synonym['words'] ) === 0 ) {
+					continue;
+				}
+				TypesenseClient::get_instance()->set_synonym( $synonym['type'], $synonym['words'], $synonym['key'] );
 			}
 		}
 		return $additional_site_info;
