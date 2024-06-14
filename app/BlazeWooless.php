@@ -61,6 +61,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Settings\\FooterFourSettings',
 			'\\BlazeWooless\\Settings\\FooterFiveSettings',
 			'\\BlazeWooless\\Settings\\FooterAfterSettings',
+			'\\BlazeWooless\\Settings\\SynonymSettings',
 		);
 
 		foreach ( $settings as $setting ) {
