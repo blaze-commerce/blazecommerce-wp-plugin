@@ -378,7 +378,7 @@ class Product extends BaseCollection {
 		}
 
 		$product_id       = $product->get_id();
-		$stockQuantity    = $product->get_stock_quantity();
+		$stock_quantity   = $product->get_stock_quantity();
 		$currency         = get_option( 'woocommerce_currency' );
 		$taxonomies       = $this->get_taxonomies( $product );
 		$related_products = $this->get_related_products( $product_id, $taxonomies, 'ids' );
@@ -400,7 +400,7 @@ class Product extends BaseCollection {
 			'regularPrice' => $this->get_regular_price( $product, $currency ),
 			'salePrice' => $this->get_sale_price( $product, $currency ),
 			'onSale' => $product->is_on_sale(),
-			'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
+			'stockQuantity' => empty( $stock_quantity ) ? 0 : $stock_quantity,
 			'stockStatus' => $product->get_stock_status(),
 			'backorder' => $product->get_backorders(),
 			'shippingClass' => $product->get_shipping_class(),
