@@ -325,12 +325,12 @@ class Product extends BaseCollection {
 			$thumbnail_alt_text = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
 			$thumbnail_src = wp_get_attachment_url( $attachment_id );
 
-			return [ 
+			return array(
 				'id' => $attachment_id,
 				'title' => $attachment->post_title,
 				'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
 				'src' => $thumbnail_src ? $thumbnail_src : '',
-			];
+			);
 		}, $attachment_ids );
 
 		return apply_filters( 'wooless_product_gallery', $product_gallery, $product );
@@ -341,9 +341,9 @@ class Product extends BaseCollection {
 			$currency = get_option( 'woocommerce_currency' );
 		}
 
-		$default_price = [ 
+		$default_price = array(
 			$currency => floatval( $product->get_price() )
-		];
+		);
 
 		return apply_filters( 'wooless_product_price', $default_price, $product->get_id(), $product );
 	}
@@ -353,9 +353,9 @@ class Product extends BaseCollection {
 			$currency = get_option( 'woocommerce_currency' );
 		}
 
-		$default_regular_price = [ 
+		$default_regular_price = array(
 			$currency => floatval( $product->get_regular_price() )
-		];
+		);
 
 		return apply_filters( 'wooless_product_regular_price', $default_regular_price, $product->get_id(), $product );
 	}
@@ -365,9 +365,9 @@ class Product extends BaseCollection {
 			$currency = get_option( 'woocommerce_currency' );
 		}
 
-		$default_sale_price = [ 
+		$default_sale_price = array(
 			$currency => floatval( $product->get_sale_price() )
-		];
+		);
 
 		return apply_filters( 'wooless_product_sale_price', $default_sale_price, $product->get_id(), $product );
 	}
@@ -452,14 +452,14 @@ class Product extends BaseCollection {
 					$term_thumbnail_id = get_term_meta( $product_term->term_id, 'thumbnail_id', true );
 					$term_attachment   = get_post( $term_thumbnail_id );
 
-					$term_thumbnail = [ 
+					$term_thumbnail = array(
 						'id' => $term_thumbnail_id,
 						'title' => $term_attachment->post_title,
 						'altText' => get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ),
 						'src' => wp_get_attachment_url( $term_thumbnail_id ),
-					];
+					);
 
-					$taxonomies_data[] = [ 
+					$taxonomies_data[] = array(
 						'name' => $term_name,
 						'url' => get_term_link( $product_term->term_id ),
 						'type' => $taxonomy,
@@ -469,7 +469,7 @@ class Product extends BaseCollection {
 						'parentTerm' => $term_parent,
 						'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
 						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
-					];
+					);
 
 					unset( $parentTerm, $term_name, $term_slug, $term_parent, $termOrder );
 				}
