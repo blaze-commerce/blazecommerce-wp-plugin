@@ -2,6 +2,7 @@
 
 namespace BlazeWooless;
 
+use Exception;
 use Symfony\Component\HttpClient\HttplugClient;
 use Typesense\Client;
 
@@ -26,8 +27,8 @@ class TypesenseClient {
 	}
 
 	public function __construct( $settings ) {
-		$decoded_api    = bw_get_decoded_api_data( $settings['api_key'] );
-		$this->api_key  = $decoded_api['private_key'];
+		$decoded_api = bw_get_decoded_api_data( $settings['api_key'] );
+		$this->api_key = $decoded_api['private_key'];
 		$this->store_id = $decoded_api['store_id'];
 
 		try {
@@ -104,7 +105,7 @@ class TypesenseClient {
 		$client = $this->get_client( $api_key, $environement );
 		try {
 			$collection_name = 'product-' . $store_id;
-			$collections     = $client->collections[ $collection_name ]->retrieve();
+			$collections = $client->collections[ $collection_name ]->retrieve();
 			if ( ! empty( $collections ) ) {
 				return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
 			} else {
@@ -116,6 +117,53 @@ class TypesenseClient {
 			return array( 'status' => 'error', 'message' => 'Typesense client error: ' . $e->getMessage() );
 		} catch (\Exception $e) {
 			return array( 'status' => 'error', 'message' => 'There was an error connecting to Typesense: ' . $e->getMessage() );
+		}
+	}
+
+	public function delete_all_synonyms() {
+		try {
+			if ( is_null( $this->client ) ) {
+				throw new Exception( 'TypesenseClient is not initialized' );
+			}
+
+			$synonims = $this->client->collections[ 'product-' . $this->store_id ]->synonyms->retrieve();
+			if ( ! isset( $synonims['synonyms'] ) || count( $synonims['synonyms'] ) === 0 ) {
+				throw new Exception( 'No synonyms found' );
+			}
+
+			foreach ( $synonims['synonyms'] as $synonym ) {
+				$this->client->collections[ 'product-' . $this->store_id ]->synonyms[ $synonym['id'] ]->delete();
+			}
+
+		} catch (Exception $e) {
+			error_log( 'Error deleting all synonyms: ' . $e->getMessage() );
+		}
+	}
+
+	public function set_synonym( $type, $value, $key = '' ) {
+
+		try {
+			if ( is_null( $this->client ) ) {
+				throw new Exception( 'TypesenseClient is not initialized' );
+			}
+
+			if ( $type === 'two-way' ) {
+				$synonym_key = $value[0] . '-synonyms';
+				$synonym_data = array(
+					"synonyms" => $value
+				);
+
+			} else {
+				$synonym_key = sanitize_title( $key ) . '-synonyms';
+				$synonym_data = array(
+					'root' => $key,
+					'synonyms' => $value
+				);
+			}
+
+			$this->client->collections[ 'product-' . $this->store_id ]->synonyms->upsert( $synonym_key, $synonym_data );
+		} catch (Exception $e) {
+			error_log( 'Error setting synonym: ' . $e->getMessage() );
 		}
 	}
 }
