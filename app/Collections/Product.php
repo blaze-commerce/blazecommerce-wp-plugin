@@ -302,103 +302,125 @@ class Product extends BaseCollection {
 		return apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product );
 	}
 
-	public function generate_typesense_data( $product ) {
-		// Format product data for indexing
-		$product_data = array();
-		$product_id   = '';
+	public function get_thumnail( $product ) {
+		// // Get the thumbnail
+		$product_id         = $product->get_id();
+		$thumbnail_id       = get_post_thumbnail_id( $product_id );
+		$attachment         = get_post( $thumbnail_id );
+		$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
+		$thumbnail_src      = get_the_post_thumbnail_url( $product_id );
 
-		if ( ! empty( $product ) ) {
-			$product_id       = $product->get_id();
-			$shortDescription = $product->get_short_description();
-			$description      = $product->get_description();
-			$attachment_ids   = $product->get_gallery_image_ids();
-			$product_gallery  = array_map( function ($attachment_id) {
-				$attachment         = get_post( $attachment_id );
-				$thumbnail_alt_text = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
-				$thumbnail_src = wp_get_attachment_url( $attachment_id );
+		return apply_filters( 'wooless_product_thumbnail', array(
+			'id' => $thumbnail_id,
+			'title' => $attachment->post_title,
+			'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+			'src' => $thumbnail_src ? $thumbnail_src : '',
+		), $product );
+	}
 
-				return [ 
-					'id' => $attachment_id,
-					'title' => $attachment->post_title,
-					'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
-					'src' => $thumbnail_src ? $thumbnail_src : '',
-				];
-			}, $attachment_ids );
+	public function get_gallery( $product ) {
+		$attachment_ids  = $product->get_gallery_image_ids();
+		$product_gallery = array_map( function ($attachment_id) {
+			$attachment         = get_post( $attachment_id );
+			$thumbnail_alt_text = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+			$thumbnail_src = wp_get_attachment_url( $attachment_id );
 
-			// // Get the thumbnail
-			$thumbnail_id       = get_post_thumbnail_id( $product_id );
-			$attachment         = get_post( $thumbnail_id );
-			$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
-			$thumbnail_src      = get_the_post_thumbnail_url( $product_id );
-
-			$thumbnail = [ 
-				'id' => $thumbnail_id,
+			return [ 
+				'id' => $attachment_id,
 				'title' => $attachment->post_title,
 				'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
 				'src' => $thumbnail_src ? $thumbnail_src : '',
 			];
+		}, $attachment_ids );
 
-			$stockQuantity = $product->get_stock_quantity();
+		return apply_filters( 'wooless_product_gallery', $product_gallery, $product );
+	}
 
-			$product_type = $product->get_type();
-
+	public function get_price( $product, $currency = null ) {
+		if ( empty( $currency ) ) {
 			$currency = get_option( 'woocommerce_currency' );
-
-			$default_price         = [ 
-				$currency => floatval( $product->get_price() )
-			];
-			$default_regular_price = [ 
-				$currency => floatval( $product->get_regular_price() )
-			];
-			$default_sale_price    = [ 
-				$currency => floatval( $product->get_sale_price() )
-			];
-
-			$taxonomies       = $this->get_taxonomies( $product );
-			$related_products = $this->get_related_products( $product_id, $taxonomies, 'ids' );
-			$published_at     = strtotime( get_the_date( '', $product->get_id() ) );
-			$days_passed      = $this->get_days_passed( $published_at );
-
-			$product_data = [ 
-				'id' => strval( $product->get_id() ),
-				'productId' => strval( $product->get_id() ),
-				'parentId' => (int) $product->get_parent_id(),
-				'shortDescription' => wpautop( $shortDescription ),
-				'description' => wpautop( $description ),
-				'name' => $product->get_name(),
-				'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
-				'slug' => $product->get_slug(),
-				'thumbnail' => $thumbnail,
-				'sku' => $product->get_sku(),
-				'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
-				'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
-				'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
-				'onSale' => $product->is_on_sale(),
-				'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
-				'stockStatus' => $product->get_stock_status(),
-				'backorder' => $product->get_backorders(),
-				'shippingClass' => $product->get_shipping_class(),
-				'updatedAt' => strtotime( $product->get_date_modified() ),
-				'createdAt' => strtotime( $product->get_date_created() ),
-				'publishedAt' => $published_at,
-				'daysPassed' => $days_passed,
-				'isFeatured' => $product->get_featured(),
-				'totalSales' => (int) $product->get_total_sales(),
-				'galleryImages' => $product_gallery,
-				'taxonomies' => $taxonomies,
-				'productType' => $product_type,
-				'crossSellProducts' => $product->get_cross_sell_ids(),
-				'relatedProducts' => $related_products,
-				'upsellProducts' => $product->get_upsell_ids(),
-				'additionalTabs' => $this->get_addional_tabs( $product ),
-				'status' => $product->get_status(),
-				'menuOrder' => $product->get_menu_order(),
-				'metaData' => array(),
-			];
-
-			unset( $shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_products, $variations_data, $formatted_additional_tabs, $upsell_products, $published_at );
 		}
 
+		$default_price = [ 
+			$currency => floatval( $product->get_price() )
+		];
+
+		return apply_filters( 'wooless_product_price', $default_price, $product->get_id(), $product );
+	}
+
+	public function get_regular_price( $product, $currency = null ) {
+		if ( empty( $currency ) ) {
+			$currency = get_option( 'woocommerce_currency' );
+		}
+
+		$default_regular_price = [ 
+			$currency => floatval( $product->get_regular_price() )
+		];
+
+		return apply_filters( 'wooless_product_regular_price', $default_regular_price, $product->get_id(), $product );
+	}
+
+	public function get_sale_price( $product, $currency = null ) {
+		if ( empty( $currency ) ) {
+			$currency = get_option( 'woocommerce_currency' );
+		}
+
+		$default_sale_price = [ 
+			$currency => floatval( $product->get_sale_price() )
+		];
+
+		return apply_filters( 'wooless_product_sale_price', $default_sale_price, $product->get_id(), $product );
+	}
+
+	public function generate_typesense_data( $product ) {
+		if ( empty( $product ) ) {
+			return null;
+		}
+
+		$product_id       = $product->get_id();
+		$stockQuantity    = $product->get_stock_quantity();
+		$currency         = get_option( 'woocommerce_currency' );
+		$taxonomies       = $this->get_taxonomies( $product );
+		$related_products = $this->get_related_products( $product_id, $taxonomies, 'ids' );
+		$published_at     = strtotime( get_the_date( '', $product->get_id() ) );
+		$days_passed      = $this->get_days_passed( $published_at );
+
+		$product_data = array(
+			'id' => strval( $product->get_id() ),
+			'productId' => strval( $product->get_id() ),
+			'parentId' => (int) $product->get_parent_id(),
+			'shortDescription' => wpautop( $product->get_short_description() ),
+			'description' => wpautop( $product->get_description() ),
+			'name' => $product->get_name(),
+			'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
+			'slug' => $product->get_slug(),
+			'thumbnail' => $this->get_thumnail( $product ),
+			'sku' => $product->get_sku(),
+			'price' => $this->get_price( $product, $currency ),
+			'regularPrice' => $this->get_regular_price( $product, $currency ),
+			'salePrice' => $this->get_sale_price( $product, $currency ),
+			'onSale' => $product->is_on_sale(),
+			'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
+			'stockStatus' => $product->get_stock_status(),
+			'backorder' => $product->get_backorders(),
+			'shippingClass' => $product->get_shipping_class(),
+			'updatedAt' => strtotime( $product->get_date_modified() ),
+			'createdAt' => strtotime( $product->get_date_created() ),
+			'publishedAt' => $published_at,
+			'daysPassed' => $days_passed,
+			'isFeatured' => $product->get_featured(),
+			'totalSales' => (int) $product->get_total_sales(),
+			'galleryImages' => $this->get_gallery( $product ),
+			'taxonomies' => $taxonomies,
+			'productType' => $product->get_type(),
+			'crossSellProducts' => $product->get_cross_sell_ids(),
+			'relatedProducts' => $related_products,
+			'upsellProducts' => $product->get_upsell_ids(),
+			'additionalTabs' => $this->get_addional_tabs( $product ),
+			'status' => $product->get_status(),
+			'menuOrder' => $product->get_menu_order(),
+			'metaData' => array(),
+		);
 		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
 	}
 
