@@ -120,6 +120,27 @@ class TypesenseClient {
 		}
 	}
 
+	public function delete_all_synonyms() {
+		try {
+			if ( is_null( $this->client ) ) {
+				throw new Exception( 'TypesenseClient is not initialized' );
+			}
+
+			$synonims = $this->client->collections[ 'product-' . $this->store_id ]->retrieve();
+
+			if ( ! isset( $synonims['synonyms'] ) || count( $synonims['synonyms'] ) === 0 ) {
+				throw new Exception( 'No synonyms found' );
+			}
+
+			foreach ( $synonims['synonyms'] as $synonym ) {
+				$this->client->collections[ 'product-' . $this->store_id ]->synonyms[ $synonym['id'] ]->delete();
+			}
+
+		} catch (Exception $e) {
+			error_log( 'Error deleting all synonyms: ' . $e->getMessage() );
+		}
+	}
+
 	public function set_synonym( $type, $value, $key = '' ) {
 
 		try {
