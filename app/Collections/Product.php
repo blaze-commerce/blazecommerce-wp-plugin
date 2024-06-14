@@ -354,20 +354,8 @@ class Product extends BaseCollection {
 				$currency => floatval( $product->get_sale_price() )
 			];
 
-			$cross_sell_ids      = $product->get_cross_sell_ids();
-			$cross_sell_products = array();
-			if ( ! empty( $cross_sell_ids ) ) {
-				$cross_sell_products = $this->get_products_by_ids( $cross_sell_ids );
-			}
-
-			$upsell_ids      = $product->get_upsell_ids();
-			$upsell_products = array();
-			if ( ! empty( $upsell_ids ) ) {
-				$upsell_products = $this->get_products_by_ids( $upsell_ids );
-			}
-
 			$taxonomies       = $this->get_taxonomies( $product );
-			$related_products = $this->get_related_products( $product_id, $taxonomies );
+			$related_products = $this->get_related_products( $product_id, $taxonomies, 'ids' );
 			$published_at     = strtotime( get_the_date( '', $product->get_id() ) );
 			$days_passed      = $this->get_days_passed( $published_at );
 
@@ -399,9 +387,9 @@ class Product extends BaseCollection {
 				'galleryImages' => $product_gallery,
 				'taxonomies' => $taxonomies,
 				'productType' => $product_type,
-				'crossSellProducts' => $cross_sell_products,
+				'crossSellProducts' => $product->get_cross_sell_ids(),
 				'relatedProducts' => $related_products,
-				'upsellProducts' => $upsell_products,
+				'upsellProducts' => $product->get_upsell_ids(),
 				'additionalTabs' => $this->get_addional_tabs( $product ),
 				'status' => $product->get_status(),
 				'menuOrder' => $product->get_menu_order(),
@@ -473,7 +461,7 @@ class Product extends BaseCollection {
 		return $taxonomies_data;
 	}
 
-	public function get_related_products( $product_id, $taxonomies ) {
+	public function get_related_products( $product_id, $taxonomies, $return = 'objects' ) {
 		$category = array();
 		foreach ( $taxonomies as $taxonomy ) {
 			if ( $taxonomy['type'] == 'product_cat' ) {
@@ -494,6 +482,10 @@ class Product extends BaseCollection {
 			'stock_status' => 'instock',
 		);
 		$product_ids = wc_get_products( $args );
+
+		if ( 'ids' === $return ) {
+			return $product_ids;
+		}
 
 		return $this->get_products_by_ids( $product_ids );
 	}
