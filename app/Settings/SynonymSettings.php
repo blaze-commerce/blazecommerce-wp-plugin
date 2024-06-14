@@ -27,10 +27,6 @@ class SynonymSettings extends BaseSettings {
 		return self::get_instance()->key;
 	}
 
-	public function update_typesense_synonyms( $synonyms ) {
-
-	}
-
 	public function settings_callback( $options ) {
 
 		if ( $_POST['synonym'] ) {
