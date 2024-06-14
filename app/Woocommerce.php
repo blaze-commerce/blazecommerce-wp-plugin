@@ -27,6 +27,14 @@ class Woocommerce {
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'on_checkout_update_order_meta' ), 10, 2 );
 		add_action( 'woocommerce_after_product_ordering', array( $this, 'product_reordering' ), 10, 2 );
 
+		add_action( 'woocommerce_get_checkout_url', array( $this, 'append_cart_in_checkout_url' ) );
+	}
+
+	public function append_cart_in_checkout_url( $checkout_url ) {
+		if ( strpos( $checkout_url, 'https://cart.' ) === false ) {
+			$checkout_url = str_replace( 'https://', 'https://cart.', $checkout_url );
+		}
+		return $checkout_url;
 	}
 
 	public function product_reordering( $product_id, $menu_orders ) {
