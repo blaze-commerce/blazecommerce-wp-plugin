@@ -34,37 +34,7 @@ class Product extends BaseCollection {
 		}
 
 		return array(
-			array( 'name' => $schema_name, 'type' => 'object[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price", 'type' => 'object' ),
-			array( 'name' => "{$schema_name}.price.AUD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.NZD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.USD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.GBP", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.CAD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.EUR", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice", 'type' => 'object' ),
-			array( 'name' => "{$schema_name}.regularPrice.AUD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.NZD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.USD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.GBP", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.CAD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.EUR", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice", 'type' => 'object', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.AUD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.NZD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.USD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.GBP", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.CAD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.EUR", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData", 'type' => 'object', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax", 'type' => 'object', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.AUD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.NZD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.USD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.GBP", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.CAD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.EUR", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.productLabel", 'type' => 'string', 'optional' => true ),
+			array( 'name' => $schema_name, 'type' => 'int64[]', 'optional' => true ),
 		);
 
 	}
@@ -185,6 +155,21 @@ class Product extends BaseCollection {
 		}
 	}
 
+	public function get_product_query_args( $page = 1, $batch_size ) {
+		return apply_filters( 'wooless_product_query_args', array(
+			'status' => 'publish',
+			'limit' => $batch_size,
+			'page' => $page,
+			'type' => array(
+				'simple',
+				'variable',
+				'bundle',
+				'composite',
+				'variation',
+			)
+		) );
+	}
+
 	public function index_to_typesense() {
 		//Product indexing
 		$logger  = wc_get_logger();
@@ -204,7 +189,7 @@ class Product extends BaseCollection {
 			$batch_size              = 100; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
-			$query_args              = array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page );
+			$query_args              = $this->get_product_query_args( $page, $batch_size );
 
 			$products = \wc_get_products( $query_args );
 
@@ -212,32 +197,16 @@ class Product extends BaseCollection {
 
 			// Prepare products for indexing in Typesense
 			foreach ( $products as $product ) {
-
-				$product_data = array();
-
-				// Get the product data
-				if ( ! empty( $product ) ) {
-					$product_data = $this->generate_typesense_data( $product );
-				}
-
-				if ( empty( $product_data ) ) {
-					error_log( "Skipping product ID: " . $product->get_id() );
-					continue; // Skip this product if no product data is found
-				}
-
-				$products_batch[] = $product_data;
+				$products_batch[] = $this->generate_typesense_data( $product );
 
 				// Free memory
 				unset( $product_data );
 			}
 
-			// Log the number of products in the batch
-			error_log( "Batch size: " . count( $products_batch ) );
 
 			// Import products to Typesense
 			try {
-				$result = $this->import( $products_batch );
-				// echo "<pre>"; print_r($result); echo "</pre>";
+				$result             = $this->import( $products_batch );
 				$successful_imports = array_filter( $result, function ($batch_result) {
 					$successful_import = isset( $batch_result['success'] ) && $batch_result['success'] == true;
 					if ( ! $successful_import ) {
@@ -253,10 +222,6 @@ class Product extends BaseCollection {
 				error_log( "Error importing products to Typesense: " . $e->getMessage() );
 			}
 
-			// unset($products, $products_batch, $result, $successful_imports);
-
-			// After the while loop, print the number of imported products
-			// echo "Imported products count: " . $imported_products_count ."/" . $total_imports . "\n";
 
 			$next_page          = $page + 1;
 			$query_args['page'] = $next_page;
@@ -377,13 +342,24 @@ class Product extends BaseCollection {
 			return null;
 		}
 
-		$product_id       = $product->get_id();
-		$stock_quantity   = $product->get_stock_quantity();
-		$currency         = get_option( 'woocommerce_currency' );
-		$taxonomies       = $this->get_taxonomies( $product );
-		$related_products = $this->get_related_products( $product_id, $taxonomies, 'ids' );
-		$published_at     = strtotime( get_the_date( '', $product->get_id() ) );
-		$days_passed      = $this->get_days_passed( $published_at );
+		$product_id     = $product->get_id();
+		$type           = $product->get_type();
+		$stock_quantity = $product->get_stock_quantity();
+		$currency       = get_option( 'woocommerce_currency' );
+
+		$published_at = strtotime( get_the_date( '', $product->get_id() ) );
+		$days_passed  = $this->get_days_passed( $published_at );
+
+		$taxonomies          = array();
+		$related_products    = array();
+		$cross_sell_products = array();
+		$upsell_products     = array();
+		if ( 'variation' !== $type ) {
+			$related_products    = $this->get_related_products( $product_id, $taxonomies, 'ids' );
+			$taxonomies          = $this->get_taxonomies( $product );
+			$cross_sell_products = $product->get_cross_sell_ids();
+			$upsell_products     = $product->get_upsell_ids();
+		}
 
 		$product_data = array(
 			'id' => strval( $product->get_id() ),
@@ -413,9 +389,9 @@ class Product extends BaseCollection {
 			'galleryImages' => $this->get_gallery( $product ),
 			'taxonomies' => $taxonomies,
 			'productType' => $product->get_type(),
-			'crossSellProducts' => $product->get_cross_sell_ids(),
+			'crossSellProducts' => $cross_sell_products,
 			'relatedProducts' => $related_products,
-			'upsellProducts' => $product->get_upsell_ids(),
+			'upsellProducts' => $upsell_products,
 			'additionalTabs' => $this->get_addional_tabs( $product ),
 			'status' => $product->get_status(),
 			'menuOrder' => $product->get_menu_order(),
