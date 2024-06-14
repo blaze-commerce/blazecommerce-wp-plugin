@@ -73,6 +73,7 @@ class Product extends BaseCollection {
 		$fields = array(
 			array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
 			array( 'name' => 'productId', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'parentId', 'type' => 'int64', 'facet' => true ),
 			array( 'name' => 'shortDescription', 'type' => 'string', 'optional' => true ),
 			array( 'name' => 'description', 'type' => 'string' ),
 			array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true ),
@@ -333,55 +334,6 @@ class Product extends BaseCollection {
 				$currency => floatval( $product->get_sale_price() )
 			];
 
-			// Get variations if the product is a variable product
-			$variations_data = $default_attributes = [];
-			if ( $product_type === 'variable' || $product_type === 'pw-gift-card' ) {
-				$variations = $product->get_available_variations();
-				foreach ( $variations as $variation ) {
-					$variation_obj = wc_get_product( $variation['variation_id'] );
-					if ( ! $variation_obj ) {
-						continue;
-					}
-
-					$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
-					$variant_attachment         = get_post( $variant_thumbnail_id );
-					$variant_thumbnail_alt_text = get_post_meta( $variant_thumbnail_id, '_wp_attachment_image_alt', true );
-					$variant_thumbnail_src      = get_the_post_thumbnail_url( $variation['variation_id'] );
-
-					$variations_items = [ 
-						'variationId' => $variation['variation_id'],
-						'attributes' => $variation['attributes'],
-						'price' => array(
-							$currency => floatval( $variation_obj->get_price() ),
-						),
-						'regularPrice' => array(
-							$currency => floatval( $variation_obj->get_regular_price() ),
-						),
-						'salePrice' => array(
-							$currency => floatval( $variation_obj->get_sale_price() ),
-						),
-						'stockQuantity' => empty( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
-						'stockStatus' => $variation_obj->get_stock_status(),
-						'backorder' => $variation_obj->get_backorders(),
-						'onSale' => $variation_obj->is_on_sale(),
-						'sku' => $variation_obj->get_sku(),
-						'image' => [ 
-							'id' => $variant_thumbnail_id,
-							'title' => $variant_attachment->post_title,
-							'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
-							'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
-						],
-						'metaData' => array(),
-					];
-
-					$variations_data[] = apply_filters( 'blaze_commerce_variation_data', $variations_items, $variation['variation_id'], $variation_obj );
-
-					unset( $variations_items, $variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src );
-				}
-
-				unset( $variations );
-			}
-
 			$cross_sell_ids      = $product->get_cross_sell_ids();
 			$cross_sell_products = array();
 			if ( ! empty( $cross_sell_ids ) ) {
@@ -420,6 +372,7 @@ class Product extends BaseCollection {
 			$product_data = [ 
 				'id' => strval( $product->get_id() ),
 				'productId' => strval( $product->get_id() ),
+				'parentId' => (int) $product->get_parent_id(),
 				'shortDescription' => wpautop( $shortDescription ),
 				'description' => wpautop( $description ),
 				'name' => $product->get_name(),
@@ -444,7 +397,6 @@ class Product extends BaseCollection {
 				'galleryImages' => $product_gallery,
 				'taxonomies' => $taxonomies,
 				'productType' => $product_type,
-				'variations' => $variations_data,
 				'crossSellProducts' => $cross_sell_products,
 				'relatedProducts' => $related_products,
 				'upsellProducts' => $upsell_products,
