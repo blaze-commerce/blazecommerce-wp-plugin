@@ -126,8 +126,7 @@ class TypesenseClient {
 				throw new Exception( 'TypesenseClient is not initialized' );
 			}
 
-			$synonims = $this->client->collections[ 'product-' . $this->store_id ]->retrieve();
-
+			$synonims = $this->client->collections[ 'product-' . $this->store_id ]->synonyms->retrieve();
 			if ( ! isset( $synonims['synonyms'] ) || count( $synonims['synonyms'] ) === 0 ) {
 				throw new Exception( 'No synonyms found' );
 			}
