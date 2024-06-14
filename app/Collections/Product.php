@@ -282,6 +282,26 @@ class Product extends BaseCollection {
 		}
 	}
 
+	public function get_addional_tabs( $product ) {
+		// Get the additional product tabs
+		$product_id                = $product->get_id();
+		$additional_tabs           = get_post_meta( $product_id, '_additional_tabs', true );
+		$formatted_additional_tabs = array();
+
+		if ( ! empty( $additional_tabs ) ) {
+			foreach ( $additional_tabs as $tab ) {
+				$formatted_additional_tabs[] = array(
+					'title' => $tab['tab_title'],
+					'content' => $tab['tab_content'],
+				);
+			}
+		}
+
+		unset( $additional_tabs );
+
+		return apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product );
+	}
+
 	public function generate_typesense_data( $product ) {
 		// Format product data for indexing
 		$product_data = array();
@@ -346,28 +366,10 @@ class Product extends BaseCollection {
 				$upsell_products = $this->get_products_by_ids( $upsell_ids );
 			}
 
-			// Get the additional product tabs
-			$additional_tabs           = get_post_meta( $product_id, '_additional_tabs', true );
-			$formatted_additional_tabs = array();
-
-			if ( ! empty( $additional_tabs ) ) {
-				foreach ( $additional_tabs as $tab ) {
-					$formatted_additional_tabs[] = array(
-						'title' => $tab['tab_title'],
-						'content' => $tab['tab_content'],
-					);
-				}
-			}
-
-			unset( $additional_tabs );
-
-			$taxonomies = $this->get_taxonomies( $product );
-
+			$taxonomies       = $this->get_taxonomies( $product );
 			$related_products = $this->get_related_products( $product_id, $taxonomies );
-
-			$published_at = strtotime( get_the_date( '', $product->get_id() ) );
-
-			$days_passed = $this->get_days_passed( $published_at );
+			$published_at     = strtotime( get_the_date( '', $product->get_id() ) );
+			$days_passed      = $this->get_days_passed( $published_at );
 
 			$product_data = [ 
 				'id' => strval( $product->get_id() ),
@@ -400,7 +402,7 @@ class Product extends BaseCollection {
 				'crossSellProducts' => $cross_sell_products,
 				'relatedProducts' => $related_products,
 				'upsellProducts' => $upsell_products,
-				'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product ),
+				'additionalTabs' => $this->get_addional_tabs( $product ),
 				'status' => $product->get_status(),
 				'menuOrder' => $product->get_menu_order(),
 				'metaData' => array(),
