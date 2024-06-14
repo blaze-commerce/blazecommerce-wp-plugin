@@ -1,5 +1,5 @@
 <?php
-$synonyms = get_option( 'wooless_synonyms', array() );
+$synonyms = get_option( \BlazeWooless\Settings\SynonymSettings::get_option_key(), array() );
 ?>
 
 <div class="notice notice-info update-nag inline">
@@ -113,28 +113,17 @@ $synonyms = get_option( 'wooless_synonyms', array() );
 
 
 		const appendTemplate = () => {
-			// count how many rows are there
 			let totalRows = $('.blaze-wooless-synonym-row').length;
 
-			console.log({ totalRows })
-
 			if (totalRows > 0) {
-				console.log($('#blaze-wooless-synonym-row-holder').find('.blaze-wooless-synonym-row').last())
-				// find last .blaze-wooles-synonym-row
 				totalRows = parseInt($('#blaze-wooless-synonym-row-holder').find('.blaze-wooless-synonym-row').last().data('row')) + 1;
 			}
 
-			console.log({ totalRows })
-
-			// get the template using jsview
 			const template = $.templates('#blaze-wooless-synonym-template');
 
-			// set row to the number of rows
 			const html = template.render({ row: totalRows });
 
-			// append the html to the row holder
 			$('#blaze-wooless-synonym-row-holder').append(html);
-
 		}
 
 		$(document).ready(function () {
