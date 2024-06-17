@@ -67,8 +67,9 @@ class YoastSEO {
 	}
 
 	public function add_taxonomy_head( $document, $term ) {
+
 		$yoastMeta               = \YoastSEO()->meta->for_term( $term->term_id );
-		$termHead                = $yoastMeta->get_head();
+		$termHead                = $yoastMeta && method_exists( $yoastMeta, 'get_head' ) ? $yoastMeta->get_head() : '';
 		$document['seoFullHead'] = is_string( $termHead ) ? $termHead : ( isset( $termHead->html ) ? $termHead->html : '' );
 
 		return $document;
