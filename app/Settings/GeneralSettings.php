@@ -39,13 +39,13 @@ class GeneralSettings extends BaseSettings {
 				update_option( 'store_id', $store_id );
 
 				$variant_as_cards = false;
-				if ( isset( $_POST['wooless_general_settings_options']['display_variant_as_separate_product_cards'] ) ) {
-					$variant_as_cards = (bool) $_POST['wooless_general_settings_options']['display_variant_as_separate_product_cards'];
+				if ( isset( $_POST['wooless_general_settings_options']['show_variant_as_separate_product_cards'] ) ) {
+					$variant_as_cards = (bool) $_POST['wooless_general_settings_options']['show_variant_as_separate_product_cards'];
 				}
 
 				$typesense_client->site_info()->upsert( [ 
 					'id' => '1002457',
-					'name' => 'display_variant_as_separate_product_cards',
+					'name' => 'show_variant_as_separate_product_cards',
 					'value' => json_encode( $variant_as_cards ),
 					'updated_at' => time(),
 				] );
@@ -120,7 +120,7 @@ class GeneralSettings extends BaseSettings {
 			);
 
 			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'display_variant_as_separate_product_cards',
+				'id' => 'show_variant_as_separate_product_cards',
 				'label' => 'Display separate variant product cards',
 				'type' => 'checkbox',
 				'args' => array(
@@ -173,9 +173,9 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner']                 = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
-		$additional_data['show_free_shipping_minicart_component']     = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
-		$additional_data['display_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'display_variant_as_separate_product_cards' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner']              = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component']  = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
 
 		return $additional_data;
 	}
