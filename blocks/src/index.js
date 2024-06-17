@@ -1,53 +1,30 @@
-import { ElementColorSelector } from "./components/element-color-selector";
+import { ColorConfig } from "./components/maxmegamenu/color-config";
+import { LayoutConfig } from "./components/maxmegamenu/layout-config";
+import { SpacingConfig } from "./components/maxmegamenu/spacing-config";
+import { TypographyConfig } from "./components/maxmegamenu/typography-config";
 
 const { createHigherOrderComponent } = wp.compose;
-const { Fragment, useState } = wp.element;
+const { Fragment } = wp.element;
 const { InspectorControls } = wp.editor;
-const {
-    PanelBody,
-    SelectControl,
-    ColorPalette,
-    ColorPicker,
-    __experimentalToolsPanel,
-    ToolsPanelItem,
-    BoxControl,
-    Button,
-    Popover,
-    __experimentalDivider: Divider,
-    Flex,
-    FlexBlock,
-    FlexItem,
-} = wp.components;
 const { addFilter } = wp.hooks;
-const { __ } = wp.i18n;
-const ToolsPanel = __experimentalToolsPanel;
 
 // Enable spacing control on the following blocks
 const enableSpacingControlOnBlocks = [
 	'maxmegamenu/location',
 ];
 
-// Available spacing control options
-const spacingControlOptions = [
-	{
-		label: __( 'None' ),
-		value: '',
-	},
-	{
-		label: __( 'Small' ),
-		value: 'small',
-	},
-	{
-		label: __( 'Medium' ),
-		value: 'medium',
-	},
-	{
-		label: __( 'Large' ),
-		value: 'large',
-	},
-];
+const boxControlDefaults = {
+    top: '0px',
+    left: '0px',
+    right: '0px',
+    bottom: '0px',
+};
 
-const maxMegaMenuAttributes = {
+const menuAttributes = {
+    mainNavigationBackgroundColor: {
+        type: 'string',
+    },
+
     menuTextColor: {
         type: 'string',
     },
@@ -76,6 +53,34 @@ const maxMegaMenuAttributes = {
     menuSeparatorColor: {
         type: 'string',
     },
+
+    menuTextPadding: {
+        type: 'object',
+        default: boxControlDefaults,
+    },
+    menuTextMargin: {
+        type: 'object',
+        default: boxControlDefaults,
+    },
+    submenuTextPadding: {
+        type: 'object',
+        default: boxControlDefaults,
+    },
+    submenuTextMargin: {
+        type: 'object',
+        default: boxControlDefaults,
+    },
+
+    menuCentered: {
+        type: 'boolean',
+    },
+    menuFullWidth: {
+        type: 'boolean',
+    },
+
+    fontSize: {
+        tyupe: 'string',
+    }
 };
 
 /**
@@ -86,32 +91,41 @@ const maxMegaMenuAttributes = {
  *
  * @returns {object} Modified block settings.
  */
-const addSpacingControlAttribute = ( settings, name ) => {
+const addMenuAttributes = ( settings, name ) => {
 	// Do nothing if it's another block than our defined ones.
 	if ( ! enableSpacingControlOnBlocks.includes( name ) ) {
 		return settings;
 	}
 
-    console.log(settings.attributes)
-
 	// Use Lodash's assign to gracefully handle if attributes are undefined
-	settings.attributes = Object.assign( settings.attributes, {
-		spacing: {
-			type: 'string',
-			default: spacingControlOptions[ 0 ].value,
+	settings.attributes = Object.assign( settings.attributes, menuAttributes);
+    settings.supports = Object.assign( settings.supports, {
+        "typography": {
+			"fontSize": true,
+			"lineHeight": true,
+			"__experimentalFontFamily": true,
+			"__experimentalFontWeight": true,
+			"__experimentalFontStyle": true,
+			"__experimentalTextTransform": true,
+			"__experimentalTextDecoration": true,
+			"__experimentalLetterSpacing": true,
+			"__experimentalDefaultControls": {
+				"fontSize": true
+			}
 		},
-	}, maxMegaMenuAttributes);
+    })
 
 	return settings;
 };
 
-addFilter( 'blocks.registerBlockType', 'extend-block-example/attribute/spacing', addSpacingControlAttribute );
+addFilter( 'blocks.registerBlockType', 'extend-block-example/attribute/spacing', addMenuAttributes );
 
 /**
  * Create HOC to add spacing control to inspector controls of block.
  */
 const withSpacingControl = createHigherOrderComponent( ( BlockEdit ) => {
 	return ( props ) => {
+        console.log('props', props)
 		// Do nothing if it's another block than our defined ones.
 		if ( ! enableSpacingControlOnBlocks.includes( props.name ) ) {
 			return (
@@ -119,115 +133,14 @@ const withSpacingControl = createHigherOrderComponent( ( BlockEdit ) => {
 			);
 		}
 
-		const { 
-            menuTextColor,
-            menuHoverTextColor,
-            menuBackgroundColor,
-            menuHoverBackgroundColor,
-
-            submenuTextColor,
-            submenuHoverTextColor,
-            submenuBackgroundColor,
-            submenuHoverBackgroundColor,
-
-            menuSeparatorColor,
-        } = props.attributes;
-
 		return (
 			<Fragment>
 				<BlockEdit { ...props } />
 				<InspectorControls>
-					<PanelBody
-						title={ __( 'Blaze Commerce - Colors' ) }
-						initialOpen={ true }
-					>
-                        <Flex>
-                            <FlexBlock>
-                                Menu Link
-                            </FlexBlock>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={menuTextColor}
-                                    setValue={(selectedColor) => props.setAttributes({ menuTextColor: selectedColor })}
-                                />
-                            </FlexItem>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={menuHoverTextColor}
-                                    setValue={(selectedColor) => props.setAttributes({ menuHoverTextColor: selectedColor })}
-                                />
-                            </FlexItem>
-                        </Flex>
-                        <p></p>
-                        <Flex>
-                            <FlexBlock>
-                                Menu Background
-                            </FlexBlock>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={menuBackgroundColor}
-                                    setValue={(selectedColor) => props.setAttributes({ menuBackgroundColor: selectedColor })}
-                                />
-                            </FlexItem>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={menuHoverBackgroundColor}
-                                    setValue={(selectedColor) => props.setAttributes({ menuHoverBackgroundColor: selectedColor })}
-                                />
-                            </FlexItem>
-                        </Flex>
-                        <p></p>
-                        <Flex>
-                            <FlexBlock>
-                                Submenu Text
-                            </FlexBlock>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={submenuTextColor}
-                                    setValue={(selectedColor) => props.setAttributes({ submenuTextColor: selectedColor })}
-                                />
-                            </FlexItem>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={submenuHoverTextColor}
-                                    setValue={(selectedColor) => props.setAttributes({ submenuHoverTextColor: selectedColor })}
-                                />
-                            </FlexItem>
-                        </Flex>
-
-                        <p></p>
-                        <Flex>
-                            <FlexBlock>
-                                Submenu Background
-                            </FlexBlock>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={submenuBackgroundColor}
-                                    setValue={(selectedColor) => props.setAttributes({ submenuBackgroundColor: selectedColor })}
-                                />
-                            </FlexItem>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={submenuHoverBackgroundColor}
-                                    setValue={(selectedColor) => props.setAttributes({ submenuHoverBackgroundColor: selectedColor })}
-                                />
-                            </FlexItem>
-                        </Flex>
-
-                        <Divider />
-                        
-                        <Flex>
-                            <FlexBlock>
-                                Menu Separator Color
-                            </FlexBlock>
-                            <FlexItem>
-                                <ElementColorSelector
-                                    value={menuSeparatorColor}
-                                    setValue={(selectedColor) => props.setAttributes({ menuSeparatorColor: selectedColor })}
-                                />
-                            </FlexItem>
-                        </Flex>
-					</PanelBody>
+                    <LayoutConfig { ...props } />
+                    <SpacingConfig { ...props } />
+                    <ColorConfig { ...props } />
+                    <TypographyConfig { ...props } />
 				</InspectorControls>
 			</Fragment>
 		);
