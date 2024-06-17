@@ -34,148 +34,118 @@ class Product extends BaseCollection {
 		}
 
 		return array(
-			array( 'name' => $schema_name, 'type' => 'object[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price", 'type' => 'object' ),
-			array( 'name' => "{$schema_name}.price.AUD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.NZD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.USD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.GBP", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.CAD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.price.EUR", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice", 'type' => 'object' ),
-			array( 'name' => "{$schema_name}.regularPrice.AUD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.NZD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.USD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.GBP", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.CAD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.regularPrice.EUR", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice", 'type' => 'object', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.AUD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.NZD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.USD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.GBP", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.CAD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.salePrice.EUR", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData", 'type' => 'object', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax", 'type' => 'object', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.AUD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.NZD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.USD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.GBP", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.CAD", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.priceWithTax.EUR", 'type' => 'float[]', 'optional' => true ),
-			array( 'name' => "{$schema_name}.metaData.productLabel", 'type' => 'string', 'optional' => true ),
+			array( 'name' => $schema_name, 'type' => 'int64[]', 'optional' => true ),
 		);
 
+	}
+
+	public function get_fields() {
+		$fields = array(
+			array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'productId', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'parentId', 'type' => 'int64', 'facet' => true ),
+			array( 'name' => 'shortDescription', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'description', 'type' => 'string' ),
+			array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true ),
+			array( 'name' => 'permalink', 'type' => 'string' ),
+			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'sku', 'type' => 'string' ),
+			array( 'name' => 'price', 'type' => 'object', 'facet' => true ),
+			array( 'name' => 'price.AUD', 'type' => 'float', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'price.NZD', 'type' => 'float', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'price.USD', 'type' => 'float', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'price.GBP', 'type' => 'float', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'price.CAD', 'type' => 'float', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'price.EUR', 'type' => 'float', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'regularPrice', 'type' => 'object' ),
+			array( 'name' => 'regularPrice.AUD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'regularPrice.NZD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'regularPrice.USD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'regularPrice.GBP', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'regularPrice.CAD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'regularPrice.EUR', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'salePrice', 'type' => 'object' ),
+			array( 'name' => 'salePrice.AUD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'salePrice.NZD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'salePrice.USD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'salePrice.GBP', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'salePrice.CAD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'salePrice.EUR', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'onSale', 'type' => 'bool', 'facet' => true ),
+			array( 'name' => 'stockQuantity', 'type' => 'int64' ),
+			array( 'name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true ),
+			array( 'name' => 'backorder', 'type' => 'string', 'sort' => true, 'facet' => true ),
+			array( 'name' => 'status', 'type' => 'string', 'sort' => true, 'facet' => true ),
+			array( 'name' => 'shippingClass', 'type' => 'string' ),
+			array( 'name' => 'updatedAt', 'type' => 'int64' ),
+			array( 'name' => 'createdAt', 'type' => 'int64' ),
+			array( 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'daysPassed', 'type' => 'int64', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'isFeatured', 'type' => 'bool', 'facet' => true ),
+			array( 'name' => 'totalSales', 'type' => 'int64' ),
+			array( 'name' => 'productType', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ),
+			// Had to use string[] to type base on https://github.com/typesense/typesense/issues/227#issuecomment-1364072388 because ts is throwing errors after updgrade that the data is not an array
+			array( 'name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true ),
+			array( 'name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.childAndParentTerm', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true ),
+			array( 'name' => 'taxonomies.breadcrumbs', 'type' => 'object[]', 'optional' => true ),
+			array( 'name' => 'taxonomies.filters', 'type' => 'string[]', 'optional' => true, 'facet' => true ),
+			//@TODO - Transfer to judme extension
+			array( 'name' => 'judgemeReviews', 'type' => 'object', 'optional' => true ),
+			array( 'name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true ),
+			array( 'name' => 'judgemeReviews.percentage', 'type' => 'object[]', 'optional' => true ),
+			//@TODO - Transfer to yotpo extentions
+			array( 'name' => 'yotpoReviews', 'type' => 'object', 'optional' => true ),
+			array( 'name' => 'yotpoReviews.product_score', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'yotpoReviews.total_reviews', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'thumbnail', 'type' => 'object' ),
+			array( 'name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'menuOrder', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'metaData', 'type' => 'object', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax', 'type' => 'object', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.AUD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.NZD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.USD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.GBP', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.CAD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.EUR', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ),
+		);
+
+		$cross_sell = $this->get_product_recommendation_schema( 'cross-sell' );
+		$related    = $this->get_product_recommendation_schema( 'related' );
+		$upsell     = $this->get_product_recommendation_schema( 'upsell' );
+
+		$recommendation_schema = array_merge( $cross_sell, $related, $upsell );
+
+		$fields = array_merge_recursive( $fields, $recommendation_schema );
+		return apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
 	}
 
 	public function initialize() {
 		$logger  = wc_get_logger();
 		$context = array( 'source' => 'wooless-product-collection-initialize' );
-		try {
-			$this->drop_collection();
-		} catch (\Exception $e) {
-		}
+
+		$this->drop_collection();
 
 		try {
-
-
 			$logger->debug( 'TS Product collection: ' . $this->collection_name(), $context );
-			$fields = array(
-				[ 'name' => 'id', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'productId', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'shortDescription', 'type' => 'string', 'optional' => true ],
-				[ 'name' => 'description', 'type' => 'string' ],
-				[ 'name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true ],
-				[ 'name' => 'permalink', 'type' => 'string' ],
-				[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ],
-				[ 'name' => 'sku', 'type' => 'string' ],
-				[ 'name' => 'price', 'type' => 'object', 'facet' => true ],
-				[ 'name' => 'price.AUD', 'type' => 'float', 'optional' => true, 'facet' => true ],
-				[ 'name' => 'price.NZD', 'type' => 'float', 'optional' => true, 'facet' => true ],
-				[ 'name' => 'price.USD', 'type' => 'float', 'optional' => true, 'facet' => true ],
-				[ 'name' => 'price.GBP', 'type' => 'float', 'optional' => true, 'facet' => true ],
-				[ 'name' => 'price.CAD', 'type' => 'float', 'optional' => true, 'facet' => true ],
-				[ 'name' => 'price.EUR', 'type' => 'float', 'optional' => true, 'facet' => true ],
-				[ 'name' => 'regularPrice', 'type' => 'object' ],
-				[ 'name' => 'regularPrice.AUD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'regularPrice.NZD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'regularPrice.USD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'regularPrice.GBP', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'regularPrice.CAD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'regularPrice.EUR', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'salePrice', 'type' => 'object' ],
-				[ 'name' => 'salePrice.AUD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'salePrice.NZD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'salePrice.USD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'salePrice.GBP', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'salePrice.CAD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'salePrice.EUR', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'onSale', 'type' => 'bool', 'facet' => true ],
-				[ 'name' => 'stockQuantity', 'type' => 'int64' ],
-				[ 'name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true ],
-				[ 'name' => 'backorder', 'type' => 'string', 'sort' => true, 'facet' => true ],
-				[ 'name' => 'status', 'type' => 'string', 'sort' => true, 'facet' => true ],
-				[ 'name' => 'shippingClass', 'type' => 'string' ],
-				[ 'name' => 'updatedAt', 'type' => 'int64' ],
-				[ 'name' => 'createdAt', 'type' => 'int64' ],
-				[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
-				[ 'name' => 'daysPassed', 'type' => 'int64', 'optional' => true, 'facet' => true ],
-				[ 'name' => 'isFeatured', 'type' => 'bool', 'facet' => true ],
-				[ 'name' => 'totalSales', 'type' => 'int64' ],
-				[ 'name' => 'productType', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ],
-				// Had to use string[] to type base on https://github.com/typesense/typesense/issues/227#issuecomment-1364072388 because ts is throwing errors after updgrade that the data is not an array
-				[ 'name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-				[ 'name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true ],
-				[ 'name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-				[ 'name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-				[ 'name' => 'taxonomies.nameAndType', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-				[ 'name' => 'taxonomies.childAndParentTerm', 'type' => 'string[]', 'facet' => true, 'optional' => true ],
-				[ 'name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true ],
-				[ 'name' => 'taxonomies.breadcrumbs', 'type' => 'object[]', 'optional' => true ],
-				[ 'name' => 'taxonomies.filters', 'type' => 'string[]', 'optional' => true, 'facet' => true ],
-				//@TODO - Transfer to judme extension
-				[ 'name' => 'judgemeReviews', 'type' => 'object', 'optional' => true ],
-				[ 'name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true ],
-				[ 'name' => 'judgemeReviews.externalId', 'type' => 'int64', 'optional' => true ],
-				[ 'name' => 'judgemeReviews.average', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'judgemeReviews.count', 'type' => 'int32', 'optional' => true ],
-				[ 'name' => 'judgemeReviews.percentage', 'type' => 'object[]', 'optional' => true ],
-				//@TODO - Transfer to yotpo extentions
-				[ 'name' => 'yotpoReviews', 'type' => 'object', 'optional' => true ],
-				[ 'name' => 'yotpoReviews.product_score', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'yotpoReviews.total_reviews', 'type' => 'int64', 'optional' => true ],
-				[ 'name' => 'thumbnail', 'type' => 'object' ],
-				[ 'name' => 'thumbnail.altText', 'type' => 'string', 'optional' => true ],
-				[ 'name' => 'thumbnail.id', 'type' => 'int64', 'optional' => true ],
-				[ 'name' => 'menuOrder', 'type' => 'int64', 'optional' => true ],
-				[ 'name' => 'thumbnail.src', 'type' => 'string', 'optional' => true ],
-				[ 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ],
-				[ 'name' => 'metaData', 'type' => 'object', 'optional' => true ],
-				[ 'name' => 'metaData.priceWithTax', 'type' => 'object', 'optional' => true ],
-				[ 'name' => 'metaData.priceWithTax.AUD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'metaData.priceWithTax.NZD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'metaData.priceWithTax.USD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'metaData.priceWithTax.GBP', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'metaData.priceWithTax.CAD', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'metaData.priceWithTax.EUR', 'type' => 'float', 'optional' => true ],
-				[ 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ],
-			);
-
-			$cross_sell = $this->get_product_recommendation_schema( 'cross-sell' );
-			$related    = $this->get_product_recommendation_schema( 'related' );
-			$upsell     = $this->get_product_recommendation_schema( 'upsell' );
-
-			$recommendation_schema = array_merge( $cross_sell, $related, $upsell );
-
-			$fields = array_merge_recursive( $fields, $recommendation_schema );
-
 			$this->create_collection(
 				array(
 					'name' => $this->collection_name(),
-					'fields' => apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields ),
+					'fields' => $this->get_fields(),
 					'default_sorting_field' => 'updatedAt',
 					'enable_nested_fields' => true
 				)
@@ -183,6 +153,21 @@ class Product extends BaseCollection {
 		} catch (\Exception $e) {
 			$logger->debug( 'TS Product collection intialize Exception: ' . $e->getMessage(), $context );
 		}
+	}
+
+	public function get_product_query_args( $page = 1, $batch_size ) {
+		return apply_filters( 'wooless_product_query_args', array(
+			'status' => 'publish',
+			'limit' => $batch_size,
+			'page' => $page,
+			'type' => array(
+				'simple',
+				'variable',
+				'bundle',
+				'composite',
+				'variation',
+			)
+		) );
 	}
 
 	public function index_to_typesense() {
@@ -204,7 +189,7 @@ class Product extends BaseCollection {
 			$batch_size              = 100; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
-			$query_args              = array( 'status' => 'publish', 'limit' => $batch_size, 'page' => $page );
+			$query_args              = $this->get_product_query_args( $page, $batch_size );
 
 			$products = \wc_get_products( $query_args );
 
@@ -212,32 +197,16 @@ class Product extends BaseCollection {
 
 			// Prepare products for indexing in Typesense
 			foreach ( $products as $product ) {
-
-				$product_data = array();
-
-				// Get the product data
-				if ( ! empty( $product ) ) {
-					$product_data = $this->generate_typesense_data( $product );
-				}
-
-				if ( empty( $product_data ) ) {
-					error_log( "Skipping product ID: " . $product->get_id() );
-					continue; // Skip this product if no product data is found
-				}
-
-				$products_batch[] = $product_data;
+				$products_batch[] = $this->generate_typesense_data( $product );
 
 				// Free memory
 				unset( $product_data );
 			}
 
-			// Log the number of products in the batch
-			error_log( "Batch size: " . count( $products_batch ) );
 
 			// Import products to Typesense
 			try {
-				$result = $this->import( $products_batch );
-				// echo "<pre>"; print_r($result); echo "</pre>";
+				$result             = $this->import( $products_batch );
 				$successful_imports = array_filter( $result, function ($batch_result) {
 					$successful_import = isset( $batch_result['success'] ) && $batch_result['success'] == true;
 					if ( ! $successful_import ) {
@@ -253,10 +222,6 @@ class Product extends BaseCollection {
 				error_log( "Error importing products to Typesense: " . $e->getMessage() );
 			}
 
-			// unset($products, $products_batch, $result, $successful_imports);
-
-			// After the while loop, print the number of imported products
-			// echo "Imported products count: " . $imported_products_count ."/" . $total_imports . "\n";
 
 			$next_page          = $page + 1;
 			$query_args['page'] = $next_page;
@@ -282,182 +247,155 @@ class Product extends BaseCollection {
 		}
 	}
 
-	public function generate_typesense_data( $product ) {
-		// Format product data for indexing
-		$product_data = array();
-		$product_id   = '';
+	public function get_addional_tabs( $product ) {
+		// Get the additional product tabs
+		$product_id                = $product->get_id();
+		$additional_tabs           = get_post_meta( $product_id, '_additional_tabs', true );
+		$formatted_additional_tabs = array();
 
-		if ( ! empty( $product ) ) {
-			$product_id       = $product->get_id();
-			$shortDescription = $product->get_short_description();
-			$description      = $product->get_description();
-			$attachment_ids   = $product->get_gallery_image_ids();
-			$product_gallery  = array_map( function ($attachment_id) {
-				$attachment         = get_post( $attachment_id );
-				$thumbnail_alt_text = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
-				$thumbnail_src = wp_get_attachment_url( $attachment_id );
+		if ( ! empty( $additional_tabs ) ) {
+			foreach ( $additional_tabs as $tab ) {
+				$formatted_additional_tabs[] = array(
+					'title' => $tab['tab_title'],
+					'content' => $tab['tab_content'],
+				);
+			}
+		}
 
-				return [ 
-					'id' => $attachment_id,
-					'title' => $attachment->post_title,
-					'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
-					'src' => $thumbnail_src ? $thumbnail_src : '',
-				];
-			}, $attachment_ids );
+		unset( $additional_tabs );
 
-			// // Get the thumbnail
-			$thumbnail_id       = get_post_thumbnail_id( $product_id );
-			$attachment         = get_post( $thumbnail_id );
-			$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
-			$thumbnail_src      = get_the_post_thumbnail_url( $product_id );
+		return apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product );
+	}
 
-			$thumbnail = [ 
-				'id' => $thumbnail_id,
+	public function get_thumnail( $product ) {
+		// // Get the thumbnail
+		$product_id         = $product->get_id();
+		$thumbnail_id       = get_post_thumbnail_id( $product_id );
+		$attachment         = get_post( $thumbnail_id );
+		$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
+		$thumbnail_src      = get_the_post_thumbnail_url( $product_id );
+
+		return apply_filters( 'wooless_product_thumbnail', array(
+			'id' => $thumbnail_id,
+			'title' => $attachment->post_title,
+			'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+			'src' => $thumbnail_src ? $thumbnail_src : '',
+		), $product );
+	}
+
+	public function get_gallery( $product ) {
+		$attachment_ids  = $product->get_gallery_image_ids();
+		$product_gallery = array_map( function ($attachment_id) {
+			$attachment         = get_post( $attachment_id );
+			$thumbnail_alt_text = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
+			$thumbnail_src = wp_get_attachment_url( $attachment_id );
+
+			return array(
+				'id' => $attachment_id,
 				'title' => $attachment->post_title,
 				'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
 				'src' => $thumbnail_src ? $thumbnail_src : '',
-			];
+			);
+		}, $attachment_ids );
 
-			$stockQuantity = $product->get_stock_quantity();
+		return apply_filters( 'wooless_product_gallery', $product_gallery, $product );
+	}
 
-			$product_type = $product->get_type();
-
+	public function get_price( $product, $currency = null ) {
+		if ( empty( $currency ) ) {
 			$currency = get_option( 'woocommerce_currency' );
-
-			$default_price         = [ 
-				$currency => floatval( $product->get_price() )
-			];
-			$default_regular_price = [ 
-				$currency => floatval( $product->get_regular_price() )
-			];
-			$default_sale_price    = [ 
-				$currency => floatval( $product->get_sale_price() )
-			];
-
-			// Get variations if the product is a variable product
-			$variations_data = $default_attributes = [];
-			if ( $product_type === 'variable' || $product_type === 'pw-gift-card' ) {
-				$variations = $product->get_available_variations();
-				foreach ( $variations as $variation ) {
-					$variation_obj = wc_get_product( $variation['variation_id'] );
-					if ( ! $variation_obj ) {
-						continue;
-					}
-
-					$variant_thumbnail_id       = get_post_thumbnail_id( $variation['variation_id'] );
-					$variant_attachment         = get_post( $variant_thumbnail_id );
-					$variant_thumbnail_alt_text = get_post_meta( $variant_thumbnail_id, '_wp_attachment_image_alt', true );
-					$variant_thumbnail_src      = get_the_post_thumbnail_url( $variation['variation_id'] );
-
-					$variations_items = [ 
-						'variationId' => $variation['variation_id'],
-						'attributes' => $variation['attributes'],
-						'price' => array(
-							$currency => floatval( $variation_obj->get_price() ),
-						),
-						'regularPrice' => array(
-							$currency => floatval( $variation_obj->get_regular_price() ),
-						),
-						'salePrice' => array(
-							$currency => floatval( $variation_obj->get_sale_price() ),
-						),
-						'stockQuantity' => empty( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
-						'stockStatus' => $variation_obj->get_stock_status(),
-						'backorder' => $variation_obj->get_backorders(),
-						'onSale' => $variation_obj->is_on_sale(),
-						'sku' => $variation_obj->get_sku(),
-						'image' => [ 
-							'id' => $variant_thumbnail_id,
-							'title' => $variant_attachment->post_title,
-							'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
-							'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
-						],
-						'metaData' => array(),
-					];
-
-					$variations_data[] = apply_filters( 'blaze_commerce_variation_data', $variations_items, $variation['variation_id'], $variation_obj );
-
-					unset( $variations_items, $variation_obj, $variant_thumbnail_id, $variant_attachment, $variant_thumbnail_alt_text, $variant_thumbnail_src );
-				}
-
-				unset( $variations );
-			}
-
-			$cross_sell_ids      = $product->get_cross_sell_ids();
-			$cross_sell_products = array();
-			if ( ! empty( $cross_sell_ids ) ) {
-				$cross_sell_products = $this->get_products_by_ids( $cross_sell_ids );
-			}
-
-			$upsell_ids      = $product->get_upsell_ids();
-			$upsell_products = array();
-			if ( ! empty( $upsell_ids ) ) {
-				$upsell_products = $this->get_products_by_ids( $upsell_ids );
-			}
-
-			// Get the additional product tabs
-			$additional_tabs           = get_post_meta( $product_id, '_additional_tabs', true );
-			$formatted_additional_tabs = array();
-
-			if ( ! empty( $additional_tabs ) ) {
-				foreach ( $additional_tabs as $tab ) {
-					$formatted_additional_tabs[] = array(
-						'title' => $tab['tab_title'],
-						'content' => $tab['tab_content'],
-					);
-				}
-			}
-
-			unset( $additional_tabs );
-
-			$taxonomies = $this->get_taxonomies( $product );
-
-			$related_products = $this->get_related_products( $product_id, $taxonomies );
-
-			$published_at = strtotime( get_the_date( '', $product->get_id() ) );
-
-			$days_passed = $this->get_days_passed( $published_at );
-
-			$product_data = [ 
-				'id' => strval( $product->get_id() ),
-				'productId' => strval( $product->get_id() ),
-				'shortDescription' => wpautop( $shortDescription ),
-				'description' => wpautop( $description ),
-				'name' => $product->get_name(),
-				'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
-				'slug' => $product->get_slug(),
-				'thumbnail' => $thumbnail,
-				'sku' => $product->get_sku(),
-				'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
-				'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
-				'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
-				'onSale' => $product->is_on_sale(),
-				'stockQuantity' => empty( $stockQuantity ) ? 0 : $stockQuantity,
-				'stockStatus' => $product->get_stock_status(),
-				'backorder' => $product->get_backorders(),
-				'shippingClass' => $product->get_shipping_class(),
-				'updatedAt' => strtotime( $product->get_date_modified() ),
-				'createdAt' => strtotime( $product->get_date_created() ),
-				'publishedAt' => $published_at,
-				'daysPassed' => $days_passed,
-				'isFeatured' => $product->get_featured(),
-				'totalSales' => (int) $product->get_total_sales(),
-				'galleryImages' => $product_gallery,
-				'taxonomies' => $taxonomies,
-				'productType' => $product_type,
-				'variations' => $variations_data,
-				'crossSellProducts' => $cross_sell_products,
-				'relatedProducts' => $related_products,
-				'upsellProducts' => $upsell_products,
-				'additionalTabs' => apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product ),
-				'status' => $product->get_status(),
-				'menuOrder' => $product->get_menu_order(),
-				'metaData' => array(),
-			];
-
-			unset( $shortDescription, $description, $attachment_ids, $product_gallery, $thumbnail, $thumbnail_id, $attachment, $thumbnail_alt_text, $thumbnail_src, $stockQuantity, $product_type, $currency, $default_price, $default_regular_price, $default_sale_price, $cross_sell_ids, $upsell_ids, $additional_tabs, $taxonomies, $related_products, $cross_sell_products, $variations_data, $formatted_additional_tabs, $upsell_products, $published_at );
 		}
 
+		$default_price = array(
+			$currency => floatval( $product->get_price() )
+		);
+
+		return apply_filters( 'wooless_product_price', $default_price, $product->get_id(), $product );
+	}
+
+	public function get_regular_price( $product, $currency = null ) {
+		if ( empty( $currency ) ) {
+			$currency = get_option( 'woocommerce_currency' );
+		}
+
+		$default_regular_price = array(
+			$currency => floatval( $product->get_regular_price() )
+		);
+
+		return apply_filters( 'wooless_product_regular_price', $default_regular_price, $product->get_id(), $product );
+	}
+
+	public function get_sale_price( $product, $currency = null ) {
+		if ( empty( $currency ) ) {
+			$currency = get_option( 'woocommerce_currency' );
+		}
+
+		$default_sale_price = array(
+			$currency => floatval( $product->get_sale_price() )
+		);
+
+		return apply_filters( 'wooless_product_sale_price', $default_sale_price, $product->get_id(), $product );
+	}
+
+	public function generate_typesense_data( $product ) {
+		if ( empty( $product ) ) {
+			return null;
+		}
+
+		$product_id     = $product->get_id();
+		$type           = $product->get_type();
+		$stock_quantity = $product->get_stock_quantity();
+		$currency       = get_option( 'woocommerce_currency' );
+
+		$published_at = strtotime( get_the_date( '', $product->get_id() ) );
+		$days_passed  = $this->get_days_passed( $published_at );
+
+		$taxonomies          = $this->get_taxonomies( $product );
+		$related_products    = array();
+		$cross_sell_products = array();
+		$upsell_products     = array();
+		if ( 'variation' !== $type ) {
+			$related_products    = $this->get_related_products( $product_id, $taxonomies, 'ids' );
+			$cross_sell_products = $product->get_cross_sell_ids();
+			$upsell_products     = $product->get_upsell_ids();
+		}
+
+		$product_data = array(
+			'id' => strval( $product->get_id() ),
+			'productId' => strval( $product->get_id() ),
+			'parentId' => (int) $product->get_parent_id(),
+			'shortDescription' => wpautop( $product->get_short_description() ),
+			'description' => wpautop( $product->get_description() ),
+			'name' => $product->get_name(),
+			'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
+			'slug' => $product->get_slug(),
+			'thumbnail' => $this->get_thumnail( $product ),
+			'sku' => $product->get_sku(),
+			'price' => $this->get_price( $product, $currency ),
+			'regularPrice' => $this->get_regular_price( $product, $currency ),
+			'salePrice' => $this->get_sale_price( $product, $currency ),
+			'onSale' => $product->is_on_sale(),
+			'stockQuantity' => empty( $stock_quantity ) ? 0 : $stock_quantity,
+			'stockStatus' => $product->get_stock_status(),
+			'backorder' => $product->get_backorders(),
+			'shippingClass' => $product->get_shipping_class(),
+			'updatedAt' => strtotime( $product->get_date_modified() ),
+			'createdAt' => strtotime( $product->get_date_created() ),
+			'publishedAt' => $published_at,
+			'daysPassed' => $days_passed,
+			'isFeatured' => $product->get_featured(),
+			'totalSales' => (int) $product->get_total_sales(),
+			'galleryImages' => $this->get_gallery( $product ),
+			'taxonomies' => $taxonomies,
+			'productType' => $product->get_type(),
+			'crossSellProducts' => $cross_sell_products,
+			'relatedProducts' => $related_products,
+			'upsellProducts' => $upsell_products,
+			'additionalTabs' => $this->get_addional_tabs( $product ),
+			'status' => $product->get_status(),
+			'menuOrder' => $product->get_menu_order(),
+			'metaData' => array(),
+		);
 		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
 	}
 
@@ -465,13 +403,19 @@ class Product extends BaseCollection {
 		$taxonomies_data = [];
 		$taxonomies      = get_object_taxonomies( 'product' );
 
+		$product_id = $product->get_id();
+
+		if ( $product->is_type( 'variation' ) ) {
+			$product_id = $product->get_parent_id();
+		}
+
 		foreach ( $taxonomies as $taxonomy ) {
 			// Exclude taxonomies based on their names
 			if ( preg_match( '/^(ef_|elementor|pa_|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
 				continue;
 			}
 
-			$product_terms = get_the_terms( $product->get_id(), $taxonomy );
+			$product_terms = get_the_terms( $product_id, $taxonomy );
 
 			if ( ! empty( $product_terms ) && ! is_wp_error( $product_terms ) ) {
 				foreach ( $product_terms as $product_term ) {
@@ -489,14 +433,14 @@ class Product extends BaseCollection {
 					$term_thumbnail_id = get_term_meta( $product_term->term_id, 'thumbnail_id', true );
 					$term_attachment   = get_post( $term_thumbnail_id );
 
-					$term_thumbnail = [ 
+					$term_thumbnail = array(
 						'id' => $term_thumbnail_id,
 						'title' => $term_attachment->post_title,
 						'altText' => get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ),
 						'src' => wp_get_attachment_url( $term_thumbnail_id ),
-					];
+					);
 
-					$taxonomies_data[] = [ 
+					$taxonomies_data[] = array(
 						'name' => $term_name,
 						'url' => get_term_link( $product_term->term_id ),
 						'type' => $taxonomy,
@@ -506,7 +450,7 @@ class Product extends BaseCollection {
 						'parentTerm' => $term_parent,
 						'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
 						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
-					];
+					);
 
 					unset( $parentTerm, $term_name, $term_slug, $term_parent, $termOrder );
 				}
@@ -520,7 +464,7 @@ class Product extends BaseCollection {
 		return $taxonomies_data;
 	}
 
-	public function get_related_products( $product_id, $taxonomies ) {
+	public function get_related_products( $product_id, $taxonomies, $return = 'objects' ) {
 		$category = array();
 		foreach ( $taxonomies as $taxonomy ) {
 			if ( $taxonomy['type'] == 'product_cat' ) {
@@ -541,6 +485,10 @@ class Product extends BaseCollection {
 			'stock_status' => 'instock',
 		);
 		$product_ids = wc_get_products( $args );
+
+		if ( 'ids' === $return ) {
+			return $product_ids;
+		}
 
 		return $this->get_products_by_ids( $product_ids );
 	}
