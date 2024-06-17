@@ -29,13 +29,27 @@ class GeneralSettings extends BaseSettings {
 			$typesense_api_key = $trimmed_api_key[0];
 			$store_id          = $trimmed_api_key[1];
 
-			$connection = TypesenseClient::get_instance()->test_connection( $typesense_api_key, $store_id, $options['environment'] );
-			// var_dump($connection); exit;
+			$typesense_client = TypesenseClient::get_instance();
+			$connection       = $typesense_client->test_connection( $typesense_api_key, $store_id, $options['environment'] );
+
 			if ( 'success' === $connection['status'] ) {
 				// TODO: remove private_key_master eventually
 				update_option( 'private_key_master', $options['api_key'] );
 				update_option( 'typesense_api_key', $typesense_api_key );
 				update_option( 'store_id', $store_id );
+
+				$variant_as_cards = false;
+				if ( isset( $_POST['wooless_general_settings_options']['display_variant_as_separate_product_cards'] ) ) {
+					$variant_as_cards = (bool) $_POST['wooless_general_settings_options']['display_variant_as_separate_product_cards'];
+				}
+
+				$typesense_client->site_info()->upsert( [ 
+					'id' => '1002457',
+					'name' => 'display_variant_as_separate_product_cards',
+					'value' => json_encode( $variant_as_cards ),
+					'updated_at' => time(),
+				] );
+
 			} else {
 				add_settings_error(
 					'blaze_settings_error',
@@ -104,6 +118,15 @@ class GeneralSettings extends BaseSettings {
 					'description' => 'Check this to show shipping minicart component dynamically based on nearest free shipping rate.'
 				),
 			);
+
+			$fields['wooless_general_settings_section']['options'][] = array(
+				'id' => 'display_variant_as_separate_product_cards',
+				'label' => 'Display separate variant product cards',
+				'type' => 'checkbox',
+				'args' => array(
+					'description' => 'Check this to show variant as product cards in catalog pages or in any product list.'
+				),
+			);
 		}
 
 
@@ -150,8 +173,9 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner']             = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
-		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner']                 = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component']     = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['display_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'display_variant_as_separate_product_cards' ) == 1 ?: false );
 
 		return $additional_data;
 	}
