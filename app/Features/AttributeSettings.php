@@ -72,11 +72,10 @@ class AttributeSettings {
 
 	public function add_available_product_attribute( $product_data, $product_id ) {
 		$product                    = wc_get_product( $product_id );
-		$product_type               = $product->get_type();
 		$attributes                 = $product->get_attributes();
 		$product_data['attributes'] = $attributes;
 
-		if ( $product_type === 'variable' ) {
+		if ( $product->is_type( 'variable' ) ) {
 
 			$generated_attributes = array();
 
@@ -124,6 +123,14 @@ class AttributeSettings {
 			}
 			$product_data['defaultAttributes'] = $product->get_default_attributes();
 			$product_data['attributes']        = $generated_attributes;
+		}
+
+		if ( $product->is_type( 'variation' ) ) {
+			$generated_attributes = array();
+			foreach ( $attributes as $key => $attribute ) {
+				$generated_attributes[ 'attribute_' . $key ] = $attribute;
+			}
+			$product_data['attributes'] = $generated_attributes;
 		}
 
 		return $product_data;
