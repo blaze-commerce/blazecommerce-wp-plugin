@@ -468,7 +468,7 @@ class Product extends BaseCollection {
 		$category = array();
 		foreach ( $taxonomies as $taxonomy ) {
 			if ( $taxonomy['type'] == 'product_cat' ) {
-				$category[] = $taxonomy['name'];
+				$category[] = $taxonomy['slug'];
 			}
 		}
 
