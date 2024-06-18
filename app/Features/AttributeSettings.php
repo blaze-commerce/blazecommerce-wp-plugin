@@ -86,7 +86,7 @@ class AttributeSettings {
 				}
 				$attribute_to_register = array(
 					'slug' => $key,
-					'name' => $key,
+					'name' => 'attribute_' . $key,
 					'options' => $attribute->get_options(),
 				);
 
