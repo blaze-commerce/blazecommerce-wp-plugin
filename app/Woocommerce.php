@@ -124,12 +124,16 @@ class Woocommerce {
 			$variations_data  = array();
 			foreach ( $variation_ids as $variation_id ) {
 				$wc_variation = wc_get_product( $variation_id );
+
 				if ( $wc_variation ) {
+					$parent_id         = $wc_variation->get_parent_id();
 					$variations_data[] = $typsense_product->generate_typesense_data( $wc_variation );
 				}
 			}
 
-			$typsense_product->import( $variations_data );
+			$typsense_product->collection()->documents->import( $variations_data, array(
+				'action' => 'update'
+			) );
 		} catch (\Exception $e) {
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-import' );
