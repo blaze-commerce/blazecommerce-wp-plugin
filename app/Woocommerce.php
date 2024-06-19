@@ -130,9 +130,13 @@ class Woocommerce {
 				}
 			}
 
-			$typsense_product->collection()->documents->import( $variations_data, array(
-				'action' => 'update'
+			$import = $typsense_product->collection()->documents->import( $variations_data, array(
+				'action' => 'upsert'
 			) );
+
+			$logger  = wc_get_logger();
+			$context = array( 'source' => 'wooless-variations-success-import' );
+			$logger->debug( print_r( $import, 1 ), $context );
 		} catch (\Exception $e) {
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-import' );
