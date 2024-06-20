@@ -130,6 +130,7 @@ class Product extends BaseCollection {
 
 		$recommendation_schema = array_merge( $cross_sell, $related, $upsell );
 
+
 		$fields = array_merge_recursive( $fields, $recommendation_schema );
 		return apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
 	}
@@ -186,7 +187,7 @@ class Product extends BaseCollection {
 				$this->initialize();
 			}
 
-			$batch_size              = 100; // Adjust the batch size depending on your server's capacity
+			$batch_size              = 5; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
 			$query_args              = $this->get_product_query_args( $page, $batch_size );
@@ -350,13 +351,12 @@ class Product extends BaseCollection {
 		$published_at = strtotime( get_the_date( '', $product->get_id() ) );
 		$days_passed  = $this->get_days_passed( $published_at );
 
-		$taxonomies          = array();
+		$taxonomies          = $this->get_taxonomies( $product );
 		$related_products    = array();
 		$cross_sell_products = array();
 		$upsell_products     = array();
 		if ( 'variation' !== $type ) {
 			$related_products    = $this->get_related_products( $product_id, $taxonomies, 'ids' );
-			$taxonomies          = $this->get_taxonomies( $product );
 			$cross_sell_products = $product->get_cross_sell_ids();
 			$upsell_products     = $product->get_upsell_ids();
 		}
@@ -404,13 +404,19 @@ class Product extends BaseCollection {
 		$taxonomies_data = [];
 		$taxonomies      = get_object_taxonomies( 'product' );
 
+		$product_id = $product->get_id();
+
+		if ( $product->is_type( 'variation' ) ) {
+			$product_id = $product->get_parent_id();
+		}
+
 		foreach ( $taxonomies as $taxonomy ) {
 			// Exclude taxonomies based on their names
 			if ( preg_match( '/^(ef_|elementor|pa_|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
 				continue;
 			}
 
-			$product_terms = get_the_terms( $product->get_id(), $taxonomy );
+			$product_terms = get_the_terms( $product_id, $taxonomy );
 
 			if ( ! empty( $product_terms ) && ! is_wp_error( $product_terms ) ) {
 				foreach ( $product_terms as $product_term ) {
@@ -463,7 +469,7 @@ class Product extends BaseCollection {
 		$category = array();
 		foreach ( $taxonomies as $taxonomy ) {
 			if ( $taxonomy['type'] == 'product_cat' ) {
-				$category[] = $taxonomy['name'];
+				$category[] = $taxonomy['slug'];
 			}
 		}
 
