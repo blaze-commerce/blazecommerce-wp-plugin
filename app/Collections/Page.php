@@ -74,12 +74,17 @@ class Page extends BaseCollection {
 	}
 
 	public function index_to_typesense() {
-		$this->initialize();
+		$page = $_REQUEST['page'] ?? 1;
+		if ( 1 == $page ) {
+			$this->initialize();
+		}
+
 		try {
 			$args = [ 
 				'post_type' => [ 'post', 'page' ],
 				'post_status' => 'publish',
-				'posts_per_page' => -1,
+				'posts_per_page' => 20,
+				'paged' => $page
 			];
 
 			$query = new \WP_Query( $args );
@@ -92,7 +97,7 @@ class Page extends BaseCollection {
 
 					// Index the page/post data in Typesense
 					try {
-						$this->create( $document );
+						$this->upsert( $document );
 					} catch (\Exception $e) {
 						echo "Error adding page/post to Typesense: " . $e->getMessage() . "\n";
 					}
@@ -124,24 +129,24 @@ class Page extends BaseCollection {
 		}
 
 		// If there is no featured image, get the first image attachment from the post content
-		$content = get_the_content();
+		$content  = get_the_content();
 		$image_id = '';
-		$output = preg_match_all('/image="(.*?)"/m', $content, $matches);
-		if (!empty($matches[1][0])) {
+		$output   = preg_match_all( '/image="(.*?)"/m', $content, $matches );
+		if ( ! empty( $matches[1][0] ) ) {
 			$image_id = $matches[1][0];
 		}
 
 		// Use the first image found in the post content
-		if (!empty($image_id) && $image_src = wp_get_attachment_image_src($image_id, 'full')) {
+		if ( ! empty( $image_id ) && $image_src = wp_get_attachment_image_src( $image_id, 'full' ) ) {
 			$attachment = get_post( $image_id );
-			$thumbnail = [ 
+			$thumbnail  = [ 
 				'id' => $image_id,
 				'title' => is_object( $attachment ) ? $attachment->post_title : '',
 				'altText' => get_post_meta( $image_id, '_wp_attachment_image_alt', true ),
 				'src' => $image_src[0],
 			];
 
-			if(empty($thumbnail['altText'])) {
+			if ( empty( $thumbnail['altText'] ) ) {
 				$thumbnail['altText'] = $attachment->post_title;
 			}
 		}
