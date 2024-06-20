@@ -30,6 +30,14 @@ class Product {
 			if ( ! empty( $site_product ) ) {
 				TypesenseClient::get_instance()->site_info()->upsert( $site_product );
 			}
+		} else {
+			do_action(
+				"inspect", array(
+					"typesense_site_product",
+					array(
+						'site_product' => "No site product found",
+					)
+				) );
 		}
 	}
 
@@ -63,9 +71,9 @@ class Product {
 
 		global $wpdb;
 
-		$query = "SELECT post_id FROM $wpdb->posts
+		$query = "SELECT ID FROM $wpdb->posts
                     WHERE post_type = 'gp_elements' AND post_status = 'publish' AND post_title = 'Product'
-                    ORDER BY post_id ASC
+                    ORDER BY ID ASC
                     LIMIT 1";
 
 		$post_id = $wpdb->get_var( $query );
