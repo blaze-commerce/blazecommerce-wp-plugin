@@ -35,7 +35,6 @@ class SynonymSettings extends BaseSettings {
 
 			TypesenseClient::get_instance()->delete_all_synonyms();
 
-
 			foreach ( $_POST['synonym'] as $synonym ) {
 
 				$words = array_map( 'trim', explode( ',', $synonym['words'] ) );
