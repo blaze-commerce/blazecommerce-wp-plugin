@@ -24,6 +24,7 @@ class Woocommerce {
 		add_action( 'trashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
 		add_action( 'untrashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
 
+
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'on_checkout_update_order_meta' ), 10, 2 );
 		add_action( 'woocommerce_after_product_ordering', array( $this, 'product_reordering' ), 10, 2 );
 
