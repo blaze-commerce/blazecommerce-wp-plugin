@@ -19,18 +19,10 @@ class Woocommerce {
 		add_action( 'woocommerce_order_status_changed', array( $this, 'on_order_status_changed' ), 10, 4 );
 		add_action( 'woocommerce_new_product', array( $this, 'on_product_save' ), 10, 2 );
 		add_action( 'woocommerce_update_product', array( $this, 'on_product_save' ), 10, 2 );
-
-		add_action( 'woocommerce_trash_product', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
-		add_action( 'trashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
-		add_action( 'untrashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
-
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'on_checkout_update_order_meta' ), 10, 2 );
 		add_action( 'woocommerce_after_product_ordering', array( $this, 'product_reordering' ), 10, 2 );
 
 		add_action( 'woocommerce_get_checkout_url', array( $this, 'append_cart_in_checkout_url' ) );
-
-		add_action( 'ts_product_update', array( $this, 'update_typesense_variation' ), 10, 2 );
-		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
 
 	}
 
@@ -84,15 +76,6 @@ class Woocommerce {
 		}
 	}
 
-	public function on_product_trash_or_untrash( $product_id ) {
-
-		$wc_product = wc_get_product( $product_id );
-		if ( $wc_product ) {
-			$this->on_product_save( $product_id, $wc_product );
-		}
-
-	}
-
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
 	public function on_product_save( $product_id, $wc_product ) {
 		try {
@@ -105,42 +88,6 @@ class Woocommerce {
 
 			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
 			error_log( "Error updating product in Typesense: " . $e->getMessage() );
-		}
-	}
-
-	public function update_typesense_variation( $product_id, $wc_product ) {
-
-		if ( $wc_product && $wc_product->is_type( 'variable' ) ) {
-			$variation_ids = $wc_product->get_children();
-			$event_time    = WC()->call_function( 'time' ) + 1;
-			as_schedule_single_action( $event_time, 'wooless_variation_update', array( $variation_ids ), 'blaze-wooless', true, 1 );
-
-		}
-	}
-
-	public function variation_update( $variation_ids ) {
-		try {
-			$typsense_product = Product::get_instance();
-			$variations_data  = array();
-			foreach ( $variation_ids as $variation_id ) {
-				$wc_variation = wc_get_product( $variation_id );
-
-				if ( $wc_variation ) {
-					$variations_data[] = $typsense_product->generate_typesense_data( $wc_variation );
-				}
-			}
-
-			$import = $typsense_product->collection()->documents->import( $variations_data, array(
-				'action' => 'upsert'
-			) );
-
-			$logger  = wc_get_logger();
-			$context = array( 'source' => 'wooless-variations-success-import' );
-			$logger->debug( print_r( $import, 1 ), $context );
-		} catch (\Exception $e) {
-			$logger  = wc_get_logger();
-			$context = array( 'source' => 'wooless-variations-import' );
-			$logger->debug( 'TS Variations Import Exception: ' . $e->getMessage(), $context );
 		}
 	}
 
