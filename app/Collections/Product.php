@@ -130,6 +130,7 @@ class Product extends BaseCollection {
 
 		$recommendation_schema = array_merge( $cross_sell, $related, $upsell );
 
+
 		$fields = array_merge_recursive( $fields, $recommendation_schema );
 		return apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
 	}
