@@ -109,6 +109,8 @@ class Taxonomy extends BaseCollection {
 		return apply_filters( 'blaze_commerce_taxonomy_data', $document, $term );
 	}
 
+
+
 	public function index_to_typesense() {
 		$logger  = wc_get_logger();
 		$context = array( 'source' => 'wooless-taxonomy-collection-initialize' );
@@ -133,7 +135,7 @@ class Taxonomy extends BaseCollection {
 			// Fetch terms for all taxonomies except those starting with 'ef_'
 			foreach ( $taxonomies as $taxonomy ) {
 				// Skip taxonomies starting with 'ef_'
-				if ( preg_match( '/^(ef_|elementor|pa_|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
+				if ( preg_match( '/^(ef_|elementor|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
 					continue;
 				}
 
