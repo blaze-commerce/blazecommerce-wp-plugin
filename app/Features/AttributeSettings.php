@@ -156,6 +156,7 @@ class AttributeSettings {
 						'select' => 'Select',
 						'boxed' => 'Boxed',
 						'swatch' => 'Swatch',
+						'image' => 'Image',
 					),
 				),
 			);

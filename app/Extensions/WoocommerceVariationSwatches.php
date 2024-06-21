@@ -59,7 +59,7 @@ class WoocommerceVariationSwatches {
 					break;
 				case "image":
 					//TODO supply correct value
-					$value = '';
+					$value = $option['label'];
 					break;
 				case "button":
 					//TODO supply correct value
