@@ -187,7 +187,7 @@ class Product extends BaseCollection {
 				$this->initialize();
 			}
 
-			$batch_size              = 5; // Adjust the batch size depending on your server's capacity
+			$batch_size              = 50; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
 			$query_args              = $this->get_product_query_args( $page, $batch_size );
@@ -294,7 +294,7 @@ class Product extends BaseCollection {
 			return array(
 				'id' => $attachment_id,
 				'title' => $attachment->post_title,
-				'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+				'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
 				'src' => $thumbnail_src ? $thumbnail_src : '',
 			);
 		}, $attachment_ids );
@@ -437,7 +437,7 @@ class Product extends BaseCollection {
 					$term_thumbnail = array(
 						'id' => $term_thumbnail_id,
 						'title' => $term_attachment->post_title,
-						'altText' => get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ),
+						'altText' => strval(get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true )),
 						'src' => wp_get_attachment_url( $term_thumbnail_id ),
 					);
 
@@ -513,7 +513,7 @@ class Product extends BaseCollection {
 							return [ 
 								'id' => $attachment_id,
 								'title' => $attachment->post_title,
-								'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+								'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
 								'src' => $thumbnail_src ? $thumbnail_src : '',
 							];
 						}, $attachment_ids );
@@ -561,7 +561,7 @@ class Product extends BaseCollection {
 									'image' => [ 
 										'id' => $variant_thumbnail_id,
 										'title' => $variant_attachment->post_title,
-										'altText' => $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title,
+										'altText' => strval($variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title),
 										'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
 									],
 								];
@@ -577,7 +577,7 @@ class Product extends BaseCollection {
 						$thumbnail = [ 
 							'id' => $thumbnail_id,
 							'title' => $attachment->post_title,
-							'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+							'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
 							'src' => $thumbnail_src ? $thumbnail_src : '',
 						];
 
