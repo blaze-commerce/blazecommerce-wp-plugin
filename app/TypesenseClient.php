@@ -131,12 +131,33 @@ class TypesenseClient {
 				throw new Exception( 'No synonyms found' );
 			}
 
+			$delete_report = array();
+
 			foreach ( $synonims['synonyms'] as $synonym ) {
-				$this->client->collections[ 'product-' . $this->store_id ]->synonyms[ $synonym['id'] ]->delete();
+				$delete_report = $this->client->collections[ 'product-' . $this->store_id ]->synonyms[ $synonym['id'] ]->delete();
 			}
 
+			do_action(
+				"inspect",
+				array(
+					"delete_all_symptons",
+					array(
+						"report" => $delete_report,
+						"synonyms" => $synonims,
+					)
+				)
+			);
+
 		} catch (Exception $e) {
-			error_log( 'Error deleting all synonyms: ' . $e->getMessage() );
+			do_action(
+				"inspect",
+				array(
+					"delete_all_symptons",
+					array(
+						"error" => $e->getMessage(),
+					)
+				)
+			);
 		}
 	}
 
@@ -147,7 +168,7 @@ class TypesenseClient {
 				throw new Exception( 'TypesenseClient is not initialized' );
 			}
 
-			if ( $type === 'two-way' ) {
+			if ( $type === 'multi-way' ) {
 				$synonym_key = $value[0] . '-synonyms';
 				$synonym_data = array(
 					"synonyms" => $value
@@ -161,9 +182,32 @@ class TypesenseClient {
 				);
 			}
 
-			$this->client->collections[ 'product-' . $this->store_id ]->synonyms->upsert( $synonym_key, $synonym_data );
+			$response = $this->client->collections[ 'product-' . $this->store_id ]->synonyms->upsert( $synonym_key, $synonym_data );
+
+			do_action(
+				"inspect",
+				array(
+					"add_sympton",
+					array(
+						"type" => $type,
+						"value" => $value,
+						"key" => $key,
+						"synonym_key" => $synonym_key,
+						"synonym_data" => $synonym_data,
+						"response" => $response,
+					)
+				)
+			);
 		} catch (Exception $e) {
-			error_log( 'Error setting synonym: ' . $e->getMessage() );
+			do_action(
+				"inspect",
+				array(
+					"add_sympton",
+					array(
+						"error" => $e->getMessage(),
+					)
+				)
+			);
 		}
 	}
 }

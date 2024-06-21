@@ -37,14 +37,18 @@ class BaseCollection {
 	}
 
 	public function drop_collection() {
-		return $this->collection()->delete();
+		try {
+			return $this->collection()->delete();
+		} catch (\Exception $e) {
+			return $e;
+		}
 	}
 
 	public function import( $batch ) {
 		$batch_files = array_map( function ($data) {
 			return json_encode( $data );
 		}, $batch );
-		$to_jsonl = implode( PHP_EOL, $batch_files );
+		$to_jsonl    = implode( PHP_EOL, $batch_files );
 
 		$curl = curl_init();
 
