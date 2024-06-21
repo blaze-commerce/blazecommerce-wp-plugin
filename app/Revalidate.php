@@ -14,7 +14,7 @@ class Revalidate {
 	}
 
 	public function __construct() {
-		add_action( 'ts_product_update', array( $this, 'revalidate_frontend_path' ), 10, 1 );
+		add_action( 'ts_product_update', array( $this, 'revalidate_frontend_path' ), 10, 2 );
 		add_action( 'next_js_revalidation_event', array( $this, 'do_next_js_revalidation_event' ), 10, 1 );
 	}
 
@@ -34,8 +34,13 @@ class Revalidate {
 		as_schedule_single_action( $event_time, 'next_js_revalidation_event', array( $product_url ), 'blaze-wooless', true, 1 );
 	}
 
-	public function revalidate_frontend_path( $product_id ) {
+	public function revalidate_frontend_path( $product_id, $product ) {
 		if ( wp_is_post_revision( $product_id ) || wp_is_post_autosave( $product_id ) ) {
+			return;
+		}
+
+		// We do not revalidate variation as this doesn't have a url on its own
+		if ( $product->is_type( 'variation' ) ) {
 			return;
 		}
 

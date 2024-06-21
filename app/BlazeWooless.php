@@ -61,6 +61,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Settings\\FooterFourSettings',
 			'\\BlazeWooless\\Settings\\FooterFiveSettings',
 			'\\BlazeWooless\\Settings\\FooterAfterSettings',
+			'\\BlazeWooless\\Settings\\SynonymSettings',
 		);
 
 		foreach ( $settings as $setting ) {
@@ -98,12 +99,15 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommerceAfterpay',
 			'\\BlazeWooless\\Extensions\\WoocommerceGiftCards',
 			'\\BlazeWooless\\Extensions\\YoastSEO',
+			'\\BlazeWooless\\Extensions\\RankMath',
 			'\\BlazeWooless\\Extensions\\GraphQL',
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Footer',
+			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
+			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
 		);
 
 		foreach ( $extensions as $extension ) {
