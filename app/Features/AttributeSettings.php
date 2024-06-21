@@ -71,20 +71,21 @@ class AttributeSettings {
 	}
 
 	public function add_available_product_attribute( $product_data, $product_id ) {
-		$product      = wc_get_product( $product_id );
-		$product_type = $product->get_type();
+		$product                    = wc_get_product( $product_id );
+		$attributes                 = $product->get_attributes();
+		$product_data['attributes'] = $attributes;
 
-		if ( $product_type === 'variable' ) {
-			$attributes           = $product->get_attributes();
+		if ( $product->is_type( 'variable' ) ) {
+
 			$generated_attributes = array();
 
 			foreach ( $attributes as $key => $attribute ) {
-				if ( !$attribute->get_variation() ) {
+				if ( ! $attribute->get_variation() ) {
 					continue;
 				}
 				$attribute_to_register = array(
 					'slug' => $key,
-					'name' => $key,
+					'name' => 'attribute_' . $key,
 					'options' => $attribute->get_options(),
 				);
 
@@ -122,6 +123,14 @@ class AttributeSettings {
 			}
 			$product_data['defaultAttributes'] = $product->get_default_attributes();
 			$product_data['attributes']        = $generated_attributes;
+		}
+
+		if ( $product->is_type( 'variation' ) ) {
+			$generated_attributes = array();
+			foreach ( $attributes as $key => $attribute ) {
+				$generated_attributes[ 'attribute_' . $key ] = $attribute;
+			}
+			$product_data['attributes'] = $generated_attributes;
 		}
 
 		return $product_data;

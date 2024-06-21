@@ -79,6 +79,23 @@ function typesense_enqueue_google_fonts( $hook ) {
 		true,
 	);
 	wp_enqueue_script( 'jquery.modal' );
+
+	// register jsrender cdn
+	wp_register_script(
+		'jsrender',
+		'https://cdnjs.cloudflare.com/ajax/libs/jsrender/1.0.14/jsrender.min.js',
+		array( 'jquery' ),
+		null,
+		true,
+	);
+
+	if ( is_admin() ) :
+		// only enqueue the script in wooless settings page and specially in synonym settings, effectively in the synonyms tab
+		global $hook_suffix;
+		if ( $hook_suffix == 'toplevel_page_wooless-settings' && isset( $_GET['tab'] ) && $_GET['tab'] == 'synonyms' ) :
+			wp_enqueue_script( 'jsrender' );
+		endif;
+	endif;
 }
 
 add_action( 'admin_enqueue_scripts', 'typesense_enqueue_google_fonts' );

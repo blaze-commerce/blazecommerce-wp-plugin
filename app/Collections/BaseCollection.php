@@ -37,7 +37,11 @@ class BaseCollection {
 	}
 
 	public function drop_collection() {
-		return $this->collection()->delete();
+		try {
+			return $this->collection()->delete();
+		} catch (\Exception $e) {
+			return $e;
+		}
 	}
 
 	public function import( $batch ) {
