@@ -374,6 +374,18 @@
                 }
             }
         },
+        otherProducts: {
+            config: commonConfig.concat([
+                { name: 'slidesToShow', label: 'Slides to show' },
+                { name: 'containerClass', label: 'Container Classes' },
+            ]),
+            fields: {
+                productId: {
+                    label: 'Product Id',
+                    name: 'product-list-id',
+                }
+            }
+        },
         subCategoryFilters: {
             config: commonConfig,
             fields: commonFilterOption,
