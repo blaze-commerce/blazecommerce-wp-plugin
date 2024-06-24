@@ -16,6 +16,9 @@
 		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="newsletter">
 			<div class="content">Newsletter</div>
 		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="products">
+			<div class="content">Featured Products</div>
+		</div>
 		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="blogPosts">
 			<div class="content">Recent Blog Posts</div>
 		</div>
@@ -38,9 +41,6 @@
 		</div>
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="callToAction">
 			<div class="content">Call to action</div>
-		</div>
-		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="products">
-			<div class="content">Featured Products</div>
 		</div>
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="categories">
 			<div class="content">Featured Categories</div>
@@ -77,6 +77,9 @@
 		</div>
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="htmlContent">
 			<div class="content">HTML Content</div>
+		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="otherProducts">
+			<div class="content">Other Products</div>
 		</div>
 	</div>
 </div>
