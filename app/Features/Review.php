@@ -43,7 +43,7 @@ class Review {
 		$site_info->upsert( [ 
 			'id' => '1002457',
 			'name' => 'hide_review_tab',
-			'value' => json_encode( $options['hide_review_tab'] ),
+			'value' => (bool) $options['hide_review_tab'],
 			'updated_at' => time(),
 		] );
 	}
