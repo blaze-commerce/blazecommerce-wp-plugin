@@ -19,6 +19,7 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function settings_callback( $options ) {
+
 		try {
 			$this->update_fields( $options );
 		} catch (\Throwable $th) {
@@ -39,7 +40,7 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		$icons                 = array(
+		$icons = array(
 			'select' => 'Select',
 			'CiDeliveryTruck' => 'CiDeliveryTruck',
 			'CiViewList' => 'CiViewList',
@@ -189,7 +190,7 @@ class ProductPageSettings extends BaseSettings {
 		if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
 			$available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
 		} else {
-			$base_currency        = get_woocommerce_currency();
+			$base_currency = get_woocommerce_currency();
 			$available_currencies = [ 
 				$base_currency => ''
 			];
