@@ -2,7 +2,6 @@
 
 namespace BlazeWooless\Extensions;
 
-
 class WoocommerceVariationSwatches {
 	private static $instance = null;
 
@@ -51,13 +50,15 @@ class WoocommerceVariationSwatches {
 	public function add_taxonomy_fields( $fields ) {
 		return array_merge_recursive( $fields, array(
 			array( 'name' => 'componentType', 'type' => 'string', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'componentValue', 'type' => 'string', 'facet' => true, 'optional' => true ),
 		) );
 	}
 
 	public function add_taxonomy_fields_data( $document, $term ) {
 		$attribute_taxonomy = $this->get_raw_attribute( $term->taxonomy );
 		if ( ! empty( $attribute_taxonomy->attribute_type ) ) {
-			$document['componentType'] = $attribute_taxonomy->attribute_type;
+			$document['componentType']  = $attribute_taxonomy->attribute_type;
+			$document['componentValue'] = $this->get_option_value( $attribute_taxonomy->attribute_type, $term->term_id, (array) $term, );
 		}
 		return $document;
 	}
@@ -122,7 +123,7 @@ class WoocommerceVariationSwatches {
 		return $value;
 	}
 
-	public function get_image_src() {
+	public function get_image_src( $term ) {
 
 	}
 }
