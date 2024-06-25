@@ -9,6 +9,8 @@ Author URI: https://www.blazecommerce.io
 */
 
 define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'BLAZE_WOOLESS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'BLAZE_WOOLESS_VERSION', '1.4.7' );
 
 require 'vendor/autoload.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/regional-data-helper.php';
