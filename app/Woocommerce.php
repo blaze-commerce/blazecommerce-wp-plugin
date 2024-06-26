@@ -166,4 +166,26 @@ class Woocommerce {
 
 		}
 	}
+
+	/**
+	 * Use for making sure that we are setting a valid float type on prices so that typesense will accept it
+	 */
+	public static function format_price( $price ) {
+		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
+	}
+
+	public static function get_currencies() {
+
+		$currencies    = array();
+		$base_currency = get_woocommerce_currency();
+		if ( ! is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
+			$base_currency = get_woocommerce_currency();
+			return apply_filters( 'blaze_wooless_currencies', array(
+				$base_currency => ''
+			) );
+		}
+
+		$currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+		return apply_filters( 'blaze_wooless_currencies', $currencies );
+	}
 }
