@@ -294,7 +294,7 @@ class Product extends BaseCollection {
 			return array(
 				'id' => $attachment_id,
 				'title' => $attachment->post_title,
-				'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
+				'altText' => strval( $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title ),
 				'src' => $thumbnail_src ? $thumbnail_src : '',
 			);
 		}, $attachment_ids );
@@ -400,6 +400,30 @@ class Product extends BaseCollection {
 		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
 	}
 
+	public function sync( $product ) {
+		try {
+			$ts_product    = Product::get_instance();
+			$document_data = $ts_product->generate_typesense_data( $product );
+
+			$response = $ts_product->upsert( $document_data );
+			do_action( 'ts_product_update', $product->get_id(), $product );
+			return array(
+				'data' => $document_data,
+				'response' => $response
+			);
+		} catch (\Exception $e) {
+			$logger  = wc_get_logger();
+			$context = array( 'source' => 'wooless-product-update' );
+
+			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
+			error_log( "Error updating product in Typesense: " . $e->getMessage() );
+
+			return array(
+				'error' => $e->getMessage(),
+			);
+		}
+	}
+
 	public function get_taxonomies( $product ) {
 		$taxonomies_data = [];
 		$taxonomies      = get_object_taxonomies( 'product' );
@@ -412,7 +436,7 @@ class Product extends BaseCollection {
 
 		foreach ( $taxonomies as $taxonomy ) {
 			// Exclude taxonomies based on their names
-			if ( preg_match( '/^(ef_|elementor|pa_|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
+			if ( preg_match( '/^(ef_|elementor|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
 				continue;
 			}
 
@@ -437,11 +461,12 @@ class Product extends BaseCollection {
 					$term_thumbnail = array(
 						'id' => $term_thumbnail_id,
 						'title' => $term_attachment->post_title,
-						'altText' => strval(get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true )),
+						'altText' => strval( get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ) ),
 						'src' => wp_get_attachment_url( $term_thumbnail_id ),
 					);
 
-					$taxonomies_data[] = array(
+
+					$taxonomies_data[] = apply_filters( 'blaze_wooless_product_taxonomy_item', array(
 						'name' => $term_name,
 						'url' => get_term_link( $product_term->term_id ),
 						'type' => $taxonomy,
@@ -451,7 +476,7 @@ class Product extends BaseCollection {
 						'parentTerm' => $term_parent,
 						'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
 						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
-					);
+					), $product_term );
 
 					unset( $parentTerm, $term_name, $term_slug, $term_parent, $termOrder );
 				}
@@ -513,7 +538,7 @@ class Product extends BaseCollection {
 							return [ 
 								'id' => $attachment_id,
 								'title' => $attachment->post_title,
-								'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
+								'altText' => strval( $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title ),
 								'src' => $thumbnail_src ? $thumbnail_src : '',
 							];
 						}, $attachment_ids );
@@ -561,7 +586,7 @@ class Product extends BaseCollection {
 									'image' => [ 
 										'id' => $variant_thumbnail_id,
 										'title' => $variant_attachment->post_title,
-										'altText' => strval($variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title),
+										'altText' => strval( $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title ),
 										'src' => $variant_thumbnail_src ? $variant_thumbnail_src : '',
 									],
 								];
@@ -577,7 +602,7 @@ class Product extends BaseCollection {
 						$thumbnail = [ 
 							'id' => $thumbnail_id,
 							'title' => $attachment->post_title,
-							'altText' => strval($thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title),
+							'altText' => strval( $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title ),
 							'src' => $thumbnail_src ? $thumbnail_src : '',
 						];
 
