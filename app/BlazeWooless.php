@@ -53,15 +53,6 @@ class BlazeWooless {
 			'\\BlazeWooless\\Settings\\CategoryPageSettings',
 			'\\BlazeWooless\\Settings\\HeaderSettings',
 			'\\BlazeWooless\\Settings\\HomePageSettings',
-			'\\BlazeWooless\\Settings\\SiteMessageTopHeaderSettings',
-			'\\BlazeWooless\\Settings\\SiteMessageSettings',
-			'\\BlazeWooless\\Settings\\FooterBeforeSettings',
-			'\\BlazeWooless\\Settings\\FooterOneSettings',
-			'\\BlazeWooless\\Settings\\FooterTwoSettings',
-			'\\BlazeWooless\\Settings\\FooterThreeSettings',
-			'\\BlazeWooless\\Settings\\FooterFourSettings',
-			'\\BlazeWooless\\Settings\\FooterFiveSettings',
-			'\\BlazeWooless\\Settings\\FooterAfterSettings',
 			'\\BlazeWooless\\Settings\\SynonymSettings',
 		);
 
