@@ -21,6 +21,14 @@ class HomePageSettings extends BaseSettings {
 		$homepage_layout = array();
 		if ( isset( $_POST['homepage_layout'] ) ) {
 			$homepage_layout = json_decode( stripslashes( $_POST['homepage_layout'] ), true );
+			$homepage_layout = array_map(function( $block ) {
+				$base_country = \WC()->countries->get_base_country();
+				if ($block['blockId'] === 'gutenbergBlocks' && is_numeric($block['metaData'][$base_country]['id'])) {
+					$block['metaData'][$base_country]['content']  = get_post_field( 'post_content', $block['metaData'][$base_country]['id'] );
+				}
+
+				return $block;
+			}, $homepage_layout);
 		}
 
 		if ( is_array( $homepage_layout ) ) {
