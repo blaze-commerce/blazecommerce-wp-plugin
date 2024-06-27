@@ -14,6 +14,28 @@ class Taxonomy extends BaseCollection {
 		return self::$instance;
 	}
 
+	public function get_fields() {
+		$fields = array(
+			array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true, 'sort' => true ),
+			array( 'name' => 'description', 'type' => 'string' ),
+			array( 'name' => 'type', 'type' => 'string', 'facet' => true, 'infix' => true ),
+			array( 'name' => 'seoFullHead', 'type' => 'string', 'facet' => true, 'infix' => true ),
+			array( 'name' => 'permalink', 'type' => 'string' ),
+			array( 'name' => 'updatedAt', 'type' => 'int64' ),
+			array( 'name' => 'bannerThumbnail', 'type' => 'string' ),
+			array( 'name' => 'bannerText', 'type' => 'string' ),
+			array( 'name' => 'parentTerm', 'type' => 'string' ),
+			array( 'name' => 'parentSlug', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'productCount', 'type' => 'int64' ),
+			array( 'name' => 'order', 'type' => 'int64' ),
+			array( 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ),
+			array( 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ),
+		);
+		return apply_filters( 'blaze_commerce_taxonomy_fields', $fields );
+	}
+
 	public function initialize() {
 		// Fetch the store ID from the saved options
 		$wooless_site_id     = get_option( 'store_id' );
@@ -27,23 +49,7 @@ class Taxonomy extends BaseCollection {
 
 		$this->create_collection( [ 
 			'name' => $collection_taxonomy,
-			'fields' => [ 
-				[ 'name' => 'id', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true, 'sort' => true ],
-				[ 'name' => 'description', 'type' => 'string' ],
-				[ 'name' => 'type', 'type' => 'string', 'facet' => true, 'infix' => true ],
-				[ 'name' => 'seoFullHead', 'type' => 'string', 'facet' => true, 'infix' => true ],
-				[ 'name' => 'permalink', 'type' => 'string' ],
-				[ 'name' => 'updatedAt', 'type' => 'int64' ],
-				[ 'name' => 'bannerThumbnail', 'type' => 'string' ],
-				[ 'name' => 'bannerText', 'type' => 'string' ],
-				[ 'name' => 'parentTerm', 'type' => 'string' ],
-				[ 'name' => 'parentSlug', 'type' => 'string', 'facet' => true ],
-				[ 'name' => 'productCount', 'type' => 'int64' ],
-				[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ],
-				[ 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ],
-			],
+			'fields' => $this->get_fields(),
 			'default_sorting_field' => 'updatedAt',
 			'enable_nested_fields' => true,
 		] );
@@ -55,11 +61,9 @@ class Taxonomy extends BaseCollection {
 		// Get the custom fields (bannerThumbnail and bannerText)
 		$bannerThumbnail = get_term_meta( $term->term_id, 'wpcf-image', true );
 		$bannerText      = get_term_meta( $term->term_id, 'wpcf-term-banner-text', true );
+		$order           = get_term_meta( $term->term_id, 'order', true );
 
 
-		$yoastMeta   = is_plugin_active( 'wordpress-seo/wp-seo.php' ) ? \YoastSEO()->meta->for_term( $term->term_id ) : [];
-		$termHead    = is_object( $yoastMeta ) ? $yoastMeta->get_head() : '';
-		$seoFullHead = is_string( $termHead ) ? $termHead : ( isset( $termHead->html ) ? $termHead->html : '' );
 
 		// Get Parent Term
 		$parentTerm = get_term( $term->parent, $taxonomy );
@@ -90,13 +94,13 @@ class Taxonomy extends BaseCollection {
 			'description' => $term->description,
 			'type' => $taxonomy,
 			'permalink' => wp_make_link_relative( get_term_link( $term ) ),
-			'seoFullHead' => $seoFullHead,
 			'updatedAt' => time(),
 			'bannerThumbnail' => (string) $bannerThumbnail,
 			'bannerText' => $bannerText,
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
 			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '',
-			'productCount' => intval($term->count),
+			'productCount' => (int) $term->count,
+			'order' => (int) $order,
 			'thumbnail' => $thumbnail,
 			'breadcrumbs' => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
 			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
@@ -104,6 +108,8 @@ class Taxonomy extends BaseCollection {
 
 		return apply_filters( 'blaze_commerce_taxonomy_data', $document, $term );
 	}
+
+
 
 	public function index_to_typesense() {
 		$logger  = wc_get_logger();
@@ -129,7 +135,7 @@ class Taxonomy extends BaseCollection {
 			// Fetch terms for all taxonomies except those starting with 'ef_'
 			foreach ( $taxonomies as $taxonomy ) {
 				// Skip taxonomies starting with 'ef_'
-				if ( preg_match( '/^(ef_|elementor|pa_|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
+				if ( preg_match( '/^(ef_|elementor|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
 					continue;
 				}
 
@@ -151,7 +157,7 @@ class Taxonomy extends BaseCollection {
 							try {
 								$result                   = $this->import( $taxonomy_datas );
 								$successful_imports       = array_filter( $result, function ($batch_result) {
-									return isset ( $batch_result['success'] ) && $batch_result['success'] == true;
+									return isset( $batch_result['success'] ) && $batch_result['success'] == true;
 								} );
 								$successful_imports_count += count( $successful_imports );
 								$imported_products_count += $current_batch_count;
@@ -178,7 +184,7 @@ class Taxonomy extends BaseCollection {
 				try {
 					$result                   = $this->import( $taxonomy_datas );
 					$successful_imports       = array_filter( $result, function ($batch_result) {
-						return isset ( $batch_result['success'] ) && $batch_result['success'] == true;
+						return isset( $batch_result['success'] ) && $batch_result['success'] == true;
 					} );
 					$successful_imports_count += count( $successful_imports );
 					$imported_products_count += $current_batch_count;

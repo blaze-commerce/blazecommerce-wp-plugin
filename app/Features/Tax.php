@@ -13,8 +13,7 @@ class Tax {
 		return self::$instance;
 	}
 
-	public function __construct()
-	{
+	public function __construct() {
 		add_filter( 'blaze_commerce_variation_data', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
 		add_filter( 'blaze_wooless_cross_sell_data_for_typesense', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
@@ -22,12 +21,13 @@ class Tax {
 
 	public function add_price_with_tax_meta_data( $product_data, $product_id, $product ) {
 		$currency = get_option( 'woocommerce_currency' );
-		if ( !isset( $product_data['metaData'] ) ) {
+		if ( ! isset( $product_data['metaData'] ) ) {
 			$product_data['metaData'] = array();
 		}
 
+		$price_with_tax                           = $product->get_price_including_tax();
 		$product_data['metaData']['priceWithTax'] = array(
-			$currency => floatval( $product->get_price_including_tax() ),
+			$currency => (float) number_format( empty( $price_with_tax ) ? 0 : $price_with_tax, 4, '.', '' ),
 		);
 		return $product_data;
 	}
