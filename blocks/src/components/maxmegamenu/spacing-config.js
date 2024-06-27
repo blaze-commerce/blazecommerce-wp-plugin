@@ -17,6 +17,7 @@ export const SpacingConfig = ({ attributes, setAttributes }) => {
             title={ __( 'Blaze Commerce - Spacing' ) }
             initialOpen={ false }
         >
+            <p></p>
             <BoxControl
                 label={ __( 'Menu Text Padding' ) }
                 values={ menuTextPadding }

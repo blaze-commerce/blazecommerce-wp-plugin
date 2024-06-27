@@ -14,6 +14,7 @@ export const LayoutConfig = ({ attributes, setAttributes }) => {
             title={ __( 'Blaze Commerce - Layout' ) }
             initialOpen={ false }
         >
+            <p></p>
             <ToggleControl
                 label="Centered"
                 help={

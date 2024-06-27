@@ -31,6 +31,7 @@ export const ColorConfig = ({ attributes, setAttributes }) => {
             title={ __( 'Blaze Commerce - Colors' ) }
             initialOpen={ false }
         >
+            <p></p>
             <Flex>
                 <FlexBlock>
                     Main Navigation Background Color
