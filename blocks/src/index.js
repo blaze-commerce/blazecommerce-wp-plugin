@@ -1,4 +1,5 @@
 import { ColorConfig } from "./components/maxmegamenu/color-config";
+import { GeneralConfig } from "./components/maxmegamenu/general-config";
 import { LayoutConfig } from "./components/maxmegamenu/layout-config";
 import { SpacingConfig } from "./components/maxmegamenu/spacing-config";
 import { TypographyConfig } from "./components/maxmegamenu/typography-config";
@@ -21,6 +22,10 @@ const boxControlDefaults = {
 };
 
 const menuAttributes = {
+    menuId: {
+        type: 'string',
+    },
+
     mainNavigationBackgroundColor: {
         type: 'string',
     },
@@ -79,8 +84,17 @@ const menuAttributes = {
     },
 
     fontSize: {
-        tyupe: 'string',
-    }
+        type: 'string',
+        default: '16',
+    },
+    fontWeight: {
+        type: 'string',
+        default: '400',
+    },
+    letterCase: {
+        type: 'string',
+        default: 'none',
+    },
 };
 
 /**
@@ -99,21 +113,6 @@ const addMenuAttributes = ( settings, name ) => {
 
 	// Use Lodash's assign to gracefully handle if attributes are undefined
 	settings.attributes = Object.assign( settings.attributes, menuAttributes);
-    settings.supports = Object.assign( settings.supports, {
-        "typography": {
-			"fontSize": true,
-			"lineHeight": true,
-			"__experimentalFontFamily": true,
-			"__experimentalFontWeight": true,
-			"__experimentalFontStyle": true,
-			"__experimentalTextTransform": true,
-			"__experimentalTextDecoration": true,
-			"__experimentalLetterSpacing": true,
-			"__experimentalDefaultControls": {
-				"fontSize": true
-			}
-		},
-    })
 
 	return settings;
 };
@@ -125,7 +124,6 @@ addFilter( 'blocks.registerBlockType', 'extend-block-example/attribute/spacing',
  */
 const withSpacingControl = createHigherOrderComponent( ( BlockEdit ) => {
 	return ( props ) => {
-        console.log('props', props)
 		// Do nothing if it's another block than our defined ones.
 		if ( ! enableSpacingControlOnBlocks.includes( props.name ) ) {
 			return (
@@ -137,6 +135,8 @@ const withSpacingControl = createHigherOrderComponent( ( BlockEdit ) => {
 			<Fragment>
 				<BlockEdit { ...props } />
 				<InspectorControls>
+                    <GeneralConfig { ...props } />
+                    <LayoutConfig { ...props } />
                     <LayoutConfig { ...props } />
                     <SpacingConfig { ...props } />
                     <ColorConfig { ...props } />

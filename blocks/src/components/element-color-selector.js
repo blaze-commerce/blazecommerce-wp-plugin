@@ -23,6 +23,14 @@ export const ElementColorSelector = ({ value, setValue }) => {
         setValue(selectedColor);
         hideColorPicker();
     }
+
+    const handleReset = () => {
+        setSelectedColor('');
+        setValue('');
+        hideColorPicker();
+    }
+
+    console.log('selectedColor', selectedColor)
     
     return (
         <>
@@ -53,6 +61,7 @@ export const ElementColorSelector = ({ value, setValue }) => {
                     />
 
                     <div style={{ display: 'flex', padding: '0 16px 20px', justifyContent: 'flex-end', gap: '10px' }}>
+                        <Button isDestructive size="compact" onClick={handleReset}>Reset</Button>
                         <Button variant="secondary" size="compact" onClick={hideColorPicker}>Cancel</Button>
                         <Button variant="primary" size="compact" onClick={saveColor}>Save</Button>
                     </div>
