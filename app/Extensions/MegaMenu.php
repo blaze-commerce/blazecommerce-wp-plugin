@@ -34,7 +34,7 @@ class MegaMenu {
     }
 
     public function should_generate_menu_item_data( $should_generate, $item ) {
-        if (0 === $item->depth && $item->megamenu_settings && 'grid' === $item->megamenu_settings['type'] && count( $item->megamenu_settings['grid'] ) > 0) {
+        if (0 === $item->depth && $item->megamenu_settings && 'grid' === $item->megamenu_settings['type'] && ($item->megamenu_settings['grid'] && count( $item->megamenu_settings['grid'] ) > 0)) {
             return false;
         }
 
