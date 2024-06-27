@@ -17,13 +17,12 @@ class ContentBuilder {
 	}
 
 	public function __construct() {
-        add_action( 'init', array( $this, 'register_blaze_settings_post_type' ), 0, 1 );
-        add_action( 'admin_init', array( $this, 'prevent_access_to_list' ));
-        add_action( 'save_post_blaze_settings', array( $this, 'save' ), 10, 2);
+		add_action( 'init', array( $this, 'register_blaze_settings_post_type' ), 0, 1 );
+		add_action( 'admin_init', array( $this, 'prevent_access_to_list' ));
+		add_action( 'save_post_blaze_settings', array( $this, 'save' ), 10, 2);
 	}
 
-    public function register_blaze_settings_post_type() {
-		// Set UI labels for Custom Post Type
+	public function register_blaze_settings_post_type() {
 		$labels = array(
 			'name'                => _x( 'Blaze Commerce Settings', 'Post Type General Name', 'blaze-commerce' ),
 			'singular_name'       => _x( 'Blaze Commerce Setting', 'Post Type Singular Name', 'blaze-commerce' ),
@@ -40,20 +39,12 @@ class ContentBuilder {
 			'not_found_in_trash'  => __( 'Not found in Trash', 'blaze-commerce' ),
 		);
 			
-		// Set other options for Custom Post Type
-			
 		$args = array(
 			'label'               => __( 'blaze commerce settings', 'blaze-commerce' ),
 			'description'         => __( 'Blaze Commerce Settings', 'blaze-commerce' ),
 			'labels'              => $labels,
-			// Features this CPT supports in Post Editor
 			'supports'            => array( 'title', 'editor', 'revisions', 'custom-fields', ),
-			// You can associate this CPT with a taxonomy or custom taxonomy. 
 			'taxonomies'          => array( 'genres' ),
-			/* A hierarchical CPT is like Pages and can have
-			* Parent and child items. A non-hierarchical CPT
-			* is like Posts.
-			*/
 			'hierarchical'        => false,
 			'public'              => true,
 			'show_ui'             => true,
@@ -73,30 +64,30 @@ class ContentBuilder {
 		register_post_type( 'blaze_settings', $args );
 	}
 
-    public function prevent_access_to_list() {
-        if ( '/wp-admin/edit.php?post_type=blaze_settings' === $_SERVER['REQUEST_URI'] ) {
-            wp_redirect( admin_url('admin.php?page=wooless-settings') );
-        }
-    }
+	public function prevent_access_to_list() {
+		if ( '/wp-admin/edit.php?post_type=blaze_settings' === $_SERVER['REQUEST_URI'] ) {
+			wp_redirect( admin_url('admin.php?page=wooless-settings') );
+		}
+	}
 
-    public function save( $post_id, $post ) {
-        // Check if this is an autosave
-        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
-            return;
-        }
-    
-        // Check user permissions
-        if ( ! current_user_can( 'edit_post', $post_id ) ) {
-            return;
-        }
+	public function save( $post_id, $post ) {
+		// Check if this is an autosave
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+	
+		// Check user permissions
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
 
-        $post_name = $post->post_name;
-        $settings = apply_filters( 'set_blaze_setting_data', array(), $post_id, $post );
-        
-        if ( isset( $settings[ $post_name ] ) ) {
-            TypesenseClient::get_instance()
-                ->site_info()
-                ->upsert( $settings[ $post_name ] );
-        }
-    }
+		$post_name = $post->post_name;
+		$settings = apply_filters( 'set_blaze_setting_data', array(), $post_id, $post );
+		
+		if ( isset( $settings[ $post_name ] ) ) {
+			TypesenseClient::get_instance()
+				->site_info()
+				->upsert( $settings[ $post_name ] );
+		}
+	}
 }
