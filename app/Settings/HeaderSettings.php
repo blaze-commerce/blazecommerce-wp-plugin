@@ -2,6 +2,8 @@
 
 namespace BlazeWooless\Settings;
 
+use BlazeWooless\TypesenseClient;
+
 class HeaderSettings extends BaseSettings {
 	private static $instance = null;
 	public $tab_key = 'header';
@@ -24,14 +26,25 @@ class HeaderSettings extends BaseSettings {
 		return array();
 	}
 
-	public function footer_callback() {
+	public function get_header_post() {
 		$args = array(
 			'post_type' => 'blaze_settings',
 			'name' => $this->setting_page_name,
 		);
 		$the_query = new \WP_Query( $args );
-
+		
 		if (!$the_query->have_posts()) {
+			return null;
+		}
+
+		return $the_query->posts[0];
+	}
+
+	public function footer_callback() {
+
+		$post = $this->get_header_post();
+
+		if (!$post) {
 			$new_post = array(
 				'post_title' => 'Header',
 				'post_type' => 'blaze_settings',
@@ -40,7 +53,7 @@ class HeaderSettings extends BaseSettings {
 			);
 			$post_id = wp_insert_post($new_post);
 		} else {
-			$post_id = $the_query->posts[0]->ID;
+			$post_id = $post->ID;
 		}
 
 		$edit_link = get_edit_post_link( $post_id, '&' );
@@ -54,6 +67,9 @@ class HeaderSettings extends BaseSettings {
 	public function register_hooks()
 	{
 		add_filter( 'set_blaze_setting_data', array( $this, 'set_blaze_setting_data' ), 10, 2 );
+		remove_action( 'generate_header', 'generate_construct_header' );
+		add_action( 'generate_header', array( $this, 'render_wp_header' ), 10 );
+		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'save_on_site_info_sync' ), 10 );
 	}
 
 	public function set_blaze_setting_data( $blaze_settings, $post_id ) {
@@ -64,6 +80,29 @@ class HeaderSettings extends BaseSettings {
 			'updated_at' => time(),
 		);
 		return $blaze_settings;
+	}
+
+	public function render_wp_header() {
+		$post = $this->get_header_post();
+
+		$post_content = $post->post_content;
+
+		echo apply_filters('the_content', $post_content);
+	}
+
+	public function save_on_site_info_sync() {
+		$post = $this->get_header_post();
+		if ($post) {
+			$post_id = $post->ID;
+			TypesenseClient::get_instance()
+                ->site_info()
+                ->upsert( array(
+					'id' => (string) $post_id,
+					'name' => 'site-header',
+					'value' => get_post_field( 'post_content', $post_id ),
+					'updated_at' => time(),
+				) );
+		}
 	}
 }
 
