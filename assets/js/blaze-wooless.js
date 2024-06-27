@@ -545,6 +545,18 @@
                 }
             }
         },
+        gutenbergBlocks: {
+            config: commonConfig.concat([
+                { name: 'style', label: 'Style', description: 'Values: style-1' },
+                { name: 'styleColor', label: 'Style Color', description: 'Values: any valid hash' },
+            ]),
+            fields: {
+                id: {
+                    label: 'Block ID',
+                    name: 'gutenberg-block-id',
+                },
+            },
+        },
     }
 
     var REPEATER_FIELD_KEYS = Object.keys(repeaterFields);
