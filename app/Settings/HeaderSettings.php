@@ -95,8 +95,8 @@ class HeaderSettings extends BaseSettings {
 		if ($post) {
 			$post_id = $post->ID;
 			TypesenseClient::get_instance()
-                ->site_info()
-                ->upsert( array(
+				->site_info()
+				->upsert( array(
 					'id' => (string) $post_id,
 					'name' => 'site-header',
 					'value' => get_post_field( 'post_content', $post_id ),
