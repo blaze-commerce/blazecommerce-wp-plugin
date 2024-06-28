@@ -3,6 +3,7 @@
 namespace BlazeWooless\Extensions;
 
 use BlazeWooless\Settings\RegionalSettings;
+use BlazeWooless\Woocommerce;
 
 class WoocommerceAeliaCurrencySwitcher {
 	private static $instance = null;
@@ -21,21 +22,13 @@ class WoocommerceAeliaCurrencySwitcher {
 			add_filter( 'blaze_wooless_cross_sell_data_for_typesense', array( $this, 'add_multicurrency_prices' ), 10, 2 );
 			add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_multicurrency_site_info' ), 10, 1 );
 
-			// add_filter('wooless_product_price', array( $this, 'wooless_product_regular_price'), 10, 2);
-			// add_filter('wooless_product_regular_price', array( $this, 'wooless_product_regular_price'), 10, 2);
-			// add_filter('wooless_product_sale_price', array( $this, 'wooless_product_sale_price'), 10, 2);
+			add_filter( 'blaze_commerce_variation_data', array( $this, 'variation_multicurrency_prices' ), 10, 2 );
 
-            // add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
-            // add_filter( 'graphql_woocommerce_price', array( $this, 'graphql_woocommerce_price' ), 10, 5 );
-			// add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 99999, 9 );
-
-            add_filter( 'blaze_commerce_variation_data', array( $this, 'variation_multicurrency_prices' ), 10, 2 );
-
-            add_action( 'wp_footer', array($this, 'add_currency_switcher_after_country_field'), 50 );
-        }
+			add_action( 'wp_footer', array( $this, 'add_currency_switcher_after_country_field' ), 50 );
+		}
 
 		add_filter( 'graphql_RootQuery_fields', array( $this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
-    }
+	}
 
 	public function add_multicurrency_prices( $product_data, $product_id ) {
 		$available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
@@ -59,26 +52,30 @@ class WoocommerceAeliaCurrencySwitcher {
 					$product           = wc_get_product( $product_id );
 					$converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
 					$converted_prices  = array(
-						'regular_price' => $converted_product->get_regular_price(),
-						'sale_price' => $converted_product->get_sale_price(),
+						'regular_price' => Woocommerce::format_price( $converted_product->get_regular_price() ),
+						'sale_price' => Woocommerce::format_price( $converted_product->get_sale_price() ),
 					);
 				}
 
 				if ( ! isset( $product_data['regularPrice'][ $currency ] ) ) {
-					$product_data['regularPrice'][ $currency ] = $converted_prices['regular_price'];
+					$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $converted_prices['regular_price'] );
 				}
 
 				if ( ! isset( $product_data['salePrice'][ $currency ] ) ) {
-					$product_data['salePrice'][ $currency ] = $converted_prices['sale_price'];
+					$product_data['salePrice'][ $currency ] = Woocommerce::format_price( $converted_prices['sale_price'] );
 				}
 
-				$_sale_price                        = $product_data['salePrice'][ $currency ];
-				$_regular_price                     = $product_data['regularPrice'][ $currency ];
-				$product_data['price'][ $currency ] = ! empty( $_sale_price ) ? $_sale_price : $_regular_price;
+				$_sale_price    = $product_data['salePrice'][ $currency ];
+				$_regular_price = $product_data['regularPrice'][ $currency ];
 
-				$product_data['regularPrice'][ $currency ] = floatval( number_format( (float) $product_data['regularPrice'][ $currency ], 2 ) );
-				$product_data['salePrice'][ $currency ]    = floatval( number_format( (float) $product_data['salePrice'][ $currency ], 2 ) );
-				$product_data['price'][ $currency ]        = floatval( number_format( (float) $product_data['price'][ $currency ], 2 ) );
+				if ( ! is_array( $product_data['price'] ) ) {
+					$product_data['price'] = [];
+				}
+				$product_data['price'][ $currency ] = Woocommerce::format_price( ! empty( $_sale_price ) ? $_sale_price : $_regular_price );
+
+				$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $product_data['regularPrice'][ $currency ] );
+				$product_data['salePrice'][ $currency ]    = Woocommerce::format_price( $product_data['salePrice'][ $currency ] );
+				$product_data['price'][ $currency ]        = Woocommerce::format_price( $product_data['price'][ $currency ] );
 
 				unset( $converted_prices, $product, $converted_product, $_sale_price, $_regular_price );
 			}
@@ -103,7 +100,7 @@ class WoocommerceAeliaCurrencySwitcher {
 			}
 
 
-			$price[ $currency ] = floatval( number_format( (float) $price_value, 2 ) );
+			$price[ $currency ] = Woocommerce::format_price( $price_value );
 		}
 
 		return $price;
@@ -123,7 +120,7 @@ class WoocommerceAeliaCurrencySwitcher {
 				$price_value = $sale_prices[ $currency ];
 			}
 
-			$price[ $currency ] = floatval( number_format( (float) $price_value, 2 ) );
+			$price[ $currency ] = Woocommerce::format_price( $price_value );
 		}
 
 		return $price;
@@ -242,41 +239,41 @@ class WoocommerceAeliaCurrencySwitcher {
 	}
 
 	function add_currency_switcher_after_country_field() {
-        if (\is_checkout() && !\is_wc_endpoint_url('order-received')) {
-            $currency_switcher_options = get_option( 'wc_aelia_currency_switcher' );
-            $enabled_currencies = $currency_switcher_options['enabled_currencies'];
-            $site_currency = \get_woocommerce_currency();
+		if ( \is_checkout() && ! \is_wc_endpoint_url( 'order-received' ) ) {
+			$currency_switcher_options = get_option( 'wc_aelia_currency_switcher' );
+			$enabled_currencies        = $currency_switcher_options['enabled_currencies'];
+			$site_currency             = \get_woocommerce_currency();
 
-            $opposing_currency = reset(array_diff($enabled_currencies, array( $site_currency )));
+			$opposing_currency = reset( array_diff( $enabled_currencies, array( $site_currency ) ) );
 
-            $switch_to_currency_text = apply_filters( 'blaze_commerce_checkout_switch_currency_text', 'Switch to ' . $opposing_currency, $opposing_currency, $site_currency );
-            $switch_currency_template = '<p class="checkout-switch-currency" data-currency="%1$s"><a style="cursor: pointer;">' . esc_html__($switch_to_currency_text) . '</a></p>';
-            ?>
-                <script type="text/javascript">
-                    (function($) {
-                        $(document).ready(function() {
-                            var currency_switch = $('<?php echo sprintf($switch_currency_template, $opposing_currency) ?>');
-                            currency_switch.on('click', function(e) {
-                                e.preventDefault();
+			$switch_to_currency_text  = apply_filters( 'blaze_commerce_checkout_switch_currency_text', 'Switch to ' . $opposing_currency, $opposing_currency, $site_currency );
+			$switch_currency_template = '<p class="checkout-switch-currency" data-currency="%1$s"><a style="cursor: pointer;">' . esc_html__( $switch_to_currency_text ) . '</a></p>';
+			?>
+			<script type="text/javascript">
+				(function ($) {
+					$(document).ready(function () {
+						var currency_switch = $('<?php echo sprintf( $switch_currency_template, $opposing_currency ) ?>');
+						currency_switch.on('click', function (e) {
+							e.preventDefault();
 
-                                var currency = $(this).data('currency');
-                                document.cookie = "aelia_cs_selected_currency=" + currency + "; path=/; domain=<?php echo COOKIE_DOMAIN ?>";
-                                window.location.reload();
-                            });
-                            $('#billing_country').after(currency_switch)
-                            $('#shipping_country').after(currency_switch.clone(true, true))
-                        });
-                    })(jQuery);
-                </script>
-            <?php
-        }
-    }
+							var currency = $(this).data('currency');
+							document.cookie = "aelia_cs_selected_currency=" + currency + "; path=/; domain=<?php echo COOKIE_DOMAIN ?>";
+							window.location.reload();
+						});
+						$('#billing_country').after(currency_switch)
+						$('#shipping_country').after(currency_switch.clone(true, true))
+					});
+				})(jQuery);
+			</script>
+			<?php
+		}
+	}
 
 	public function giftcard_multicurrency_prices( $product_data, $product_id, $available_currencies ) {
 		if ( ! empty( $available_currencies ) ) {
 			foreach ( $available_currencies as $currency => $value ) {
-				$product_data['regularPrice'][ $currency ] = floatval( number_format( (float) $product_data['variations'][0]['regularPrice'][ $currency ], 2 ) );
-				$product_data['price'][ $currency ]        = floatval( number_format( (float) $product_data['variations'][0]['price'][ $currency ], 2 ) );
+				$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $product_data['variations'][0]['regularPrice'][ $currency ] );
+				$product_data['price'][ $currency ]        = Woocommerce::format_price( $product_data['variations'][0]['price'][ $currency ] );
 			}
 		}
 
@@ -318,9 +315,9 @@ class WoocommerceAeliaCurrencySwitcher {
 					$variations_data['price'][ $currency ] = ! empty( $_variation_sale_price ) ? $_variation_sale_price : $_variation_regular_price;
 				}
 
-				$variations_data['regularPrice'][ $currency ] = floatval( number_format( (float) $variations_data['regularPrice'][ $currency ], 2 ) );
-				$variations_data['salePrice'][ $currency ]    = floatval( number_format( (float) $variations_data['salePrice'][ $currency ], 2 ) );
-				$variations_data['price'][ $currency ]        = floatval( number_format( (float) $variations_data['price'][ $currency ], 2 ) );
+				$variations_data['regularPrice'][ $currency ] = Woocommerce::format_price( $variations_data['regularPrice'][ $currency ] );
+				$variations_data['salePrice'][ $currency ]    = Woocommerce::format_price( $variations_data['salePrice'][ $currency ] );
+				$variations_data['price'][ $currency ]        = Woocommerce::format_price( $variations_data['price'][ $currency ] );
 
 				unset( $converted_variation_prices, $variation_obj, $converted_variation, $_variation_sale_price, $_variation_regular_price );
 			}
