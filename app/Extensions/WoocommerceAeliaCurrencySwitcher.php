@@ -43,6 +43,8 @@ class WoocommerceAeliaCurrencySwitcher {
 		$sale_prices               = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_sale_prices( $product_id );
 		$product_data["salePrice"] = $sale_prices;
 
+		$product_data['price'] = array();
+
 		if ( ! empty( $available_currencies ) ) {
 			foreach ( $available_currencies as $currency => $value ) {
 				$converted_prices = array();

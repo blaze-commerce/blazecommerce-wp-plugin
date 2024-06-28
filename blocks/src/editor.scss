@@ -1,0 +1,10 @@
+/**
+ * The following styles get applied inside the editor only.
+ */
+.wp-block-maxmegamenu-maxmegamenu:not(.is-selected) * {
+    pointer-events: none !important;
+}
+.max-mega-menu > li.mega-menu-item > a.mega-menu-link {
+    font-family: var(--wp--preset--font-family--system-font) !important;
+    font-weight: normal !important;
+}
