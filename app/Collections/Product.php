@@ -270,8 +270,11 @@ class Product extends BaseCollection {
 
 	public function get_thumnail( $product ) {
 		// // Get the thumbnail
-		$product_id         = $product->get_id();
-		$thumbnail_id       = get_post_thumbnail_id( $product_id );
+		$product_id   = $product->get_id();
+		$thumbnail_id = get_post_thumbnail_id( $product_id );
+		if ( $product->is_type( 'variation' ) && empty( $thumbnail_id ) ) {
+			$thumbnail_id = get_post_thumbnail_id( $product->get_parent_id() );
+		}
 		$attachment         = get_post( $thumbnail_id );
 		$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
 		$thumbnail_src      = get_the_post_thumbnail_url( $product_id );
