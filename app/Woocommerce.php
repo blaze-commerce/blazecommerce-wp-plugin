@@ -166,4 +166,11 @@ class Woocommerce {
 
 		}
 	}
+
+	/**
+	 * Use for making sure that we are setting a valid float type on prices so that typesense will accept it
+	 */
+	public static function format_price( $price ) {
+		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
+	}
 }

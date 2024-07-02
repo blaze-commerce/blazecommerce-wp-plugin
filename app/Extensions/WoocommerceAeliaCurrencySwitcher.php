@@ -29,19 +29,6 @@ class WoocommerceAeliaCurrencySwitcher {
 
 		add_filter( 'graphql_RootQuery_fields', array( $this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
 	}
-	/**
-	 * Compare price data from aelia and default prices
-	 */
-	protected function compare_price_data( array $from_aelia, array $default_prices ): array {
-
-		array_walk( $from_aelia, function (&$value, $currency) use ($default_prices) {
-			if ( $value === 0 || is_null( $value ) || empty( $value ) ) {
-				$value = $default_prices[ $currency ];
-			}
-		} );
-
-		return $from_aelia;
-	}
 
 	public function add_multicurrency_prices( $product_data, $product_id ) {
 
@@ -67,21 +54,21 @@ class WoocommerceAeliaCurrencySwitcher {
 					$product = wc_get_product( $product_id );
 					$converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
 					$converted_prices = array(
-						'regular_price' => $converted_product->get_regular_price(),
-						'sale_price' => $converted_product->get_sale_price(),
+						'regular_price' => Woocommerce::format_price( $converted_product->get_regular_price() ),
+						'sale_price' => Woocommerce::format_price( $converted_product->get_sale_price() ),
 					);
 				}
 
 				if ( ! isset( $product_data['regularPrice'][ $currency ] ) ) {
-					$product_data['regularPrice'][ $currency ] = $converted_prices['regular_price'];
+					$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $converted_prices['regular_price'] );
 				}
 
 				if ( ! isset( $product_data['salePrice'][ $currency ] ) ) {
-					$product_data['salePrice'][ $currency ] = $converted_prices['sale_price'];
+					$product_data['salePrice'][ $currency ] = Woocommerce::format_price( $converted_prices['sale_price'] );
 				}
 
-				$_sale_price = Woocommerce::format_price( $product_data['salePrice'][ $currency ] );
-				$_regular_price = Woocommerce::format_price( $product_data['regularPrice'][ $currency ] );
+				$_sale_price = $product_data['salePrice'][ $currency ];
+				$_regular_price = $product_data['regularPrice'][ $currency ];
 
 				if ( ! is_array( $product_data['price'] ) ) {
 					$product_data['price'] = [];
