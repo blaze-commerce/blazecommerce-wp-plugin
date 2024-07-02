@@ -15,7 +15,7 @@ class RankMath {
 
 	public function __construct() {
 		if ( \is_plugin_active( 'seo-by-rank-math/rank-math.php' ) ) {
-			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_seo_to_product_schema' ), 10, 2 );
+			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_seo_to_product_schema' ), 10, 3 );
 			add_filter( 'blaze_wooless_page_data_for_typesense', array( $this, 'add_seo_to_page_schema' ), 10, 2 );
 			add_filter( 'blaze_wooless_additional_homepage_seo_info', array( $this, 'homepage_seo_settings' ), 10, 1 );
 			add_filter( 'blaze_commerce_taxonomy_data', array( $this, 'add_taxonomy_head' ), 10, 2 );
@@ -33,8 +33,11 @@ class RankMath {
 
 
 
-	public function add_seo_to_product_schema( $product_data, $product_id ) {
-		$product_data['seoFullHead'] = $this->get_full_head( get_permalink( $product_id ) );
+	public function add_seo_to_product_schema( $product_data, $product_id, $product ) {
+		$product_data['seoFullHead'] = '';
+		if ( ! $product->is_type( 'variation' ) ) {
+			$product_data['seoFullHead'] = $this->get_full_head( get_permalink( $product_id ) );
+		}
 		return $product_data;
 
 	}
