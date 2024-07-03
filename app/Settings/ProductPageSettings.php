@@ -145,6 +145,15 @@ class ProductPageSettings extends BaseSettings {
 
 		$site_info->upsert(
 			array(
+				'id' => '10089553',
+				'name' => 'description_after_content',
+				'value' => $options['description_after_content'],
+				'updated_at' => time(),
+			)
+		);
+
+		$site_info->upsert(
+			array(
 				'id' => '1000001',
 				'name' => 'privacy_policy_content',
 				'value' => $options['privacy_policy'],
