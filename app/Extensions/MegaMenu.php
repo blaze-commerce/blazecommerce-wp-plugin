@@ -73,6 +73,7 @@ class MegaMenu {
                             $image = wp_get_attachment_url( $thumbnail_id );
                             $image_fallback = apply_filters( 'blaze_wooless_menu_item_data_fallback_image', false );
                             $item['image'] = $image ? $image : $image_fallback;
+                            $item['id'] = $menu_item_object->ID;
                         } else if ( 'widget' === $item['type'] ) {
                             $item['content'] = $this->get_widget_content( $item['id'] );
                         }
