@@ -42,7 +42,8 @@ class DraggableContent {
 		<input type="hidden" id="base-country" value='<?php echo json_encode( $base_country ) ?>' />
 		<select name="region_selector" id="region_selector">
 			<?php foreach ( $regions as $country_code ) : ?>
-				<option value="<?php echo $country_code ?>">
+				<?php if ( $country_code != $base_country ) continue; ?>
+				<option value="<?php echo $country_code ?>" <?php echo $base_country == $country_code ? 'selected' : '' ?>>
 					<?php echo $countries[ $country_code ] ?>
 				</option>
 			<?php endforeach; ?>
