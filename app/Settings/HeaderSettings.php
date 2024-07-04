@@ -32,10 +32,13 @@ class HeaderSettings extends BaseSettings {
 			'name' => $this->setting_page_name,
 		);
 		$the_query = new \WP_Query( $args );
-		
-		if (!$the_query->have_posts()) {
+
+		if ( ! $the_query->have_posts() ) {
 			return null;
 		}
+
+		wp_reset_postdata();
+		wp_reset_query();
 
 		return $the_query->posts[0];
 	}
@@ -44,14 +47,14 @@ class HeaderSettings extends BaseSettings {
 
 		$post = $this->get_header_post();
 
-		if (!$post) {
+		if ( ! $post ) {
 			$new_post = array(
 				'post_title' => 'Header',
 				'post_type' => 'blaze_settings',
 				'post_name' => $this->setting_page_name,
-				'post_category' => array(0)
+				'post_category' => array( 0 )
 			);
-			$post_id = wp_insert_post($new_post);
+			$post_id = wp_insert_post( $new_post );
 		} else {
 			$post_id = $post->ID;
 		}
@@ -64,10 +67,9 @@ class HeaderSettings extends BaseSettings {
 		echo '<p>Select which areas of content you wish to display.</p>';
 	}
 
-	public function register_hooks()
-	{
+	public function register_hooks() {
 		add_filter( 'set_blaze_setting_data', array( $this, 'set_blaze_setting_data' ), 10, 2 );
-		remove_action( 'generate_header', 'generate_construct_header' );
+		// remove_action( 'generate_header', 'generate_construct_header' );
 		add_action( 'generate_header', array( $this, 'render_wp_header' ), 10 );
 		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'save_on_site_info_sync' ), 10 );
 	}
@@ -83,16 +85,29 @@ class HeaderSettings extends BaseSettings {
 	}
 
 	public function render_wp_header() {
+
+		global $post;
+
+		$temp_post = $post;
+
 		$post = $this->get_header_post();
+
+		setup_postdata( $post );
 
 		$post_content = $post->post_content;
 
-		echo apply_filters('the_content', $post_content);
+		$content = apply_filters( 'the_content', $post_content );
+
+		$post = $temp_post;
+
+		wp_reset_postdata();
+
+		echo $content;
 	}
 
 	public function save_on_site_info_sync() {
 		$post = $this->get_header_post();
-		if ($post) {
+		if ( $post ) {
 			$post_id = $post->ID;
 			TypesenseClient::get_instance()
 				->site_info()
