@@ -34,7 +34,7 @@ class MegaMenu {
     }
 
     public function should_generate_menu_item_data( $should_generate, $item ) {
-        if (0 === $item->depth && $item->megamenu_settings && 'grid' === $item->megamenu_settings['type'] && count( $item->megamenu_settings['grid'] ) > 0) {
+        if (0 === $item->depth && $item->megamenu_settings && 'grid' === $item->megamenu_settings['type'] && ($item->megamenu_settings['grid'] && count( $item->megamenu_settings['grid'] ) > 0)) {
             return false;
         }
 
@@ -73,6 +73,7 @@ class MegaMenu {
                             $image = wp_get_attachment_url( $thumbnail_id );
                             $image_fallback = apply_filters( 'blaze_wooless_menu_item_data_fallback_image', false );
                             $item['image'] = $image ? $image : $image_fallback;
+                            $item['id'] = $menu_item_object->ID;
                         } else if ( 'widget' === $item['type'] ) {
                             $item['content'] = $this->get_widget_content( $item['id'] );
                         }

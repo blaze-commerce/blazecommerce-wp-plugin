@@ -95,6 +95,7 @@ class Menu extends BaseCollection {
 							'title' => $item->title,
 							'url' => $item->url,
 						);
+						$menu_item_data[ $item->menu_item_parent ]['parentId'] = $item->menu_item_parent;
 					}
 				}
 
