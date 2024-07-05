@@ -49,7 +49,7 @@ class Product extends BaseCollection {
 		);
 
 		$currencies = Woocommerce::get_currencies();
-		foreach ( $currencies as $currency => $label ) {
+		foreach ( $currencies as $currency ) {
 			$price[] = array( 'name' => 'price.' . $currency, 'type' => 'float', 'optional' => true, 'facet' => true );
 			$price[] = array( 'name' => 'regularPrice.' . $currency, 'type' => 'float', 'optional' => true );
 			$price[] = array( 'name' => 'salePrice.' . $currency, 'type' => 'float', 'optional' => true );
