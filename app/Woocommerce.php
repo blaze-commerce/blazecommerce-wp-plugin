@@ -175,17 +175,9 @@ class Woocommerce {
 	}
 
 	public static function get_currencies() {
-
-		$currencies    = array();
 		$base_currency = get_woocommerce_currency();
-		if ( ! is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
-			$base_currency = get_woocommerce_currency();
-			return apply_filters( 'blaze_wooless_currencies', array(
-				$base_currency => ''
-			) );
-		}
-
-		$currencies = get_option( 'wc_aelia_currency_switcher' )['enabled_currencies'];
-		return apply_filters( 'blaze_wooless_currencies', $currencies );
+		return apply_filters( 'blaze_wooless_currencies', array(
+			$base_currency => ''
+		) );
 	}
 }
