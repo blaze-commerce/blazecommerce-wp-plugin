@@ -2,6 +2,8 @@
 
 namespace BlazeWooless\Collections;
 
+use BlazeWooless\Woocommerce;
+
 class Product extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'product';
@@ -39,6 +41,23 @@ class Product extends BaseCollection {
 
 	}
 
+	public function get_price_schema() {
+		$price = array(
+			array( 'name' => 'price', 'type' => 'object', 'facet' => true ),
+			array( 'name' => 'regularPrice', 'type' => 'object' ),
+			array( 'name' => 'salePrice', 'type' => 'object' ),
+		);
+
+		$currencies = Woocommerce::get_currencies();
+		foreach ( $currencies as $currency ) {
+			$price[] = array( 'name' => 'price.' . $currency, 'type' => 'float', 'optional' => true, 'facet' => true );
+			$price[] = array( 'name' => 'regularPrice.' . $currency, 'type' => 'float', 'optional' => true );
+			$price[] = array( 'name' => 'salePrice.' . $currency, 'type' => 'float', 'optional' => true );
+		}
+
+		return $price;
+	}
+
 	public function get_fields() {
 		$fields = array(
 			array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
@@ -51,27 +70,6 @@ class Product extends BaseCollection {
 			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
 			array( 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ),
 			array( 'name' => 'sku', 'type' => 'string' ),
-			array( 'name' => 'price', 'type' => 'object', 'facet' => true ),
-			array( 'name' => 'price.AUD', 'type' => 'float', 'optional' => true, 'facet' => true ),
-			array( 'name' => 'price.NZD', 'type' => 'float', 'optional' => true, 'facet' => true ),
-			array( 'name' => 'price.USD', 'type' => 'float', 'optional' => true, 'facet' => true ),
-			array( 'name' => 'price.GBP', 'type' => 'float', 'optional' => true, 'facet' => true ),
-			array( 'name' => 'price.CAD', 'type' => 'float', 'optional' => true, 'facet' => true ),
-			array( 'name' => 'price.EUR', 'type' => 'float', 'optional' => true, 'facet' => true ),
-			array( 'name' => 'regularPrice', 'type' => 'object' ),
-			array( 'name' => 'regularPrice.AUD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'regularPrice.NZD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'regularPrice.USD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'regularPrice.GBP', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'regularPrice.CAD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'regularPrice.EUR', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'salePrice', 'type' => 'object' ),
-			array( 'name' => 'salePrice.AUD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'salePrice.NZD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'salePrice.USD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'salePrice.GBP', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'salePrice.CAD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'salePrice.EUR', 'type' => 'float', 'optional' => true ),
 			array( 'name' => 'onSale', 'type' => 'bool', 'facet' => true ),
 			array( 'name' => 'stockQuantity', 'type' => 'int64' ),
 			array( 'name' => 'stockStatus', 'type' => 'string', 'sort' => true, 'facet' => true ),
@@ -132,6 +130,7 @@ class Product extends BaseCollection {
 
 
 		$fields = array_merge_recursive( $fields, $recommendation_schema );
+		$fields = array_merge_recursive( $fields, $this->get_price_schema() );
 		return apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
 	}
 
@@ -400,6 +399,29 @@ class Product extends BaseCollection {
 		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
 	}
 
+	public function sync( $product ) {
+		$document_data = $this->generate_typesense_data( $product );
+		try {
+			$response = $this->upsert( $document_data );
+			do_action( 'ts_product_update', $product->get_id(), $product );
+			return array(
+				'data_sent' => $document_data,
+				'response' => $response
+			);
+		} catch (\Exception $e) {
+			$logger  = wc_get_logger();
+			$context = array( 'source' => 'wooless-product-update' );
+
+			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
+			error_log( "Error updating product in Typesense: " . $e->getMessage() );
+
+			return array(
+				'error' => $e->getMessage(),
+				'data_sent' => $document_data
+			);
+		}
+	}
+
 	public function get_taxonomies( $product ) {
 		$taxonomies_data = [];
 		$taxonomies      = get_object_taxonomies( 'product' );
@@ -441,7 +463,8 @@ class Product extends BaseCollection {
 						'src' => wp_get_attachment_url( $term_thumbnail_id ),
 					);
 
-					$taxonomies_data[] = apply_filters( 'add_taxonomy_product_fields_data', array(
+
+					$taxonomies_data[] = apply_filters( 'blaze_wooless_product_taxonomy_item', array(
 						'name' => $term_name,
 						'url' => get_term_link( $product_term->term_id ),
 						'type' => $taxonomy,
