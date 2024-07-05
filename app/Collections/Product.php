@@ -441,7 +441,7 @@ class Product extends BaseCollection {
 						'src' => wp_get_attachment_url( $term_thumbnail_id ),
 					);
 
-					$taxonomies_data[] = array(
+					$taxonomies_data[] = apply_filters( 'add_taxonomy_fields_data', array(
 						'name' => $term_name,
 						'url' => get_term_link( $product_term->term_id ),
 						'type' => $taxonomy,
@@ -451,7 +451,7 @@ class Product extends BaseCollection {
 						'parentTerm' => $term_parent,
 						'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
 						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
-					);
+					), $product_term );
 
 					unset( $parentTerm, $term_name, $term_slug, $term_parent, $termOrder );
 				}
