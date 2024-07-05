@@ -19,7 +19,6 @@ class WoocommerceVariationSwatches {
 
 			add_filter( 'blaze_commerce_taxonomy_fields', array( $this, 'add_taxonomy_fields' ) );
 			add_filter( 'blaze_commerce_taxonomy_data', array( $this, 'add_taxonomy_fields_data' ), 10, 2 );
-
 			add_filter( 'blaze_wooless_product_taxonomy_item', array( $this, 'modify_product_taxonomy_item' ) );
 		}
 	}
@@ -69,6 +68,11 @@ class WoocommerceVariationSwatches {
 		if ( ! empty( $attribute_taxonomy->attribute_type ) ) {
 			$document['componentType']  = $attribute_taxonomy->attribute_type;
 			$document['componentValue'] = $this->get_option_value( $attribute_taxonomy->attribute_type, $term->term_id, (array) $term, );
+
+			if ( ! empty( $document['filters'] ) ) {
+				$document['filters'] .= '|' . $document['componentType'] . '|' . $document['componentValue'];
+			}
+
 		}
 		return $document;
 	}

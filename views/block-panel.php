@@ -81,5 +81,8 @@
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="otherProducts">
 			<div class="content">Other Products</div>
 		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="gutenbergBlocks">
+			<div class="content">Gutenberg Block</div>
+		</div>
 	</div>
 </div>
