@@ -25,6 +25,9 @@
 		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="customerReviews">
 			<div class="content">Customer Reviews</div>
 		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="customerTestimonials">
+			<div class="content">Customer Testimonials</div>
+		</div>
 		<div class="blaze-wooless-draggable-block" data-block_type="single" data-block_id="videoBanner">
 			<div class="content">YouTube Banner</div>
 		</div>
