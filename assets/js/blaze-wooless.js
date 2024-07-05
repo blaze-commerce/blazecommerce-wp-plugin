@@ -299,6 +299,35 @@
                 },
             }
         },
+        customerTestimonials: {
+            config: commonConfig,
+            fields: {
+                author: {
+                    label: 'Author',
+                    name: 'customer-testimonials-author',
+                },
+                authorClasses: {
+                    label: 'Author Classes',
+                    name: 'customer-testimonials-author-classes',
+                },
+                authorImage: {
+                    label: 'Author Image',
+                    name: 'customer-testimonials-author-image',
+                },
+                authorImageClasses: {
+                    label: 'Author Image Classes',
+                    name: 'customer-testimonials-author-image-classes',
+                },
+                content: {
+                    label: 'Content',
+                    name: 'customer-testimonials-content',
+                },
+                contentClasses: {
+                    label: 'Content Classes',
+                    name: 'customer-testimonials-content-classes',
+                },
+            },
+        },
     }
 
     var dynamicConfigFields = {
