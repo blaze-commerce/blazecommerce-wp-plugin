@@ -173,4 +173,11 @@ class Woocommerce {
 	public static function format_price( $price ) {
 		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
 	}
+
+	public static function get_currencies() {
+		$base_currency = get_woocommerce_currency();
+		return apply_filters( 'blaze_wooless_currencies', array(
+			$base_currency => ''
+		) );
+	}
 }
