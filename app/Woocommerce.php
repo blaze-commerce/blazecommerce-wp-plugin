@@ -185,7 +185,7 @@ class Woocommerce {
 			) );
 		}
 
-		$currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
+		$currencies = get_option( 'wc_aelia_currency_switcher' )['enabled_currencies'];
 		return apply_filters( 'blaze_wooless_currencies', $currencies );
 	}
 }
