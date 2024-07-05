@@ -59,6 +59,11 @@ class WoocommerceVariationSwatches {
 		if ( ! empty( $attribute_taxonomy->attribute_type ) ) {
 			$document['componentType']  = $attribute_taxonomy->attribute_type;
 			$document['componentValue'] = $this->get_option_value( $attribute_taxonomy->attribute_type, $term->term_id, (array) $term, );
+
+			if ( ! empty( $document['filters'] ) ) {
+				$document['filters'] .= '|'. $document['componentType'] . '|'. $document['componentValue']
+			}
+
 		}
 		return $document;
 	}
