@@ -400,11 +400,9 @@ class Product extends BaseCollection {
 	}
 
 	public function sync( $product ) {
-
-		$ts_product    = Product::get_instance();
-		$document_data = $ts_product->generate_typesense_data( $product );
+		$document_data = $this->generate_typesense_data( $product );
 		try {
-			$response = $ts_product->upsert( $document_data );
+			$response = $this->upsert( $document_data );
 			do_action( 'ts_product_update', $product->get_id(), $product );
 			return array(
 				'data_sent' => $document_data,
