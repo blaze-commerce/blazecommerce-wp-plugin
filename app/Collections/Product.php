@@ -441,7 +441,7 @@ class Product extends BaseCollection {
 						'src' => wp_get_attachment_url( $term_thumbnail_id ),
 					);
 
-					$taxonomies_data[] = apply_filters( 'add_taxonomy_fields_data', array(
+					$taxonomies_data[] = apply_filters( 'add_taxonomy_product_fields_data', array(
 						'name' => $term_name,
 						'url' => get_term_link( $product_term->term_id ),
 						'type' => $taxonomy,
