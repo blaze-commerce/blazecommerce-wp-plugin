@@ -32,13 +32,28 @@ class WoocommerceAeliaCurrencySwitcher {
 		add_filter( 'graphql_RootQuery_fields', array( $this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
 	}
 
+	public function get_base_currency() {
+		return get_option( 'wc_aelia_currency_switcher' )['ipgeolocation_default_currency'];
+	}
+
 	public function available_currencies( $currencies = null ) {
 		return get_option( 'wc_aelia_currency_switcher' )['enabled_currencies'];
+	}
+
+	public function calculate_converted_price( $price, $currency ) {
+		$exchange_rates = get_option( 'wc_aelia_currency_switcher' )['exchange_rates'];
+		if ( ! isset( $exchange_rates[$currency] ) || ! $price ) {
+			return $price;
+		}
+		$currency_rate = $exchange_rates[$currency]['rate'];
+
+		return $price * $currency_rate;
 	}
 
 	public function add_multicurrency_prices( $product_data, $product_id ) {
 
 		$available_currencies = $this->available_currencies();
+		$base_currency = $this->get_base_currency();
 
 		if ( $product_data['productType'] === 'pw-gift-card' ) {
 			return $this->giftcard_multicurrency_prices( $product_data, $product_id, $available_currencies );
@@ -58,10 +73,9 @@ class WoocommerceAeliaCurrencySwitcher {
 				$converted_prices = array();
 				if ( ! isset( $product_data['regularPrice'][ $currency ] ) || ! isset( $product_data['salePrice'][ $currency ] ) ) {
 					$product           = wc_get_product( $product_id );
-					$converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
 					$converted_prices  = array(
-						'regular_price' => Woocommerce::format_price( $converted_product->get_regular_price() ),
-						'sale_price' => Woocommerce::format_price( $converted_product->get_sale_price() ),
+						'regular_price' => Woocommerce::format_price( $this->calculate_converted_price( $regular_prices[$base_currency], $currency ) ),
+						'sale_price' => Woocommerce::format_price( $this->calculate_converted_price( $sale_prices[$base_currency], $currency ) ),
 					);
 				}
 
@@ -85,7 +99,7 @@ class WoocommerceAeliaCurrencySwitcher {
 				$product_data['salePrice'][ $currency ]    = Woocommerce::format_price( $product_data['salePrice'][ $currency ] );
 				$product_data['price'][ $currency ]        = Woocommerce::format_price( $product_data['price'][ $currency ] );
 
-				unset( $converted_prices, $product, $converted_product, $_sale_price, $_regular_price );
+				unset( $converted_prices, $product, $_sale_price, $_regular_price );
 			}
 		}
 
@@ -94,15 +108,14 @@ class WoocommerceAeliaCurrencySwitcher {
 
 	public function wooless_product_regular_price( $price, $product_id ) {
 		$available_currencies = $this->available_currencies();
+		$base_currency = $this->get_base_currency();
 
 		$regular_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices( $product_id );
 
 
 		foreach ( $available_currencies as $currency ) {
 			if ( ! isset( $regular_prices[ $currency ] ) ) {
-				$product           = wc_get_product( $product_id );
-				$converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
-				$price_value       = $converted_product->get_regular_price();
+				$price_value = $this->calculate_converted_price( $regular_prices[$base_currency], $currency );
 			} else {
 				$price_value = $regular_prices[ $currency ];
 			}
@@ -116,14 +129,12 @@ class WoocommerceAeliaCurrencySwitcher {
 
 	public function wooless_product_sale_price( $price, $product_id ) {
 		$available_currencies = $this->available_currencies();
+		$base_currency = $this->get_base_currency();
 
 		$sale_prices = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_sale_prices( $product_id );
 		foreach ( $available_currencies as $currency ) {
 			if ( ! isset( $sale_prices[ $currency ] ) ) {
-				$product           = wc_get_product( $product_id );
-				$converted_product = \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->convert_simple_product_prices( $product, $currency );
-
-				$price_value = $converted_product->get_sale_price();
+				$price_value = $this->calculate_converted_price( $sale_prices[$base_currency], $currency );
 			} else {
 				$price_value = $sale_prices[ $currency ];
 			}
