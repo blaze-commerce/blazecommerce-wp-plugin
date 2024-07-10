@@ -2,62 +2,76 @@
 
 namespace BlazeWooless\Extensions;
 
-class YoastSEO
-{
-    private static $instance = null;
+class YoastSEO {
+	private static $instance = null;
 
-    public static function get_instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
+	public static function get_instance() {
+		if ( self::$instance === null ) {
+			self::$instance = new self();
+		}
 
-        return self::$instance;
-    }
+		return self::$instance;
+	}
 
-    public function __construct()
-    {
-        if ( \is_plugin_active( 'wordpress-seo/wp-seo.php' ) ) {
-            add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_seo_to_product_schema' ), 10, 2 );
-        }
-    }
+	public function __construct() {
+		if ( \is_plugin_active( 'wordpress-seo/wp-seo.php' ) ) {
+			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_seo_to_product_schema' ), 10, 2 );
+			add_filter( 'blaze_wooless_page_data_for_typesense', array( $this, 'add_seo_to_page_schema' ), 10, 2 );
+			add_filter( 'blaze_wooless_additional_homepage_seo_info', array( $this, 'homepage_seo_settings' ), 10, 1 );
+			add_filter( 'blaze_commerce_taxonomy_data', array( $this, 'add_taxonomy_head' ), 10, 2 );
 
-    public function add_seo_to_product_schema( $product_data, $product_id )
-    {
-        $product = wc_get_product( $product_id );
+		}
+	}
 
-        // Generate seo
-        $seo_head = '';
-        $prev_post = $GLOBALS['post'];
-        $GLOBALS['post'] = get_post($product->get_id());
+	public function add_seo_to_page_schema( $document, $page ) {
 
-        $wpseo_frontend = \WPSEO_Frontend::get_instance();
-        $title = $wpseo_frontend->get_content_title();
-        $metadesc = $wpseo_frontend->get_meta_description();
+		if ( ! empty( $page->ID ) ) {
+			$meta                    = \YoastSEO()->meta->for_post( $page->ID );
+			$document['seoFullHead'] = $this->get_full_head( $meta );
+		}
 
-        $canonical = \WPSEO_Meta::get_value('canonical');
-        $canonical = $canonical ? $canonical : get_permalink($product->get_id());
 
-        $seo_head = "<title>$title</title>";
-        $seo_head .= "<meta name='description' content='$metadesc' />";
-        $seo_head .= "<link rel='canonical' href='$canonical' />";
+		return $document;
+	}
 
-        $GLOBALS['post'] = $prev_post;
-        $product_data['seo'] = htmlspecialchars($seo_head);
+	public function add_seo_to_product_schema( $product_data, $product_id ) {
+		$meta                        = \YoastSEO()->meta->for_post( $product_id );
+		$product_data['seoFullHead'] = $this->get_full_head( $meta );
 
-        // Generate full seo head
-        $fullHead = '';
-        if ( $this->is_wp_graphql_yoast_seo_active() ) {
-            $meta = \YoastSEO()->meta->for_post($product_id);
-            $fullHead = wp_gql_seo_get_full_head($meta);
-        }
-        $product_data['seoFullHead'] = htmlspecialchars($fullHead);
+		return $product_data;
+	}
 
-        return $product_data;
-    }
+	public function get_full_head( $metaForPost ) {
+		if ( $metaForPost !== false ) {
+			$head = $metaForPost->get_head();
 
-    public function is_wp_graphql_yoast_seo_active()
-    {
-        return \is_plugin_active( 'wp-graphql-yoast-seo-master/wp-graphql-yoast-seo.php' ) || is_plugin_active( 'add-wpgraphql-seo/wp-graphql-yoast-seo.php' );
-    }
+			$final_head = is_string( $head ) ? $head : $head->html;
+			$final_head = htmlspecialchars( $final_head, ENT_QUOTES, 'UTF-8' );
+			return $final_head;
+		}
+
+		return '';
+	}
+
+	public function homepage_seo_settings( $additional_settings ) {
+		if ( $pageID = get_option( 'page_on_front' ) ) {
+			// Generate full seo head
+			$meta = \YoastSEO()->meta->for_post( $pageID );
+
+			if ( ! empty( $meta ) ) {
+				$additional_settings['homepage_seo_fullhead'] = $this->get_full_head( $meta );
+			}
+		}
+
+		return $additional_settings;
+	}
+
+	public function add_taxonomy_head( $document, $term ) {
+
+		$yoastMeta               = \YoastSEO()->meta->for_term( $term->term_id );
+		$termHead                = $yoastMeta && method_exists( $yoastMeta, 'get_head' ) ? $yoastMeta->get_head() : '';
+		$document['seoFullHead'] = is_string( $termHead ) ? $termHead : ( isset( $termHead->html ) ? $termHead->html : '' );
+
+		return $document;
+	}
 }

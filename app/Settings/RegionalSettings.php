@@ -5,74 +5,109 @@ namespace BlazeWooless\Settings;
 use BlazeWooless\TypesenseClient;
 
 class RegionalSettings extends BaseSettings {
-    private static $instance = null;
-    public $tab_key = 'regions';
-    public $page_label = 'Regional Settings';
+	private static $instance = null;
+	public $tab_key = 'regions';
+	public $page_label = 'Regional Settings';
 
-    public static function get_instance()
-    {
-        if (self::$instance === null) {
-            self::$instance = new self( 'wooless_regional_settings_options', 'wooless_regional_settings_section', 'Regional Settings' );
-        }
+	public static function get_instance() {
+		if ( self::$instance === null ) {
+			self::$instance = new self( 'wooless_regional_settings_options', 'wooless_regional_settings_section', 'Regional Settings' );
+		}
 
-        return self::$instance;
-    }
-    
-    public function settings_callback( $options )
-    {
-        if ( isset( $options['api_key'] ) ) {
-            $encoded_api_key = sanitize_text_field( $options['api_key'] );
-            $decoded_api_key = base64_decode( $encoded_api_key );
-            $trimmed_api_key = explode(':', $decoded_api_key);
-            $typesense_api_key = $trimmed_api_key[0];
-            $store_id = $trimmed_api_key[1];
-            
-            $connection = TypesenseClient::get_instance()->test_connection( $typesense_api_key, $store_id, $options['environment'] );
-            // var_dump($connection); exit;
-            if ( $connection['status'] === 'success' ) {
-                // TODO: remove private_key_master eventually
-                update_option('private_key_master', $options['api_key']);
-                update_option('typesense_api_key', $typesense_api_key);
-                update_option('store_id', $store_id);
-            } else {
-                add_settings_error(
-                    'blaze_settings_error',
-                    esc_attr( 'settings_updated' ),
-                    $connection['message'],
-                    'error'
-                );
-            }            
-        }
+		return self::$instance;
+	}
 
-        return $options;
-    }
+	public function register_hooks() {
+		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
+	}
 
-    public function settings()
-    {
-        return array(
-            'wooless_regional_settings_section' => array(
-                'label' => 'Regional Data',
-                'options' => array(
-                    array(
-                        'id' => 'regions',
-                        'label' => 'Regions',
-                        'type' => 'multiselect',
-                        'args' => array(
-                            'options' => \WC()->countries->get_countries(),
-                            'placeholder' => 'Select countries',
-                        ),
-                    ),
-                ),
-            ),
-        );
-    }
+	public function settings_callback( $options ) {
+		if ( isset( $options['api_key'] ) ) {
+			$encoded_api_key   = sanitize_text_field( $options['api_key'] );
+			$decoded_api_key   = base64_decode( $encoded_api_key );
+			$trimmed_api_key   = explode( ':', $decoded_api_key );
+			$typesense_api_key = $trimmed_api_key[0];
+			$store_id          = $trimmed_api_key[1];
 
-    public static function get_selected_regions()
-    {
-        return self::get_instance()->get_option( 'regions' );
-    }
+			$connection = TypesenseClient::get_instance()->test_connection( $typesense_api_key, $store_id, $options['environment'] );
+			// var_dump($connection); exit;
+			if ( $connection['status'] === 'success' ) {
+				// TODO: remove private_key_master eventually
+				update_option( 'private_key_master', $options['api_key'] );
+				update_option( 'typesense_api_key', $typesense_api_key );
+				update_option( 'store_id', $store_id );
+			} else {
+				add_settings_error(
+					'blaze_settings_error',
+					esc_attr( 'settings_updated' ),
+					$connection['message'],
+					'error'
+				);
+			}
+		}
 
-    public function section_callback() {
-        echo '<p>Select which areas of content you wish to display.</p>';
-    }
+		return $options;
+	}
+
+	public function settings() {
+		$fields = array(
+			array(
+				'id' => 'regions',
+				'label' => 'Regions',
+				'type' => 'multiselect',
+				'args' => array(
+					'options' => \WC()->countries->get_countries(),
+					'placeholder' => 'Select countries',
+				),
+			),
+		);
+
+		if ( !empty( $regions = $this->get_option( 'regions' ) ) ) {
+			$fields[] = array(
+				'id' => 'regions_header',
+				'label' => 'Map Regions',
+				'type' => 'heading',
+			);
+
+			foreach ( $regions as $region) {
+				$fields[] = array(
+					'id' => 'region_' . $region,
+					'label' => $region,
+					'type' => 'multiselect',
+					'args' => array(
+						'options' => \WC()->countries->get_countries(),
+						'placeholder' => 'Select countries',
+						'description' => 'Select countries you want to map to the front-end. If a country is not found it will use the next country.',
+					),
+				);
+			}
+		}
+
+		return $fields = array(
+			'wooless_regional_settings_section' => array(
+				'label' => 'Regional Data',
+				'options' => $fields,
+			),
+		);
+	}
+
+	public static function get_selected_regions() {
+		return self::get_instance()->get_option( 'regions' );
+	}
+
+	public function section_callback() {
+		echo '<p>Select which areas of content you wish to display.</p>';
+	}
+
+	public function register_additional_site_info( $additional_site_info ) {
+		$regions = $this->get_option( 'regions' );
+		if ( count( $additional_site_info ) > 0 ) {
+			$additional_site_info['regions'] = array();
+			foreach ( $regions as $region) {
+				$region_mappings = $this->get_option( 'region_' . $region );
+				$additional_site_info['regions'][$region] = $region_mappings ?? [];
+			}
+		}
+		return $additional_site_info;
+	}
 }
