@@ -72,7 +72,7 @@ class CategoryPageSettings extends BaseSettings {
 
 		$site_info->upsert(
 			array(
-				'id' => '10089553',
+				'id' => '10089554',
 				'name' => 'category_page_default_banner',
 				'value' => json_encode( array(
 					'url' => $options['default_banner_link']
@@ -83,7 +83,7 @@ class CategoryPageSettings extends BaseSettings {
 
 		$site_info->upsert(
 			array(
-				'id' => '10089554',
+				'id' => '10089555',
 				'name' => 'category_page_default_sort',
 				'value' => json_encode( array(
 					'sort_option' => $options['default_product_sorting']
