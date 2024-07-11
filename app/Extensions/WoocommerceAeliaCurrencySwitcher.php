@@ -24,7 +24,7 @@ class WoocommerceAeliaCurrencySwitcher {
 
 			add_filter( 'blaze_commerce_variation_data', array( $this, 'variation_multicurrency_prices' ), 10, 2 );
 
-			add_action( 'wp_footer', array( $this, 'add_currency_switcher_after_country_field' ), 50 );
+			// add_action( 'wp_footer', array( $this, 'add_currency_switcher_after_country_field' ), 50 );
 
 			add_filter( 'blaze_wooless_currencies', array( $this, 'available_currencies' ), 10, 1 );
 		}
