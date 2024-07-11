@@ -33,6 +33,8 @@ class Woocommerce {
 		add_action( 'ts_product_update', array( $this, 'update_typesense_variation' ), 10, 2 );
 		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
 
+		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'log_data' ), 999999999999, 3 );
+
 	}
 
 	public function append_cart_in_checkout_url( $checkout_url ) {
@@ -56,7 +58,7 @@ class Woocommerce {
 				'action' => 'update'
 			) );
 
-			$logger  = wc_get_logger();
+			$logger = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-menu-ordering' );
 			$logger->debug( 'TS Product import response : ' . print_r( $response, 1 ), $context );
 		}
@@ -101,7 +103,7 @@ class Woocommerce {
 			Product::get_instance()->upsert( $document_data );
 			do_action( 'ts_product_update', $product_id, $wc_product );
 		} catch (\Exception $e) {
-			$logger  = wc_get_logger();
+			$logger = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-update' );
 
 			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
@@ -113,7 +115,7 @@ class Woocommerce {
 
 		if ( $wc_product && $wc_product->is_type( 'variable' ) ) {
 			$variation_ids = $wc_product->get_children();
-			$event_time    = WC()->call_function( 'time' ) + 1;
+			$event_time = WC()->call_function( 'time' ) + 1;
 			as_schedule_single_action( $event_time, 'wooless_variation_update', array( $variation_ids ), 'blaze-wooless', true, 1 );
 
 		}
@@ -122,7 +124,7 @@ class Woocommerce {
 	public function variation_update( $variation_ids ) {
 		try {
 			$typsense_product = Product::get_instance();
-			$variations_data  = array();
+			$variations_data = array();
 			foreach ( $variation_ids as $variation_id ) {
 				$wc_variation = wc_get_product( $variation_id );
 
@@ -135,11 +137,11 @@ class Woocommerce {
 				'action' => 'upsert'
 			) );
 
-			$logger  = wc_get_logger();
+			$logger = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-success-import' );
 			$logger->debug( print_r( $import, 1 ), $context );
 		} catch (\Exception $e) {
-			$logger  = wc_get_logger();
+			$logger = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-import' );
 			$logger->debug( 'TS Variations Import Exception: ' . $e->getMessage(), $context );
 		}
@@ -179,5 +181,31 @@ class Woocommerce {
 		return apply_filters( 'blaze_wooless_currencies', array(
 			$base_currency => ''
 		) );
+	}
+
+	public function log_data( $product_data, $product_id, $product ) {
+
+		if ( $product->get_type() == 'variable' ) {
+
+			// get variations
+			$variations = $product->get_children();
+
+			foreach ( $variations as $variation_id ) {
+				$variation = wc_get_product( $variation_id );
+
+				$variation_data = Product::get_instance()->generate_typesense_data( $variation );
+
+				$variation_data = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $variation_id, $variation );
+
+				do_action( 'inspect', [ 
+					'check_variations_' . current_time( 'timestamp' ),
+					[ 
+						'variation_data' => $variation_data,
+					]
+				] );
+			}
+		}
+
+		return $product_data;
 	}
 }
