@@ -33,7 +33,7 @@ class Woocommerce {
 		add_action( 'ts_product_update', array( $this, 'update_typesense_variation' ), 10, 2 );
 		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
 
-		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'log_data' ), 999999999999, 3 );
+		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'update_variable_product_price' ), 999, 3 );
 
 	}
 
@@ -183,9 +183,25 @@ class Woocommerce {
 		) );
 	}
 
-	public function log_data( $product_data, $product_id, $product ) {
+	/**
+	 * Update variable product price based on variations
+	 * This function is used to update the price of a variable product based on the variations
+	 * Since the price of a variable product is not stored in the product itself, we need to get the price from the variations
+	 * Task : https://app.clickup.com/t/86eprwe91
+	 * @since   1.5.0
+	 * @param   array $product_data
+	 * @param   int $product_id
+	 * @param   \WC_Product $product
+	 * @return  array
+	 */
+	public function update_variable_product_price( $product_data, $product_id, $product ) {
 
 		if ( $product->get_type() == 'variable' ) {
+
+			$first_currency = array_key_first( $product_data['price'] );
+
+			$min_price = 0;
+
 
 			// get variations
 			$variations = $product->get_children();
@@ -197,12 +213,14 @@ class Woocommerce {
 
 				$variation_data = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $variation_id, $variation );
 
-				do_action( 'inspect', [ 
-					'check_variations_' . current_time( 'timestamp' ),
-					[ 
-						'variation_data' => $variation_data,
-					]
-				] );
+				if ( $variation_data['price'][ $first_currency ] > $min_price ) {
+					$min_price = $variation_data['price'][ $first_currency ];
+
+					$product_data['price'] = $variation_data['price'];
+					$product_data['regularPrice'] = $variation_data['regularPrice'];
+					$product_data['salePrice'] = $variation_data['salePrice'];
+				}
+
 			}
 		}
 
