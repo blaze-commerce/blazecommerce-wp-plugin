@@ -157,7 +157,6 @@ class Page extends BaseCollection {
 	}
 
 	public function get_taxonomies( $post_id, $post_type ) {
-		echo "Registered taxonomies for {$post_type}: " . json_encode( get_object_taxonomies( $post_type ) ) . "\n\n";
 
 		$taxonomies_data = [];
 		$taxonomies      = get_object_taxonomies( $post_type );
