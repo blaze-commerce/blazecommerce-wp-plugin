@@ -31,6 +31,7 @@ class BlazeWooless {
 
 		Ajax::get_instance();
 		Woocommerce::get_instance();
+		PostType::get_instance();
 
 		add_action( 'template_redirect', array( $this, 'search_redirect' ) );
 	}

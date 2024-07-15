@@ -36,6 +36,7 @@ class Page extends BaseCollection {
 					[ 'name' => 'createdAt', 'type' => 'int64' ],
 					[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
 					[ 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ],
+					[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
 				],
 				'default_sorting_field' => 'updatedAt',
 				'enable_nested_fields' => true
@@ -70,6 +71,7 @@ class Page extends BaseCollection {
 			'createdAt' => (int) strtotime( get_the_date( 'c', $page_id ) ),
 			'publishedAt' => $published_at,
 			'content' => $page_content,
+			'rawContent' => $content
 		], $page );
 	}
 
@@ -155,7 +157,6 @@ class Page extends BaseCollection {
 	}
 
 	public function get_taxonomies( $post_id, $post_type ) {
-		echo "Registered taxonomies for {$post_type}: " . json_encode( get_object_taxonomies( $post_type ) ) . "\n\n";
 
 		$taxonomies_data = [];
 		$taxonomies      = get_object_taxonomies( $post_type );
