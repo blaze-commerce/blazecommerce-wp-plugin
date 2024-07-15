@@ -19,18 +19,80 @@ class GeneralSettings extends BaseSettings {
 
 	public function register_hooks() {
 		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
+		add_action( 'template_redirect', array( $this, 'redirect_non_admin_user' ), -1 );
+		add_filter( 'rest_url', array( $this, 'overwrite_rest_url' ), 10 );
+	}
+
+	/**
+	 * Redirect non admin user to non cart.* url
+	 * Hooked into template_redirect, priority -1
+	 * @since   1.5.0
+	 * @return  void
+	 */
+	public function redirect_non_admin_user() {
+
+		// skip redirect for administrator
+		if ( is_user_logged_in() && current_user_can( 'manage_options' ) )
+			return;
+
+		// skip redirect for ajax request
+		if ( is_ajax() ) {
+			return;
+		}
+
+		$enable_redirect = boolval( $this->get_option( 'enable_redirect' ) );
+
+		if ( ! $enable_redirect )
+			return;
+
+		// Redirect to home page if the user is not logged in and the page is cart 
+		$restricted_pages = apply_filters( 'blaze_wooless_restricted_pages', is_cart() );
+		if ( $restricted_pages ) {
+			wp_redirect( home_url() );
+			exit;
+		}
+
+		// Redirect to home page if the user is not logged in and the page is home page, front page, shop page, product category page, or product page
+		$pages_should_redirect_to_frontend = apply_filters( 'blaze_wooless_pages_should_redirect_to_frontend', is_home() || is_front_page() || is_shop() || is_product_category() || is_product() );
+		if ( $pages_should_redirect_to_frontend ) {
+			wp_redirect( home_url( $_SERVER['REQUEST_URI'] ) );
+			exit;
+		}
+
+		if ( isset( $_COOKIE['isLoggedIn'] ) && $_COOKIE['isLoggedIn'] === 'false' ) {
+			if ( is_user_logged_in() ) {
+				wp_set_auth_cookie( 0 );
+				wp_redirect( home_url( $_SERVER['REQUEST_URI'] ) );
+				exit;
+			}
+		}
+
+	}
+
+	/**
+	 * Overwrite rest url, so we can use guttenberg editor when the site url is different
+	 * Hooked into rest_url, priority 10
+	 * @param string $url
+	 * @return string
+	 */
+	public function overwrite_rest_url( $url ) {
+		$new_url = trailingslashit( get_option( 'siteurl' ) ) . 'wp-json';
+
+		$url = str_replace( home_url( '/wp-json' ), $new_url, $url );
+
+		return $url;
 	}
 
 	public function settings_callback( $options ) {
 		if ( isset( $options['api_key'] ) ) {
-			$encoded_api_key   = sanitize_text_field( $options['api_key'] );
-			$decoded_api_key   = base64_decode( $encoded_api_key );
-			$trimmed_api_key   = explode( ':', $decoded_api_key );
+			$encoded_api_key = sanitize_text_field( $options['api_key'] );
+			$decoded_api_key = base64_decode( $encoded_api_key );
+			$trimmed_api_key = explode( ':', $decoded_api_key );
 			$typesense_api_key = $trimmed_api_key[0];
-			$store_id          = $trimmed_api_key[1];
+			$store_id = $trimmed_api_key[1];
 
 			$typesense_client = TypesenseClient::get_instance();
-			$connection       = $typesense_client->test_connection( $typesense_api_key, $store_id, $options['environment'] );
+			$connection = $typesense_client->test_connection( $typesense_api_key, $store_id, $options['environment'] );
 
 			if ( 'success' === $connection['status'] ) {
 				// TODO: remove private_key_master eventually
@@ -127,6 +189,15 @@ class GeneralSettings extends BaseSettings {
 					'description' => 'Check this to show variant as product cards in catalog pages or in any product list.'
 				),
 			);
+
+			$fields['wooless_general_settings_section']['options'][] = array(
+				'id' => 'enable_redirect',
+				'label' => 'Enable Redirect to non cart.* Url',
+				'type' => 'checkbox',
+				'args' => array(
+					'description' => 'Check this to enable redirect for homepage, product page, and product category page. This will work only if the user is not administrator.'
+				),
+			);
 		}
 
 
@@ -136,8 +207,8 @@ class GeneralSettings extends BaseSettings {
 
 	public function connected() {
 		$typesense_api_key = get_option( 'typesense_api_key' );
-		$store_id          = get_option( 'store_id' );
-		$environment       = bw_get_general_settings( 'environment' );
+		$store_id = get_option( 'store_id' );
+		$environment = bw_get_general_settings( 'environment' );
 
 		if ( empty( $typesense_api_key ) || empty( $store_id ) || empty( $environment ) ) {
 			return false;
@@ -173,8 +244,8 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner']              = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
-		$additional_data['show_free_shipping_minicart_component']  = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner'] = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
 
 		return $additional_data;
