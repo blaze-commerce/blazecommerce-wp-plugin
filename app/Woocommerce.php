@@ -187,6 +187,7 @@ class Woocommerce {
 	 * Update variable product price based on variations
 	 * This function is used to update the price of a variable product based on the variations
 	 * Since the price of a variable product is not stored in the product itself, we need to get the price from the variations
+	 * Hooked to blaze_wooless_get_variation_prices filter, priority 999
 	 * Task : https://app.clickup.com/t/86eprwe91
 	 * @since   1.5.0
 	 * @param   array $product_data
@@ -198,29 +199,32 @@ class Woocommerce {
 
 		if ( $product->get_type() == 'variable' ) {
 
-			$first_currency = array_key_first( $product_data['price'] );
+			try {
 
-			$min_price = 0;
+				// get variations
+				$variations = $product->get_variation_prices( true );
 
+				// find the lowest price among the variations
+				$prices = $variations['price'];
+				$min_price = min( $prices );
+				$lowest_product_id = array_search( $min_price, $prices );
 
-			// get variations
-			$variations = $product->get_children();
+				if ( $lowest_product_id ) {
+					$lowest_product = wc_get_product( $lowest_product_id );
+					$variation_data = Product::get_instance()->generate_typesense_data( $lowest_product );
 
-			foreach ( $variations as $variation_id ) {
-				$variation = wc_get_product( $variation_id );
-
-				$variation_data = Product::get_instance()->generate_typesense_data( $variation );
-
-				$variation_data = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $variation_id, $variation );
-
-				if ( $variation_data['price'][ $first_currency ] > $min_price ) {
-					$min_price = $variation_data['price'][ $first_currency ];
-
-					$product_data['price'] = $variation_data['price'];
-					$product_data['regularPrice'] = $variation_data['regularPrice'];
-					$product_data['salePrice'] = $variation_data['salePrice'];
+					$variation_data = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
+					$product_data['price'] = $lowest_product->get_price();
+					$product_data['regularPrice'] = $lowest_product->get_regular_price();
+					$product_data['salePrice'] = $lowest_product->get_sale_price();
+				} else {
+					throw new \Exception( 'No variations found for product ' . $product_id );
 				}
 
+			} catch (\Exception $e) {
+				$logger = wc_get_logger();
+				$context = array( 'source' => 'wooless-variable-product-price' );
+				$logger->debug( 'TS Variable Product Price Exception: ' . $e->getMessage(), $context );
 			}
 		}
 
