@@ -214,9 +214,9 @@ class Woocommerce {
 					$variation_data = Product::get_instance()->generate_typesense_data( $lowest_product );
 
 					$variation_data = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
-					$product_data['price'] = $lowest_product->get_price();
-					$product_data['regularPrice'] = $lowest_product->get_regular_price();
-					$product_data['salePrice'] = $lowest_product->get_sale_price();
+					$product_data['price'] = $variation_data['price'];
+					$product_data['regularPrice'] = $variation_data['regularPrice'];
+					$product_data['salePrice'] = $variation_data['salePrice'];
 				} else {
 					throw new \Exception( 'No variations found for product ' . $product_id );
 				}
