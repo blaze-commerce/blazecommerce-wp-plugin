@@ -395,6 +395,7 @@ class Product extends BaseCollection {
 			'status' => $product->get_status(),
 			'menuOrder' => $product->get_menu_order(),
 			'metaData' => array(),
+			'seoFullHead' => '',
 		);
 		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
 	}

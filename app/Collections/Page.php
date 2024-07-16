@@ -71,7 +71,8 @@ class Page extends BaseCollection {
 			'createdAt' => (int) strtotime( get_the_date( 'c', $page_id ) ),
 			'publishedAt' => $published_at,
 			'content' => $page_content,
-			'rawContent' => $content
+			'rawContent' => $content,
+			'seoFullHead' => '',
 		], $page );
 	}
 
