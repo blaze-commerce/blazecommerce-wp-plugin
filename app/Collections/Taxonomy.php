@@ -104,6 +104,7 @@ class Taxonomy extends BaseCollection {
 			'thumbnail' => $thumbnail,
 			'breadcrumbs' => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
 			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
+			'seoFullHead' => '',
 		];
 
 		return apply_filters( 'blaze_commerce_taxonomy_data', $document, $term );
