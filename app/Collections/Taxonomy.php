@@ -98,7 +98,7 @@ class Taxonomy extends BaseCollection {
 			'bannerThumbnail' => (string) $bannerThumbnail,
 			'bannerText' => $bannerText,
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
-			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '',
+			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '0',
 			'productCount' => (int) $term->count,
 			'order' => (int) $order,
 			'thumbnail' => $thumbnail,
