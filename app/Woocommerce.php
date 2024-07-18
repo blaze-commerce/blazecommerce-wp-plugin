@@ -31,7 +31,7 @@ class Woocommerce {
 		add_action( 'woocommerce_get_checkout_url', array( $this, 'append_cart_in_checkout_url' ) );
 
 		add_action( 'ts_product_update', array( $this, 'update_typesense_variation' ), 10, 2 );
-		add_action( 'ts_before_product_upsert', array( $this, 'auto_select_parent_categories' ), 10, 1 );
+		add_action( 'ts_before_product_upsert', array( $this, 'auto_assign_parent_categories' ), 10, 1 );
 		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
 
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'update_variable_product_price' ), 999, 3 );
@@ -98,7 +98,7 @@ class Woocommerce {
 	}
 
 	/**
-	 * Summary of auto_select_parent_categories
+	 * Summary of auto_assign_parent_categories
 	 * 
 	 * We needed this function to auto select the parent product categories when product is saved to typesense. 
 	 * 
@@ -107,7 +107,7 @@ class Woocommerce {
 	 * @param mixed $product
 	 * @return void
 	 */
-	public function auto_select_parent_categories( $product ) {
+	public function auto_assign_parent_categories( $product ) {
 		$product_id     = $product->get_id();
 		$all_categories = $this->get_all_categories_with_parents( $product_id );
 
