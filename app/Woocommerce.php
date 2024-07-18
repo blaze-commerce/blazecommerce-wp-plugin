@@ -31,6 +31,7 @@ class Woocommerce {
 		add_action( 'woocommerce_get_checkout_url', array( $this, 'append_cart_in_checkout_url' ) );
 
 		add_action( 'ts_product_update', array( $this, 'update_typesense_variation' ), 10, 2 );
+		add_action( 'ts_before_product_upsert', array( $this, 'auto_select_parent_categories' ), 10, 1 );
 		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
 
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'update_variable_product_price' ), 999, 3 );
@@ -58,7 +59,7 @@ class Woocommerce {
 				'action' => 'update'
 			) );
 
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-menu-ordering' );
 			$logger->debug( 'TS Product import response : ' . print_r( $response, 1 ), $context );
 		}
@@ -96,14 +97,33 @@ class Woocommerce {
 
 	}
 
+	/**
+	 * Summary of auto_select_parent_categories
+	 * 
+	 * We needed this function to auto select the parent product categories when product is saved to typesense. 
+	 * 
+	 * This fixes issues where parent category is not selected and ends up making the frontend not having the products
+	 * 
+	 * @param mixed $product
+	 * @return void
+	 */
+	public function auto_select_parent_categories( $product ) {
+		$product_id     = $product->get_id();
+		$all_categories = $this->get_all_categories_with_parents( $product_id );
+
+		// Assign the terms to the product
+		wp_set_object_terms( $product_id, $all_categories, 'product_cat' );
+	}
+
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
 	public function on_product_save( $product_id, $wc_product ) {
 		try {
+			do_action( 'ts_before_product_upsert', $wc_product );
 			$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
 			Product::get_instance()->upsert( $document_data );
 			do_action( 'ts_product_update', $product_id, $wc_product );
 		} catch (\Exception $e) {
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-update' );
 
 			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
@@ -111,11 +131,40 @@ class Woocommerce {
 		}
 	}
 
+	public function get_all_parent_categories_recursive( $term_id, $taxonomy, &$parent_terms = [] ) {
+		$term = get_term( $term_id, $taxonomy );
+		if ( $term && $term->parent != 0 && ! in_array( $term->parent, $parent_terms ) ) {
+			$parent_terms[] = $term->parent;
+			$this->get_all_parent_categories_recursive( $term->parent, $taxonomy, $parent_terms );
+		}
+		return $parent_terms;
+	}
+
+	public function get_all_categories_with_parents( $product_id ) {
+		$current_categories = wp_get_object_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
+
+		$all_categories = [];
+		foreach ( $current_categories as $category_id ) {
+			if ( ! in_array( $category_id, $all_categories ) ) {
+				$all_categories[] = $category_id;
+			}
+			// Get all parent categories recursively
+			$parent_categories = $this->get_all_parent_categories_recursive( $category_id, 'product_cat' );
+			foreach ( $parent_categories as $parent_category_id ) {
+				if ( ! in_array( $parent_category_id, $all_categories ) ) {
+					$all_categories[] = $parent_category_id;
+				}
+			}
+		}
+
+		return $all_categories;
+	}
+
 	public function update_typesense_variation( $product_id, $wc_product ) {
 
 		if ( $wc_product && $wc_product->is_type( 'variable' ) ) {
 			$variation_ids = $wc_product->get_children();
-			$event_time = WC()->call_function( 'time' ) + 1;
+			$event_time    = WC()->call_function( 'time' ) + 1;
 			as_schedule_single_action( $event_time, 'wooless_variation_update', array( $variation_ids ), 'blaze-wooless', true, 1 );
 
 		}
@@ -124,7 +173,7 @@ class Woocommerce {
 	public function variation_update( $variation_ids ) {
 		try {
 			$typsense_product = Product::get_instance();
-			$variations_data = array();
+			$variations_data  = array();
 			foreach ( $variation_ids as $variation_id ) {
 				$wc_variation = wc_get_product( $variation_id );
 
@@ -137,11 +186,11 @@ class Woocommerce {
 				'action' => 'upsert'
 			) );
 
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-success-import' );
 			$logger->debug( print_r( $import, 1 ), $context );
 		} catch (\Exception $e) {
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-import' );
 			$logger->debug( 'TS Variations Import Exception: ' . $e->getMessage(), $context );
 		}
@@ -205,24 +254,24 @@ class Woocommerce {
 				$variations = $product->get_variation_prices( true );
 
 				// find the lowest price among the variations
-				$prices = $variations['price'];
-				$min_price = min( $prices );
+				$prices            = $variations['price'];
+				$min_price         = min( $prices );
 				$lowest_product_id = array_search( $min_price, $prices );
 
 				if ( $lowest_product_id ) {
 					$lowest_product = wc_get_product( $lowest_product_id );
 					$variation_data = Product::get_instance()->generate_typesense_data( $lowest_product );
 
-					$variation_data = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
-					$product_data['price'] = $variation_data['price'];
+					$variation_data               = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
+					$product_data['price']        = $variation_data['price'];
 					$product_data['regularPrice'] = $variation_data['regularPrice'];
-					$product_data['salePrice'] = $variation_data['salePrice'];
+					$product_data['salePrice']    = $variation_data['salePrice'];
 				} else {
 					throw new \Exception( 'No variations found for product ' . $product_id );
 				}
 
 			} catch (\Exception $e) {
-				$logger = wc_get_logger();
+				$logger  = wc_get_logger();
 				$context = array( 'source' => 'wooless-variable-product-price' );
 				$logger->debug( 'TS Variable Product Price Exception: ' . $e->getMessage(), $context );
 			}
