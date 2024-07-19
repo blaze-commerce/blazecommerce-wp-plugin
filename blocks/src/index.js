@@ -1,8 +1,7 @@
-import { ColorConfig } from "./components/maxmegamenu/color-config";
 import { GeneralConfig } from "./components/maxmegamenu/general-config";
-import { LayoutConfig } from "./components/maxmegamenu/layout-config";
-import { SpacingConfig } from "./components/maxmegamenu/spacing-config";
 import { TypographyConfig } from "./components/maxmegamenu/typography-config";
+import { MainMenuConfig } from "./components/maxmegamenu/main-menu-config";
+import { SubmenuConfig } from "./components/maxmegamenu/submenu-config";
 
 const { createHigherOrderComponent } = wp.compose;
 const { Fragment } = wp.element;
@@ -14,88 +13,6 @@ const enableSpacingControlOnBlocks = [
 	'maxmegamenu/location',
 ];
 
-const boxControlDefaults = {
-    top: '0px',
-    left: '0px',
-    right: '0px',
-    bottom: '0px',
-};
-
-const menuAttributes = {
-    menuId: {
-        type: 'string',
-    },
-
-    mainNavigationBackgroundColor: {
-        type: 'string',
-    },
-
-    menuTextColor: {
-        type: 'string',
-    },
-    menuHoverTextColor: {
-        type: 'string',
-    },
-    menuBackgroundColor: {
-        type: 'string',
-    },
-    menuHoverBackgroundColor: {
-        type: 'string',
-    },
-    submenuTextColor: {
-        type: 'string',
-    },
-    submenuHoverTextColor: {
-        type: 'string',
-    },
-    submenuBackgroundColor: {
-        type: 'string',
-    },
-    submenuHoverBackgroundColor: {
-        type: 'string',
-    },
-
-    menuSeparatorColor: {
-        type: 'string',
-    },
-
-    menuTextPadding: {
-        type: 'object',
-        default: boxControlDefaults,
-    },
-    menuTextMargin: {
-        type: 'object',
-        default: boxControlDefaults,
-    },
-    submenuTextPadding: {
-        type: 'object',
-        default: boxControlDefaults,
-    },
-    submenuTextMargin: {
-        type: 'object',
-        default: boxControlDefaults,
-    },
-
-    menuCentered: {
-        type: 'boolean',
-    },
-    menuFullWidth: {
-        type: 'boolean',
-    },
-
-    fontSize: {
-        type: 'string',
-        default: '16',
-    },
-    fontWeight: {
-        type: 'string',
-        default: '400',
-    },
-    letterCase: {
-        type: 'string',
-        default: 'none',
-    },
-};
 
 /**
  * Add spacing control attribute to block.
@@ -112,7 +29,13 @@ const addMenuAttributes = ( settings, name ) => {
 	}
 
 	// Use Lodash's assign to gracefully handle if attributes are undefined
-	settings.attributes = Object.assign( settings.attributes, menuAttributes);
+	settings.attributes = Object.assign( settings.attributes, Object.assign(
+        {},
+        GeneralConfig.attributeSchema,
+        TypographyConfig.attributeSchema,
+        MainMenuConfig.attributeSchema,
+        SubmenuConfig.attributeSchema,
+    ));
 
 	return settings;
 };
@@ -136,10 +59,8 @@ const withSpacingControl = createHigherOrderComponent( ( BlockEdit ) => {
 				<BlockEdit { ...props } />
 				<InspectorControls>
                     <GeneralConfig { ...props } />
-                    <LayoutConfig { ...props } />
-                    <LayoutConfig { ...props } />
-                    <SpacingConfig { ...props } />
-                    <ColorConfig { ...props } />
+                    <MainMenuConfig { ...props } />
+                    <SubmenuConfig { ...props } />
                     <TypographyConfig { ...props } />
 				</InspectorControls>
 			</Fragment>
