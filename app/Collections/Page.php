@@ -93,7 +93,9 @@ class Page extends BaseCollection {
 				'post_type' => [ 'page' ],
 				'post_status' => 'publish',
 				'posts_per_page' => $batch_size,
-				'paged' => $page
+				'paged' => $page,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false
 			];
 
 			$query = new \WP_Query( $args );
