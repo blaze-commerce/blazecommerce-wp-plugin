@@ -77,16 +77,22 @@ class Page extends BaseCollection {
 	}
 
 	public function index_to_typesense() {
-		$page = $_REQUEST['page'] ?? 1;
+		$batch_size      = $_REQUEST['batch_size'] ?? 20;
+		$page            = $_REQUEST['page'] ?? 1;
+		$imported_count  = $_REQUEST['imported_count'] ?? 0;
+		$total_imports   = $_REQUEST['total_imports'] ?? 0;
+		$import_response = array();
+
+		$post_datas = array();
 		if ( 1 == $page ) {
 			$this->initialize();
 		}
 
 		try {
 			$args = [ 
-				'post_type' => [ 'post', 'page' ],
+				'post_type' => [ 'page' ],
 				'post_status' => 'publish',
-				'posts_per_page' => 20,
+				'posts_per_page' => $batch_size,
 				'paged' => $page
 			];
 
@@ -96,22 +102,48 @@ class Page extends BaseCollection {
 				while ( $query->have_posts() ) {
 					$query->the_post();
 					global $post;
-					$document = $this->get_data( $post );
-
-					// Index the page/post data in Typesense
-					try {
-						$this->upsert( $document );
-					} catch (\Exception $e) {
-						echo "Error adding page/post to Typesense: " . $e->getMessage() . "\n";
-					}
-
+					$post_datas[] = $this->get_data( $post );
 					unset( $document );
 				}
+
+				$import_response = $this->collection()->documents->import( $post_datas, array(
+					'action' => 'upsert'
+				) );
+
+				$successful_imports = array_filter( $import_response, function ($batch_result) {
+					return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+				} );
+
+				$imported_count += count( $successful_imports );
+				$total_imports += count( $post_datas );
+
+				$total_pages   = $query->max_num_pages;
+				$next_page     = $page + 1;
+				$has_next_data = $page < $total_pages;
+
+				wp_send_json( array(
+					'imported_count' => $imported_count,
+					'total_imports' => $total_imports,
+					'next_page' => $has_next_data ? $next_page : null,
+					'query_args' => $args,
+					'import_response' => $import_response,
+					'import_data_sent' => $post_datas,
+				) );
+
 			}
 			// Restore original post data. 
 			wp_reset_postdata();
 
-			echo "Pages and posts are added successfully!\n";
+
+			wp_send_json( array(
+				'imported_count' => $imported_count,
+				'total_imports' => $total_imports,
+				'next_page' => null,
+				'query_args' => $args,
+				'import_response' => $import_response,
+				'import_data_sent' => $post_datas,
+			) );
+
 		} catch (\Exception $e) {
 			echo "Error: " . $e->getMessage() . "\n";
 		}
