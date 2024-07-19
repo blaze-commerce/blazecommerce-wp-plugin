@@ -75,6 +75,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\CategoryBanner',
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',
+			'\\BlazeWooless\\Features\\Cli',
 		);
 
 		foreach ( $features as $feature ) {
