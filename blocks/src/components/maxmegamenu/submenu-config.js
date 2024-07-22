@@ -1,6 +1,9 @@
 import { ElementColorSelector } from '../element-color-selector'
 import { boxControlDefaults } from '../types';
 
+const { store: editorStore } = wp.editor;
+const { select } = wp.data;
+
 const {
     PanelBody,
     __experimentalBoxControl: BoxControl,
@@ -30,6 +33,10 @@ const attributeSchema = {
         type: 'string',
     },
     submenuLinkHoverBackgroundColor: {
+        type: 'string',
+    },
+
+    mobileSubmenuLinkColor: {
         type: 'string',
     },
 
@@ -79,6 +86,8 @@ export const SubmenuConfig = ({ attributes, setAttributes }) => {
         submenuLinkBackgroundColor,
         submenuLinkHoverBackgroundColor,
 
+        mobileSubmenuLinkColor,
+
         submenuContainerPadding,
         submenuLinkPadding,
         submenuLinkMargin,
@@ -91,6 +100,8 @@ export const SubmenuConfig = ({ attributes, setAttributes }) => {
         submenuTextPadding,
         submenuTextMargin,
     } = attributes;
+
+    const isMobile = select(editorStore).getDeviceType() === 'Mobile';
 
     return (
         <PanelBody
@@ -133,8 +144,8 @@ export const SubmenuConfig = ({ attributes, setAttributes }) => {
                 </FlexBlock>
                 <FlexItem>
                     <ElementColorSelector
-                        value={submenuLinkColor || submenuTextColor}
-                        setValue={(selectedColor) => setAttributes({ submenuLinkColor: selectedColor })}
+                        value={isMobile ? mobileSubmenuLinkColor : (submenuLinkColor || submenuTextColor)}
+                        setValue={(selectedColor) => setAttributes({ [isMobile ? 'mobileSubmenuLinkColor' : 'submenuLinkColor']: selectedColor })}
                     />
                 </FlexItem>
                 <FlexItem>
