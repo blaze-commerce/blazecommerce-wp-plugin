@@ -1,6 +1,9 @@
 import { ElementColorSelector } from '../element-color-selector'
 import { boxControlDefaults } from '../types';
 
+const { store: editorStore } = wp.editor;
+const { select } = wp.data;
+
 const {
     PanelBody,
     __experimentalBoxControl: BoxControl,
@@ -33,6 +36,10 @@ const attributeSchema = {
         type: 'string',
     },
     menuLinkHoverBackgroundColor: {
+        type: 'string',
+    },
+
+    mobileMenuLinkColor: {
         type: 'string',
     },
 
@@ -83,6 +90,8 @@ export const MainMenuConfig = ({ attributes, setAttributes }) => {
         menuLinkBackgroundColor,
         menuLinkHoverBackgroundColor,
 
+        mobileMenuLinkColor,
+
         menuLinkPadding,
         menuLinkMargin,
 
@@ -97,7 +106,7 @@ export const MainMenuConfig = ({ attributes, setAttributes }) => {
         menuTextMargin,
     } = attributes;
 
-    console.log('attributes', attributes)
+    const isMobile = select(editorStore).getDeviceType() === 'Mobile';
 
     return (
         <PanelBody
@@ -153,8 +162,8 @@ export const MainMenuConfig = ({ attributes, setAttributes }) => {
                 </FlexBlock>
                 <FlexItem>
                     <ElementColorSelector
-                        value={menuLinkColor || menuTextColor}
-                        setValue={(selectedColor) => setAttributes({ menuLinkColor: selectedColor })}
+                        value={isMobile ? mobileMenuLinkColor : (menuLinkColor || menuTextColor)}
+                        setValue={(selectedColor) => setAttributes({ [isMobile ? 'mobileMenuLinkColor' : 'menuLinkColor']: selectedColor })}
                     />
                 </FlexItem>
                 <FlexItem>

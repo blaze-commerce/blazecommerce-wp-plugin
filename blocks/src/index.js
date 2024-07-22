@@ -5,8 +5,9 @@ import { SubmenuConfig } from "./components/maxmegamenu/submenu-config";
 
 const { createHigherOrderComponent } = wp.compose;
 const { Fragment } = wp.element;
-const { InspectorControls } = wp.editor;
+const { InspectorControls, store: editorStore } = wp.editor;
 const { addFilter } = wp.hooks;
+const { select } = wp.data;
 
 // Enable spacing control on the following blocks
 const enableSpacingControlOnBlocks = [
