@@ -105,6 +105,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
+			'\\BlazeWooless\\Extensions\\Elementor',
 		);
 
 		foreach ( $extensions as $extension ) {
