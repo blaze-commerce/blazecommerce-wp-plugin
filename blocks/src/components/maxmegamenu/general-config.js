@@ -1,12 +1,24 @@
 const {
     PanelBody,
     SelectControl,
+    __experimentalUnitControl: UnitControl,
 } = wp.components;
 const { __ } = wp.i18n;
+
+const attributeSchema = {
+    menuId: {
+        type: 'string',
+    },
+    menuMaxWidth: {
+        type: 'string',
+        default: '1200x',
+    },
+};
 
 export const GeneralConfig = ({ attributes, setAttributes }) => {
     const {
         menuId,
+        menuMaxWidth,
     } = attributes;
 
     let options = [{
@@ -33,6 +45,16 @@ export const GeneralConfig = ({ attributes, setAttributes }) => {
                 onChange={(newMenuId) => setAttributes({ menuId: newMenuId })}
                 __nextHasNoMarginBottom
             />
+
+            <p></p>
+            <UnitControl
+                label="Max Width (px)"
+                disableUnits={true}
+                onChange={(newMenuMaxWidth) => setAttributes({ menuMaxWidth: newMenuMaxWidth })}
+                value={menuMaxWidth}
+            />
         </PanelBody>
     );
-}
+};
+
+GeneralConfig.attributeSchema = attributeSchema;
