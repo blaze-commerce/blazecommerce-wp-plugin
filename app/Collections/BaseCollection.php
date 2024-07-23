@@ -53,7 +53,7 @@ class BaseCollection {
 		$curl = curl_init();
 
 		curl_setopt_array( $curl, array(
-			CURLOPT_URL => 'https://' . $this->typesense->get_host() . '/collections/' . $this->collection_name() . '/documents/import?action=create',
+			CURLOPT_URL => 'https://' . $this->typesense->get_host() . '/collections/' . $this->collection_name() . '/documents/import?action=upsert',
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_ENCODING => '',
 			CURLOPT_MAXREDIRS => 10,
