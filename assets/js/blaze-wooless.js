@@ -766,6 +766,35 @@
                 });
             })
         },
+
+        importPageData: function (params = {}) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                var data = {
+                    'action': 'index_data_to_typesense',
+                    'collection_name': 'page',
+                };
+
+                $.post(ajaxurl, Object.assign({}, data, params), function (response) {
+
+                    if (response.next_page != null) {
+                        resolve(_this.importPageData(
+                            {
+                                page: response.next_page,
+                                imported_count: response.imported_count,
+                                total_imports: response.total_imports
+                            }))
+                    } else {
+
+                        _this.hideLoader();
+                        _this.syncInProgress = false;
+
+                        $(_this.syncResultsContainer).append('<div>Imported pagcount: ' + response.imported_count + '/' + response.total_imports + '</div>');
+                        resolve(true);
+                    }
+                });
+            })
+        },
         importProducts: function (e) {
             e.preventDefault();
             if (this.syncInProgress) {
@@ -804,7 +833,9 @@
                 return false;
             }
             this.clearResultContainer();
-            return this.importData('page', 'Pages Syncing in progress...', true);
+            this.renderLoader('Page Syncing in progress...');
+            this.syncInProgress = true;
+            return this.importPageData();
         },
 
         importSiteInfo: function (e) {
