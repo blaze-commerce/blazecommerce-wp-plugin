@@ -7,6 +7,21 @@ const {
 // const { FontSizePicker } = wp.editor;
 const { __ } = wp.i18n;
 
+const attributeSchema = {
+    fontSize: {
+        type: 'string',
+        default: '16',
+    },
+    fontWeight: {
+        type: 'string',
+        default: '400',
+    },
+    letterCase: {
+        type: 'string',
+        default: 'none',
+    },
+};
+
 const fontSizes = [
     {
         name: __( 'Extra Small' ),
@@ -98,3 +113,5 @@ export const TypographyConfig = ({ attributes, setAttributes }) => {
         </PanelBody>
     )
 }
+
+TypographyConfig.attributeSchema = attributeSchema;
