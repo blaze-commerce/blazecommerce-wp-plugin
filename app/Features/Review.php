@@ -29,10 +29,18 @@ class Review {
 					'id' => 'hide_review_tab',
 					'label' => 'Hide from Tab',
 					'type' => 'checkbox',
-					'args' => array( 'description' => 'Check this to hide review section in tab. You can display it manually from page builder', ),
+					'args' => array( 'description' => 'Check this to hide review section in tab. You can display it manually from page builder' ),
 				),
+
 			),
+
 		);
+
+		$product_page_settings['wooless_settings_review_section']['options'] =
+			apply_filters(
+				'blaze_wooless_review_setting_options',
+				$product_page_settings['wooless_settings_review_section']['options']
+			);
 
 		return $product_page_settings;
 	}
