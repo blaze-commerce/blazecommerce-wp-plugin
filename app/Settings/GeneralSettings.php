@@ -85,32 +85,20 @@ class GeneralSettings extends BaseSettings {
 
 	public function settings_callback( $options ) {
 		if ( isset( $options['api_key'] ) ) {
-			$encoded_api_key = sanitize_text_field( $options['api_key'] );
-			$decoded_api_key = base64_decode( $encoded_api_key );
-			$trimmed_api_key = explode( ':', $decoded_api_key );
+			$encoded_api_key   = sanitize_text_field( $options['api_key'] );
+			$decoded_api_key   = base64_decode( $encoded_api_key );
+			$trimmed_api_key   = explode( ':', $decoded_api_key );
 			$typesense_api_key = $trimmed_api_key[0];
-			$store_id = $trimmed_api_key[1];
+			$store_id          = $trimmed_api_key[1];
 
 			$typesense_client = TypesenseClient::get_instance();
-			$connection = $typesense_client->test_connection( $typesense_api_key, $store_id, $options['environment'] );
+			$connection       = $typesense_client->test_connection( $typesense_api_key, $store_id, $options['environment'] );
 
 			if ( 'success' === $connection['status'] ) {
 				// TODO: remove private_key_master eventually
 				update_option( 'private_key_master', $options['api_key'] );
 				update_option( 'typesense_api_key', $typesense_api_key );
 				update_option( 'store_id', $store_id );
-
-				$variant_as_cards = false;
-				if ( isset( $_POST['wooless_general_settings_options']['show_variant_as_separate_product_cards'] ) ) {
-					$variant_as_cards = (bool) $_POST['wooless_general_settings_options']['show_variant_as_separate_product_cards'];
-				}
-
-				$typesense_client->site_info()->upsert( [ 
-					'id' => '1002457',
-					'name' => 'show_variant_as_separate_product_cards',
-					'value' => json_encode( $variant_as_cards ),
-					'updated_at' => time(),
-				] );
 
 			} else {
 				add_settings_error(
@@ -207,8 +195,8 @@ class GeneralSettings extends BaseSettings {
 
 	public function connected() {
 		$typesense_api_key = get_option( 'typesense_api_key' );
-		$store_id = get_option( 'store_id' );
-		$environment = bw_get_general_settings( 'environment' );
+		$store_id          = get_option( 'store_id' );
+		$environment       = bw_get_general_settings( 'environment' );
 
 		if ( empty( $typesense_api_key ) || empty( $store_id ) || empty( $environment ) ) {
 			return false;
@@ -244,8 +232,8 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner'] = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
-		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner']              = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component']  = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
 
 		return $additional_data;
