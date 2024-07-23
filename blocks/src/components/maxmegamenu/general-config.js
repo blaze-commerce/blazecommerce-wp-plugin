@@ -32,8 +32,6 @@ export const GeneralConfig = ({ attributes, setAttributes }) => {
         value: menu.term_id,
     }));
 
-    console.log('menuMaxWidth', menuMaxWidth)
-
     return (
         <PanelBody
             title={ __( 'Blaze Commerce - General' ) }
