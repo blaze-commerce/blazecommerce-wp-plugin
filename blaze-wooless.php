@@ -3,14 +3,16 @@
 Plugin Name: Blaze Commerce
 Plugin URI: https://www.blazecommerce.io
 Description: The official plugin that integrates your site with the Blaze Commerce service.
-Version: 1.5.0
+Version: 1.5.1
 Author: Blaze Commerce
 Author URI: https://www.blazecommerce.io
 */
 
+use Http\Message\Authentication\Header;
+
 define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BLAZE_WOOLESS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'BLAZE_WOOLESS_VERSION', '1.5.0' );
+define( 'BLAZE_WOOLESS_VERSION', '1.5.1' );
 
 require 'vendor/autoload.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/regional-data-helper.php';
@@ -136,3 +138,23 @@ function add_typesense_product_indexer_menu() {
 		'typesense_product_indexer_page'
 	);
 }
+
+/**
+ * Fix issue with elementor editor
+ * Replace home_url with site_url
+ * @param $env
+ * @return mixed	
+ */
+add_filter( 'elementor/editor/localize_settings', function ($env) {
+
+	$site_url = get_site_url();
+	$home_url = get_home_url();
+
+	$env['initial_document']['urls'] = array_map( function ($value) use ($site_url, $home_url) {
+		return str_replace( $home_url, $site_url, $value );
+	}, $env['initial_document']['urls'] );
+
+	$env['home_url'] = $site_url;
+
+	return $env;
+}, 9999999 );
