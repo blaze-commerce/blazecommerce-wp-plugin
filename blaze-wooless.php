@@ -138,23 +138,3 @@ function add_typesense_product_indexer_menu() {
 		'typesense_product_indexer_page'
 	);
 }
-
-/**
- * Fix issue with elementor editor
- * Replace home_url with site_url
- * @param $env
- * @return mixed	
- */
-add_filter( 'elementor/editor/localize_settings', function ($env) {
-
-	$site_url = get_site_url();
-	$home_url = get_home_url();
-
-	$env['initial_document']['urls'] = array_map( function ($value) use ($site_url, $home_url) {
-		return str_replace( $home_url, $site_url, $value );
-	}, $env['initial_document']['urls'] );
-
-	$env['home_url'] = $site_url;
-
-	return $env;
-}, 9999999 );
