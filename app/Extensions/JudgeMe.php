@@ -63,7 +63,7 @@ class JudgeMe {
 	public function generate_product_data() {
 
 
-		$SHOP_DOMAIN = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
+		$shop_domain = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
 		$products_batch = array();
 
 		if ( $this->get_api_key() ) {
@@ -73,7 +73,7 @@ class JudgeMe {
 			while ( ! $finished ) {
 				$params = array(
 					'api_token' => $this->get_api_key(),
-					'shop_domain' => $SHOP_DOMAIN,
+					'shop_domain' => $shop_domain,
 					'page' => $page,
 					'per_page' => 100,
 				);
@@ -141,7 +141,7 @@ class JudgeMe {
 
 	public function generate_product_reviews( $products ) {
 		$is_single_review = get_option( 'wooless_settings_product_page_options' )['judgme_single_product_review'];
-		$SHOP_DOMAIN = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
+		$shop_domain = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
 		$product_reviews = array();
 
 		if ( ! empty( $products ) ) {
@@ -156,9 +156,9 @@ class JudgeMe {
 				}, $products );
 			}
 
-			$REVIEWS_WIDGETS_PARAMETERS = 'review_widget_product_ids=' . implode( ",", $product_ids );
+			$review_widgets_parameter = 'review_widget_product_ids=' . implode( ",", $product_ids );
 
-			$result = wp_remote_get( self::$WIDGET_URL . $SHOP_DOMAIN . "?" . $REVIEWS_WIDGETS_PARAMETERS );
+			$result = wp_remote_get( self::$WIDGET_URL . $shop_domain . "?" . $review_widgets_parameter );
 
 			$response = json_decode( wp_remote_retrieve_body( $result ), true );
 
