@@ -90,7 +90,7 @@ class Page extends BaseCollection {
 
 		try {
 			$args = [ 
-				'post_type' => [ 'page' ],
+				'post_type' => [ 'page', 'post' ],
 				'post_status' => 'publish',
 				'posts_per_page' => $batch_size,
 				'paged' => $page,
