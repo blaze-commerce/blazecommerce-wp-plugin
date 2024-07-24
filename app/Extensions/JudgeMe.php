@@ -39,7 +39,7 @@ class JudgeMe {
 	public function register_review_settings( array $options ) {
 
 		$options[] = array(
-			'id' => 'judgme_single_product_review',
+			'id' => 'judegme_single_product_review',
 			'label' => 'JudgeMe - Display Single Review',
 			'type' => 'checkbox',
 			'args' => array( 'description' => 'Check this to enable single review for all products' ),
@@ -55,6 +55,14 @@ class JudgeMe {
 
 		if ( $setting = get_option( 'judgeme_widget_settings' ) ) {
 			$additional_settings['judgeme_widget_settings'] = $setting;
+		}
+
+		$additional_settings['judegme_settings'] = array();
+
+		$product_options = get_option( 'wooless_settings_product_page_options' );
+
+		if ( isset( $product_options['judegme_single_product_review'] ) ) {
+			$additional_settings['judegme_settings']['single_review'] = $product_options['judegme_single_product_review'];
 		}
 
 		return $additional_settings;
@@ -140,7 +148,13 @@ class JudgeMe {
 	}
 
 	public function generate_product_reviews( $products ) {
-		$is_single_review = get_option( 'wooless_settings_product_page_options' )['judgme_single_product_review'];
+		$option = get_option( 'wooless_settings_product_page_options' );
+
+		if ( ! array_key_exists( "judegme_single_product_review", $option ) )
+			return array();
+
+		$is_single_review = $option['judegme_single_product_review'];
+
 		$shop_domain = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
 		$product_reviews = array();
 
