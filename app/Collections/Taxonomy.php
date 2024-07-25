@@ -98,111 +98,97 @@ class Taxonomy extends BaseCollection {
 			'bannerThumbnail' => (string) $bannerThumbnail,
 			'bannerText' => $bannerText,
 			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
-			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '',
+			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '0',
 			'productCount' => (int) $term->count,
 			'order' => (int) $order,
 			'thumbnail' => $thumbnail,
 			'breadcrumbs' => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
 			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
+			'seoFullHead' => '',
 		];
 
 		return apply_filters( 'blaze_commerce_taxonomy_data', $document, $term );
 	}
 
+	public function get_query_args( $page = 1, $batch_size = 50 ) {
+		// Add the custom taxonomies to this array
+		$taxonomies          = get_taxonomies( array(), 'names' );
+		$taxonomies_for_sync = array();
+		foreach ( $taxonomies as $taxonomy ) {
+			// Skip taxonomies starting with 'ef_'
+			if ( preg_match( '/^(ef_|link_category|product_shipping_class|post_format|wp_template_part_area|wp_pattern_category|gblocks_pattern_collections|fb_product_set|wp_theme|elementor|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
+				continue;
+			}
+
+			$taxonomies_for_sync[] = $taxonomy;
+		}
+
+		$offset = ( $page - 1 ) * $batch_size;
+		return apply_filters( 'wooless_taxonomy_query_args', array(
+			'taxonomy' => $taxonomies_for_sync,
+			'hide_empty' => true,
+			'number' => $batch_size,
+			'offset' => $offset,
+		) );
+	}
 
 
 	public function index_to_typesense() {
-		$logger  = wc_get_logger();
-		$context = array( 'source' => 'wooless-taxonomy-collection-initialize' );
 
 		$import_logger  = wc_get_logger();
 		$import_context = array( 'source' => 'wooless-taxonomy-import' );
+		$taxonomy_datas = array();
 
-		$batch_size               = 250; // Adjust the batch size depending on your server's capacity
-		$current_batch_count      = 0;
-		$taxonomy_datas           = array();
-		$imported_products_count  = 0;
-		$successful_imports_count = 0;
-
-
-		//indexing taxonmy terms
 		try {
-			$this->initialize();
+			$batch_size      = $_REQUEST['batch_size'] ?? 250;
+			$page            = $_REQUEST['page'] ?? 1;
+			$imported_count  = $_REQUEST['imported_count'] ?? 0;
+			$total_imports   = $_REQUEST['total_imports'] ?? 0;
+			$import_response = array();
 
-			// Add the custom taxonomies to this array
-			$taxonomies = get_taxonomies( [], 'names' );
-
-			// Fetch terms for all taxonomies except those starting with 'ef_'
-			foreach ( $taxonomies as $taxonomy ) {
-				// Skip taxonomies starting with 'ef_'
-				if ( preg_match( '/^(ef_|elementor|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
-					continue;
-				}
-
-				$args = [ 
-					'taxonomy' => $taxonomy,
-					'hide_empty' => false,
-				];
-
-				$terms = get_terms( $args );
-
-				if ( ! empty( $terms ) && ! is_wp_error( $terms ) ) {
-					foreach ( $terms as $term ) {
-						// Prepare the data to be indexed
-						$taxonomy_datas[] = $this->generate_typesense_data( $term );
-						$current_batch_count++;
-
-						if ( $current_batch_count >= $batch_size ) {
-							// Index the term data in Typesense
-							try {
-								$result                   = $this->import( $taxonomy_datas );
-								$successful_imports       = array_filter( $result, function ($batch_result) {
-									return isset( $batch_result['success'] ) && $batch_result['success'] == true;
-								} );
-								$successful_imports_count += count( $successful_imports );
-								$imported_products_count += $current_batch_count;
-								$taxonomy_datas           = array();
-								$current_batch_count      = 0;
-								$import_logger->debug( 'TS Taxonomy Import result: ' . print_r( $result, 1 ), $import_context );
-							} catch (\Exception $e) {
-								$logger->debug( 'TS Taxonomy Import Exception: ' . $e->getMessage(), $context );
-
-								echo "Error adding term '{$term->name}' to Typesense: " . $e->getMessage() . "\n";
-								$taxonomy_datas      = array();
-								$current_batch_count = 0;
-							}
-						}
-					}
-				}
-
-				unset( $terms );
+			if ( $page == 1 ) {
+				$this->initialize();
 			}
 
-			unset( $taxonomies );
+			$query_args = $this->get_query_args( $page, $batch_size );
 
-			if ( count( $taxonomy_datas ) > 0 ) {
-				try {
-					$result                   = $this->import( $taxonomy_datas );
-					$successful_imports       = array_filter( $result, function ($batch_result) {
-						return isset( $batch_result['success'] ) && $batch_result['success'] == true;
-					} );
-					$successful_imports_count += count( $successful_imports );
-					$imported_products_count += $current_batch_count;
-					$import_logger->debug( 'TS Taxonomy Import result: ' . print_r( $result, 1 ), $import_context );
-				} catch (\Exception $e) {
-					$logger->debug( 'TS Taxonomy Import Exception: ' . $e->getMessage(), $context );
+			$term_query = new \WP_Term_Query( $query_args );
 
-					echo "Error adding term '{$term->name}' to Typesense: " . $e->getMessage() . "\n";
+			if ( ! empty( $term_query->terms ) && ! is_wp_error( $term_query->terms ) ) {
+				foreach ( $term_query->terms as $term ) {
+					$taxonomy_datas[] = $this->generate_typesense_data( $term );
 				}
+
+				$import_response = $this->collection()->documents->import( $taxonomy_datas, array(
+					'action' => 'upsert'
+				) );
+
+				$successful_imports = array_filter( $import_response, function ($batch_result) {
+					return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+				} );
+
+				$imported_count += count( $successful_imports );
+				$total_imports += count( $taxonomy_datas );
 			}
 
-			unset( $taxonomy_datas );
 
-			echo "Taxonomies synced: {$successful_imports_count}/{$imported_products_count}\n";
+
+			$next_page          = $page + 1;
+			$query_args['page'] = $next_page;
+			$term_query         = new \WP_Term_Query( $query_args );
+			$has_next_data      = ! empty( $term_query->terms ) && ! is_wp_error( $term_query->terms );
+
+			wp_send_json( array(
+				'imported_count' => $imported_count,
+				'total_imports' => $total_imports,
+				'next_page' => $has_next_data ? $next_page : null,
+				'query_args' => $query_args,
+				'import_response' => $import_response,
+				'import_data_sent' => $taxonomy_datas,
+			) );
+
 		} catch (\Exception $e) {
-			$logger->debug( 'TS Taxonomy collection intialize Exception: ' . $e->getMessage(), $context );
-
-			echo "Error: " . $e->getMessage() . "\n";
+			$import_logger->debug( 'TS Taxonomy collection import Exception: ' . $e->getMessage(), $import_context );
 		}
 	}
 

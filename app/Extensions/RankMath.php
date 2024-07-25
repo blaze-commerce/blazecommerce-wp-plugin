@@ -48,7 +48,17 @@ class RankMath {
 	}
 
 	public function add_taxonomy_head( $document, $term ) {
-		$document['seoFullHead'] = $this->get_full_head( get_term_link( $term ) );
+		/**
+		 * This is useful when someone created a custom taxonomies and it should have an seoFullhead in the front end. 
+		 */
+		$taxonomies_with_seo     = apply_filters( 'wooless_taxonomies_with_seo', array(
+			'product_cat',
+			'category',
+			'post_tag',
+			'product_tag'
+		) );
+		$document['seoFullHead'] = in_array( $document['type'], $taxonomies_with_seo ) ? $this->get_full_head( get_term_link( $term ) ) : '';
+
 		return $document;
 	}
 

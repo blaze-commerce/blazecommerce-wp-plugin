@@ -31,6 +31,7 @@ class BlazeWooless {
 
 		Ajax::get_instance();
 		Woocommerce::get_instance();
+		PostType::get_instance();
 
 		add_action( 'template_redirect', array( $this, 'search_redirect' ) );
 	}
@@ -74,6 +75,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\CategoryBanner',
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',
+			'\\BlazeWooless\\Features\\Cli',
 		);
 
 		foreach ( $features as $feature ) {
@@ -103,6 +105,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
+			'\\BlazeWooless\\Extensions\\Elementor',
 		);
 
 		foreach ( $extensions as $extension ) {
