@@ -31,7 +31,10 @@ class Woocommerce {
 		add_action( 'woocommerce_get_checkout_url', array( $this, 'append_cart_in_checkout_url' ) );
 
 		add_action( 'ts_product_update', array( $this, 'update_typesense_variation' ), 10, 2 );
+		add_action( 'ts_before_product_upsert', array( $this, 'auto_assign_parent_categories' ), 10, 1 );
 		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
+
+		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'update_variable_product_price' ), 999, 3 );
 
 	}
 
@@ -94,9 +97,28 @@ class Woocommerce {
 
 	}
 
+	/**
+	 * Summary of auto_assign_parent_categories
+	 * 
+	 * We needed this function to auto select the parent product categories when product is saved to typesense. 
+	 * 
+	 * This fixes issues where parent category is not selected and ends up making the frontend not having the products
+	 * 
+	 * @param mixed $product
+	 * @return void
+	 */
+	public function auto_assign_parent_categories( $product ) {
+		$product_id     = $product->get_id();
+		$all_categories = $this->get_all_categories_with_parents( $product_id );
+
+		// Assign the terms to the product
+		wp_set_object_terms( $product_id, $all_categories, 'product_cat' );
+	}
+
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
 	public function on_product_save( $product_id, $wc_product ) {
 		try {
+			do_action( 'ts_before_product_upsert', $wc_product );
 			$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
 			Product::get_instance()->upsert( $document_data );
 			do_action( 'ts_product_update', $product_id, $wc_product );
@@ -107,6 +129,35 @@ class Woocommerce {
 			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
 			error_log( "Error updating product in Typesense: " . $e->getMessage() );
 		}
+	}
+
+	public function get_all_parent_categories_recursive( $term_id, $taxonomy, &$parent_terms = [] ) {
+		$term = get_term( $term_id, $taxonomy );
+		if ( $term && $term->parent != 0 && ! in_array( $term->parent, $parent_terms ) ) {
+			$parent_terms[] = $term->parent;
+			$this->get_all_parent_categories_recursive( $term->parent, $taxonomy, $parent_terms );
+		}
+		return $parent_terms;
+	}
+
+	public function get_all_categories_with_parents( $product_id ) {
+		$current_categories = wp_get_object_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
+
+		$all_categories = [];
+		foreach ( $current_categories as $category_id ) {
+			if ( ! in_array( $category_id, $all_categories ) ) {
+				$all_categories[] = $category_id;
+			}
+			// Get all parent categories recursively
+			$parent_categories = $this->get_all_parent_categories_recursive( $category_id, 'product_cat' );
+			foreach ( $parent_categories as $parent_category_id ) {
+				if ( ! in_array( $parent_category_id, $all_categories ) ) {
+					$all_categories[] = $parent_category_id;
+				}
+			}
+		}
+
+		return $all_categories;
 	}
 
 	public function update_typesense_variation( $product_id, $wc_product ) {
@@ -172,5 +223,60 @@ class Woocommerce {
 	 */
 	public static function format_price( $price ) {
 		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
+	}
+
+	public static function get_currencies() {
+		$base_currency = get_woocommerce_currency();
+		return apply_filters( 'blaze_wooless_currencies', array(
+			$base_currency => ''
+		) );
+	}
+
+	/**
+	 * Update variable product price based on variations
+	 * This function is used to update the price of a variable product based on the variations
+	 * Since the price of a variable product is not stored in the product itself, we need to get the price from the variations
+	 * Hooked to blaze_wooless_get_variation_prices filter, priority 999
+	 * Task : https://app.clickup.com/t/86eprwe91
+	 * @since   1.5.0
+	 * @param   array $product_data
+	 * @param   int $product_id
+	 * @param   \WC_Product $product
+	 * @return  array
+	 */
+	public function update_variable_product_price( $product_data, $product_id, $product ) {
+
+		if ( $product->get_type() == 'variable' ) {
+
+			try {
+
+				// get variations
+				$variations = $product->get_variation_prices( true );
+
+				// find the lowest price among the variations
+				$prices            = $variations['price'];
+				$min_price         = min( $prices );
+				$lowest_product_id = array_search( $min_price, $prices );
+
+				if ( $lowest_product_id ) {
+					$lowest_product = wc_get_product( $lowest_product_id );
+					$variation_data = Product::get_instance()->generate_typesense_data( $lowest_product );
+
+					$variation_data               = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
+					$product_data['price']        = $variation_data['price'];
+					$product_data['regularPrice'] = $variation_data['regularPrice'];
+					$product_data['salePrice']    = $variation_data['salePrice'];
+				} else {
+					throw new \Exception( 'No variations found for product ' . $product_id );
+				}
+
+			} catch (\Exception $e) {
+				$logger  = wc_get_logger();
+				$context = array( 'source' => 'wooless-variable-product-price' );
+				$logger->debug( 'TS Variable Product Price Exception: ' . $e->getMessage(), $context );
+			}
+		}
+
+		return $product_data;
 	}
 }

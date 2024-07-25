@@ -39,6 +39,23 @@ class CategoryPageSettings extends BaseSettings {
 						'type' => 'text',
 						'args' => array( 'description' => 'Input the Default Banner Image Link', ),
 					),
+					array(
+						'id' => 'default_product_sorting',
+						'label' => 'Default Product Sorting',
+						'type' => 'select',
+						'args' => array( 
+							'description' => 'Select the default sorting for products',
+							'options' => array(
+								'sort_0' => 'Sort By None',
+								'sort_1' => 'Sort By Popularity',
+								'sort_2' => 'Sort By Latest',
+								'sort_3' => 'Sort By Price: low to high',
+								'sort_4' => 'Sort By Price: high to low',
+								'sort_5' => 'Sort By Alphabetical: A-Z',
+								'sort_6' => 'Sort By Alphabetical: Z-A',
+							), 
+						),
+					),
 				)
 			),
 		];
@@ -55,10 +72,21 @@ class CategoryPageSettings extends BaseSettings {
 
 		$site_info->upsert(
 			array(
-				'id' => '10089553',
+				'id' => '10089554',
 				'name' => 'category_page_default_banner',
 				'value' => json_encode( array(
 					'url' => $options['default_banner_link']
+				) ),
+				'updated_at' => time(),
+			)
+		);
+
+		$site_info->upsert(
+			array(
+				'id' => '10089555',
+				'name' => 'category_page_default_sort',
+				'value' => json_encode( array(
+					'sort_option' => $options['default_product_sorting']
 				) ),
 				'updated_at' => time(),
 			)

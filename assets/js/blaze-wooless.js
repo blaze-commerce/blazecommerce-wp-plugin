@@ -299,6 +299,35 @@
                 },
             }
         },
+        customerTestimonials: {
+            config: commonConfig,
+            fields: {
+                author: {
+                    label: 'Author',
+                    name: 'customer-testimonials-author',
+                },
+                authorClasses: {
+                    label: 'Author Classes',
+                    name: 'customer-testimonials-author-classes',
+                },
+                authorImage: {
+                    label: 'Author Image',
+                    name: 'customer-testimonials-author-image',
+                },
+                authorImageClasses: {
+                    label: 'Author Image Classes',
+                    name: 'customer-testimonials-author-image-classes',
+                },
+                content: {
+                    label: 'Content',
+                    name: 'customer-testimonials-content',
+                },
+                contentClasses: {
+                    label: 'Content Classes',
+                    name: 'customer-testimonials-content-classes',
+                },
+            },
+        },
     }
 
     var dynamicConfigFields = {
@@ -709,6 +738,63 @@
             })
         },
 
+        importTaxonomyTermData: function (params = {}) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                var data = {
+                    'action': 'index_data_to_typesense',
+                    'collection_name': 'taxonomy',
+                };
+
+                $.post(ajaxurl, Object.assign({}, data, params), function (response) {
+
+                    if (response.next_page != null) {
+                        resolve(_this.importTaxonomyTermData(
+                            {
+                                page: response.next_page,
+                                imported_count: response.imported_count,
+                                total_imports: response.total_imports
+                            }))
+                    } else {
+
+                        _this.hideLoader();
+                        _this.syncInProgress = false;
+
+                        $(_this.syncResultsContainer).append('<div>Imported taxonomy terms count: ' + response.imported_count + '/' + response.total_imports + '</div>');
+                        resolve(true);
+                    }
+                });
+            })
+        },
+
+        importPageData: function (params = {}) {
+            var _this = this;
+            return new Promise(function (resolve, reject) {
+                var data = {
+                    'action': 'index_data_to_typesense',
+                    'collection_name': 'page',
+                };
+
+                $.post(ajaxurl, Object.assign({}, data, params), function (response) {
+
+                    if (response.next_page != null) {
+                        resolve(_this.importPageData(
+                            {
+                                page: response.next_page,
+                                imported_count: response.imported_count,
+                                total_imports: response.total_imports
+                            }))
+                    } else {
+
+                        _this.hideLoader();
+                        _this.syncInProgress = false;
+
+                        $(_this.syncResultsContainer).append('<div>Imported pagcount: ' + response.imported_count + '/' + response.total_imports + '</div>');
+                        resolve(true);
+                    }
+                });
+            })
+        },
         importProducts: function (e) {
             e.preventDefault();
             if (this.syncInProgress) {
@@ -727,7 +813,9 @@
                 return false;
             }
             this.clearResultContainer();
-            return this.importData('taxonomy', 'Taxonomies Syncing in progress...', true);
+            this.renderLoader('Taxonomy Syncing in progress...');
+            this.syncInProgress = true;
+            return this.importTaxonomyTermData();
         },
 
         importMenus: function (e) {
@@ -745,7 +833,9 @@
                 return false;
             }
             this.clearResultContainer();
-            return this.importData('page', 'Pages Syncing in progress...', true);
+            this.renderLoader('Page Syncing in progress...');
+            this.syncInProgress = true;
+            return this.importPageData();
         },
 
         importSiteInfo: function (e) {
