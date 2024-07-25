@@ -34,7 +34,9 @@ class Authentication {
 		wc_setcookie( 'woo-session', $token );
 		wc_setcookie( 'isLoggedIn', 'true' );
 		$cart_meta = get_user_meta( $user->ID, '_woocommerce_persistent_cart_1', true );
-		wc_setcookie( 'woocommerce_total_product_in_cart', count( $cart_meta['cart'] ) );
+		if ( ! empty( $cart_meta ) && is_array( $cart_meta ) ) {
+			wc_setcookie( 'woocommerce_total_product_in_cart', count( $cart_meta['cart'] ) );
+		}
 	}
 
 	public function destroy_cookies() {
