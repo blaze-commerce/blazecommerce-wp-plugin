@@ -62,7 +62,7 @@ class Product extends BaseCollection {
 		$fields = array(
 			array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
 			array( 'name' => 'productId', 'type' => 'string', 'facet' => true ),
-			array( 'name' => 'parentId', 'type' => 'int64', 'facet' => true ),
+			array( 'name' => 'parentId', 'type' => 'int64', 'facet' => true, 'optional' => true ),
 			array( 'name' => 'shortDescription', 'type' => 'string', 'optional' => true ),
 			array( 'name' => 'description', 'type' => 'string' ),
 			array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'sort' => true ),
