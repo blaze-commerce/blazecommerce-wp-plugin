@@ -26,6 +26,15 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	/**
+	 * Helper method to remove "cart." in url 
+	 * @param mixed $url
+	 * @return string
+	 */
+	public function remove_cart_from_url( $url ) {
+		return rtrim( str_replace( '/cart.', '/', $url ), '/' );
+	}
+
+	/**
 	 * Removes all "cart." in all links when the user is not on admin pages. 
 	 * This function dynamically changes the wordpress site address url in general settings via option_home filter
 	 * 
@@ -40,7 +49,7 @@ class GeneralSettings extends BaseSettings {
 			return $value;
 		}
 
-		return rtrim( str_replace( '/cart.', '/', $value ), '/' );
+		return $this->remove_cart_from_url( $value );
 	}
 
 	/**
