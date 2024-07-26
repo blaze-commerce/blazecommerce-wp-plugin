@@ -23,6 +23,11 @@ class GeneralSettings extends BaseSettings {
 		add_filter( 'rest_url', array( $this, 'overwrite_rest_url' ), 10 );
 
 		add_filter( 'option_home', array( $this, 'maybe_remove_cart_from_site_address_url' ), 10, 2 );
+
+		add_filter( 'post_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
+		add_filter( 'post_type_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
+		add_filter( 'page_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
+		add_filter( 'term_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
 	}
 
 	/**
