@@ -27,6 +27,7 @@ class WoocommerceAeliaCurrencySwitcher {
 			// add_action( 'wp_footer', array( $this, 'add_currency_switcher_after_country_field' ), 50 );
 
 			add_filter( 'blaze_wooless_currencies', array( $this, 'available_currencies' ), 10, 1 );
+			add_filter( 'wc_aelia_cs_selected_currency', array( $this, 'set_selected_country' ), 10000, 1 );
 		}
 
 		add_filter( 'graphql_RootQuery_fields', array( $this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
@@ -342,5 +343,16 @@ class WoocommerceAeliaCurrencySwitcher {
 		}
 
 		return $variations_data;
+	}
+
+	public function set_selected_country( $selected_currency ) {
+		$currency_countries_mappings = get_option( 'wc_aelia_currency_switcher' )['currency_countries_mappings'];
+		$matched_currency = $currency_countries_mappings[ $selected_currency ];
+		if ( isset($matched_currency['countries']) ) {
+			\wc_setcookie( 'currentCountry', $matched_currency['countries'][0] );
+			\wc_setcookie( 'aelia_cs_selected_currency', $selected_currency );
+		}
+		
+		return $selected_currency;
 	}
 }
