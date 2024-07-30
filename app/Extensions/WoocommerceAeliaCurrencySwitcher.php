@@ -346,6 +346,10 @@ class WoocommerceAeliaCurrencySwitcher {
 	}
 
 	public function set_selected_country( $selected_currency ) {
+		if ( $_SERVER['REQUEST_URI'] === '/graphql' ) {
+			return $selected_currency;
+		}
+		
 		$currency_countries_mappings = get_option( 'wc_aelia_currency_switcher' )['currency_countries_mappings'];
 		$matched_currency = $currency_countries_mappings[ $selected_currency ];
 		if ( isset($matched_currency['countries']) ) {
