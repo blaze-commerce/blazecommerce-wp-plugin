@@ -57,12 +57,12 @@ class JudgeMe {
 			$additional_settings['judgeme_widget_settings'] = $setting;
 		}
 
-		$additional_settings['judegme_settings'] = array();
+		$additional_settings['judgeme_settings'] = array();
 
 		$product_options = get_option( 'wooless_settings_product_page_options' );
 
 		if ( isset( $product_options['judegme_single_product_review'] ) ) {
-			$additional_settings['judegme_settings']['single_review'] = $product_options['judegme_single_product_review'];
+			$additional_settings['judgeme_settings']['single_review'] = $product_options['judegme_single_product_review'];
 		}
 
 		return $additional_settings;
