@@ -35,19 +35,9 @@ class Woocommerce {
 		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
 
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'update_variable_product_price' ), 999, 3 );
-
-		add_filter( 'option_home', array( $this, 'maybe_remove_cart_from_site_address_url' ), 10, 2 );
 	}
 
-	public function maybe_remove_cart_from_site_address_url( $value, $option ) {
 
-		// skip the filter if the user is on admin pages
-		if ( is_admin() ) {
-			return $value;
-		}
-
-		return rtrim( str_replace( '/cart.', '/', $value ), '/' );
-	}
 
 	public function append_cart_in_checkout_url( $checkout_url ) {
 		if ( strpos( $checkout_url, 'https://cart.' ) === false ) {

@@ -21,11 +21,46 @@ class GeneralSettings extends BaseSettings {
 		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
 		add_action( 'template_redirect', array( $this, 'redirect_non_admin_user' ), -1 );
 		add_filter( 'rest_url', array( $this, 'overwrite_rest_url' ), 10 );
+
+		add_filter( 'option_home', array( $this, 'maybe_remove_cart_from_site_address_url' ), 10, 2 );
+
+		add_filter( 'post_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
+		add_filter( 'post_type_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
+		add_filter( 'page_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
+		add_filter( 'term_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
+	}
+
+	/**
+	 * Helper method to remove "cart." in url 
+	 * @param mixed $url
+	 * @return string
+	 */
+	public function remove_cart_from_url( $url ) {
+		return rtrim( str_replace( '/cart.', '/', $url ), '/' );
+	}
+
+	/**
+	 * Removes all "cart." in all links when the user is not on admin pages. 
+	 * This function dynamically changes the wordpress site address url in general settings via option_home filter
+	 * 
+	 * @param mixed $value
+	 * @param mixed $option
+	 * @return mixed
+	 */
+	public function maybe_remove_cart_from_site_address_url( $value, $option ) {
+
+		// skip the filter if the user is on admin pages
+		if ( is_admin() ) {
+			return $value;
+		}
+
+		return $this->remove_cart_from_url( $value );
 	}
 
 	/**
 	 * Redirect non admin user to non cart.* url
 	 * Hooked into template_redirect, priority -1
+	 * 
 	 * @since   1.5.0
 	 * @return  void
 	 */
@@ -40,31 +75,28 @@ class GeneralSettings extends BaseSettings {
 			return;
 		}
 
-		$enable_redirect = boolval( $this->get_option( 'enable_redirect' ) );
-
-		if ( ! $enable_redirect )
-			return;
 
 		// Redirect to home page if the user is not logged in and the page is cart 
 		$restricted_pages = apply_filters( 'blaze_wooless_restricted_pages', is_cart() );
 		if ( $restricted_pages ) {
-			wp_redirect( home_url() );
+			wp_redirect( $this->remove_cart_from_url( home_url() ) );
 			exit;
 		}
 
-		// Redirect to home page if the user is not logged in and the page is home page, front page, shop page, product category page, or product page
-		$pages_should_redirect_to_frontend = apply_filters( 'blaze_wooless_pages_should_redirect_to_frontend', is_home() || is_front_page() || is_shop() || is_product_category() || is_product() );
-		if ( $pages_should_redirect_to_frontend ) {
-			wp_redirect( home_url( $_SERVER['REQUEST_URI'] ) );
-			exit;
+		$is_my_account_page                = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
+		$exclude_page_redirect_to_frontend = apply_filters( 'blaze_wooless_exclude_page_redirect_to_frontend', is_checkout() );
+		if ( $exclude_page_redirect_to_frontend || $is_my_account_page ) {
+			//Since the page is excluded from redirecting to frontend then we just end the function here
+			return;
 		}
 
-		if ( isset( $_COOKIE['isLoggedIn'] ) && $_COOKIE['isLoggedIn'] === 'false' ) {
-			if ( is_user_logged_in() ) {
-				wp_set_auth_cookie( 0 );
-				wp_redirect( home_url( $_SERVER['REQUEST_URI'] ) );
-				exit;
-			}
+		$has_cart_in_url           = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
+		$from_vercel_proxy_request = isset( $_SERVER['HTTP_X_VERCEL_PROXY_SIGNATURE'] ) ? true : false;
+
+		// if the url has cart. on it and the request is not from vercel then we redirect it to frontend page without cart in the url
+		if ( $has_cart_in_url && ! $from_vercel_proxy_request ) {
+			wp_redirect( $this->remove_cart_from_url( home_url( $_SERVER['REQUEST_URI'] ) ) );
+			exit;
 		}
 
 	}
@@ -178,14 +210,6 @@ class GeneralSettings extends BaseSettings {
 				),
 			);
 
-			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'enable_redirect',
-				'label' => 'Enable Redirect to non cart.* Url',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to enable redirect for homepage, product page, and product category page. This will work only if the user is not administrator.'
-				),
-			);
 		}
 
 
