@@ -41,6 +41,7 @@ class WoocommerceBundle {
 				'product' => array(
 					'id' => $product->get_id(),
 					'stockStatus' => $product->get_stock_status(),
+					'bundleId' => $bundled_item->get_id(),
 				),
 				'settings' => array(
 					'minQuantity' => $bundled_item->get_quantity( 'min' ),
