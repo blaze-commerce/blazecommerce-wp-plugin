@@ -70,6 +70,9 @@ class WoocommerceBundle {
 			return array();
 		}
 
+		$minPrice = get_post_meta( $product->get_id(), '_wc_pb_base_price', true );
+		$maxPrice = get_post_meta( $product->get_id(), '_wc_sw_max_price', true );
+
 		$data = array(
 			'settings' => array(
 				'layout' => $product->get_layout(),
@@ -79,8 +82,8 @@ class WoocommerceBundle {
 				'editInCart' => $product->get_editable_in_cart(),
 			),
 			'products' => $this->get_bundled_items( $product ),
-			'minPrice' => get_post_meta( $product->get_id(), '_wc_pb_base_price', true ),
-			'maxPrice' => get_post_meta( $product->get_id(), '_wc_sw_max_price', true ),
+			'minPrice' => apply_filters( 'blaze_wooless_calculated_converted_single_price', $minPrice ),
+			'maxPrice' => apply_filters( 'blaze_wooless_calculated_converted_single_price', $maxPrice )
 		);
 
 		return apply_filters( 'blaze_wooless_product_bundle_data', $data, $product );
