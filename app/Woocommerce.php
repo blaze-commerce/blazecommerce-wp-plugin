@@ -47,7 +47,10 @@ class Woocommerce {
 			return $cart_item_data;
 		}
 
-		// The copied post data is merged to the global post so that it mimic how a normal add to cart as it is normally in the global post variable in php
+		/**
+		 * We modify and merge global post request to our graphql request so that we mimic how a normal add to cart request is done in woocommerce.
+		 * Normally add to cart request is a post request and this is the reason why we had to set the priority to 1 when we hook in woocommerce_add_cart_item_data
+		 */
 		$_POST = array_merge( $_POST, $post_data );
 		return $cart_item_data;
 	}
