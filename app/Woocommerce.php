@@ -35,8 +35,25 @@ class Woocommerce {
 		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
 
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'update_variable_product_price' ), 999, 3 );
+
+		// We set the priority to 1 so that this will be the first to be executed as we will mimic how woo is adding product to cart but via graphql
+		add_filter( 'woocommerce_add_cart_item_data', array( $this, 'add_cart_item_data' ), 1, 4 );
 	}
 
+	public function add_cart_item_data( $cart_item_data, $product_id, $variation_id, $quantity ) {
+		$post_data = ! empty( $cart_item_data['woolessGraphqlRequest'] ) ? $cart_item_data['woolessGraphqlRequest'] : null;
+		if ( empty( $post_data ) ) {
+			// Since the request is not from our wpgraphql request then we just return $cart_item_data and not modify it to avoid conflicts
+			return $cart_item_data;
+		}
+
+		/**
+		 * We modify and merge global post request to our graphql request so that we mimic how a normal add to cart request is done in woocommerce.
+		 * Normally add to cart request is a post request and this is the reason why we had to set the priority to 1 when we hook in woocommerce_add_cart_item_data
+		 */
+		$_POST = array_merge( $_POST, $post_data );
+		return $cart_item_data;
+	}
 
 
 	public function append_cart_in_checkout_url( $checkout_url ) {
