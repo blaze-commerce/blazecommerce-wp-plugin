@@ -18,6 +18,10 @@ class CategoryPageSettings extends BaseSettings {
 		return self::$instance;
 	}
 
+	public function register_hooks() {
+		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 2 );
+	}
+
 	public function settings_callback( $options ) {
 		try {
 			$this->update_fields( $options );
@@ -93,6 +97,14 @@ class CategoryPageSettings extends BaseSettings {
 		);
 
 		do_action( 'blaze_wooless_save_category_page_settings', $options );
+	}
+
+	public function register_additional_site_info( $additional_data ) {
+		$category_options = get_option( 'wooless_settings_category_page_options' );
+		$additional_data['category_page_default_banner']              = json_encode( $category_options['default_banner_link'] ?? [] );
+		$additional_data['category_page_default_sort']              = json_encode( $category_options['default_product_sorting'] ?? [] );
+
+		return $additional_data;
 	}
 }
 
