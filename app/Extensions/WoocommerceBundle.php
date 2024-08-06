@@ -70,8 +70,29 @@ class WoocommerceBundle {
 			return array();
 		}
 
-		$minPrice = get_post_meta( $product->get_id(), '_wc_pb_base_price', true );
-		$maxPrice = get_post_meta( $product->get_id(), '_wc_sw_max_price', true );
+		$maxPrice = $minPrice = array_map( 'floatval', \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices( $product->get_id() ) );
+
+		$bundle_products = $this->get_bundled_items( $product );
+
+		if ( is_array( $bundle_products ) && count( $bundle_products ) > 0 ) {
+			foreach ( $bundle_products as $bundle_product ) {
+				// $bundles[ $bundle_product['product']['id'] ] = $bundle_product['settings']['pricedIndividually'];
+				if ( $bundle_product['settings']['pricedIndividually'] ) {
+
+					$bundle_prices = get_transient( 'blaze_wooless_product_bundle_' . $bundle_product['product']['id'] . '_price' );
+
+					if ( $bundle_prices === false ) {
+						$bundle_prices = array_map( 'floatval', \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices( $bundle_product['product']['id'] ) );
+						set_transient( 'blaze_wooless_product_bundle_' . $bundle_product['product']['id'] . '_price', $bundle_prices, 60 * 60 * 24 );
+					}
+
+					foreach ( $bundle_prices as $currency => $price ) {
+						$maxPrice[ $currency ] += $price;
+					}
+				}
+			}
+		}
+
 
 		$data = array(
 			'settings' => array(
@@ -81,9 +102,9 @@ class WoocommerceBundle {
 				'maxBundleSize' => $product->get_max_bundle_size(),
 				'editInCart' => $product->get_editable_in_cart(),
 			),
-			'products' => $this->get_bundled_items( $product ),
-			'minPrice' => apply_filters( 'blaze_wooless_calculated_converted_single_price', $minPrice ),
-			'maxPrice' => apply_filters( 'blaze_wooless_calculated_converted_single_price', $maxPrice )
+			'products' => $bundle_products,
+			'minPrice' => $minPrice,
+			'maxPrice' => $maxPrice,
 		);
 
 		return apply_filters( 'blaze_wooless_product_bundle_data', $data, $product );
