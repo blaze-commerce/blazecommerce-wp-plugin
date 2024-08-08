@@ -121,6 +121,13 @@ class SiteInfo extends BaseCollection {
 					'name' => 'woocommerce_prices_include_tax',
 					'value' => get_option( 'woocommerce_prices_include_tax', 'no' ),
 				),
+				array(
+					'name' => 'woocommerce_tax_setup',
+					'value' => [ 
+						'displayPricesIncludingTax' => get_option( 'woocommerce_tax_display_shop' ),
+						'priceDisplaySuffix' => get_option( 'woocommerce_price_display_suffix' ),
+					]
+				)
 			);
 
 			$datas[] = $this->site_logo_settings();
