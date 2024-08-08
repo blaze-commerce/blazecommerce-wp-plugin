@@ -100,12 +100,12 @@ class CategoryPageSettings extends BaseSettings {
 	}
 	public function register_additional_site_info( $additional_data ) {
 		$category_options = get_option( 'wooless_settings_category_page_options' );
-		$default_banner_link = json_encode( $category_options['default_banner_link'] );
-		$default_product_sorting = json_encode( $category_options['default_product_sorting'] );
-		if( $default_banner_link ) {
+		$default_banner_link = json_encode( [ "url" => $category_options['default_banner_link'] ] );
+		$default_product_sorting = json_encode( [ "sort_option" => $category_options['default_product_sorting'] ] );
+		if( !empty( $default_banner_link ) ) {
 			$additional_data['category_page_default_banner']              =  $default_banner_link;
 		}
-		if( $default_product_sorting ) {
+		if( !empty( $default_product_sorting ) ) {
 			$additional_data['category_page_default_sort']              = $default_product_sorting;
 		}
 
