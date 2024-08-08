@@ -126,9 +126,11 @@ class Taxonomy extends BaseCollection {
 		$offset = ( $page - 1 ) * $batch_size;
 		return apply_filters( 'wooless_taxonomy_query_args', array(
 			'taxonomy' => $taxonomies_for_sync,
-			'hide_empty' => true,
+			'hide_empty' => false,
 			'number' => $batch_size,
 			'offset' => $offset,
+			'orderby' => 'term_id',
+			'order' => 'ASC',
 		) );
 	}
 
@@ -159,9 +161,8 @@ class Taxonomy extends BaseCollection {
 					$taxonomy_datas[] = $this->generate_typesense_data( $term );
 				}
 
-				$import_response = $this->collection()->documents->import( $taxonomy_datas, array(
-					'action' => 'upsert'
-				) );
+				$import_response = $this->collection()->documents->import( $taxonomy_datas );
+
 
 				$successful_imports = array_filter( $import_response, function ($batch_result) {
 					return isset( $batch_result['success'] ) && $batch_result['success'] == true;
@@ -177,6 +178,8 @@ class Taxonomy extends BaseCollection {
 			$query_args['page'] = $next_page;
 			$term_query         = new \WP_Term_Query( $query_args );
 			$has_next_data      = ! empty( $term_query->terms ) && ! is_wp_error( $term_query->terms );
+
+
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,
