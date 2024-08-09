@@ -20,7 +20,6 @@ class BusinessReviewsBundle {
 			add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_review_config_to_site_info' ), 10, 2 );
 
 			add_action( 'rest_api_init', array( $this, 'register_api_endpoint' ) );
-			add_action( 'blaze_wooless_save_product_page_settings', array( $this, 'save_settings' ) );
 		}
 	}
 
@@ -100,28 +99,19 @@ class BusinessReviewsBundle {
 
 		$is_clone = false;
 		$collection_id = '';
-		$collection_post_title = '';
-		$collection_content = '';
-		$collection_inited = false;
 		$businesses = null;
 		$reviews = null;
 
 		if ( $collection != null ) {
 			if ( ! $is_clone ) {
 				$collection_id = $collection->ID;
-				$collection_post_title = $collection->post_title;
 			}
-			$collection_content = trim( $collection->post_content );
 
 			$review_data = $core->get_reviews( $collection );
 			if ( $review_data !== false ) {
 				$businesses = $review_data['businesses'];
 				$reviews = $review_data['reviews'];
 				$options = $review_data['options'];
-				$errors = $review_data['errors'];
-				if ( isset( $businesses ) && count( $businesses ) || isset( $reviews ) && count( $reviews ) ) {
-					$collection_inited = true;
-				}
 			}
 		}
 
@@ -237,19 +227,5 @@ class BusinessReviewsBundle {
 		}
 
 		return $response;
-	}
-
-	public function save_settings() {
-		// $product_options = get_option( 'wooless_settings_product_page_options' );
-
-		// if ( ! isset( $product_options['brb_review_collection'] ) )
-		// 	return;
-
-		// TypesenseClient::get_instance()->site_info()->upsert( [ 
-		// 	'id' => '1001023',
-		// 	'name' => 'business_reviews_bundle_settings',
-		// 	'value' => json_encode( [ 'collection' => $product_options['brb_review_collection'] ] ),
-		// 	'updated_at' => time(),
-		// ] );
 	}
 }
