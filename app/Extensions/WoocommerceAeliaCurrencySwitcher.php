@@ -29,6 +29,7 @@ class WoocommerceAeliaCurrencySwitcher {
 			add_filter( 'blaze_wooless_currencies', array( $this, 'available_currencies' ), 10, 1 );
 			add_action( 'init', array( $this, 'set_selected_country' ), 10000, 1 );
 			add_filter( 'blaze_wooless_calculated_converted_single_price', array( $this, 'get_converted_single_price' ), 10 );
+			add_filter( 'woocommerce_prices_include_tax', array( $this, 'include_tax_if_has_rates' ), 10, 1 );
 		}
 
 		add_filter( 'graphql_RootQuery_fields', array( $this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
@@ -384,5 +385,14 @@ class WoocommerceAeliaCurrencySwitcher {
 				\wc_setcookie( 'aelia_cs_selected_currency', $selected_currency );
 			}
 		}
+	}
+
+	public function include_tax_if_has_rates( $include_tax ) {
+		$tax_rates = \WC_Tax::get_rates();
+		if ( count( $tax_rates ) > 0 ) {
+			return reset($tax_rates)['rate'] > 0;
+		}
+
+		return $include_tax;
 	}
 }
