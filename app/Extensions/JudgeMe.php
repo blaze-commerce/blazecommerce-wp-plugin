@@ -39,7 +39,7 @@ class JudgeMe {
 	public function register_review_settings( array $options ) {
 
 		$options[] = array(
-			'id' => 'judegme_single_product_review',
+			'id' => 'judgeme_single_product_review',
 			'label' => 'JudgeMe - Display Single Review',
 			'type' => 'checkbox',
 			'args' => array( 'description' => 'Check this to enable single review for all products' ),
@@ -61,7 +61,7 @@ class JudgeMe {
 
 		$product_options = get_option( 'wooless_settings_product_page_options' );
 
-		if ( isset( $product_options['judegme_single_product_review'] ) ) {
+		if ( isset( $product_options['judgeme_single_product_review'] ) ) {
 			$additional_settings['judgeme_settings']['single_review'] = $product_options['judegme_single_product_review'];
 		}
 
