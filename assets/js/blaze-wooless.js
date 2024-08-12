@@ -397,6 +397,10 @@
                 { name: 'containerClass', label: 'Container Classes' },
             ]),
             fields: {
+                classes: {
+                    label: 'Classes',
+                    name: 'product-id-classes',
+                },
                 productId: {
                     label: 'Product Id',
                     name: 'list-text',
