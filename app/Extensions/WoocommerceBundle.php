@@ -16,8 +16,9 @@ class WoocommerceBundle {
 	public function __construct() {
 		if ( is_plugin_active( 'woocommerce-product-bundles/woocommerce-product-bundles.php' ) ) {
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'fields' ), 10, 1 );
-			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'data' ), 10, 3 );
+			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'data' ), 99, 3 );
 			add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
+
 		}
 	}
 
@@ -35,6 +36,7 @@ class WoocommerceBundle {
 		$bundled_items_data = array();
 
 		$bundled_items = $bundle->get_bundled_items();
+
 		foreach ( $bundled_items as $bundled_item ) {
 			$product = $bundled_item->get_product();
 			array_push( $bundled_items_data, array(
@@ -70,29 +72,17 @@ class WoocommerceBundle {
 			return array();
 		}
 
-		$maxPrice = $minPrice = array_map( 'floatval', \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices( $product->get_id() ) );
+		$currency = get_option( 'woocommerce_currency' );
 
 		$bundle_products = $this->get_bundled_items( $product );
 
-		if ( is_array( $bundle_products ) && count( $bundle_products ) > 0 ) {
-			foreach ( $bundle_products as $bundle_product ) {
-				// $bundles[ $bundle_product['product']['id'] ] = $bundle_product['settings']['pricedIndividually'];
-				if ( $bundle_product['settings']['pricedIndividually'] ) {
+		$minPrice = $maxPrice = array();
 
-					$bundle_prices = get_transient( 'blaze_wooless_product_bundle_' . $bundle_product['product']['id'] . '_price' );
+		$minPrice[ $currency ] = $product->get_bundle_price( 'min', true );
+		$maxPrice[ $currency ] = $product->get_bundle_price( 'max', true );
 
-					if ( $bundle_prices === false ) {
-						$bundle_prices = array_map( 'floatval', \Aelia\WC\CurrencySwitcher\WC27\WC_Aelia_CurrencyPrices_Manager::instance()->get_product_regular_prices( $bundle_product['product']['id'] ) );
-						set_transient( 'blaze_wooless_product_bundle_' . $bundle_product['product']['id'] . '_price', $bundle_prices, 60 * 60 * 24 );
-					}
-
-					foreach ( $bundle_prices as $currency => $price ) {
-						$maxPrice[ $currency ] += $price;
-					}
-				}
-			}
-		}
-
+		$minPrice = apply_filters( 'blaze_wooless_convert_prices', $minPrice, $currency );
+		$maxPrice = apply_filters( 'blaze_wooless_convert_prices', $maxPrice, $currency );
 
 		$data = array(
 			'settings' => array(
@@ -111,11 +101,19 @@ class WoocommerceBundle {
 	}
 
 	public function data( $product_data, $product_id, $product ) {
+
 		if ( ! $product->is_type( 'bundle' ) ) {
 			return $product_data;
 		}
+		$currency = get_option( 'woocommerce_currency' );
 
 		$product_data['bundle'] = $this->get_bundled_data( $product );
+
+		if ( $product_data['price'][ $currency ] === 0 && $product_data['regularPrice'][ $currency ] === 0 ) {
+			$product_data['price'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
+			$product_data['regularPrice'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
+			$product_data['salePrice'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
+		}
 
 		return $product_data;
 	}
