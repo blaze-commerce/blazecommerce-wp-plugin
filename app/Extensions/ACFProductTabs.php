@@ -30,25 +30,13 @@ class ACFProductTabs {
 			$title = get_post_meta( $product_id, 'title_' . $key, true );
 			$content = get_post_meta( $product_id, 'text_' . $key, true );
 
-			if ( ! empty( $title ) && ! empty( $content ) ) {
-				$additional_tabs[ $key ] = array(
+			if ( ! empty( $title ) ) {
+				$additional_tabs[] = array(
 					'title' => $title,
 					'content' => $content,
 				);
 			}
 		}
-
-		do_action(
-			"inspect",
-			[ 
-				"wooless_product_tabs",
-				[ 
-					"additional_tabs" => $additional_tabs,
-					"product_id" => $product_id,
-					"product" => $product
-				]
-			]
-		);
 
 		return $additional_tabs;
 	}
