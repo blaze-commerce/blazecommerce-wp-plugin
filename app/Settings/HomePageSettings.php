@@ -60,13 +60,13 @@ class HomePageSettings extends BaseSettings {
 		add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
 		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_homepage_data' ), 10, 2 );
 
-		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_home_page_id' ), 10, 1 );
+		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_home_page_slug' ), 10, 1 );
 	}
 
-	public function add_home_page_id( $site_infos ) {
+	public function add_home_page_slug( $site_infos ) {
 		$home_page_id = get_option( 'page_on_front' );
 		if ( ! empty( $home_page_id ) ) {
-			$site_infos['home_page_id'] = $home_page_id;
+			$site_infos['homepage_slug'] = (string) get_post_field( 'post_name', $home_page_id );
 		}
 		return $site_infos;
 	}
