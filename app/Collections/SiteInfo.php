@@ -280,7 +280,7 @@ class SiteInfo extends BaseCollection {
 
 				$this->create( [ 
 					'name' => $key,
-					'value' => $value,
+					'value' => (string) $value,
 					'updated_at' => time(),
 				] );
 			}
