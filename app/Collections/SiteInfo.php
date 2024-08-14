@@ -220,18 +220,6 @@ class SiteInfo extends BaseCollection {
 
 			unset( $additional_data );
 
-			$woocommerce_afterpay_settings = apply_filters( 'blaze_wooless_woocommerce_afterpay_settings', array() );
-			foreach ( $woocommerce_afterpay_settings as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
 
 			$gift_card_info = apply_filters( 'blaze_commerce_giftcard_info', array() );
 			foreach ( $gift_card_info as $key => $value ) {
