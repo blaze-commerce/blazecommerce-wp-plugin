@@ -168,21 +168,6 @@ class SiteInfo extends BaseCollection {
 
 			unset( $homepage_data );
 
-			$site_messages_data = apply_filters( 'blaze_wooless_additional_site_info_message', array() );
-			foreach ( $site_messages_data as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
-
-			unset( $site_messages_data );
-
 			$initial_additional_data = array();
 
 			$site_currency                         = get_woocommerce_currency();
