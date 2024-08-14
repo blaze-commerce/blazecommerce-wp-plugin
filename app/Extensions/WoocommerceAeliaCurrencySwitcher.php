@@ -29,6 +29,9 @@ class WoocommerceAeliaCurrencySwitcher {
 			add_filter( 'blaze_wooless_currencies', array( $this, 'available_currencies' ), 10, 1 );
 			add_action( 'init', array( $this, 'set_selected_country' ), 10000, 1 );
 			add_filter( 'blaze_wooless_calculated_converted_single_price', array( $this, 'get_converted_single_price' ), 10 );
+			add_filter( 'woocommerce_prices_include_tax', array( $this, 'include_tax_if_has_rates' ), 10, 1 );
+
+			add_filter( 'blaze_wooless_convert_prices', array( $this, 'convert_prices' ), 10, 2 );
 		}
 
 		add_filter( 'graphql_RootQuery_fields', array( $this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
@@ -128,6 +131,22 @@ class WoocommerceAeliaCurrencySwitcher {
 		}
 
 		return $product_data;
+	}
+
+	public function convert_prices( $prices, $base_currency ) {
+		$available_currencies = $this->available_currencies();
+
+		if ( ! empty( $available_currencies ) ) {
+
+			$base_price = $prices[ $base_currency ];
+
+			foreach ( $available_currencies as $currency ) {
+
+				$prices[ $currency ] = Woocommerce::format_price( $this->calculate_converted_price( $base_price, $currency ) );
+			}
+		}
+
+		return $prices;
 	}
 
 	public function wooless_product_regular_price( $price, $product_id ) {
@@ -384,5 +403,18 @@ class WoocommerceAeliaCurrencySwitcher {
 				\wc_setcookie( 'aelia_cs_selected_currency', $selected_currency );
 			}
 		}
+	}
+
+	public function include_tax_if_has_rates( $include_tax ) {
+		if ( ! is_checkout() )
+			return $include_tax;
+
+
+		$tax_rates = \WC_Tax::get_rates();
+		if ( count( $tax_rates ) > 0 ) {
+			return reset( $tax_rates )['rate'] > 0;
+		}
+
+		return $include_tax;
 	}
 }
