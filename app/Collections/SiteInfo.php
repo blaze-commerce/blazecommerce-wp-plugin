@@ -360,6 +360,7 @@ class SiteInfo extends BaseCollection {
 			'facebook-reviews-pro',
 			'wp-reviews',
 			'multi-rating-pro',
+			'business-reviews-bundle'
 		);
 
 		// Filter the active plugins by the known review plugin slugs
