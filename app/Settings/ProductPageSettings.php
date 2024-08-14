@@ -48,6 +48,8 @@ class ProductPageSettings extends BaseSettings {
 			'FiLock' => 'FiLock',
 			'FiPackage' => 'FiPackage',
 			'CiCircleInfo' => 'CiCircleInfo',
+			'GoShieldCheck' => 'GoShieldCheck',
+			'BsExclamationOctagon' => 'BsExclamationOctagon',
 		);
 		$product_page_settings = [ 
 			'wooless_settings_product_page_section' => array(
@@ -174,7 +176,8 @@ class ProductPageSettings extends BaseSettings {
 				'value' => json_encode( array(
 					'title' => $options['information_1_title'],
 					'icon' => $options['information_1_icon'],
-					'content' => $options['information_1_content']
+					'content' => $options['information_1_content'],
+					'link' => $options['information_1_link']
 				) ),
 				'updated_at' => time(),
 			)
@@ -187,7 +190,8 @@ class ProductPageSettings extends BaseSettings {
 				'value' => json_encode( array(
 					'title' => $options['information_2_title'],
 					'icon' => $options['information_2_icon'],
-					'content' => $options['information_2_content']
+					'content' => $options['information_2_content'],
+					'link' => $options['information_2_link']
 				) ),
 				'updated_at' => time(),
 			)
@@ -200,7 +204,8 @@ class ProductPageSettings extends BaseSettings {
 				'value' => json_encode( array(
 					'title' => $options['information_3_title'],
 					'icon' => $options['information_3_icon'],
-					'content' => $options['information_3_content']
+					'content' => $options['information_3_content'],
+					'link' => $options['information_3_link']
 				) ),
 				'updated_at' => time(),
 			)
