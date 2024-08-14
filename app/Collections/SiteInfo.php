@@ -220,20 +220,6 @@ class SiteInfo extends BaseCollection {
 
 			unset( $additional_data );
 
-
-			$gift_card_info = apply_filters( 'blaze_commerce_giftcard_info', array() );
-			foreach ( $gift_card_info as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
-
 			do_action( 'blaze_wooless_after_site_info_sync' );
 
 			echo "Site info added successfully!";
