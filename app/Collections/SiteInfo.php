@@ -148,26 +148,6 @@ class SiteInfo extends BaseCollection {
 
 			unset( $datas );
 
-			$homepage_data = apply_filters( 'blaze_wooless_additional_homepage_info', array() );
-			foreach ( $homepage_data as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				// If it's 'popular_categories', decode it from a JSON string
-				if ( $key == 'popular_categories' ) {
-					$value = json_decode( $value, true );
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => (string) $value,
-					'updated_at' => time(),
-				] );
-			}
-
-			unset( $homepage_data );
-
 			$initial_additional_data = array();
 
 			$site_currency                         = get_woocommerce_currency();
@@ -194,6 +174,11 @@ class SiteInfo extends BaseCollection {
 
 				if ( is_array( $value ) ) {
 					$value = json_encode( $value );
+				}
+
+				// If it's 'popular_categories', decode it from a JSON string
+				if ( $key == 'popular_categories' ) {
+					$value = json_decode( $value, true );
 				}
 
 				$this->create( [ 
