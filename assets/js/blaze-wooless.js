@@ -482,6 +482,30 @@
         blogPosts: {
             config: commonConfig,
             fields: {
+                imageClasses: {
+                    label: 'Image Classes',
+                    name: 'blog-image-classes',
+                },
+                titleClasses: {
+                    label: 'Title Classes',
+                    name: 'blog-title-classes',
+                },
+                dateClasses: {
+                    label: 'Date Classes',
+                    name: 'blog-date-classes',
+                },
+                descriptionClasses: {
+                    label: 'Description Classes',
+                    name: 'blog-description-classes',
+                },
+                readMoreClasses: {
+                    label: 'Read More Classes',
+                    name: 'blog-read-more-classes',
+                },
+                cardContentClasses: {
+                    label: 'Card Content Classes',
+                    name: 'blog-card-content-classes',
+                },
                 blogCount: {
                     label: 'Blog Count',
                     name: 'blog-count',
