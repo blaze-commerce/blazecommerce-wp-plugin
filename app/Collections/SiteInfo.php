@@ -213,7 +213,7 @@ class SiteInfo extends BaseCollection {
 
 				$this->create( [ 
 					'name' => $key,
-					'value' => $value,
+					'value' => (string) $value,
 					'updated_at' => time(),
 				] );
 			}
@@ -268,19 +268,6 @@ class SiteInfo extends BaseCollection {
 				$this->create( [ 
 					'name' => $key,
 					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
-
-			$additionnal_site_info = apply_filters( 'blaze_wooless_additional_site_info', array() );
-			foreach ( $additionnal_site_info as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => (string) $value,
 					'updated_at' => time(),
 				] );
 			}
