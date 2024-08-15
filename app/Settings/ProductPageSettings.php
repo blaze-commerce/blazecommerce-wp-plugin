@@ -48,11 +48,14 @@ class ProductPageSettings extends BaseSettings {
 			'FiLock' => 'FiLock',
 			'FiPackage' => 'FiPackage',
 			'CiCircleInfo' => 'CiCircleInfo',
+			'GoShieldCheck' => 'GoShieldCheck',
+			'BsExclamationOctagon' => 'BsExclamationOctagon',
 		);
 		$product_page_settings = [ 
 			'wooless_settings_product_page_section' => array(
 				'label' => 'Product Page',
 				'options' => array(
+					// Information 1
 					array(
 						'id' => 'information_1_title',
 						'label' => 'Information 1 Title',
@@ -68,6 +71,14 @@ class ProductPageSettings extends BaseSettings {
 						),
 					),
 					array(
+						'id' => 'information_1_link',
+						'label' => 'Information 1 Link',
+						'type' => 'html',
+						'args' => array(
+							'description' => 'Set the link for information 1. Keep empty to use the dialog sidebar',
+						),
+					),
+					array(
 						'id' => 'information_1_icon',
 						'label' => 'Information 1 Icon',
 						'type' => 'select',
@@ -76,6 +87,8 @@ class ProductPageSettings extends BaseSettings {
 							'description' => 'Set the icon for information 1',
 						),
 					),
+
+					// Information 2
 					array(
 						'id' => 'information_2_title',
 						'label' => 'Information 2 Title',
@@ -89,12 +102,51 @@ class ProductPageSettings extends BaseSettings {
 						'args' => array( 'description' => 'Set the returns policy content.' ),
 					),
 					array(
+						'id' => 'information_2_link',
+						'label' => 'Information 2 Link',
+						'type' => 'html',
+						'args' => array(
+							'description' => 'Set the link for information 2. Keep empty to use the dialog sidebar',
+						),
+					),
+					array(
 						'id' => 'information_2_icon',
 						'label' => 'Information 2 Icon',
 						'type' => 'select',
 						'args' => array(
 							'options' => $icons,
 							'description' => 'Set the icon for information 2',
+						),
+					),
+
+					// Information 3
+					array(
+						'id' => 'information_3_title',
+						'label' => 'Information 3 Title',
+						'type' => 'text',
+						'args' => array( 'description' => 'Set the title for information 3.', ),
+					),
+					array(
+						'id' => 'information_3_content',
+						'label' => 'Information 3 Content',
+						'type' => 'html',
+						'args' => array( 'description' => 'Set the returns policy content.' ),
+					),
+					array(
+						'id' => 'information_3_link',
+						'label' => 'Information 3 Link',
+						'type' => 'html',
+						'args' => array(
+							'description' => 'Set the link for information 3. Keep empty to use the dialog sidebar',
+						),
+					),
+					array(
+						'id' => 'information_3_icon',
+						'label' => 'Information 3 Icon',
+						'type' => 'select',
+						'args' => array(
+							'options' => $icons,
+							'description' => 'Set the icon for information 3',
 						),
 					),
 					array(
@@ -124,7 +176,8 @@ class ProductPageSettings extends BaseSettings {
 				'value' => json_encode( array(
 					'title' => $options['information_1_title'],
 					'icon' => $options['information_1_icon'],
-					'content' => $options['information_1_content']
+					'content' => $options['information_1_content'],
+					'link' => $options['information_1_link']
 				) ),
 				'updated_at' => time(),
 			)
@@ -137,7 +190,8 @@ class ProductPageSettings extends BaseSettings {
 				'value' => json_encode( array(
 					'title' => $options['information_2_title'],
 					'icon' => $options['information_2_icon'],
-					'content' => $options['information_2_content']
+					'content' => $options['information_2_content'],
+					'link' => $options['information_2_link']
 				) ),
 				'updated_at' => time(),
 			)
@@ -146,6 +200,20 @@ class ProductPageSettings extends BaseSettings {
 		$site_info->upsert(
 			array(
 				'id' => '10089553',
+				'name' => 'product_page_information_3',
+				'value' => json_encode( array(
+					'title' => $options['information_3_title'],
+					'icon' => $options['information_3_icon'],
+					'content' => $options['information_3_content'],
+					'link' => $options['information_3_link']
+				) ),
+				'updated_at' => time(),
+			)
+		);
+
+		$site_info->upsert(
+			array(
+				'id' => '10089554',
 				'name' => 'description_after_content',
 				'value' => $options['description_after_content'],
 				'updated_at' => time(),
