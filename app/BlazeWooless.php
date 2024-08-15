@@ -53,6 +53,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Settings\\ProductPageSettings',
 			'\\BlazeWooless\\Settings\\CategoryPageSettings',
 			'\\BlazeWooless\\Settings\\HeaderSettings',
+			'\\BlazeWooless\\Settings\\FooterSettings',
 			'\\BlazeWooless\\Settings\\HomePageSettings',
 			'\\BlazeWooless\\Settings\\SynonymSettings',
 		);
@@ -103,7 +104,6 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommercePhotoReviews',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
-			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Footer',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
