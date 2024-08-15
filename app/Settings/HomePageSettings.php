@@ -21,14 +21,14 @@ class HomePageSettings extends BaseSettings {
 		$homepage_layout = array();
 		if ( isset( $_POST['homepage_layout'] ) ) {
 			$homepage_layout = json_decode( stripslashes( $_POST['homepage_layout'] ), true );
-			$homepage_layout = array_map(function( $block ) {
+			$homepage_layout = array_map( function ($block) {
 				$base_country = \WC()->countries->get_base_country();
-				if ($block['blockId'] === 'gutenbergBlocks' && is_numeric($block['metaData'][$base_country]['id'])) {
-					$block['metaData'][$base_country]['content']  = get_post_field( 'post_content', $block['metaData'][$base_country]['id'] );
+				if ( $block['blockId'] === 'gutenbergBlocks' && is_numeric( $block['metaData'][ $base_country ]['id'] ) ) {
+					$block['metaData'][ $base_country ]['content'] = get_post_field( 'post_content', $block['metaData'][ $base_country ]['id'] );
 				}
 
 				return $block;
-			}, $homepage_layout);
+			}, $homepage_layout );
 		}
 
 		if ( is_array( $homepage_layout ) ) {
@@ -59,6 +59,16 @@ class HomePageSettings extends BaseSettings {
 	public function register_hooks() {
 		add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
 		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_homepage_data' ), 10, 2 );
+
+		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_home_page_slug' ), 10, 1 );
+	}
+
+	public function add_home_page_slug( $site_infos ) {
+		$home_page_id = get_option( 'page_on_front' );
+		if ( ! empty( $home_page_id ) ) {
+			$site_infos['homepage_slug'] = (string) get_post_field( 'post_name', $home_page_id );
+		}
+		return $site_infos;
 	}
 
 	public function footer_callback() {
