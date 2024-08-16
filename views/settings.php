@@ -8,7 +8,7 @@
 		}
 		?>
 		<nav class="nav-tab-wrapper">
-			<?php do_action( 'blazecommerce/settings/register_tabs', $active_tab ) ?>
+			<?php do_action( 'blazecommerce/settings/register_tab_link', $active_tab ) ?>
 		</nav>
 
 		<?php
