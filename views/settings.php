@@ -12,8 +12,8 @@
 		</nav>
 
 		<?php
-		do_action( 'blaze_wooless_render_settings_tab', $active_tab );
-		do_action( 'blaze_wooless_render_settings_tab_footer', $active_tab );
+		do_action( 'blazecommerce/settings/render_settings_tab_content', $active_tab );
+		do_action( 'blazecommerce/settings/render_settings_tab_content_footer', $active_tab );
 		?>
 
 		<?php
