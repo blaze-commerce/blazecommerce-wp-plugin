@@ -27,20 +27,16 @@ class TypesenseClient {
 	}
 
 	public function __construct( $settings ) {
-		$decoded_api = bw_get_decoded_api_data( $settings['api_key'] );
-		$this->api_key = $decoded_api['private_key'];
-		$this->store_id = $decoded_api['store_id'];
+		$this->api_key  = $settings['typesense_api_key'];
+		$this->store_id = $settings['store_id'];
 
 		try {
-			$client = $this->get_client( $this->api_key, $settings['environment'] );
+			$client = $this->get_client( $this->api_key, $settings['typesense_host'] );
 		} catch (\Throwable $th) {
 			$client = null;
 		}
 
 		$this->client = $client;
-
-		// ajax endpoints
-		// add_action( 'wp_ajax_blaze_wooless_test_connection', array( $this, 'blaze_wooless_test_connection' ) );
 	}
 
 	public function debug() {
@@ -51,11 +47,8 @@ class TypesenseClient {
 		);
 	}
 
-	public function get_client( $api_key, $environment ) {
-		$this->host = 'gq6r7nsikma359hep-1.a1.typesense.net';
-		if ( $environment === 'live' ) {
-			$this->host = 'd5qgrfvxs1ouw48lp.a1.typesense.net';
-		}
+	public function get_client( $api_key, $host ) {
+		$this->host = $host;
 		return new Client( [ 
 			'api_key' => $api_key,
 			'nodes' => [ 
@@ -105,7 +98,7 @@ class TypesenseClient {
 		$client = $this->get_client( $api_key, $environement );
 		try {
 			$collection_name = 'product-' . $store_id;
-			$collections = $client->collections[ $collection_name ]->retrieve();
+			$collections     = $client->collections[ $collection_name ]->retrieve();
 			if ( ! empty( $collections ) ) {
 				return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
 			} else {
@@ -169,13 +162,13 @@ class TypesenseClient {
 			}
 
 			if ( $type === 'multi-way' ) {
-				$synonym_key = $value[0] . '-synonyms';
+				$synonym_key  = $value[0] . '-synonyms';
 				$synonym_data = array(
 					"synonyms" => $value
 				);
 
 			} else {
-				$synonym_key = sanitize_title( $key ) . '-synonyms';
+				$synonym_key  = sanitize_title( $key ) . '-synonyms';
 				$synonym_data = array(
 					'root' => $key,
 					'synonyms' => $value
