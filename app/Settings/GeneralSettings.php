@@ -171,6 +171,30 @@ class GeneralSettings extends BaseSettings {
 						),
 					),
 					array(
+						'id' => 'typesense_api_key',
+						'label' => 'API Key',
+						'type' => 'password',
+						'args' => array(
+							'description' => 'API Key generated from typesense cloud API keys page.'
+						),
+					),
+					array(
+						'id' => 'typesense_host',
+						'label' => 'Typesense Host',
+						'type' => 'text',
+						'args' => array(
+							'description' => 'This is the host url found in your cluster overview page in typesense clould'
+						),
+					),
+					array(
+						'id' => 'store_id',
+						'label' => 'Store Id',
+						'type' => 'number',
+						'args' => array(
+							'description' => 'We use store id to identify a store collection in your typesense cluster. This allows you to use one cluster for different websites'
+						),
+					),
+					array(
 						'id' => 'shop_domain',
 						'label' => 'Shop Domain',
 						'type' => 'text',
