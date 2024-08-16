@@ -57,7 +57,7 @@ class HomePageSettings extends BaseSettings {
 	}
 
 	public function register_hooks() {
-		add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+		add_action( 'blazecommerce/settings/render_settings_tab_content_footer', array( $this, 'default_draggable_data' ), 10 );
 		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_homepage_data' ), 10, 2 );
 
 		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_home_page_slug' ), 10, 1 );
