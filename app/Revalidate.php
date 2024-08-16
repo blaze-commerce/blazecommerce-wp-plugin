@@ -67,7 +67,7 @@ class Revalidate {
 
 
 		$wooless_frontend_url  = $this->get_frontend_url();
-		$typesense_private_key = get_option( 'typesense_api_key' );
+		$typesense_private_key = bw_get_general_settings( 'typesense_api_key' );
 
 		$logger->debug( print_r( array(
 			'wooless_frontend_url' => $wooless_frontend_url,
@@ -133,24 +133,24 @@ class Revalidate {
 	// This is copied from https://developer.wordpress.org/reference/functions/get_sample_permalink/#source
 	function get_sample_permalink( $post, $title = null, $name = null ) {
 		$post = get_post( $post );
-	
+
 		if ( ! $post ) {
 			return array( '', '' );
 		}
-	
+
 		$ptype = get_post_type_object( $post->post_type );
-	
+
 		$original_status = $post->post_status;
 		$original_date   = $post->post_date;
 		$original_name   = $post->post_name;
 		$original_filter = $post->filter;
-	
+
 		// Hack: get_permalink() would return plain permalink for drafts, so we will fake that our post is published.
 		if ( in_array( $post->post_status, array( 'draft', 'pending', 'future' ), true ) ) {
 			$post->post_status = 'publish';
 			$post->post_name   = sanitize_title( $post->post_name ? $post->post_name : $post->post_title, $post->ID );
 		}
-	
+
 		/*
 		 * If the user wants to set a new name -- override the current one.
 		 * Note: if empty name is supplied -- use the title instead, see #6072.
@@ -158,16 +158,16 @@ class Revalidate {
 		if ( ! is_null( $name ) ) {
 			$post->post_name = sanitize_title( $name ? $name : $title, $post->ID );
 		}
-	
+
 		$post->post_name = wp_unique_post_slug( $post->post_name, $post->ID, $post->post_status, $post->post_type, $post->post_parent );
-	
+
 		$post->filter = 'sample';
-	
+
 		$permalink = get_permalink( $post, true );
-	
+
 		// Replace custom post_type token with generic pagename token for ease of use.
 		$permalink = str_replace( "%$post->post_type%", '%pagename%', $permalink );
-	
+
 		// Handle page hierarchy.
 		if ( $ptype->hierarchical ) {
 			$uri = get_page_uri( $post );
@@ -176,7 +176,7 @@ class Revalidate {
 				$uri = strrev( stristr( strrev( $uri ), '/' ) );
 				$uri = untrailingslashit( $uri );
 			}
-	
+
 			/** This filter is documented in wp-admin/edit-tag-form.php */
 			$uri = apply_filters( 'editable_slug', $uri, $post );
 			if ( ! empty( $uri ) ) {
@@ -184,14 +184,14 @@ class Revalidate {
 			}
 			$permalink = str_replace( '%pagename%', "{$uri}%pagename%", $permalink );
 		}
-	
+
 		/** This filter is documented in wp-admin/edit-tag-form.php */
 		$permalink         = array( $permalink, apply_filters( 'editable_slug', $post->post_name, $post ) );
 		$post->post_status = $original_status;
 		$post->post_date   = $original_date;
 		$post->post_name   = $original_name;
 		$post->filter      = $original_filter;
-	
+
 		/**
 		 * Filters the sample permalink.
 		 *

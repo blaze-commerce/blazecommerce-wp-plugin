@@ -46,7 +46,7 @@ class ProductFilterSettings extends BaseSettings {
 	}
 
 	public function register_hooks() {
-		add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'default_draggable_data' ), 10 );
+		add_action( 'blazecommerce/settings/render_settings_tab_content_footer', array( $this, 'default_draggable_data' ), 10 );
 		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_product_filters_data' ), 10, 2 );
 	}
 
