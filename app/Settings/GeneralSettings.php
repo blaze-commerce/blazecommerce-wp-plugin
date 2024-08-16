@@ -115,35 +115,6 @@ class GeneralSettings extends BaseSettings {
 		return $url;
 	}
 
-	public function settings_callback( $options ) {
-		if ( isset( $options['api_key'] ) ) {
-			$encoded_api_key   = sanitize_text_field( $options['api_key'] );
-			$decoded_api_key   = base64_decode( $encoded_api_key );
-			$trimmed_api_key   = explode( ':', $decoded_api_key );
-			$typesense_api_key = $trimmed_api_key[0];
-			$store_id          = $trimmed_api_key[1];
-
-			$typesense_client = TypesenseClient::get_instance();
-			$connection       = $typesense_client->test_connection( $typesense_api_key, $store_id, $options['environment'] );
-
-			if ( 'success' === $connection['status'] ) {
-				// TODO: remove private_key_master eventually
-				update_option( 'private_key_master', $options['api_key'] );
-				update_option( 'typesense_api_key', $typesense_api_key );
-				update_option( 'store_id', $store_id );
-
-			} else {
-				add_settings_error(
-					'blaze_settings_error',
-					esc_attr( 'settings_updated' ),
-					$connection['message'],
-					'error'
-				);
-			}
-		}
-
-		return $options;
-	}
 
 	public function settings() {
 		$fields = array(
@@ -206,7 +177,7 @@ class GeneralSettings extends BaseSettings {
 			),
 		);
 
-		if ( $this->connected() ) {
+		if ( $this->is_typesense_connected() ) {
 			$fields['wooless_general_settings_section']['options'][] = array(
 				'id' => 'show_free_shipping_banner',
 				'label' => 'Show free shipping banner',
@@ -241,22 +212,7 @@ class GeneralSettings extends BaseSettings {
 		return $fields;
 	}
 
-	public function connected() {
-		$typesense_api_key = get_option( 'typesense_api_key' );
-		$store_id          = get_option( 'store_id' );
-		$environment       = bw_get_general_settings( 'environment' );
 
-		if ( empty( $typesense_api_key ) || empty( $store_id ) || empty( $environment ) ) {
-			return false;
-		}
-
-		try {
-			$connection = TypesenseClient::get_instance()->test_connection( $typesense_api_key, $store_id, $environment );
-			return 'success' === $connection['status'];
-		} catch (\Throwable $th) {
-			return false;
-		}
-	}
 
 	public function section_callback() {
 		echo '<p>Select which areas of content you wish to display.</p>';
