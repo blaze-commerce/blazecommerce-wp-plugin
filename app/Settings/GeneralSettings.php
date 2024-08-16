@@ -220,7 +220,7 @@ class GeneralSettings extends BaseSettings {
 
 	public function footer_callback() {
 		$api_key = bw_get_general_settings( 'api_key' );
-		if ( null !== $api_key && ! empty( $api_key ) ) :
+		if ( $this->is_typesense_connected() ) :
 			?>
 			<a href="#" id="sync-product-link">Sync Products</a><br />
 			<a href="#" id="sync-taxonomies-link">Sync Taxonomies</a><br />
