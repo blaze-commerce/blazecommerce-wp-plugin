@@ -1,8 +1,3 @@
-<?php
-
-$private_key_master = get_option( 'private_key_master', '' );
-$api_key            = bw_get_general_settings( 'api_key' );
-?>
 <div class="wrap">
 	<?php settings_errors(); ?>
 	<form method="post" action="options.php" enctype="multipart/form-data">
