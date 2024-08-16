@@ -99,6 +99,13 @@ class BaseSettings {
 		echo $html;
 	}
 
+	public function field_callback_number( $args ) {
+		$value = $this->get_option( $args['id'] );
+		$html  = '<input type="number" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" min="1" />';
+		$html .= $this->render_field_description( $args );
+		echo $html;
+	}
+
 	public function field_callback_textarea( $args ) {
 		$value = $this->get_option( $args['id'] );
 		$html  = '<textarea rows="4" cols="50" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']">' . sanitize_text_field( $value ) . '</textarea>';
