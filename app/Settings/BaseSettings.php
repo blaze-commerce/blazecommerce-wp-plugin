@@ -13,7 +13,7 @@ class BaseSettings {
 		$this->register_hooks();
 
 		add_action( 'admin_init', array( $this, 'init' ), 10, 1 );
-		add_action( 'blaze_wooless_settings_navtab', array( $this, 'register_settings_navtab' ), 10, 1 );
+		add_action( 'blazecommerce/settings/register_tabs', array( $this, 'register_settings_navtab' ), 10, 1 );
 		add_action( 'blaze_wooless_render_settings_tab', array( $this, 'render_settings_tab' ), 10, 1 );
 		add_action( 'blaze_wooless_render_settings_tab_footer', array( $this, 'render_settings_footer_tab' ), 10, 1 );
 	}
