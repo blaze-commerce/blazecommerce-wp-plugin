@@ -27,7 +27,7 @@ class Ajax {
 	}
 
 	public function get_headers() {
-		$api_key = bw_get_general_settings( 'api_key' );
+		$api_key = bw_get_general_settings( 'typesense_api_key' );
 		return array(
 			'x-wooless-secret-token: ' . $api_key
 		);
@@ -51,7 +51,7 @@ class Ajax {
 	}
 
 	public function check_deployment() {
-		$api_key = bw_get_general_settings( 'api_key' );
+		$api_key = bw_get_general_settings( 'typesense_api_key' );
 		if ( empty( $api_key ) ) {
 			wp_send_json( array(
 				'error' => 'Empty api key.',
@@ -66,7 +66,7 @@ class Ajax {
 	}
 
 	public function redeploy_store_front() {
-		$api_key = bw_get_general_settings( 'api_key' );
+		$api_key = bw_get_general_settings( 'typesense_api_key' );
 		if ( empty( $api_key ) ) {
 			wp_send_json( array(
 				'error' => 'Empty api key.',
