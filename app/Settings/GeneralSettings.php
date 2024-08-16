@@ -122,26 +122,6 @@ class GeneralSettings extends BaseSettings {
 				'label' => 'General Settings',
 				'options' => array(
 					array(
-						'id' => 'environment',
-						'label' => 'Environment',
-						'type' => 'select',
-						'args' => array(
-							'description' => 'Select which environment to use.',
-							'options' => array(
-								'test' => 'Test',
-								'live' => 'Live',
-							),
-						),
-					),
-					array(
-						'id' => 'api_key',
-						'label' => 'API Key',
-						'type' => 'password',
-						'args' => array(
-							'description' => 'API Key generated from the Blaze Commerce Admin Portal.'
-						),
-					),
-					array(
 						'id' => 'typesense_api_key',
 						'label' => 'API Key',
 						'type' => 'password',
