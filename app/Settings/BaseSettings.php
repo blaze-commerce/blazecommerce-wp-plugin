@@ -1,6 +1,7 @@
 <?php
 
 namespace BlazeWooless\Settings;
+use BlazeWooless\TypesenseClient;
 
 class BaseSettings {
 	public $option_key;
@@ -16,6 +17,34 @@ class BaseSettings {
 		add_action( 'blazecommerce/settings/register_tab_link', array( $this, 'register_settings_navtab' ), 10, 1 );
 		add_action( 'blazecommerce/settings/render_settings_tab_content', array( $this, 'render_settings_tab' ), 10, 1 );
 		add_action( 'blazecommerce/settings/render_settings_tab_content_footer', array( $this, 'render_settings_footer_tab' ), 10, 1 );
+	}
+
+	/**
+	 * Check if the givent settings or the saved settings is connected to typesense
+	 * 
+	 * @param mixed $settings_args Custom settings config if we need to check on custom typesense api key and host
+	 * @return bool
+	 */
+	public function is_typesense_connected( $settings_args = array() ) {
+		$saved_settings = bw_get_general_settings();
+
+		// we prioritize the custom settings_args if its given that is why we are merging the data here
+		$settings = array_merge( $saved_settings, $settings_args );
+
+		$typesense_api_key = $settings['typesense_api_key'];
+		$store_id          = $settings['store_id'];
+		$host              = $settings['typesense_host'];
+
+		if ( empty( $typesense_api_key ) || empty( $store_id ) || empty( $host ) ) {
+			return false;
+		}
+
+		try {
+			$connection = TypesenseClient::get_instance()->test_connection( $typesense_api_key, $store_id, $host );
+			return 'success' === $connection['status'];
+		} catch (\Throwable $th) {
+			return false;
+		}
 	}
 
 	public function init() {
@@ -75,8 +104,24 @@ class BaseSettings {
 
 	public function section_callback() {
 	}
-	public function settings_callback( $input ) {
-		return $input;
+	public function settings_callback( $options ) {
+		if ( isset( $options['typesense_api_key'] ) ) {
+			$api_key          = sanitize_text_field( $options['typesense_api_key'] );
+			$typesense_client = TypesenseClient::get_instance();
+			$connection       = $typesense_client->test_connection( $api_key, $options['store_id'], $options['typesense_host'] );
+
+			if ( 'success' !== $connection['status'] ) {
+
+				add_settings_error(
+					'blaze_settings_error',
+					esc_attr( 'settings_updated' ),
+					$connection['message'],
+					'error'
+				);
+			}
+		}
+
+		return $options;
 	}
 	public function register_hooks() {
 	}
