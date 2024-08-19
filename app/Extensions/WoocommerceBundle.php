@@ -62,9 +62,10 @@ class WoocommerceBundle {
 
 				$bundle_fields_prefix = apply_filters( 'woocommerce_product_bundle_field_prefix', '', $bundled_item->get_id() );
 
-				$variation_bundles['prefix'] = $bundle_fields_prefix . 'bundle_attribute_' . sanitize_title( $variation_attribute_name ) . '_' . $bundled_item->get_id();
+				// $variation_bundles['prefix'] = $bundle_fields_prefix . 'bundle_attribute_' . sanitize_title( $variation_attribute_name ) . '_' . $bundled_item->get_id();
 
-				$variation_bundles['variations'] = array(
+				$variation_bundles[] = array(
+					'prefix' => $bundle_fields_prefix . 'bundle_attribute_' . sanitize_title( $variation_attribute_name ) . '_' . $bundled_item->get_id(),
 					'attributes' => $bundled_item->get_product_variation_attributes(),
 					'options' => $variation_options
 				);
