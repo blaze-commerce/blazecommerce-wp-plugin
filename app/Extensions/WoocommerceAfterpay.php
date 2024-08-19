@@ -22,7 +22,7 @@ class WoocommerceAfterpay {
 	public function woocommerce_is_afterpay_enabled( $additional_settings ) {
 		if ( $woocommerce_afterpay_settings = get_option( 'woocommerce_afterpay_settings' ) ) {
 			if ( $woocommerce_afterpay_settings['enabled'] === 'yes' ) {
-				$additional_settings['woocommerce_is_afterpay_enabled'] = true;
+				$additional_settings['woocommerce_is_afterpay_enabled'] = "true";
 			}
 		}
 
