@@ -272,22 +272,23 @@ class Woocommerce {
 				$variations = $product->get_variation_prices( true );
 
 				// find the lowest price among the variations
-				$prices            = $variations['price'];
-				$min_price         = min( $prices );
-				$lowest_product_id = array_search( $min_price, $prices );
+				$prices = $variations['price'];
+				if ( ! empty( $prices ) ) {
+					$min_price         = min( $prices );
+					$lowest_product_id = array_search( $min_price, $prices );
 
-				if ( $lowest_product_id ) {
-					$lowest_product = wc_get_product( $lowest_product_id );
-					$variation_data = Product::get_instance()->generate_typesense_data( $lowest_product );
+					if ( $lowest_product_id ) {
+						$lowest_product = wc_get_product( $lowest_product_id );
+						$variation_data = Product::get_instance()->generate_typesense_data( $lowest_product );
 
-					$variation_data               = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
-					$product_data['price']        = $variation_data['price'];
-					$product_data['regularPrice'] = $variation_data['regularPrice'];
-					$product_data['salePrice']    = $variation_data['salePrice'];
-				} else {
-					throw new \Exception( 'No variations found for product ' . $product_id );
+						$variation_data               = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
+						$product_data['price']        = $variation_data['price'];
+						$product_data['regularPrice'] = $variation_data['regularPrice'];
+						$product_data['salePrice']    = $variation_data['salePrice'];
+					} else {
+						throw new \Exception( 'No variations found for product ' . $product_id );
+					}
 				}
-
 			} catch (\Exception $e) {
 				$logger  = wc_get_logger();
 				$context = array( 'source' => 'wooless-variable-product-price' );
