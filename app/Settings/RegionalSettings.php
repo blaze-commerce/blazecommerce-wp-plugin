@@ -21,34 +21,6 @@ class RegionalSettings extends BaseSettings {
 		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
 	}
 
-	public function settings_callback( $options ) {
-		if ( isset( $options['api_key'] ) ) {
-			$encoded_api_key   = sanitize_text_field( $options['api_key'] );
-			$decoded_api_key   = base64_decode( $encoded_api_key );
-			$trimmed_api_key   = explode( ':', $decoded_api_key );
-			$typesense_api_key = $trimmed_api_key[0];
-			$store_id          = $trimmed_api_key[1];
-
-			$connection = TypesenseClient::get_instance()->test_connection( $typesense_api_key, $store_id, $options['environment'] );
-			// var_dump($connection); exit;
-			if ( $connection['status'] === 'success' ) {
-				// TODO: remove private_key_master eventually
-				update_option( 'private_key_master', $options['api_key'] );
-				update_option( 'typesense_api_key', $typesense_api_key );
-				update_option( 'store_id', $store_id );
-			} else {
-				add_settings_error(
-					'blaze_settings_error',
-					esc_attr( 'settings_updated' ),
-					$connection['message'],
-					'error'
-				);
-			}
-		}
-
-		return $options;
-	}
-
 	public function settings() {
 		$fields = array(
 			array(
@@ -62,14 +34,14 @@ class RegionalSettings extends BaseSettings {
 			),
 		);
 
-		if ( !empty( $regions = $this->get_option( 'regions' ) ) ) {
+		if ( ! empty( $regions = $this->get_option( 'regions' ) ) ) {
 			$fields[] = array(
 				'id' => 'regions_header',
 				'label' => 'Map Regions',
 				'type' => 'heading',
 			);
 
-			foreach ( $regions as $region) {
+			foreach ( $regions as $region ) {
 				$fields[] = array(
 					'id' => 'region_' . $region,
 					'label' => $region,
@@ -103,9 +75,9 @@ class RegionalSettings extends BaseSettings {
 		$regions = $this->get_option( 'regions' );
 		if ( count( $additional_site_info ) > 0 ) {
 			$additional_site_info['regions'] = array();
-			foreach ( $regions as $region) {
-				$region_mappings = $this->get_option( 'region_' . $region );
-				$additional_site_info['regions'][$region] = $region_mappings ?? [];
+			foreach ( $regions as $region ) {
+				$region_mappings                          = $this->get_option( 'region_' . $region );
+				$additional_site_info['regions'][ $region ] = $region_mappings ?? [];
 			}
 		}
 		return $additional_site_info;

@@ -69,7 +69,7 @@ class Page extends BaseCollection {
 			'thumbnail' => $thumbnail,
 			'updatedAt' => (int) strtotime( get_the_modified_date( 'c', $page_id ) ),
 			'createdAt' => (int) strtotime( get_the_date( 'c', $page_id ) ),
-			'publishedAt' => $published_at,
+			'publishedAt' => (int) $published_at,
 			'content' => $page_content,
 			'rawContent' => $content,
 			'seoFullHead' => '',

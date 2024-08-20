@@ -23,7 +23,7 @@ class SiteInfo extends BaseCollection {
 
 	public function index_to_typesense() {
 		// Fetch the store ID from the saved options
-		$wooless_site_id = get_option( 'store_id' );
+		$wooless_site_id      = get_option( 'store_id' );
 		$collection_site_info = 'site_info-' . $wooless_site_id;
 		//Indexing Site Info
 		try {
@@ -148,10 +148,32 @@ class SiteInfo extends BaseCollection {
 
 			unset( $datas );
 
-			$homepage_data = apply_filters( 'blaze_wooless_additional_homepage_info', array() );
-			foreach ( $homepage_data as $key => $value ) {
+			$initial_additional_data = array();
+
+			$site_currency                         = get_woocommerce_currency();
+			$base_currency                         = WC()->countries->get_base_country();
+			$currencies                            = array(
+				'countries' => [ $base_currency ],
+				'baseCountry' => $base_currency,
+				'currency' => $site_currency,
+				'symbol' => html_entity_decode( get_woocommerce_currency_symbol( $site_currency ) ),
+				'symbolPosition' => get_option( 'woocommerce_currency_pos' ),
+				'thousandSeparator' => get_option( 'woocommerce_price_thousand_sep' ),
+				'decimalSeparator' => get_option( 'woocommerce_price_decimal_sep' ),
+				'precision' => wc_get_price_decimals(),
+				'default' => true,
+			);
+			$initial_additional_data['currencies'] = array( $currencies );
+			$initial_additional_data['regions']    = RegionalSettings::get_selected_regions();
+
+			$additional_data = apply_filters( 'blaze_wooless_additional_site_info', $initial_additional_data );
+			foreach ( $additional_data as $key => $value ) {
 				if ( empty( $value ) ) {
 					continue;
+				}
+
+				if ( is_array( $value ) ) {
+					$value = json_encode( $value );
 				}
 
 				// If it's 'popular_categories', decode it from a JSON string
@@ -166,111 +188,7 @@ class SiteInfo extends BaseCollection {
 				] );
 			}
 
-			unset( $homepage_data );
-
-			$site_messages_data = apply_filters( 'blaze_wooless_additional_site_info_message', array() );
-			foreach ( $site_messages_data as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
-
-			unset( $site_messages_data );
-
-			$initial_additional_data = array();
-
-			$site_currency = get_woocommerce_currency();
-			$base_currency = WC()->countries->get_base_country();
-			$currencies = array(
-				'countries' => [ $base_currency ],
-				'baseCountry' => $base_currency,
-				'currency' => $site_currency,
-				'symbol' => html_entity_decode( get_woocommerce_currency_symbol( $site_currency ) ),
-				'symbolPosition' => get_option( 'woocommerce_currency_pos' ),
-				'thousandSeparator' => get_option( 'woocommerce_price_thousand_sep' ),
-				'decimalSeparator' => get_option( 'woocommerce_price_decimal_sep' ),
-				'precision' => wc_get_price_decimals(),
-				'default' => true,
-			);
-			$initial_additional_data['currencies'] = array( $currencies );
-			$initial_additional_data['regions'] = RegionalSettings::get_selected_regions();
-
-			$additional_data = apply_filters( 'blaze_wooless_additional_site_info', $initial_additional_data );
-			foreach ( $additional_data as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				if ( is_array( $value ) ) {
-					$value = json_encode( $value );
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
-
 			unset( $additional_data );
-
-			$homepage_seo_settings = apply_filters( 'blaze_wooless_additional_homepage_seo_info', array() );
-			foreach ( $homepage_seo_settings as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
-
-			$woographql_settings = apply_filters( 'blaze_wooless_additional_graphql_info', array() );
-			foreach ( $woographql_settings as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
-
-			$woocommerce_afterpay_settings = apply_filters( 'blaze_wooless_woocommerce_afterpay_settings', array() );
-			foreach ( $woocommerce_afterpay_settings as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
-
-			$gift_card_info = apply_filters( 'blaze_commerce_giftcard_info', array() );
-			foreach ( $gift_card_info as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => $value,
-					'updated_at' => time(),
-				] );
-			}
 
 			do_action( 'blaze_wooless_after_site_info_sync' );
 
@@ -308,15 +226,15 @@ class SiteInfo extends BaseCollection {
 
 	public function get_permalink_structure() {
 		$permalink_structure = get_option( 'woocommerce_permalinks' );
-		$product_base = $permalink_structure['product_base'] ?: '';
+		$product_base        = $permalink_structure['product_base'] ?: '';
 
 		// If the product base does not start with a slash, add one
 		if ( $product_base && $product_base[0] !== '/' ) {
 			$product_base = '/' . $product_base;
 		}
 
-		$category_base = get_option( 'category_base', 'category' );
-		$tag_base = get_option( 'tag_base', 'tag' );
+		$category_base            = get_option( 'category_base', 'category' );
+		$tag_base                 = get_option( 'tag_base', 'tag' );
 		$base_permalink_structure = get_option( 'permalink_structure' );
 
 		return array(
@@ -334,7 +252,7 @@ class SiteInfo extends BaseCollection {
 
 		// Fetch the 'active_plugins' option from the WordPress options table
 		$active_plugins_serialized = $wpdb->get_var( "SELECT option_value FROM " . $wpdb->options . " WHERE option_name = 'active_plugins'" );
-		$active_plugins = unserialize( $active_plugins_serialized );
+		$active_plugins            = unserialize( $active_plugins_serialized );
 
 		// List of known review plugin slugs
 		$review_plugin_slugs = array(
@@ -390,9 +308,9 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function site_logo_settings() {
-		$logo_id = get_theme_mod( 'custom_logo' );
-		$logo_image = wp_get_attachment_image_src( $logo_id, 'full' );
-		$logo_metadata = wp_get_attachment_metadata( $logo_id );
+		$logo_id         = get_theme_mod( 'custom_logo' );
+		$logo_image      = wp_get_attachment_image_src( $logo_id, 'full' );
+		$logo_metadata   = wp_get_attachment_metadata( $logo_id );
 		$logo_updated_at = isset( $logo_metadata['file'] ) ? strtotime( date( "Y-m-d H:i:s", filemtime( get_attached_file( $logo_id ) ) ) ) : null;
 
 		return array(
@@ -405,7 +323,7 @@ class SiteInfo extends BaseCollection {
 	public function store_notice_settings() {
 		global $wpdb;
 
-		$store_notice = get_option( 'woocommerce_demo_store_notice' );
+		$store_notice            = get_option( 'woocommerce_demo_store_notice' );
 		$store_notice_updated_at = $wpdb->get_var( "SELECT UNIX_TIMESTAMP(option_value) FROM {$wpdb->options} WHERE option_name = '_transient_timeout_woocommerce_demo_store_notice'" ) ?: time();
 
 		return array(
@@ -417,7 +335,7 @@ class SiteInfo extends BaseCollection {
 
 	public function favicon_settings() {
 		$site_icon_id = get_option( 'site_icon' );
-		$favicon_url = $site_icon_id ? wp_get_attachment_image_url( $site_icon_id, 'full' ) : '';
+		$favicon_url  = $site_icon_id ? wp_get_attachment_image_url( $site_icon_id, 'full' ) : '';
 
 		if ( $site_icon_id ) {
 			$favicon_updated_at = strtotime( get_the_modified_date( 'Y-m-d H:i:s', $site_icon_id ) );
