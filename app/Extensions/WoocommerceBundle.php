@@ -32,6 +32,7 @@ class WoocommerceBundle {
 	protected function set_variation_data( $bundle_data, $bundled_item, $product ) {
 		if ( $product->is_type( 'variable' ) ) {
 
+			$bundle_fields_prefix = apply_filters( 'woocommerce_product_bundle_field_prefix', '', $bundled_item->get_id() );
 			$variation_attributes = $bundled_item->get_product_variation_attributes();
 			$variation_bundles = array();
 
@@ -40,6 +41,7 @@ class WoocommerceBundle {
 				$variation_options = array();
 				$variations = $bundled_item->get_product_variations();
 				$currency = get_option( 'woocommerce_currency' );
+
 
 				foreach ( (array) $variations as $variation ) {
 					foreach ( $variation['attributes'] as $variation_key => $variation_value ) {
@@ -51,24 +53,25 @@ class WoocommerceBundle {
 						$convertedPrice[ $currency ] = $price;
 						$convertedPrice = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
 
-						$variation_options[ $variation_key ][ $variation_value ] = array(
-							'id' => $variation_id,
+						$variation_options[ $variation_key ][ $variation_id ] = array(
+							'label' => $variation_value,
 							'price' => $convertedPrice,
-							'description' => $variation['variation_description'] ?? null,
+							'description' => strip_tags( $variation['variation_description'] ) ?? null,
 							'displayPrice' => boolval( $variation['display_price'] ),
 						);
 					}
 				}
 
-				$bundle_fields_prefix = apply_filters( 'woocommerce_product_bundle_field_prefix', '', $bundled_item->get_id() );
+				foreach ( (array) $bundled_item->get_product_variation_attributes() as $label_name => $attribute_options ) {
+					$variation_key = 'attribute_' . sanitize_title( $label_name );
 
-				// $variation_bundles['prefix'] = $bundle_fields_prefix . 'bundle_attribute_' . sanitize_title( $variation_attribute_name ) . '_' . $bundled_item->get_id();
-
-				$variation_bundles[] = array(
-					'prefix' => $bundle_fields_prefix . 'bundle_attribute_' . sanitize_title( $variation_attribute_name ) . '_' . $bundled_item->get_id(),
-					'attributes' => $bundled_item->get_product_variation_attributes(),
-					'options' => $variation_options
-				);
+					array_push( $variation_bundles, array(
+						'prefix' => $bundle_fields_prefix,
+						'name' => 'bundle_attribute_' . sanitize_title( $variation_attribute_name ) . '_' . $bundled_item->get_id(),
+						'label' => $label_name,
+						'options' => $variation_options[ $variation_key ]
+					) );
+				}
 			}
 
 			$bundle_data['variations'] = $variation_bundles;
@@ -112,8 +115,8 @@ class WoocommerceBundle {
 					'priceVisible' => $bundled_item->is_price_visible(),
 					'overrideTitle' => $bundled_item->has_title_override(),
 					'title' => $bundled_item->get_title(),
-					'description' => $bundled_item->get_description(),
-					'hideThumbnail' => $bundled_item->is_thumbnail_visible()
+					'description' => strip_tags( $bundled_item->get_description() ),
+					'hideThumbnail' => $bundled_item->is_thumbnail_visible(),
 				)
 			);
 
