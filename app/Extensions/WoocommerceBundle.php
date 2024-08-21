@@ -26,9 +26,6 @@ class WoocommerceBundle {
 		$fields[] = array( 'name' => 'bundle', 'type' => 'object', 'optional' => true );
 		return $fields;
 	}
-
-	// i give up, i need to do a dirty way to get the variation data
-	// i don't want my salary to be pending again! damn you!!!!
 	protected function set_variation_data( $bundle_data, $bundled_item, $product ) {
 		if ( $product->is_type( 'variable' ) ) {
 
