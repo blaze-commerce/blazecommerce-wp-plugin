@@ -53,13 +53,6 @@ class WoocommerceProductAddons {
 				if ( ! empty( $available_global_addons ) ) {
 					$product_addons['fields'] += $available_global_addons;
 				}
-
-
-				do_action( 'inspect', [ 
-					"check_available_global_addons", [ 
-						"fields" => $product_addons['fields'],
-					]
-				] );
 			}
 
 			$product_data['addons'] = $product_addons['fields'];
