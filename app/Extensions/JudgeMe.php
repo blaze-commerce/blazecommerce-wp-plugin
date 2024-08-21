@@ -195,13 +195,6 @@ class JudgeMe {
 		}
 		unset( $products );
 
-		do_action( "inspect", [ 
-			"product_review_data",
-			[ 
-				$product_reviews
-			]
-		] );
-
 		return $product_reviews;
 	}
 
