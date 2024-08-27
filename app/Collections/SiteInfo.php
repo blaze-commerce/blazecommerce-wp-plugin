@@ -16,15 +16,8 @@ class SiteInfo extends BaseCollection {
 		return self::$instance;
 	}
 
-	// public function __construct()
-	// {
-	//     add_action( 'updated_option', array( 'site_info_update' ), 10, 3 );
-	// }
-
 	public function index_to_typesense() {
-		// Fetch the store ID from the saved options
-		$wooless_site_id      = get_option( 'store_id' );
-		$collection_site_info = 'site_info-' . $wooless_site_id;
+		$collection_site_info = $this->collection_name();
 		//Indexing Site Info
 		try {
 			// Delete the existing 'site_info' collection (if it exists)
