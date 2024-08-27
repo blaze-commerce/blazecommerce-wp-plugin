@@ -97,8 +97,9 @@ class TypesenseClient {
 	public function test_connection( $api_key, $store_id, $environement ) {
 		$client = $this->get_client( $api_key, $environement );
 		try {
-			$collection_name = 'product-' . $store_id;
-			$collections     = $client->collections[ $collection_name ]->retrieve();
+			$collections = $client->collections->retrieve();
+			return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
+
 			if ( ! empty( $collections ) ) {
 				return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
 			} else {
