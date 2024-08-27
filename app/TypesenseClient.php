@@ -99,12 +99,6 @@ class TypesenseClient {
 		try {
 			$collections = $client->collections->retrieve();
 			return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
-
-			if ( ! empty( $collections ) ) {
-				return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
-			} else {
-				return array( 'status' => 'error', 'message' => 'No collection found for store ID: ' . $this->store_id );
-			}
 		} catch (\Typesense\Exception\ObjectNotFound $e) {
 			return array( 'status' => 'error', 'message' => 'Collection not found: ' . $e->getMessage() );
 		} catch (\Typesense\Exception\TypesenseClientError $e) {
