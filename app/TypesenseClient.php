@@ -97,13 +97,8 @@ class TypesenseClient {
 	public function test_connection( $api_key, $store_id, $environement ) {
 		$client = $this->get_client( $api_key, $environement );
 		try {
-			$collection_name = 'product-' . $store_id;
-			$collections     = $client->collections[ $collection_name ]->retrieve();
-			if ( ! empty( $collections ) ) {
-				return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
-			} else {
-				return array( 'status' => 'error', 'message' => 'No collection found for store ID: ' . $this->store_id );
-			}
+			$collections = $client->collections->retrieve();
+			return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
 		} catch (\Typesense\Exception\ObjectNotFound $e) {
 			return array( 'status' => 'error', 'message' => 'Collection not found: ' . $e->getMessage() );
 		} catch (\Typesense\Exception\TypesenseClientError $e) {
