@@ -178,6 +178,8 @@ class Product extends BaseCollection {
 		$this->log_failed_product_import( "============================ START OF PRODUCT IMPORT ============================" );
 
 		try {
+			do_action( 'blaze_wooless_pre_sync_products' );
+
 			// Query judge.me product external_ids and update to options	
 			do_action( 'blaze_wooless_generate_product_reviews_data' );
 			$page = $_REQUEST['page'] ?? 1;
@@ -358,10 +360,22 @@ class Product extends BaseCollection {
 		$related_products    = array();
 		$cross_sell_products = array();
 		$upsell_products     = array();
+		$status              = $product->get_status();
 		if ( 'variation' !== $type ) {
 			$related_products    = $this->get_related_products( $product_id, $taxonomies, 'ids' );
 			$cross_sell_products = $product->get_cross_sell_ids();
 			$upsell_products     = $product->get_upsell_ids();
+		}
+
+		if ( 'variation' === $type ) {
+			$parent_id      = $product->get_parent_id();
+			$parent_product = wc_get_product( $parent_id );
+			if ( $parent_product ) {
+				$parent_status = $parent_product->get_status();
+				if ( 'publish' !== $parent_status ) {
+					$status = $parent_status;
+				}
+			}
 		}
 
 		$product_data = array(
@@ -396,7 +410,7 @@ class Product extends BaseCollection {
 			'relatedProducts' => $related_products,
 			'upsellProducts' => $upsell_products,
 			'additionalTabs' => $this->get_addional_tabs( $product ),
-			'status' => $product->get_status(),
+			'status' => $status,
 			'menuOrder' => $product->get_menu_order(),
 			'metaData' => array(),
 			'seoFullHead' => '',
