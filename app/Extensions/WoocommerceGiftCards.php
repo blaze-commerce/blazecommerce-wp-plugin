@@ -16,6 +16,7 @@ class WoocommerceGiftCards {
 	public function __construct() {
 		if ( is_plugin_active( 'pw-gift-cards/pw-gift-cards.php' ) ) {
 			add_filter( 'blaze_wooless_additional_site_info', array( $this, 'giftcard_email_content' ), 10, 1 );
+			add_filter( 'wooless_product_query_args', array( $this, 'giftcard_product_query_args' ), 10, 1 );
 		}
 	}
 
@@ -29,5 +30,17 @@ class WoocommerceGiftCards {
 		}
 
 		return $additional_settings;
+	}
+
+	public function giftcard_product_query_args( array $args ) {
+		if (
+			defined( 'PWGC_PRODUCT_TYPE_SLUG' ) &&
+			array_key_exists( 'type', $args ) &&
+			is_array( $args['type'] )
+		) {
+			$args['type'][] = \PWGC_PRODUCT_TYPE_SLUG;
+		}
+
+		return $args;
 	}
 }
