@@ -115,6 +115,10 @@ class SiteInfo extends BaseCollection {
 					'value' => get_option( 'woocommerce_prices_include_tax', 'no' ),
 				),
 				array(
+					'name' => 'site_icon_url',
+					'value' => get_site_icon_url( 512, 'https://blazecommerce.io/wp-content/uploads/2023/09/blaze_commerce_favicon-1.png' ),
+				),
+				array(
 					'name' => 'woocommerce_tax_setup',
 					'value' => [ 
 						'displayPricesIncludingTax' => get_option( 'woocommerce_tax_display_shop' ),
