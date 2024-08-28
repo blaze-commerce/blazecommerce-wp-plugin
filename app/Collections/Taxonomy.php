@@ -37,9 +37,7 @@ class Taxonomy extends BaseCollection {
 	}
 
 	public function initialize() {
-		// Fetch the store ID from the saved options
-		$wooless_site_id     = get_option( 'store_id' );
-		$collection_taxonomy = 'taxonomy-' . $wooless_site_id;
+		$collection_taxonomy = $this->collection_name();
 
 		try {
 			$this->drop_collection();
