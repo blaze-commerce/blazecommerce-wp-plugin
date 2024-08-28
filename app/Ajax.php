@@ -24,6 +24,18 @@ class Ajax {
 
 		add_action( 'wp_ajax_redeploy_store_front', array( $this, 'redeploy_store_front' ) );
 		add_action( 'wp_ajax_check_deployment', array( $this, 'check_deployment' ) );
+
+		add_action( 'wp_ajax_check_product_sync_data', array( $this, 'check_product_sync_data' ) );
+	}
+
+	public function check_product_sync_data() {
+		if ( ! empty( $_REQUEST['product_id'] ) ) {
+			$product = wc_get_product( $_REQUEST['product_id'] );
+			if ( $product ) {
+				$product_document = Product::get_instance()->generate_typesense_data( $product );
+				wp_send_json( $product_document );
+			}
+		}
 	}
 
 	public function get_headers() {

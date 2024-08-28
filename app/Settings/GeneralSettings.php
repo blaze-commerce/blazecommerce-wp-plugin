@@ -117,7 +117,60 @@ class GeneralSettings extends BaseSettings {
 
 
 	public function settings() {
-		$fields = array(
+
+		$font_families = array(
+			'Arimo' => 'Arimo',
+			'Barlow' => 'Barlow',
+			'DM Sans' => 'DM Sans',
+			'Dosis' => 'Dosis',
+			'Fira Sans' => 'Fira Sans',
+			'Futura Book' => 'Futura Book',
+			'Heebo' => 'Heebo',
+			'Hind Siliguri' => 'Hind Siliguri',
+			'IBM Plex Sans' => 'IBM Plex Sans',
+			'Inconsolata' => 'Inconsolata',
+			'Inter' => 'Inter',
+			'Josefin Sans' => 'Josefin Sans',
+			'Kanit' => 'Kanit',
+			'Karla' => 'Karla',
+			'Lato' => 'Lato',
+			'Libre Baskerville' => 'Libre Baskerville',
+			'Libre Franklin' => 'Libre Franklin',
+			'Lora' => 'Lora',
+			'Manrope' => 'Manrope',
+			'Material Icons' => 'Material Icons',
+			'Material Icons Outlined' => 'Material Icons Outlined',
+			'Merriweather' => 'Merriweather',
+			'Montserrat' => 'Montserrat',
+			'Mukta' => 'Mukta',
+			'Mulish' => 'Mulish',
+			'Nanum Gothic' => 'Nanum Gothic',
+			'Noto Sans' => 'Noto Sans',
+			'Noto Sans JP' => 'Noto Sans JP',
+			'Noto Sans KR' => 'Noto Sans KR',
+			'Noto Sans TC' => 'Noto Sans TC',
+			'Noto Serif' => 'Noto Serif',
+			'Nunito' => 'Nunito',
+			'Nunito Sans' => 'Nunito Sans',
+			'Open Sans' => 'Open Sans',
+			'Oswald' => 'Oswald',
+			'Playfair Display' => 'Playfair Display',
+			'Poppins' => 'Poppins',
+			'PT Sans' => 'PT Sans',
+			'PT Serif' => 'PT Serif',
+			'Quicksand' => 'Quicksand',
+			'Raleway' => 'Raleway',
+			'Roboto' => 'Roboto',
+			'Roboto Condensed' => 'Roboto Condensed',
+			'Roboto Mono' => 'Roboto Mono',
+			'Roboto Slab' => 'Roboto Slab',
+			'Rubik' => 'Rubik',
+			'Source Sans Pro' => 'Source Sans Pro',
+			'Titillium Web' => 'Titillium Web',
+			'Ubuntu' => 'Ubuntu',
+			'Work Sans' => 'Work Sans',
+		);
+		$fields        = array(
 			'wooless_general_settings_section' => array(
 				'label' => 'General Settings',
 				'options' => array(
@@ -185,6 +238,16 @@ class GeneralSettings extends BaseSettings {
 				),
 			);
 
+			$fields['wooless_general_settings_section']['options'][] = array(
+				'id' => 'font_family',
+				'label' => 'Font Family',
+				'type' => 'select',
+				'args' => array(
+					'options' => $font_families,
+					'description' => 'Select the font family for your frontend pages',
+				),
+			);
+
 		}
 
 
@@ -219,6 +282,7 @@ class GeneralSettings extends BaseSettings {
 		$additional_data['show_free_shipping_banner']              = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
 		$additional_data['show_free_shipping_minicart_component']  = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
+		$additional_data['font_family']                            = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
 
 		return $additional_data;
 	}
