@@ -8,6 +8,7 @@ Author: Blaze Commerce
 Author URI: https://www.blazecommerce.io
 */
 
+use BlazeWooless\PostType;
 use Http\Message\Authentication\Header;
 
 define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -138,3 +139,11 @@ function add_typesense_product_indexer_menu() {
 		'typesense_product_indexer_page'
 	);
 }
+
+
+
+function plugin_activate() {
+
+	PostType::initiliaze_default_home_page();
+}
+register_activation_hook( __FILE__, 'plugin_activate' );
