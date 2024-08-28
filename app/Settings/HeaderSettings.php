@@ -27,7 +27,7 @@ class HeaderSettings extends BaseSettings {
 	}
 
 	public function get_header_post() {
-		$args = array(
+		$args      = array(
 			'post_type' => 'blaze_settings',
 			'name' => $this->setting_page_name,
 		);
@@ -48,13 +48,31 @@ class HeaderSettings extends BaseSettings {
 		$post = $this->get_header_post();
 
 		if ( ! $post ) {
-			$new_post = array(
+			$content        = '<!-- wp:generateblocks/container {"uniqueId":"33f81160","backgroundColor":"#090e1a","isDynamic":true,"blockVersion":4,"display":"flex","flexDirection":"row","alignItems":"center","justifyContent":"center"} -->
+<!-- wp:generateblocks/container {"uniqueId":"8747b327","isDynamic":true,"blockVersion":4,"display":"flex","flexDirection":"row","alignItems":"center","justifyContent":"space-between","className":"container"} -->
+<!-- wp:site-logo {"shouldSyncIcon":true} /-->
+
+<!-- wp:generateblocks/container {"uniqueId":"e2af78b8","isDynamic":true,"blockVersion":4,"display":"flex","flexDirection":"row","alignItems":"center","justifyContent":"flex-end","columnGap":"8px"} -->
+<!-- wp:paragraph {"style":{"color":{"text":"#ffffff"},"elements":{"link":{"color":{"text":"#ffffff"}}}}} -->
+<p class="has-text-color has-link-color" style="color:#ffffff"><a href="/shop">Shop</a></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:generateblocks/container {"uniqueId":"aa90172c","isDynamic":true,"blockVersion":4,"blockLabel":"MiniCartIcon","htmlAttributes":[{"attribute":"data-color","value":"#F7F7F7"}]} -->
+<!-- wp:generateblocks/image {"uniqueId":"56f0986b","mediaId":216617,"relNoFollow":true,"sizeSlug":"full","anchor":"minicart","blockVersion":2} -->
+<figure class="gb-block-image gb-block-image-56f0986b"><a href="/?cart=1" rel="nofollow"><img class="gb-image gb-image-56f0986b" id="minicart" src="https://cart.ezywiper-bc-v1.blz.onl/wp-content/uploads/2024/07/icon-cart.png" alt="" title="icon-cart"/></a></figure>
+<!-- /wp:generateblocks/image -->
+<!-- /wp:generateblocks/container -->
+<!-- /wp:generateblocks/container -->
+<!-- /wp:generateblocks/container -->
+<!-- /wp:generateblocks/container -->';
+			$default_header = array(
 				'post_title' => 'Header',
 				'post_type' => 'blaze_settings',
 				'post_name' => $this->setting_page_name,
-				'post_category' => array( 0 )
+				'post_category' => array( 0 ),
+				'post_content' => $content
 			);
-			$post_id = wp_insert_post( $new_post );
+			$post_id        = wp_insert_post( $default_header );
 		} else {
 			$post_id = $post->ID;
 		}
