@@ -62,9 +62,12 @@ class WoocommerceBundle {
 				foreach ( (array) $bundled_item->get_product_variation_attributes() as $label_name => $attribute_options ) {
 					$variation_key = 'attribute_' . sanitize_title( $label_name );
 
+					$id = $variation_key . '_' . $bundled_item->get_id();
+
 					array_push( $variation_bundles, array(
 						'prefix' => $bundle_fields_prefix,
-						'name' => 'bundle_attribute_' . sanitize_title( $variation_attribute_name ) . '_' . $bundled_item->get_id(),
+						'id' => $id,
+						'name' => 'bundle_' . $id,
 						'label' => $label_name,
 						'options' => $variation_options[ $variation_key ]
 					) );
