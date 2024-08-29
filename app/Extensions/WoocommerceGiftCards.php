@@ -2,8 +2,6 @@
 
 namespace BlazeWooless\Extensions;
 
-use BlazeWooless\TypesenseClient;
-
 class WoocommerceGiftCards {
 	private static $instance = null;
 
