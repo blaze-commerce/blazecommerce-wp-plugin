@@ -279,10 +279,10 @@ class WoocommerceAeliaCurrencySwitcher {
 		if ( 'rootquery' === strtolower( $type_name ) && 'cart' === $field_key ) {
 			if ( isset( $args['currency'] ) ) {
 				$selected_currency = $args['currency'];
-	
+
 				$currency_countries_mappings = get_option( 'wc_aelia_currency_switcher' )['currency_countries_mappings'];
 				$matched_currency = $currency_countries_mappings[ $selected_currency ];
-	
+
 				if ( isset( $matched_currency['countries'] ) ) {
 					\wc_setcookie( 'aelia_customer_country', $matched_currency['countries'][0] );
 					\wc_setcookie( 'currentCountry', $matched_currency['countries'][0] );
