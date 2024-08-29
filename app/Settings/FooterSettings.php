@@ -47,14 +47,21 @@ class FooterSettings extends BaseSettings {
 
 		$post = $this->get_post();
 
+
 		if ( ! $post ) {
-			$new_post = array(
+			$content        = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
+<!-- wp:paragraph {"style":{"color":{"text":"#ffffffcc"},"elements":{"link":{"color":{"text":"#ffffffcc"}}}}} -->
+<p class="has-text-color has-link-color" style="color:#ffffffcc">Built with <a href="https://blazecommerce.io/">Blaze Commerce</a></p>
+<!-- /wp:paragraph -->
+<!-- /wp:generateblocks/container -->';
+			$default_footer = array(
 				'post_title' => $this->page_label,
 				'post_type' => 'blaze_settings',
 				'post_name' => $this->setting_page_name,
-				'post_category' => array( 0 )
+				'post_category' => array( 0 ),
+				'post_content' => $content,
 			);
-			$post_id  = wp_insert_post( $new_post );
+			$post_id        = wp_insert_post( $default_footer );
 		} else {
 			$post_id = $post->ID;
 		}
