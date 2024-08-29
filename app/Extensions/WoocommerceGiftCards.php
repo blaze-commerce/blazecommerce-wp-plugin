@@ -49,9 +49,27 @@ class WoocommerceGiftCards {
 
 	public function sync_gift_card_data( $product_data, $product_id, $product ) {
 
-		if ( is_a( $product, 'WC_Product_PW_Gift_Card' ) ) {
+		if ( $product_data['productType'] === 'pw-gift-card' ) {
 
-			$price = apply_filters( 'blaze_wooless_calculated_converted_single_price', $product->get_price() );
+			$product_price = $product->get_price();
+
+			// re-initialize $product if price is 0
+			if ( $product_price == 0 ) {
+
+				// get the lowest price from its variations
+				$variations = $product->get_available_variations();
+				$lowest_price = 0;
+				foreach ( $variations as $variation ) {
+					$variation_price = $variation['display_price'];
+					if ( $lowest_price == 0 || $variation_price < $lowest_price ) {
+						$lowest_price = $variation_price;
+					}
+				}
+
+				$product_price = $lowest_price;
+			}
+
+			$price = apply_filters( 'blaze_wooless_calculated_converted_single_price', $lowest_price );
 
 			$product_data['price'] = $price;
 			$product_data['regularPrice'] = $price;
