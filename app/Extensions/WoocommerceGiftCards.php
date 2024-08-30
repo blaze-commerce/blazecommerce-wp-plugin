@@ -69,7 +69,7 @@ class WoocommerceGiftCards {
 				$product_price = $lowest_price;
 			}
 
-			$price = apply_filters( 'blaze_wooless_calculated_converted_single_price', $lowest_price );
+			$price = apply_filters( 'blaze_wooless_calculated_converted_single_price', $product_price );
 
 			$product_data['price'] = $price;
 			$product_data['regularPrice'] = $price;
