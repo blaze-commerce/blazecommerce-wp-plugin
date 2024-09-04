@@ -24,7 +24,7 @@ class BusinessReviewsBundle {
 	}
 
 	protected function is_active() {
-		return is_plugin_active( 'business-reviews-bundle/brb.php' );
+		return function_exists( 'is_plugin_active' ) && is_plugin_active( 'business-reviews-bundle/brb.php' );
 	}
 
 	public function register_api_endpoint() {

@@ -22,45 +22,52 @@ class RegionalSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		$fields = array(
-			array(
-				'id' => 'regions',
-				'label' => 'Regions',
-				'type' => 'multiselect',
-				'args' => array(
-					'options' => \WC()->countries->get_countries(),
-					'placeholder' => 'Select countries',
-				),
-			),
-		);
+		if ( class_exists( 'WooCommerce' ) ) {
 
-		if ( ! empty( $regions = $this->get_option( 'regions' ) ) ) {
-			$fields[] = array(
-				'id' => 'regions_header',
-				'label' => 'Map Regions',
-				'type' => 'heading',
-			);
-
-			foreach ( $regions as $region ) {
-				$fields[] = array(
-					'id' => 'region_' . $region,
-					'label' => $region,
+			$fields = array(
+				array(
+					'id' => 'regions',
+					'label' => 'Regions',
 					'type' => 'multiselect',
 					'args' => array(
 						'options' => \WC()->countries->get_countries(),
 						'placeholder' => 'Select countries',
-						'description' => 'Select countries you want to map to the front-end. If a country is not found it will use the next country.',
 					),
+				),
+			);
+
+
+			if ( ! empty( $regions = $this->get_option( 'regions' ) ) ) {
+				$fields[] = array(
+					'id' => 'regions_header',
+					'label' => 'Map Regions',
+					'type' => 'heading',
 				);
+
+				foreach ( $regions as $region ) {
+					$fields[] = array(
+						'id' => 'region_' . $region,
+						'label' => $region,
+						'type' => 'multiselect',
+						'args' => array(
+							'options' => \WC()->countries->get_countries(),
+							'placeholder' => 'Select countries',
+							'description' => 'Select countries you want to map to the front-end. If a country is not found it will use the next country.',
+						),
+					);
+				}
 			}
+
+			return $fields = array(
+				'wooless_regional_settings_section' => array(
+					'label' => 'Regional Data',
+					'options' => $fields,
+				),
+			);
+
 		}
 
-		return $fields = array(
-			'wooless_regional_settings_section' => array(
-				'label' => 'Regional Data',
-				'options' => $fields,
-			),
-		);
+		return [];
 	}
 
 	public static function get_selected_regions() {
@@ -76,7 +83,7 @@ class RegionalSettings extends BaseSettings {
 		if ( count( $additional_site_info ) > 0 ) {
 			$additional_site_info['regions'] = array();
 			foreach ( $regions as $region ) {
-				$region_mappings                          = $this->get_option( 'region_' . $region );
+				$region_mappings = $this->get_option( 'region_' . $region );
 				$additional_site_info['regions'][ $region ] = $region_mappings ?? [];
 			}
 		}
