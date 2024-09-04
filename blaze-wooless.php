@@ -161,21 +161,21 @@ add_action( 'tgmpa_register', function () {
 			'name' => 'WPGraphQL CORS',
 			'slug' => 'wp-graphql-cors',
 			'required' => true,
-			'source' => 'https://github.com/funkhaus/wp-graphql-cors/archive/master.zip',
+			'source' => BLAZE_WOOLESS_PLUGIN_URL . 'plugins/wp-graphql-cors.zip',
 		),
 
 		array(
 			'name' => 'WPGraphQL JWT Authentication',
 			'slug' => 'wp-graphql-jwt-authentication',
 			'required' => true,
-			'source' => 'https://github.com/wp-graphql/wp-graphql-jwt-authentication/archive/master.zip',
+			'source' => BLAZE_WOOLESS_PLUGIN_URL . 'plugins/wp-graphql-jwt-authentication.zip',
 		),
 
 		array(
 			'name' => 'WPGraphQL WooCommerce',
 			'slug' => 'wp-graphql-woocommerce',
 			'required' => true,
-			'source' => 'https://github.com/wp-graphql/wp-graphql-woocommerce/archive/master.zip',
+			'source' => BLAZE_WOOLESS_PLUGIN_URL . 'plugins/wp-graphql-woocommerce.zip',
 		),
 
 		array(
