@@ -4,6 +4,7 @@ Plugin Name: Blaze Commerce
 Plugin URI: https://www.blazecommerce.io
 Description: The official plugin that integrates your site with the Blaze Commerce service.
 Version: 1.5.1
+Requires Plugins: woocommerce, wp-graphql, wp-graphql-cors, wp-graphql-jwt-authentication, wp-graphql-woocommerce
 Author: Blaze Commerce
 Author URI: https://www.blazecommerce.io
 */
@@ -161,21 +162,21 @@ add_action( 'tgmpa_register', function () {
 			'name' => 'WPGraphQL CORS',
 			'slug' => 'wp-graphql-cors',
 			'required' => true,
-			'source' => BLAZE_WOOLESS_PLUGIN_URL . 'plugins/wp-graphql-cors.zip',
+			'source' => 'https://github.com/funkhaus/wp-graphql-cors/archive/master.zip',
 		),
 
 		array(
 			'name' => 'WPGraphQL JWT Authentication',
 			'slug' => 'wp-graphql-jwt-authentication',
 			'required' => true,
-			'source' => BLAZE_WOOLESS_PLUGIN_URL . 'plugins/wp-graphql-jwt-authentication.zip',
+			'source' => 'https://github.com/wp-graphql/wp-graphql-jwt-authentication/archive/master.zip',
 		),
 
 		array(
 			'name' => 'WPGraphQL WooCommerce',
 			'slug' => 'wp-graphql-woocommerce',
 			'required' => true,
-			'source' => BLAZE_WOOLESS_PLUGIN_URL . 'plugins/wp-graphql-woocommerce.zip',
+			'source' => 'https://github.com/wp-graphql/wp-graphql-woocommerce/archive/master.zip',
 		),
 
 		array(
