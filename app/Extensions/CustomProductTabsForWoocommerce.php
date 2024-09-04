@@ -14,7 +14,7 @@ class CustomProductTabsForWoocommerce {
 	}
 
 	public function __construct() {
-		if ( is_plugin_active( 'yikes-inc-easy-custom-woocommerce-product-tabs/yikes-inc-easy-custom-woocommerce-product-tabs.php' ) ) {
+		if ( function_exists( 'is_plugin_actvie' ) && is_plugin_active( 'yikes-inc-easy-custom-woocommerce-product-tabs/yikes-inc-easy-custom-woocommerce-product-tabs.php' ) ) {
 			// var_dump('activated'); exit;
 			add_filter( 'wooless_product_tabs', array( $this, 'add_additional_tabs' ), 10, 2 );
 		}

@@ -26,22 +26,35 @@ class BaseSettings {
 	 * @return bool
 	 */
 	public function is_typesense_connected( $settings_args = array() ) {
-		$saved_settings = bw_get_general_settings();
-
-		// we prioritize the custom settings_args if its given that is why we are merging the data here
-		$settings = array_merge( $saved_settings, $settings_args );
-
-		$typesense_api_key = $settings['typesense_api_key'];
-		$store_id          = $settings['store_id'];
-		$host              = $settings['typesense_host'];
-
-		if ( empty( $typesense_api_key ) || empty( $store_id ) || empty( $host ) ) {
-			return false;
-		}
-
 		try {
-			$connection = TypesenseClient::get_instance()->test_connection( $typesense_api_key, $store_id, $host );
-			return 'success' === $connection['status'];
+			$saved_settings = bw_get_general_settings();
+
+			// we prioritize the custom settings_args if its given that is why we are merging the data here
+			$settings = array_merge( $saved_settings, $settings_args );
+
+			if ( ! (
+				isset( $settings['typesense_api_key'] ) &&
+				isset( $settings['store_id'] ) &&
+				isset( $settings['typesense_host'] )
+			) ) {
+				throw new \Exception( 'Typesense settings not found' );
+			}
+
+
+			$typesense_api_key = $settings['typesense_api_key'];
+			$store_id = $settings['store_id'];
+			$host = $settings['typesense_host'];
+
+			if ( empty( $typesense_api_key ) || empty( $store_id ) || empty( $host ) ) {
+				return false;
+			}
+
+			try {
+				$connection = TypesenseClient::get_instance()->test_connection( $typesense_api_key, $store_id, $host );
+				return 'success' === $connection['status'];
+			} catch (\Throwable $th) {
+				return false;
+			}
 		} catch (\Throwable $th) {
 			return false;
 		}
@@ -106,9 +119,9 @@ class BaseSettings {
 	}
 	public function settings_callback( $options ) {
 		if ( isset( $options['typesense_api_key'] ) ) {
-			$api_key          = sanitize_text_field( $options['typesense_api_key'] );
+			$api_key = sanitize_text_field( $options['typesense_api_key'] );
 			$typesense_client = TypesenseClient::get_instance();
-			$connection       = $typesense_client->test_connection( $api_key, $options['store_id'], $options['typesense_host'] );
+			$connection = $typesense_client->test_connection( $api_key, $options['store_id'], $options['typesense_host'] );
 
 			if ( 'success' !== $connection['status'] ) {
 
@@ -132,42 +145,42 @@ class BaseSettings {
 
 	public function field_callback_checkbox( $args ) {
 		$value = $this->get_option( $args['id'] );
-		$html  = '<input type="checkbox" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="1" ' . checked( 1, $value, false ) . '/>';
+		$html = '<input type="checkbox" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="1" ' . checked( 1, $value, false ) . '/>';
 		$html .= $this->render_field_description( $args, true );
 		echo $html;
 	}
 
 	public function field_callback_text( $args ) {
 		$value = $this->get_option( $args['id'] );
-		$html  = '<input type="text" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" />';
+		$html = '<input type="text" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" />';
 		$html .= $this->render_field_description( $args );
 		echo $html;
 	}
 
 	public function field_callback_number( $args ) {
 		$value = $this->get_option( $args['id'] );
-		$html  = '<input type="number" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" min="1" />';
+		$html = '<input type="number" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" min="1" />';
 		$html .= $this->render_field_description( $args );
 		echo $html;
 	}
 
 	public function field_callback_textarea( $args ) {
 		$value = $this->get_option( $args['id'] );
-		$html  = '<textarea rows="4" cols="50" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']">' . sanitize_text_field( $value ) . '</textarea>';
+		$html = '<textarea rows="4" cols="50" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']">' . sanitize_text_field( $value ) . '</textarea>';
 		$html .= $this->render_field_description( $args );
 		echo $html;
 	}
 
 	public function field_callback_html( $args ) {
 		$value = $this->get_option( $args['id'] );
-		$html  = '<textarea rows="4" cols="50" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']">' . $value . '</textarea>';
+		$html = '<textarea rows="4" cols="50" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']">' . $value . '</textarea>';
 		$html .= $this->render_field_description( $args );
 		echo $html;
 	}
 
 	public function field_callback_password( $args ) {
 		$value = $this->get_option( $args['id'] );
-		$html  = '<input type="password" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" />';
+		$html = '<input type="password" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" />';
 		$html .= $this->render_field_description( $args );
 		echo $html;
 	}
@@ -177,7 +190,7 @@ class BaseSettings {
 
 	public function field_callback_select( $args ) {
 		$value = $this->get_option( $args['id'] );
-		$html  = '<select name="' . $this->option_key . '[' . $args['id'] . ']">';
+		$html = '<select name="' . $this->option_key . '[' . $args['id'] . ']">';
 		// var_dump($args['options']); exit;
 		foreach ( $args['options'] as $key => $label ) {
 			$html .= '<option value="' . $key . '" ' . ( $key === $value ? 'selected' : '' ) . '>' . $label . '</option>';
@@ -189,7 +202,7 @@ class BaseSettings {
 
 	public function field_callback_multiselect( $args ) {
 		$values = $this->get_option( $args['id'] ) ?: array();
-		$html   = '<select name="' . $this->option_key . '[' . $args['id'] . '][]" class="wooless-multiple-select" multiple="multiple" data-placeholder="' . $args['placeholder'] . '">';
+		$html = '<select name="' . $this->option_key . '[' . $args['id'] . '][]" class="wooless-multiple-select" multiple="multiple" data-placeholder="' . $args['placeholder'] . '">';
 		foreach ( $args['options'] as $key => $label ) {
 			$html .= '<option value="' . $key . '" ' . ( in_array( $key, $values ) ? 'selected' : '' ) . '>' . $label . '</option>';
 		}
