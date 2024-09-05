@@ -609,6 +609,14 @@
 
         syncInProgress: false,
 
+        shouldFinishProductSync: false,
+        importedProductsCount: 0,
+        totalProductImports: 0,
+
+        shouldFinishTaxonomySync: false,
+        importedTaxonomyCount: 0,
+        totalTaxonomyImports: 0,
+
         renderLoader: function (message) {
             if ($('#wooless-loader').length === 0) {
                 $(this.syncResultsContainer).append('<img id="wooless-loader" src="/wp-includes/js/thickbox/loadingAnimation.gif" />')
@@ -683,6 +691,55 @@
             });
         },
 
+        managePaginatedRequests: function ({
+            apiRequest,
+            initialPages,
+            onApiRequestSuccess,
+            onFinish,
+            shouldFinish,
+        }) {
+            var activePromises = 0;
+            var nextPage = initialPages[initialPages.length - 1] + 1;
+            var startTime = Date.now(); // Capture the start time
+            var _this = this;
+        
+            // A helper function to handle a single promise with a specific page number
+            var handleRequest = function(page) {
+                if (shouldFinish()) return;
+        
+                activePromises++;
+                apiRequest(page)
+                    .then(function(result) {
+                        let shouldContinue = false;
+                        if (onApiRequestSuccess) {
+                            shouldContinue = onApiRequestSuccess(result, page);
+                        }
+                        activePromises--;
+                        if (shouldContinue) {
+                            handleRequest(nextPage++);
+                        }
+                    })
+            };
+        
+            // Fire initial requests
+            for (var i = 0; i < initialPages.length; i++) {
+                handleRequest(initialPages[i]);
+            }
+        
+            // Wait until all promises have been handled
+            var interval = setInterval(function() {
+                if (activePromises === 0) {
+                    clearInterval(interval);
+                    var endTime = Date.now(); // Capture the end time
+                    var elapsedTime = (endTime - startTime) / 1000; // Calculate elapsed time in seconds
+                    
+                    if (onFinish) {
+                        onFinish(elapsedTime);
+                    }
+                }
+            }, 50); // Small delay to avoid tight loop
+        },
+
         importData: function (collection, message, hideLoader = false, params = {}) {
             var _this = this;
             return new Promise(function (resolve, reject) {
@@ -705,7 +762,7 @@
             })
         },
 
-        importProductData: function (prevData = {}, params = {}, message = false) {
+        importProductData: function (page, message = false) {
             var _this = this;
             return new Promise(function (resolve, reject) {
                 var data = {
@@ -718,27 +775,14 @@
                     _this.syncInProgress = true;
                 }
 
-                $.post(ajaxurl, Object.assign({}, data, params), function (response) {
+                $.post(ajaxurl, Object.assign({}, data, { page: page }), function (response) {
                     response = JSON.parse(response);
-                    prevData.imported_products_count += response.imported_products_count;
-                    prevData.total_imports += response.total_imports;
-                    if (response.has_next_data) {
-                        resolve(_this.importProductData(prevData, { page: response.next_page }))
-                    } else {
-                        console.log(prevData);
-                        if (prevData.shouldHideLoader) {
-                            _this.hideLoader();
-                            _this.syncInProgress = false;
-                        }
-
-                        $(_this.syncResultsContainer).append('<div>Imported products count: ' + prevData.imported_products_count + '/' + prevData.total_imports + '</div>');
-                        resolve(true);
-                    }
+                    resolve(response);
                 });
             })
         },
 
-        importTaxonomyTermData: function (params = {}) {
+        importTaxonomyTermData: function (page) {
             var _this = this;
             return new Promise(function (resolve, reject) {
                 var data = {
@@ -746,23 +790,8 @@
                     'collection_name': 'taxonomy',
                 };
 
-                $.post(ajaxurl, Object.assign({}, data, params), function (response) {
-
-                    if (response.next_page != null) {
-                        resolve(_this.importTaxonomyTermData(
-                            {
-                                page: response.next_page,
-                                imported_count: response.imported_count,
-                                total_imports: response.total_imports
-                            }))
-                    } else {
-
-                        _this.hideLoader();
-                        _this.syncInProgress = false;
-
-                        $(_this.syncResultsContainer).append('<div>Imported taxonomy terms count: ' + response.imported_count + '/' + response.total_imports + '</div>');
-                        resolve(true);
-                    }
+                $.post(ajaxurl, Object.assign({}, data, { page: page}), function (response) {
+                    resolve(response);
                 });
             })
         },
@@ -804,18 +833,92 @@
             this.renderLoader('Product Syncing in progress...');
             this.syncInProgress = true;
 
-            return this.importProductData({ imported_products_count: 0, total_imports: 0, shouldHideLoader: true }, { page: 1 });
+            return this.runProductImportQueue();
+
+            // return this.importProductData({ imported_products_count: 0, total_imports: 0, shouldHideLoader: true }, { page: 1 });
+        },
+
+        runProductImportQueue: function({ hideLoader = true} = {}) {
+            var _this = this;
+            return new Promise(function(resolve) {
+                return _this.importProductData(1).then(function() {
+                    return _this.managePaginatedRequests({
+                        apiRequest: _this.importProductData,
+                        initialPages: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                        onApiRequestSuccess: function(result, page) {
+                            _this.importedProductsCount += result.imported_products_count;
+                            _this.totalProductImports += result.total_imports;
+                            if (!result.has_next_data) {
+                                _this.shouldFinishProductSync = true;
+                            }
+    
+                            // return true if to continue with the next request
+                            return !_this.shouldFinishProductSync;
+                        },
+                        onFinish: function(elapsedTime) {
+                            console.log('All products have been requested and no more products can be fetched');
+                            if (hideLoader) {
+                                _this.hideLoader();
+                                _this.syncInProgress = false;
+                            }
+                            resolve(true);
+                            $(_this.syncResultsContainer).append('<div>Imported products count: ' + _this.importedProductsCount + '/' + _this.totalProductImports + '. Elapsed time: ' + elapsedTime + ' seconds </div>');
+                            console.log('Elapsed time: ' + elapsedTime + ' seconds');
+                        },
+                        shouldFinish: function() {
+                            return _this.shouldFinishProductSync;
+                        }
+                    });
+                });
+            });
         },
 
         importTaxonomies: function (e) {
             e.preventDefault();
+            
             if (this.syncInProgress) {
                 return false;
             }
             this.clearResultContainer();
             this.renderLoader('Taxonomy Syncing in progress...');
             this.syncInProgress = true;
-            return this.importTaxonomyTermData();
+
+            return this.runTaxonomyImportQueue();
+        },
+
+        runTaxonomyImportQueue: function({ hideLoader = true} = {}) {
+            var _this = this;
+            return new Promise(function(resolve) {
+                return _this.importTaxonomyTermData(1).then(function() {
+                    return _this.managePaginatedRequests({
+                        apiRequest: _this.importTaxonomyTermData,
+                        initialPages: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                        onApiRequestSuccess: function(result, page) {
+                            _this.importedTaxonomyCount += result.imported_count;
+                            _this.totalTaxonomyImports += result.total_imports;
+                            if (result.next_page == null) {
+                                _this.shouldFinishTaxonomySync = true;
+                            }
+    
+                            // return true if to continue with the next request
+                            return !_this.shouldFinishTaxonomySync;
+                        },
+                        onFinish: function(elapsedTime) {
+                            console.log('All taxonomies have been requested and no more taxonomies can be fetched');
+                            if (hideLoader) {
+                                _this.hideLoader();
+                                _this.syncInProgress = false;
+                            }
+                            resolve(true);
+                            $(_this.syncResultsContainer).append('<div>Imported taxonomy terms count: ' + _this.importedTaxonomyCount + '/' + _this.totalTaxonomyImports + '. Elapsed time: ' + elapsedTime + ' seconds </div>');
+                            console.log('Elapsed time: ' + elapsedTime + ' seconds');
+                        },
+                        shouldFinish: function() {
+                            return _this.shouldFinishTaxonomySync;
+                        }
+                    });
+                });
+            })
         },
 
         importMenus: function (e) {
@@ -854,8 +957,12 @@
             }
             (async function () {
                 _this.clearResultContainer();
-                await _this.importProductData({ imported_products_count: 0, total_imports: 0, shouldHideLoader: false }, { page: 1 }, 'Products Syncing in progress...');
-                await _this.importData('taxonomy', 'Taxonomies Syncing in progress...');
+                _this.renderLoader('Product Syncing in progress...');
+                _this.syncInProgress = true;
+                await _this.runProductImportQueue({ hideLoader: false });
+                _this.renderLoader('Taxonomy Syncing in progress...');
+                _this.syncInProgress = true;
+                await _this.runTaxonomyImportQueue({ hideLoader: false });
                 await _this.importData('menu', 'Menus Syncing in progress...');
                 await _this.importData('page', 'Pages Syncing in progress...');
                 await _this.importData('site_info', 'Site Info Syncing in progress...');
