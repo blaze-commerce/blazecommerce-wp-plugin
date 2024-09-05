@@ -140,7 +140,7 @@ class Taxonomy extends BaseCollection {
 		$taxonomy_datas = array();
 
 		try {
-			$batch_size      = $_REQUEST['batch_size'] ?? 250;
+			$batch_size      = $_REQUEST['batch_size'] ?? 5;
 			$page            = $_REQUEST['page'] ?? 1;
 			$imported_count  = $_REQUEST['imported_count'] ?? 0;
 			$total_imports   = $_REQUEST['total_imports'] ?? 0;
@@ -166,8 +166,8 @@ class Taxonomy extends BaseCollection {
 					return isset( $batch_result['success'] ) && $batch_result['success'] == true;
 				} );
 
-				$imported_count += count( $successful_imports );
-				$total_imports += count( $taxonomy_datas );
+				$imported_count = count( $successful_imports );
+				$total_imports = count( $taxonomy_datas );
 			}
 
 
