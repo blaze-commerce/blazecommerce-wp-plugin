@@ -14,7 +14,7 @@ class YoastSEO {
 	}
 
 	public function __construct() {
-		if ( \is_plugin_active( 'wordpress-seo/wp-seo.php' ) ) {
+		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'wordpress-seo/wp-seo.php' ) ) {
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_seo_to_product_schema' ), 10, 2 );
 			add_filter( 'blaze_wooless_page_data_for_typesense', array( $this, 'add_seo_to_page_schema' ), 10, 2 );
 			add_filter( 'blaze_wooless_additional_homepage_seo_info', array( $this, 'homepage_seo_settings' ), 10, 1 );
@@ -26,7 +26,7 @@ class YoastSEO {
 	public function add_seo_to_page_schema( $document, $page ) {
 
 		if ( ! empty( $page->ID ) ) {
-			$meta                    = \YoastSEO()->meta->for_post( $page->ID );
+			$meta = \YoastSEO()->meta->for_post( $page->ID );
 			$document['seoFullHead'] = $this->get_full_head( $meta );
 		}
 
@@ -35,7 +35,7 @@ class YoastSEO {
 	}
 
 	public function add_seo_to_product_schema( $product_data, $product_id ) {
-		$meta                        = \YoastSEO()->meta->for_post( $product_id );
+		$meta = \YoastSEO()->meta->for_post( $product_id );
 		$product_data['seoFullHead'] = $this->get_full_head( $meta );
 
 		return $product_data;
@@ -68,8 +68,8 @@ class YoastSEO {
 
 	public function add_taxonomy_head( $document, $term ) {
 
-		$yoastMeta               = \YoastSEO()->meta->for_term( $term->term_id );
-		$termHead                = $yoastMeta && method_exists( $yoastMeta, 'get_head' ) ? $yoastMeta->get_head() : '';
+		$yoastMeta = \YoastSEO()->meta->for_term( $term->term_id );
+		$termHead = $yoastMeta && method_exists( $yoastMeta, 'get_head' ) ? $yoastMeta->get_head() : '';
 		$document['seoFullHead'] = is_string( $termHead ) ? $termHead : ( isset( $termHead->html ) ? $termHead->html : '' );
 
 		return $document;
