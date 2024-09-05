@@ -57,6 +57,8 @@ class HeaderSettings extends BaseSettings {
 <p class="has-text-color has-link-color" style="color:#ffffff"><a href="/shop">Shop</a></p>
 <!-- /wp:paragraph -->
 
+<!-- wp:generateblocks/container {"uniqueId":"04c0d214","isDynamic":true,"blockVersion":4,"metadata":{"name":"Search"}} /-->
+
 <!-- wp:generateblocks/container {"uniqueId":"aa90172c","isDynamic":true,"blockVersion":4,"blockLabel":"MiniCartIcon","htmlAttributes":[{"attribute":"data-color","value":"#F7F7F7"}]} -->
 <!-- wp:generateblocks/image {"uniqueId":"56f0986b","mediaId":216617,"relNoFollow":true,"sizeSlug":"full","anchor":"minicart","blockVersion":2} -->
 <figure class="gb-block-image gb-block-image-56f0986b"><a href="/?cart=1" rel="nofollow"><img class="gb-image gb-image-56f0986b" id="minicart" src="https://cart.ezywiper-bc-v1.blz.onl/wp-content/uploads/2024/07/icon-cart.png" alt="" title="icon-cart"/></a></figure>
