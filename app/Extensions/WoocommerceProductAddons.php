@@ -15,7 +15,7 @@ class WoocommerceProductAddons {
 	}
 
 	public function __construct() {
-		if ( is_plugin_active( 'woocommerce-product-addons/woocommerce-product-addons.php' ) ) {
+		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-product-addons/woocommerce-product-addons.php' ) ) {
 			add_action( 'ts_before_product_upsert', array( $this, 'prepare_general_product_addons' ) );
 			add_action( 'blaze_wooless_pre_sync_products', array( $this, 'prepare_general_product_addons' ) );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_product_addons_data' ), 99, 3 );
