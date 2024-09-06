@@ -68,7 +68,8 @@ class GraphQL {
 					$shipping_zone = wc_get_shipping_zone( $package );
 				}
 
-				if ( empty( $shipping_zone ) ) return null;
+				if ( empty( $shipping_zone ) )
+					return null;
 
 				$all_shipping_methods = $shipping_zone->get_shipping_methods();
 				$free_shipping_method = reset( array_filter( $all_shipping_methods, function ($shipping) {
@@ -104,11 +105,10 @@ class GraphQL {
 		}
 	}
 
-	public function is_vercel_staging($url)
-	{
+	public function is_vercel_staging( $url ) {
 		$re = '/.vercel.app\/?$/m';
 
-		preg_match_all($re, $url, $is_vercel_staging, PREG_SET_ORDER, 0);
+		preg_match_all( $re, $url, $is_vercel_staging, PREG_SET_ORDER, 0 );
 
 		return $is_vercel_staging;
 	}
@@ -117,8 +117,8 @@ class GraphQL {
 	 * Tells the browser to accept the custom cookie when loggin in from headless site
 	 */
 	public function modify_response_headers( $headers ) {
-		$http_origin     = get_http_origin();
-		
+		$http_origin = get_http_origin();
+
 		$allowed_origins = [ 
 			'http://localhost:3000',
 			home_url(),
@@ -131,13 +131,13 @@ class GraphQL {
 		}
 
 		// If the request is coming from an allowed origin (HEADLESS_FRONTEND_URL), tell the browser it can accept the response.
-		if ( in_array( $http_origin, $allowed_origins, true ) || $this->is_vercel_staging($http_origin) ) {
+		if ( in_array( $http_origin, $allowed_origins, true ) || $this->is_vercel_staging( $http_origin ) ) {
 			$headers['Access-Control-Allow-Origin'] = $http_origin;
 		}
 
 		// Tells browsers to expose the response to frontend JavaScript code when the request credentials mode is "include".
 		$headers['Access-Control-Allow-Credentials'] = 'true';
-		$headers['Access-Control-Expose-Headers']    = $headers['Access-Control-Expose-Headers'] . ', set-cookie, woocommerce-session';
+		$headers['Access-Control-Expose-Headers'] = $headers['Access-Control-Expose-Headers'] . ', set-cookie, woocommerce-session';
 
 		return $headers;
 	}
@@ -260,7 +260,7 @@ class GraphQL {
 	}
 
 	public function is_extension_active() {
-		return is_plugin_active( 'wp-graphql/wp-graphql.php' );
+		return function_exists( 'is_plugin_active' ) && is_plugin_active( 'wp-graphql/wp-graphql.php' );
 	}
 
 	public function auth_expiration( $expiration = '' ) {
@@ -269,7 +269,7 @@ class GraphQL {
 
 	public function auth_secret_key() {
 		$auth_key = wp_salt( 'auth' );
-		$jwt_key  = get_option( 'wooless_custom_jwt_secret_key', $auth_key );
+		$jwt_key = get_option( 'wooless_custom_jwt_secret_key', $auth_key );
 
 		return $jwt_key;
 	}

@@ -14,7 +14,7 @@ class WoocommercePhotoReviews {
 	}
 
 	public function __construct() {
-		if ( is_plugin_active( 'woocommerce-photo-reviews/woocommerce-photo-reviews.php' ) && is_plugin_active( 'woo-photo-reviews/woo-photo-reviews.php' ) ) {
+		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-photo-reviews/woocommerce-photo-reviews.php' ) && is_plugin_active( 'woo-photo-reviews/woo-photo-reviews.php' ) ) {
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'reviews_summary' ), 10, 2 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'product_reviews' ), 10, 2 );
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'additional_meta_fields' ), 10, 1 );
@@ -70,8 +70,8 @@ class WoocommercePhotoReviews {
 
 	public function reviews_summary( $product_data, $product_id ) {
 		if ( ! empty( $product_data ) && $product_id ) {
-			$product        = wc_get_product( $product_id );
-			$review_count   = $product->get_review_count();
+			$product = wc_get_product( $product_id );
+			$review_count = $product->get_review_count();
 			$average_rating = $product->get_average_rating();
 			for ( $i = 5; $i > 0; $i-- ) {
 				$rating_count[ 'rating_' . $i ] = $product->get_rating_count( $i );
@@ -101,22 +101,22 @@ class WoocommercePhotoReviews {
 
 	public function product_reviews( $product_data, $product_id ) {
 		if ( ! empty( $product_data ) && $product_id ) {
-			$args           = array(
+			$args = array(
 				'post_type' => 'product',
 				'post_id' => $product_id,
 				'status' => 'approve',
 				'post_status' => 'publish',
 			);
-			$comments       = get_comments( $args );
+			$comments = get_comments( $args );
 			$comments_array = array();
 
 			foreach ( $comments as $comment ) {
 				if ( ! empty( $comment ) ) {
-					$images          = array();
-					$rating          = get_comment_meta( $comment->comment_ID, 'rating', true );
-					$vote_up_count   = get_comment_meta( $comment->comment_ID, 'wcpr_vote_up_count', true );
+					$images = array();
+					$rating = get_comment_meta( $comment->comment_ID, 'rating', true );
+					$vote_up_count = get_comment_meta( $comment->comment_ID, 'wcpr_vote_up_count', true );
 					$vote_down_count = get_comment_meta( $comment->comment_ID, 'wcpr_vote_down_count', true );
-					$review_images   = get_comment_meta( $comment->comment_ID, 'reviews-images', true );
+					$review_images = get_comment_meta( $comment->comment_ID, 'reviews-images', true );
 					if ( is_array( $review_images ) && count( $review_images ) > 0 ) {
 						$images = array_map( function ($image) {
 							return wp_get_attachment_url( $image );
