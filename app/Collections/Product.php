@@ -281,6 +281,11 @@ class Product extends BaseCollection {
 		$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
 		$thumbnail_src      = get_the_post_thumbnail_url( $should_use_parent_thumbnail ? $parent_id : $product_id );
 
+		if ( empty( $thumbnail_src ) ) {
+			// If there is no product image then we use the woocommerce placeholder image
+			$thumbnail_src = wc_placeholder_img_src();
+		}
+
 		return apply_filters( 'wooless_product_thumbnail', array(
 			'id' => $thumbnail_id,
 			'title' => $attachment->post_title,
