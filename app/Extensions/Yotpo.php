@@ -15,7 +15,7 @@ class Yotpo {
 	}
 
 	public function __construct() {
-		if ( is_plugin_active( 'yotpo-social-reviews-for-woocommerce/wc_yotpo.php' ) ) {
+		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'yotpo-social-reviews-for-woocommerce/wc_yotpo.php' ) ) {
 			add_action( 'blaze_wooless_generate_product_reviews_data', array( $this, 'generate_product_data' ), 10, 1 );
 
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'generate_product_reviews_stats' ), 10, 2 );
@@ -31,9 +31,9 @@ class Yotpo {
 	}
 
 	public function generate_product_data() {
-		$page            = 1;
-		$batch_size      = 100;
-		$finished        = false;
+		$page = 1;
+		$batch_size = 100;
+		$finished = false;
 		$product_reviews = array();
 
 		while ( ! $finished ) {

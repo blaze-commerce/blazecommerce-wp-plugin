@@ -14,7 +14,7 @@ class WoocommerceBundle {
 	}
 
 	public function __construct() {
-		if ( is_plugin_active( 'woocommerce-product-bundles/woocommerce-product-bundles.php' ) ) {
+		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-product-bundles/woocommerce-product-bundles.php' ) ) {
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'fields' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'data' ), 99, 3 );
 			add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
