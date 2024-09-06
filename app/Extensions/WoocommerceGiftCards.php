@@ -14,7 +14,7 @@ class WoocommerceGiftCards {
 	}
 
 	public function __construct() {
-		if ( is_plugin_active( 'pw-gift-cards/pw-gift-cards.php' ) ) {
+		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'pw-gift-cards/pw-gift-cards.php' ) ) {
 			add_filter( 'blaze_wooless_additional_site_info', array( $this, 'giftcard_email_content' ), 10, 1 );
 			add_filter( 'wooless_product_query_args', array( $this, 'giftcard_product_query_args' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_gift_card_data' ), 99, 3 );
@@ -69,7 +69,7 @@ class WoocommerceGiftCards {
 				$product_price = $lowest_price;
 			}
 
-			$price = apply_filters( 'blaze_wooless_calculated_converted_single_price', $lowest_price );
+			$price = apply_filters( 'blaze_wooless_calculated_converted_single_price', $product_price );
 
 			$product_data['price'] = $price;
 			$product_data['regularPrice'] = $price;
