@@ -27,16 +27,29 @@ class TypesenseClient {
 	}
 
 	public function __construct( $settings ) {
-		$this->api_key  = $settings['typesense_api_key'];
-		$this->store_id = $settings['store_id'];
-
 		try {
-			$client = $this->get_client( $this->api_key, $settings['typesense_host'] );
+			if ( ! (
+				array_key_exists( 'typesense_api_key', $settings ) &&
+				array_key_exists( 'store_id', $settings ) &&
+				array_key_exists( 'typesense_host', $settings )
+			)
+			) {
+				throw new Exception( 'Typesense settings not found' );
+			}
+			$this->api_key = $settings['typesense_api_key'];
+			$this->store_id = $settings['store_id'];
+
+			try {
+				$client = $this->get_client( $this->api_key, $settings['typesense_host'] );
+			} catch (\Throwable $th) {
+				$client = null;
+			}
+
+			$this->client = $client;
 		} catch (\Throwable $th) {
-			$client = null;
+			$this->client = null;
 		}
 
-		$this->client = $client;
 	}
 
 	public function debug() {
@@ -157,13 +170,13 @@ class TypesenseClient {
 			}
 
 			if ( $type === 'multi-way' ) {
-				$synonym_key  = $value[0] . '-synonyms';
+				$synonym_key = $value[0] . '-synonyms';
 				$synonym_data = array(
 					"synonyms" => $value
 				);
 
 			} else {
-				$synonym_key  = sanitize_title( $key ) . '-synonyms';
+				$synonym_key = sanitize_title( $key ) . '-synonyms';
 				$synonym_data = array(
 					'root' => $key,
 					'synonyms' => $value

@@ -4,6 +4,7 @@ Plugin Name: Blaze Commerce
 Plugin URI: https://www.blazecommerce.io
 Description: The official plugin that integrates your site with the Blaze Commerce service.
 Version: 1.5.1
+Requires Plugins: woocommerce, wp-graphql, wp-graphql-cors, wp-graphql-jwt-authentication, wp-graphql-woocommerce
 Author: Blaze Commerce
 Author URI: https://www.blazecommerce.io
 */
@@ -16,6 +17,7 @@ define( 'BLAZE_WOOLESS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'BLAZE_WOOLESS_VERSION', '1.5.1' );
 
 require 'vendor/autoload.php';
+require_once plugin_dir_path( __FILE__ ) . 'lib/class-tgm-plugin-activation.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/regional-data-helper.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/setting-helper.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/blaze-wooless-functions.php';
@@ -140,7 +142,117 @@ function add_typesense_product_indexer_menu() {
 	);
 }
 
+/**
+ * Register the required plugins for the plugin
+ */
+add_action( 'tgmpa_register', function () {
+	$plugins = array(
+		array(
+			'name' => 'WooCommerce',
+			'slug' => 'woocommerce',
+			'required' => true,
+		),
+		array(
+			'name' => 'WPGraphQL',
+			'slug' => 'wp-graphql',
+			'required' => true,
+		),
 
+		array(
+			'name' => 'WPGraphQL CORS',
+			'slug' => 'wp-graphql-cors',
+			'required' => true,
+			'source' => 'https://github.com/funkhaus/wp-graphql-cors/archive/master.zip',
+		),
+
+		array(
+			'name' => 'WPGraphQL JWT Authentication',
+			'slug' => 'wp-graphql-jwt-authentication',
+			'required' => true,
+			'source' => 'https://github.com/wp-graphql/wp-graphql-jwt-authentication/archive/master.zip',
+		),
+
+		array(
+			'name' => 'WPGraphQL WooCommerce',
+			'slug' => 'wp-graphql-woocommerce',
+			'required' => true,
+			'source' => 'https://github.com/wp-graphql/wp-graphql-woocommerce/archive/master.zip',
+		),
+
+		array(
+			'name' => 'Enable Tailwind CSS Classes in Gutenberg',
+			'slug' => 'website-builder',
+			'required' => false,
+		)
+
+	);
+
+	$config = array(
+		'id' => 'blaze-commerce',                 // Unique ID for hashing notices for multiple instances of TGMPA.
+		'default_path' => '',                      // Default absolute path to bundled plugins.
+		'menu' => 'tgmpa-install-plugins', // Menu slug.
+		'parent_slug' => 'plugins.php',            // Parent menu slug.
+		'capability' => 'manage_options',    // Capability needed to view plugin install page, should be a capability associated with the parent menu used.
+		'has_notices' => true,                    // Show admin notices or not.
+		'dismissable' => true,                    // If false, a user cannot dismiss the nag message.
+		'dismiss_msg' => '',                      // If 'dismissable' is false, this message will be output at top of nag.
+		'is_automatic' => false,                   // Automatically activate plugins after installation or not.
+		'message' => '',
+		'strings' => array(
+			'page_title' => __( 'Install Required Plugins', 'blaze-commerce' ),
+			'menu_title' => __( 'Install Plugins', 'blaze-commerce' ),
+			'installing' => __( 'Installing Plugin: %s', 'blaze-commerce' ),
+			'oops' => __( 'Something went wrong with the plugin API.', 'blaze-commerce' ),
+			'notice_can_install_required' => _n_noop(
+				'Blaze Commerce requires the following plugin: %1$s.',
+				'Blaze Commerce requires the following plugins: %1$s.',
+				'blaze-commerce'
+			),
+			'notice_can_install_recommended' => _n_noop(
+				'Blaze Commerce recommends the following plugin: %1$s.',
+				'Blaze Commerce recommends the following plugins: %1$s.',
+				'blaze-commerce'
+			),
+			'notice_cannot_install' => _n_noop(
+				'Sorry, but you do not have the correct permissions to install the %s plugin.',
+				'Sorry, but you do not have the correct permissions to install the %s plugins.',
+				'blaze-commerce'
+			),
+			'notice_ask_to_update' => _n_noop(
+				'Blaze Commerce recommends you update the following plugin: %1$s.',
+				'Blaze Commerce recommends you update the following plugins: %1$s.',
+				'blaze-commerce'
+			),
+			'notice_ask_to_update_maybe' => _n_noop(
+				'There is an update available for: %1$s.',
+				'There are updates available for the following plugins: %1$s.',
+				'blaze-commerce'
+			),
+			'notice_can_activate_required' => _n_noop(
+				'The following required plugin is currently inactive: %1$s.',
+				'The following required plugins are currently inactive: %1$s.',
+				'blaze-commerce'
+			),
+			'notice_can_activate_recommended' => _n_noop(
+				'The following recommended plugin is currently inactive: %1$s.',
+				'The following recommended plugins are currently inactive: %1$s.',
+				'blaze-commerce'
+			),
+			'install_link' => _n_noop(
+				'Begin installing plugin',
+				'Begin installing plugins',
+				'blaze-commerce'
+			),
+			'update_link' => _n_noop(
+				'Begin updating plugin',
+				'Begin updating plugins',
+				'blaze-commerce'
+			),
+		)
+	);
+
+	tgmpa( $plugins, $config );
+} );
 
 function plugin_activate() {
 
