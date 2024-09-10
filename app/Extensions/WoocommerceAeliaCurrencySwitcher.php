@@ -284,6 +284,7 @@ class WoocommerceAeliaCurrencySwitcher {
 				$matched_currency = $currency_countries_mappings[ $selected_currency ];
 
 				if ( isset( $matched_currency['countries'] ) ) {
+					\WC()->customer->set_shipping_country( $matched_currency['countries'][0] );
 					\wc_setcookie( 'aelia_customer_country', $matched_currency['countries'][0] );
 					\wc_setcookie( 'currentCountry', $matched_currency['countries'][0] );
 					\wc_setcookie( 'aelia_cs_selected_currency', $selected_currency );
@@ -383,7 +384,7 @@ class WoocommerceAeliaCurrencySwitcher {
 	}
 
 	public function set_selected_country() {
-		if ( $_SERVER['REQUEST_URI'] === '/graphql' ) {
+		if ( $_SERVER['REQUEST_URI'] === '/graphql' && !isset( $_POST['aelia_from_cart_currency'] ) ) {
 			return;
 		}
 
@@ -394,6 +395,7 @@ class WoocommerceAeliaCurrencySwitcher {
 			$matched_currency = $currency_countries_mappings[ $selected_currency ];
 
 			if ( isset( $matched_currency['countries'] ) ) {
+				\WC()->customer->set_shipping_country( $matched_currency['countries'][0] );
 				\wc_setcookie( 'currentCountry', $matched_currency['countries'][0] );
 				\wc_setcookie( 'aelia_cs_selected_currency', $selected_currency );
 			}
@@ -401,7 +403,7 @@ class WoocommerceAeliaCurrencySwitcher {
 	}
 
 	public function include_tax_if_has_rates( $include_tax ) {
-		if ( ! is_checkout() )
+		if ( ! is_checkout() || is_admin() )
 			return $include_tax;
 
 
