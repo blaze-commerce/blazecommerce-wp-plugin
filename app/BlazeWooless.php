@@ -74,6 +74,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\LoadCartFromSession',
 			'\\BlazeWooless\\Features\\Authentication',
 			'\\BlazeWooless\\Features\\CategoryBanner',
+			'\\BlazeWooless\\Features\\TemplateBuilder',
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',
 			'\\BlazeWooless\\Features\\Cli',
