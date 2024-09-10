@@ -63,8 +63,6 @@ class PostType {
 				update_option( 'show_on_front', 'page' );
 				update_option( 'page_on_front', $post_id );
 			}
-
-
 		}
 	}
 
@@ -95,9 +93,6 @@ class PostType {
 
 			}
 		}
-
-
-
 		return;
 	}
 }
