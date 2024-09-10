@@ -27,7 +27,7 @@ class FooterSettings extends BaseSettings {
 	}
 
 	public function get_post() {
-		$args      = array(
+		$args = array(
 			'post_type' => 'blaze_settings',
 			'name' => $this->setting_page_name,
 		);
@@ -49,7 +49,7 @@ class FooterSettings extends BaseSettings {
 
 
 		if ( ! $post ) {
-			$content        = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
+			$content = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
 <!-- wp:paragraph {"style":{"color":{"text":"#ffffffcc"},"elements":{"link":{"color":{"text":"#ffffffcc"}}}}} -->
 <p class="has-text-color has-link-color" style="color:#ffffffcc">Built with <a href="https://blazecommerce.io/">Blaze Commerce</a></p>
 <!-- /wp:paragraph -->
@@ -61,7 +61,7 @@ class FooterSettings extends BaseSettings {
 				'post_category' => array( 0 ),
 				'post_content' => $content,
 			);
-			$post_id        = wp_insert_post( $default_footer );
+			$post_id = wp_insert_post( $default_footer );
 		} else {
 			$post_id = $post->ID;
 		}
