@@ -188,7 +188,7 @@ class Product extends BaseCollection {
 				$this->initialize();
 			}
 
-			$batch_size              = 20; // Adjust the batch size depending on your server's capacity
+			$batch_size              = 5; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
 			$query_args              = $this->get_product_query_args( $page, $batch_size );
