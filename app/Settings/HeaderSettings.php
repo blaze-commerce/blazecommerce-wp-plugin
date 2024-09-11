@@ -72,7 +72,8 @@ class HeaderSettings extends BaseSettings {
 				'post_type' => 'blaze_settings',
 				'post_name' => $this->setting_page_name,
 				'post_category' => array( 0 ),
-				'post_content' => $content
+				'post_content' => $content,
+				'post_status' => 'publish',
 			);
 			$post_id        = wp_insert_post( $default_header );
 		} else {
