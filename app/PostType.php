@@ -67,6 +67,13 @@ class PostType {
 	}
 
 	public function upsert_page_data( $post_id, $post, $update ) {
+
+		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
+
+		if ( ! $enable_system ) {
+			return;
+		}
+
 		// bail out if this is an autosave
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
@@ -77,17 +84,22 @@ class PostType {
 			return;
 		}
 
-		$page_collection = Page::get_instance();
-
-		$document = $page_collection->get_data( $post );
-
-		// Index the page/post data in Typesense
-		try {
-			$page_collection->upsert( $document );
-		} catch (\Exception $e) {
-
+		// If no api key and host has been entered then user can't connect to typesense then we don't attempt to save the data to typesense
+		if ( ! TypesenseClient::get_instance()->can_connect() ) {
+			return;
 		}
 
+		$page_collection = Page::get_instance();
+		if ( ! empty( $page_collection ) ) {
+			$document = $page_collection->get_data( $post );
+
+			// Index the page/post data in Typesense
+			try {
+				$page_collection->upsert( $document );
+			} catch (\Exception $e) {
+
+			}
+		}
 		return;
 	}
 }

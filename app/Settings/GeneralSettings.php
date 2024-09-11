@@ -179,6 +179,14 @@ class GeneralSettings extends BaseSettings {
 				'label' => 'General Settings',
 				'options' => array(
 					array(
+						'id' => 'enable_system',
+						'label' => 'Enable System',
+						'type' => 'checkbox',
+						'args' => array(
+							'description' => 'Check this to enable the system.'
+						),
+					),
+					array(
 						'id' => 'typesense_api_key',
 						'label' => 'API Key',
 						'type' => 'password',
