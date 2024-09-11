@@ -43,8 +43,9 @@ class Woocommerce {
 	public function add_cart_item_data( $cart_item_data, $product_id, $variation_id, $quantity ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return $cart_item_data;
+        }ß
 
 		$post_data = ! empty( $cart_item_data['woolessGraphqlRequest'] ) ? $cart_item_data['woolessGraphqlRequest'] : null;
 		if ( empty( $post_data ) ) {
@@ -94,8 +95,9 @@ class Woocommerce {
 	public function on_order_status_changed( $order_id, $old_status, $new_status, $order ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return;
+        }ß
 
 		if ( $new_status === 'completed' || $new_status === 'processing' || $new_status === 'cancelled' || $new_status === 'refunded' ) {
 			// Get the items in the order
@@ -122,8 +124,9 @@ class Woocommerce {
 	public function on_product_trash_or_untrash( $product_id ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return;
+        }
 
 		$wc_product = wc_get_product( $product_id );
 		if ( $wc_product ) {
@@ -154,8 +157,9 @@ class Woocommerce {
 	public function on_product_save( $product_id, $wc_product ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return;
+        }
 
 		try {
 			do_action( 'ts_before_product_upsert', $wc_product );
@@ -240,8 +244,9 @@ class Woocommerce {
 
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return;
+        }
 
 		// Get the order object
 		$order = wc_get_order( $order_id );

@@ -26,8 +26,9 @@ class LoadCartFromSession {
 	public function woocommerce_load_cart_from_session() {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return;
+		}
 
 		if ( $_SERVER['REQUEST_URI'] === '/graphql' ) {
 			return;
@@ -96,8 +97,9 @@ class LoadCartFromSession {
 
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return;
+		}
 
 		if ( $_SERVER['REQUEST_URI'] === '/graphql' ) {
 			return;
@@ -136,8 +138,9 @@ class LoadCartFromSession {
 	public function remove_session_id_from_url_script() {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return;
+		}
 
 		?>
 		<script>
@@ -178,8 +181,9 @@ class LoadCartFromSession {
 	function clear_cart_data( $order_id ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
-		if ( ! $enable_system )
+		if ( ! $enable_system ) {
 			return;
+		}
 
 		wc_setcookie( 'woocommerce_total_product_in_cart', '', time() - YEAR_IN_SECONDS );
 		if ( ! is_user_logged_in() ) {
