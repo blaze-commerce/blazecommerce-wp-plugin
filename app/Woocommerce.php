@@ -45,7 +45,7 @@ class Woocommerce {
 
 		if ( ! $enable_system ) {
 			return $cart_item_data;
-        }ß
+		}
 
 		$post_data = ! empty( $cart_item_data['woolessGraphqlRequest'] ) ? $cart_item_data['woolessGraphqlRequest'] : null;
 		if ( empty( $post_data ) ) {
@@ -97,7 +97,7 @@ class Woocommerce {
 
 		if ( ! $enable_system ) {
 			return;
-        }ß
+		}
 
 		if ( $new_status === 'completed' || $new_status === 'processing' || $new_status === 'cancelled' || $new_status === 'refunded' ) {
 			// Get the items in the order
@@ -126,7 +126,7 @@ class Woocommerce {
 
 		if ( ! $enable_system ) {
 			return;
-        }
+		}
 
 		$wc_product = wc_get_product( $product_id );
 		if ( $wc_product ) {
@@ -159,7 +159,7 @@ class Woocommerce {
 
 		if ( ! $enable_system ) {
 			return;
-        }
+		}
 
 		try {
 			do_action( 'ts_before_product_upsert', $wc_product );
@@ -246,7 +246,7 @@ class Woocommerce {
 
 		if ( ! $enable_system ) {
 			return;
-        }
+		}
 
 		// Get the order object
 		$order = wc_get_order( $order_id );
