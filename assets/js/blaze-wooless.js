@@ -604,8 +604,6 @@
         syncPagesLink: '#sync-pages-link',
         syncSiteInfoLink: '#sync-site-info-link',
         syncAllLink: '#sync-all-link',
-        redeployButton: '#redeploy',
-        redeployResultContainer: '#redeploy-result',
 
         syncInProgress: false,
 
@@ -645,50 +643,6 @@
             $(document.body).on('click', this.syncPagesLink, this.importPages.bind(this));
             $(document.body).on('click', this.syncSiteInfoLink, this.importSiteInfo.bind(this));
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
-            $(document.body).on('click', this.redeployButton, this.redeployStoreFront.bind(this));
-        },
-
-        checkDeployment: function () {
-            var _this = this;
-            _this.renderLoader('Checking Deployment..');
-            _this.syncInProgress = true;
-
-            var data = {
-                'action': 'check_deployment',
-            };
-
-            $.post(ajaxurl, data).done(function (response) {
-                if (response.state === 'BUILDING') {
-                    _this.renderLoader('Store front is deploying..');
-                    setTimeout(function () {
-                        _this.checkDeployment();
-                    }, 120000);
-
-                } else if (response.state === 'READY') {
-                    $(_this.redeployButton).prop("disabled", false);
-                    _this.hideLoader();
-                    $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
-                }
-
-            });
-        },
-
-        redeployStoreFront: function (e) {
-            var _this = this;
-            e.preventDefault();
-            $(this.redeployButton).prop("disabled", true);
-
-            _this.renderLoader('Triggering redeploy');
-            _this.syncInProgress = true;
-
-            var data = {
-                'action': 'redeploy_store_front',
-            };
-
-            $.post(ajaxurl, data).done(function (response) {
-                _this.renderLoader(response.message);
-                _this.checkDeployment();
-            });
         },
 
         managePaginatedRequests: function ({
@@ -702,14 +656,14 @@
             var nextPage = initialPages[initialPages.length - 1] + 1;
             var startTime = Date.now(); // Capture the start time
             var _this = this;
-        
+
             // A helper function to handle a single promise with a specific page number
-            var handleRequest = function(page) {
+            var handleRequest = function (page) {
                 if (shouldFinish()) return;
-        
+
                 activePromises++;
                 apiRequest(page)
-                    .then(function(result) {
+                    .then(function (result) {
                         let shouldContinue = false;
                         if (onApiRequestSuccess) {
                             shouldContinue = onApiRequestSuccess(result, page);
@@ -720,19 +674,19 @@
                         }
                     })
             };
-        
+
             // Fire initial requests
             for (var i = 0; i < initialPages.length; i++) {
                 handleRequest(initialPages[i]);
             }
-        
+
             // Wait until all promises have been handled
-            var interval = setInterval(function() {
+            var interval = setInterval(function () {
                 if (activePromises === 0) {
                     clearInterval(interval);
                     var endTime = Date.now(); // Capture the end time
                     var elapsedTime = (endTime - startTime) / 1000; // Calculate elapsed time in seconds
-                    
+
                     if (onFinish) {
                         onFinish(elapsedTime);
                     }
@@ -790,7 +744,7 @@
                     'collection_name': 'taxonomy',
                 };
 
-                $.post(ajaxurl, Object.assign({}, data, { page: page}), function (response) {
+                $.post(ajaxurl, Object.assign({}, data, { page: page }), function (response) {
                     resolve(response);
                 });
             })
@@ -838,24 +792,24 @@
             // return this.importProductData({ imported_products_count: 0, total_imports: 0, shouldHideLoader: true }, { page: 1 });
         },
 
-        runProductImportQueue: function({ hideLoader = true} = {}) {
+        runProductImportQueue: function ({ hideLoader = true } = {}) {
             var _this = this;
-            return new Promise(function(resolve) {
-                return _this.importProductData(1).then(function() {
+            return new Promise(function (resolve) {
+                return _this.importProductData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importProductData,
                         initialPages: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                        onApiRequestSuccess: function(result, page) {
+                        onApiRequestSuccess: function (result, page) {
                             _this.importedProductsCount += result.imported_products_count;
                             _this.totalProductImports += result.total_imports;
                             if (!result.has_next_data) {
                                 _this.shouldFinishProductSync = true;
                             }
-    
+
                             // return true if to continue with the next request
                             return !_this.shouldFinishProductSync;
                         },
-                        onFinish: function(elapsedTime) {
+                        onFinish: function (elapsedTime) {
                             console.log('All products have been requested and no more products can be fetched');
                             if (hideLoader) {
                                 _this.hideLoader();
@@ -865,7 +819,7 @@
                             $(_this.syncResultsContainer).append('<div>Imported products count: ' + _this.importedProductsCount + '/' + _this.totalProductImports + '. Elapsed time: ' + elapsedTime + ' seconds </div>');
                             console.log('Elapsed time: ' + elapsedTime + ' seconds');
                         },
-                        shouldFinish: function() {
+                        shouldFinish: function () {
                             return _this.shouldFinishProductSync;
                         }
                     });
@@ -875,7 +829,7 @@
 
         importTaxonomies: function (e) {
             e.preventDefault();
-            
+
             if (this.syncInProgress) {
                 return false;
             }
@@ -886,24 +840,24 @@
             return this.runTaxonomyImportQueue();
         },
 
-        runTaxonomyImportQueue: function({ hideLoader = true} = {}) {
+        runTaxonomyImportQueue: function ({ hideLoader = true } = {}) {
             var _this = this;
-            return new Promise(function(resolve) {
-                return _this.importTaxonomyTermData(1).then(function() {
+            return new Promise(function (resolve) {
+                return _this.importTaxonomyTermData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importTaxonomyTermData,
                         initialPages: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-                        onApiRequestSuccess: function(result, page) {
+                        onApiRequestSuccess: function (result, page) {
                             _this.importedTaxonomyCount += result.imported_count;
                             _this.totalTaxonomyImports += result.total_imports;
                             if (result.next_page == null) {
                                 _this.shouldFinishTaxonomySync = true;
                             }
-    
+
                             // return true if to continue with the next request
                             return !_this.shouldFinishTaxonomySync;
                         },
-                        onFinish: function(elapsedTime) {
+                        onFinish: function (elapsedTime) {
                             console.log('All taxonomies have been requested and no more taxonomies can be fetched');
                             if (hideLoader) {
                                 _this.hideLoader();
@@ -913,7 +867,7 @@
                             $(_this.syncResultsContainer).append('<div>Imported taxonomy terms count: ' + _this.importedTaxonomyCount + '/' + _this.totalTaxonomyImports + '. Elapsed time: ' + elapsedTime + ' seconds </div>');
                             console.log('Elapsed time: ' + elapsedTime + ' seconds');
                         },
-                        shouldFinish: function() {
+                        shouldFinish: function () {
                             return _this.shouldFinishTaxonomySync;
                         }
                     });

@@ -87,14 +87,14 @@ class GeneralSettings extends BaseSettings {
 			exit;
 		}
 
-		$is_my_account_page = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
+		$is_my_account_page                = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
 		$exclude_page_redirect_to_frontend = apply_filters( 'blaze_wooless_exclude_page_redirect_to_frontend', is_checkout() );
 		if ( $exclude_page_redirect_to_frontend || $is_my_account_page ) {
 			//Since the page is excluded from redirecting to frontend then we just end the function here
 			return;
 		}
 
-		$has_cart_in_url = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
+		$has_cart_in_url           = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
 		$from_vercel_proxy_request = isset( $_SERVER['HTTP_X_VERCEL_PROXY_SIGNATURE'] ) ? true : false;
 
 		// if the url has cart. on it and the request is not from vercel then we redirect it to frontend page without cart in the url
@@ -174,7 +174,7 @@ class GeneralSettings extends BaseSettings {
 			'Ubuntu' => 'Ubuntu',
 			'Work Sans' => 'Work Sans',
 		);
-		$fields = array(
+		$fields        = array(
 			'wooless_general_settings_section' => array(
 				'label' => 'General Settings',
 				'options' => array(
@@ -274,7 +274,6 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function footer_callback() {
-		$api_key = bw_get_general_settings( 'api_key' );
 		if ( $this->is_typesense_connected() ) :
 			?>
 			<a href="#" id="sync-product-link">Sync Products</a><br />
@@ -285,16 +284,15 @@ class GeneralSettings extends BaseSettings {
 			<a href="#" id="sync-all-link">Sync All</a>
 			<div id="sync-results-container"></div>
 
-			<button id="redeploy" class="button button-primary">Redeploy Store Front</button>
 			<?php
 		endif;
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner'] = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
-		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner']              = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component']  = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
-		$additional_data['font_family'] = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
+		$additional_data['font_family']                            = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
 
 		return $additional_data;
 	}
