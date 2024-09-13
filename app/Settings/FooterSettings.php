@@ -43,30 +43,29 @@ class FooterSettings extends BaseSettings {
 		return $the_query->posts[0];
 	}
 
-	public function footer_callback() {
-
+	public function maybe_save_settings() {
 		$post = $this->get_post();
+		if ( $post ) {
+			return $post->ID;
+		}
 
-
-		if ( ! $post ) {
-			$content        = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
+		$content        = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
 <!-- wp:paragraph {"style":{"color":{"text":"#ffffffcc"},"elements":{"link":{"color":{"text":"#ffffffcc"}}}}} -->
 <p class="has-text-color has-link-color" style="color:#ffffffcc">Built with <a href="https://blazecommerce.io/">Blaze Commerce</a></p>
 <!-- /wp:paragraph -->
 <!-- /wp:generateblocks/container -->';
-			$default_footer = array(
-				'post_title' => $this->page_label,
-				'post_type' => 'blaze_settings',
-				'post_name' => $this->setting_page_name,
-				'post_category' => array( 0 ),
-				'post_content' => $content,
-				'post_status' => 'publish',
-			);
-			$post_id        = wp_insert_post( $default_footer );
-		} else {
-			$post_id = $post->ID;
-		}
-
+		$default_footer = array(
+			'post_title' => $this->page_label,
+			'post_type' => 'blaze_settings',
+			'post_name' => $this->setting_page_name,
+			'post_category' => array( 0 ),
+			'post_content' => $content,
+			'post_status' => 'publish',
+		);
+		return wp_insert_post( $default_footer );
+	}
+	public function footer_callback() {
+		$post_id   = $this->maybe_save_settings();
 		$edit_link = get_edit_post_link( $post_id, '&' );
 		wp_redirect( $edit_link );
 	}
