@@ -72,6 +72,14 @@ class HomePageSettings extends BaseSettings {
 	}
 
 	public function footer_callback() {
+		$show_front   = get_option( 'show_on_front', 'page' );
+		$home_page_id = get_option( 'page_on_front' );
+
+		if ( $show_front == 'page' && ! empty( $home_page_id ) ) {
+			$edit_link = get_edit_post_link( $home_page_id, '&' );
+			wp_redirect( $edit_link );
+			exit();
+		}
 		require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/draggable-content.php';
 	}
 

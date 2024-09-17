@@ -41,6 +41,12 @@ class Woocommerce {
 	}
 
 	public function add_cart_item_data( $cart_item_data, $product_id, $variation_id, $quantity ) {
+		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
+
+		if ( ! $enable_system ) {
+			return $cart_item_data;
+		}
+
 		$post_data = ! empty( $cart_item_data['woolessGraphqlRequest'] ) ? $cart_item_data['woolessGraphqlRequest'] : null;
 		if ( empty( $post_data ) ) {
 			// Since the request is not from our wpgraphql request then we just return $cart_item_data and not modify it to avoid conflicts
@@ -57,7 +63,10 @@ class Woocommerce {
 
 
 	public function append_cart_in_checkout_url( $checkout_url ) {
-		if ( strpos( $checkout_url, 'https://cart.' ) === false ) {
+
+		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
+
+		if ( $enable_system && strpos( $checkout_url, 'https://cart.' ) === false ) {
 			$checkout_url = str_replace( 'https://', 'https://cart.', $checkout_url );
 		}
 		return $checkout_url;
@@ -84,6 +93,12 @@ class Woocommerce {
 	}
 
 	public function on_order_status_changed( $order_id, $old_status, $new_status, $order ) {
+		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
+
+		if ( ! $enable_system ) {
+			return;
+		}
+
 		if ( $new_status === 'completed' || $new_status === 'processing' || $new_status === 'cancelled' || $new_status === 'refunded' ) {
 			// Get the items in the order
 			$items = $order->get_items();
@@ -107,6 +122,11 @@ class Woocommerce {
 	}
 
 	public function on_product_trash_or_untrash( $product_id ) {
+		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
+
+		if ( ! $enable_system ) {
+			return;
+		}
 
 		$wc_product = wc_get_product( $product_id );
 		if ( $wc_product ) {
@@ -135,6 +155,12 @@ class Woocommerce {
 
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
 	public function on_product_save( $product_id, $wc_product ) {
+		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
+
+		if ( ! $enable_system ) {
+			return;
+		}
+
 		try {
 			do_action( 'ts_before_product_upsert', $wc_product );
 			$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
@@ -215,6 +241,13 @@ class Woocommerce {
 	}
 
 	public function on_checkout_update_order_meta( $order_id, $data ) {
+
+		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
+
+		if ( ! $enable_system ) {
+			return;
+		}
+
 		// Get the order object
 		$order = wc_get_order( $order_id );
 

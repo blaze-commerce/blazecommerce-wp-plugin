@@ -26,7 +26,7 @@ class HeaderSettings extends BaseSettings {
 		return array();
 	}
 
-	public function get_header_post() {
+	public function get_post() {
 		$args      = array(
 			'post_type' => 'blaze_settings',
 			'name' => $this->setting_page_name,
@@ -43,12 +43,14 @@ class HeaderSettings extends BaseSettings {
 		return $the_query->posts[0];
 	}
 
-	public function footer_callback() {
+	public function maybe_save_settings() {
+		$post = $this->get_post();
 
-		$post = $this->get_header_post();
+		if ( $post ) {
+			return $post->ID;
+		}
 
-		if ( ! $post ) {
-			$content        = '<!-- wp:generateblocks/container {"uniqueId":"33f81160","backgroundColor":"#090e1a","isDynamic":true,"blockVersion":4,"display":"flex","flexDirection":"row","alignItems":"center","justifyContent":"center"} -->
+		$content        = '<!-- wp:generateblocks/container {"uniqueId":"33f81160","backgroundColor":"#090e1a","isDynamic":true,"blockVersion":4,"display":"flex","flexDirection":"row","alignItems":"center","justifyContent":"center"} -->
 <!-- wp:generateblocks/container {"uniqueId":"8747b327","isDynamic":true,"blockVersion":4,"display":"flex","flexDirection":"row","alignItems":"center","justifyContent":"space-between","className":"container"} -->
 <!-- wp:site-logo {"shouldSyncIcon":true} /-->
 
@@ -56,6 +58,8 @@ class HeaderSettings extends BaseSettings {
 <!-- wp:paragraph {"style":{"color":{"text":"#ffffff"},"elements":{"link":{"color":{"text":"#ffffff"}}}}} -->
 <p class="has-text-color has-link-color" style="color:#ffffff"><a href="/shop">Shop</a></p>
 <!-- /wp:paragraph -->
+
+<!-- wp:generateblocks/container {"uniqueId":"04c0d214","isDynamic":true,"blockVersion":4,"metadata":{"name":"Search"}} /-->
 
 <!-- wp:generateblocks/container {"uniqueId":"aa90172c","isDynamic":true,"blockVersion":4,"blockLabel":"MiniCartIcon","htmlAttributes":[{"attribute":"data-color","value":"#F7F7F7"}]} -->
 <!-- wp:generateblocks/image {"uniqueId":"56f0986b","mediaId":216617,"relNoFollow":true,"sizeSlug":"full","anchor":"minicart","blockVersion":2} -->
@@ -65,18 +69,20 @@ class HeaderSettings extends BaseSettings {
 <!-- /wp:generateblocks/container -->
 <!-- /wp:generateblocks/container -->
 <!-- /wp:generateblocks/container -->';
-			$default_header = array(
-				'post_title' => 'Header',
-				'post_type' => 'blaze_settings',
-				'post_name' => $this->setting_page_name,
-				'post_category' => array( 0 ),
-				'post_content' => $content
-			);
-			$post_id        = wp_insert_post( $default_header );
-		} else {
-			$post_id = $post->ID;
-		}
+		$default_header = array(
+			'post_title' => 'Header',
+			'post_type' => 'blaze_settings',
+			'post_name' => $this->setting_page_name,
+			'post_category' => array( 0 ),
+			'post_content' => $content,
+			'post_status' => 'publish',
+		);
+		return wp_insert_post( $default_header );
+	}
 
+	public function footer_callback() {
+
+		$post_id   = $this->maybe_save_settings();
 		$edit_link = get_edit_post_link( $post_id, '&' );
 		wp_redirect( $edit_link );
 	}
@@ -108,7 +114,7 @@ class HeaderSettings extends BaseSettings {
 
 		$temp_post = $post;
 
-		$post = $this->get_header_post();
+		$post = $this->get_post();
 
 		setup_postdata( $post );
 
@@ -124,7 +130,7 @@ class HeaderSettings extends BaseSettings {
 	}
 
 	public function save_on_site_info_sync() {
-		$post = $this->get_header_post();
+		$post = $this->get_post();
 		if ( $post ) {
 			$post_id = $post->ID;
 			TypesenseClient::get_instance()

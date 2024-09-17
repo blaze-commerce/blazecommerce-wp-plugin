@@ -22,9 +22,6 @@ class Ajax {
 	public function __construct() {
 		add_action( 'wp_ajax_index_data_to_typesense', array( $this, 'index_data_to_typesense' ) );
 
-		add_action( 'wp_ajax_redeploy_store_front', array( $this, 'redeploy_store_front' ) );
-		add_action( 'wp_ajax_check_deployment', array( $this, 'check_deployment' ) );
-
 		add_action( 'wp_ajax_check_product_sync_data', array( $this, 'check_product_sync_data' ) );
 	}
 
@@ -61,36 +58,6 @@ class Ajax {
 
 		return $curl;
 	}
-
-	public function check_deployment() {
-		$api_key = bw_get_general_settings( 'typesense_api_key' );
-		if ( empty( $api_key ) ) {
-			wp_send_json( array(
-				'error' => 'Empty api key.',
-				'message' => 'Empty api key.'
-			) );
-		}
-
-		$curl     = $this->prepare_curl( 'api/deployments?checkDeployment=1', 'GET' );
-		$response = curl_exec( $curl );
-		curl_close( $curl );
-		wp_send_json( json_decode( $response ) );
-	}
-
-	public function redeploy_store_front() {
-		$api_key = bw_get_general_settings( 'typesense_api_key' );
-		if ( empty( $api_key ) ) {
-			wp_send_json( array(
-				'error' => 'Empty api key.',
-				'message' => 'Empty api key.'
-			) );
-		}
-		$curl     = $this->prepare_curl( 'api/deployments', 'POST' );
-		$response = curl_exec( $curl );
-		curl_close( $curl );
-		wp_send_json( json_decode( $response ) );
-	}
-
 	public function index_data_to_typesense() {
 		$collection_name = ! ( empty( $_REQUEST['collection_name'] ) ) ? $_REQUEST['collection_name'] : '';
 		if ( $collection_name == 'products' ) {

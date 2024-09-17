@@ -37,6 +37,12 @@ class BlazeWooless {
 	}
 
 	public function search_redirect() {
+		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
+
+		if ( ! $enable_system ) {
+			return;
+		}
+
 		if (
 			isset( $_GET['s'] ) && ! empty( $_GET['s'] )
 		) {

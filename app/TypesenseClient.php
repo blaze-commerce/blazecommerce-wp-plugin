@@ -36,8 +36,9 @@ class TypesenseClient {
 			) {
 				throw new Exception( 'Typesense settings not found' );
 			}
-			$this->api_key = $settings['typesense_api_key'];
+			$this->api_key  = $settings['typesense_api_key'];
 			$this->store_id = $settings['store_id'];
+			$this->host     = $settings['typesense_host'];
 
 			try {
 				$client = $this->get_client( $this->api_key, $settings['typesense_host'] );
@@ -50,6 +51,15 @@ class TypesenseClient {
 			$this->client = null;
 		}
 
+	}
+
+	public function can_connect() {
+
+		if ( ! empty( $this->api_key ) && ! empty( $this->host ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	public function debug() {
@@ -170,13 +180,13 @@ class TypesenseClient {
 			}
 
 			if ( $type === 'multi-way' ) {
-				$synonym_key = $value[0] . '-synonyms';
+				$synonym_key  = $value[0] . '-synonyms';
 				$synonym_data = array(
 					"synonyms" => $value
 				);
 
 			} else {
-				$synonym_key = sanitize_title( $key ) . '-synonyms';
+				$synonym_key  = sanitize_title( $key ) . '-synonyms';
 				$synonym_data = array(
 					'root' => $key,
 					'synonyms' => $value
