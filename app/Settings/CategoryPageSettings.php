@@ -47,7 +47,7 @@ class CategoryPageSettings extends BaseSettings {
 						'id' => 'default_product_sorting',
 						'label' => 'Default Product Sorting',
 						'type' => 'select',
-						'args' => array( 
+						'args' => array(
 							'description' => 'Select the default sorting for products',
 							'options' => array(
 								'sort_0' => 'Sort By None',
@@ -57,7 +57,7 @@ class CategoryPageSettings extends BaseSettings {
 								'sort_4' => 'Sort By Price: high to low',
 								'sort_5' => 'Sort By Alphabetical: A-Z',
 								'sort_6' => 'Sort By Alphabetical: Z-A',
-							), 
+							),
 						),
 					),
 				)
@@ -99,14 +99,17 @@ class CategoryPageSettings extends BaseSettings {
 		do_action( 'blaze_wooless_save_category_page_settings', $options );
 	}
 	public function register_additional_site_info( $additional_data ) {
-		$category_options = get_option( 'wooless_settings_category_page_options' );
-		$default_banner_link = json_encode( [ "url" => $category_options['default_banner_link'] ] );
-		$default_product_sorting = json_encode( [ "sort_option" => $category_options['default_product_sorting'] ] );
-		if( !empty( $default_banner_link ) ) {
-			$additional_data['category_page_default_banner']              =  $default_banner_link;
+
+		$banner_link             = ! empty( $category_options['default_banner_link'] ) ? $category_options['default_banner_link'] : '';
+		$default_banner_link     = json_encode( [ "url" => $banner_link ] );
+		$product_sorting         = ! empty( $category_options['default_product_sorting'] ) ? $category_options['default_product_sorting'] : '';
+		$default_product_sorting = json_encode( [ "sort_option" => $product_sorting ] );
+
+		if ( ! empty( $default_banner_link ) ) {
+			$additional_data['category_page_default_banner'] = $default_banner_link;
 		}
-		if( !empty( $default_product_sorting ) ) {
-			$additional_data['category_page_default_sort']              = $default_product_sorting;
+		if ( ! empty( $default_product_sorting ) ) {
+			$additional_data['category_page_default_sort'] = $default_product_sorting;
 		}
 
 		return $additional_data;

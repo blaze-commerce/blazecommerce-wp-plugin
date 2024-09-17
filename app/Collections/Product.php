@@ -188,7 +188,7 @@ class Product extends BaseCollection {
 				$this->initialize();
 			}
 
-			$batch_size              = 20; // Adjust the batch size depending on your server's capacity
+			$batch_size              = 5; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
 			$query_args              = $this->get_product_query_args( $page, $batch_size );
@@ -280,6 +280,11 @@ class Product extends BaseCollection {
 		$attachment         = get_post( $thumbnail_id );
 		$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
 		$thumbnail_src      = get_the_post_thumbnail_url( $should_use_parent_thumbnail ? $parent_id : $product_id );
+
+		if ( empty( $thumbnail_src ) ) {
+			// If there is no product image then we use the woocommerce placeholder image
+			$thumbnail_src = wc_placeholder_img_src();
+		}
 
 		return apply_filters( 'wooless_product_thumbnail', array(
 			'id' => $thumbnail_id,
