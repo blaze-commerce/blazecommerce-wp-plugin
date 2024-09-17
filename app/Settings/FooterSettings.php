@@ -27,7 +27,7 @@ class FooterSettings extends BaseSettings {
 	}
 
 	public function get_post() {
-		$args      = array(
+		$args = array(
 			'post_type' => 'blaze_settings',
 			'name' => $this->setting_page_name,
 		);
@@ -49,7 +49,7 @@ class FooterSettings extends BaseSettings {
 			return $post->ID;
 		}
 
-		$content        = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
+		$content = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
 <!-- wp:paragraph {"style":{"color":{"text":"#ffffffcc"},"elements":{"link":{"color":{"text":"#ffffffcc"}}}}} -->
 <p class="has-text-color has-link-color" style="color:#ffffffcc">Built with <a href="https://blazecommerce.io/">Blaze Commerce</a></p>
 <!-- /wp:paragraph -->
@@ -65,7 +65,7 @@ class FooterSettings extends BaseSettings {
 		return wp_insert_post( $default_footer );
 	}
 	public function footer_callback() {
-		$post_id   = $this->maybe_save_settings();
+		$post_id = $this->maybe_save_settings();
 		$edit_link = get_edit_post_link( $post_id, '&' );
 		wp_redirect( $edit_link );
 	}
