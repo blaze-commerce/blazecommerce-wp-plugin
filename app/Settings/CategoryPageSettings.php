@@ -19,7 +19,7 @@ class CategoryPageSettings extends BaseSettings {
 	}
 
 	public function register_hooks() {
-		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 2 );
+		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'sync_additional_data' ), 10 );
 	}
 
 	public function settings_callback( $options ) {
@@ -60,6 +60,18 @@ class CategoryPageSettings extends BaseSettings {
 							),
 						),
 					),
+					array(
+						'id' => 'container_max_width',
+						'label' => 'Container Max Width (px)',
+						'type' => 'text',
+						'args' => array( 'description' => 'Enter Page Content Max Width', ),
+					),
+					array(
+						'id' => 'container_padding',
+						'label' => 'Container Padding (px)',
+						'type' => 'text',
+						'args' => array( 'description' => 'Enter Page Content Padding', ),
+					),
 				)
 			),
 		];
@@ -96,23 +108,33 @@ class CategoryPageSettings extends BaseSettings {
 			)
 		);
 
+		$site_info->upsert(
+			array(
+				'id' => '10089556',
+				'name' => 'category_page_max_width',
+				'value' => json_encode( array(
+					'container_max_width' => $options['container_max_width']
+				) ),
+				'updated_at' => time(),
+			)
+		);
+
+		$site_info->upsert(
+			array(
+				'id' => '10089557',
+				'name' => 'category_page_padding',
+				'value' => json_encode( array(
+					'container_padding' => $options['container_padding']
+				) ),
+				'updated_at' => time(),
+			)
+		);
+
 		do_action( 'blaze_wooless_save_category_page_settings', $options );
 	}
-	public function register_additional_site_info( $additional_data ) {
-
-		$banner_link             = ! empty( $category_options['default_banner_link'] ) ? $category_options['default_banner_link'] : '';
-		$default_banner_link     = json_encode( [ "url" => $banner_link ] );
-		$product_sorting         = ! empty( $category_options['default_product_sorting'] ) ? $category_options['default_product_sorting'] : '';
-		$default_product_sorting = json_encode( [ "sort_option" => $product_sorting ] );
-
-		if ( ! empty( $default_banner_link ) ) {
-			$additional_data['category_page_default_banner'] = $default_banner_link;
-		}
-		if ( ! empty( $default_product_sorting ) ) {
-			$additional_data['category_page_default_sort'] = $default_product_sorting;
-		}
-
-		return $additional_data;
+	public function sync_additional_data() {
+		$options = $this->get_option();
+		$this->update_fields( $options );
 	}
 }
 
