@@ -44,6 +44,18 @@ class CategoryPageSettings extends BaseSettings {
 						'args' => array( 'description' => 'Input the Default Banner Image Link', ),
 					),
 					array(
+						'id' => 'default_banner_width',
+						'label' => 'Banner Width',
+						'type' => 'select',
+						'args' => array(
+							'description' => 'Select the banner width',
+							'options' => array(
+								'full' => 'Full Width (Default)',
+								'screen' => 'Screen Width',
+							),
+						),
+					),
+					array(
 						'id' => 'default_product_sorting',
 						'label' => 'Default Product Sorting',
 						'type' => 'select',
@@ -130,8 +142,20 @@ class CategoryPageSettings extends BaseSettings {
 			)
 		);
 
+		$site_info->upsert(
+			array(
+				'id' => '10089558',
+				'name' => 'category_page_banner_width',
+				'value' => json_encode( array(
+					'category_banner_width' => $options['default_banner_width']
+				) ),
+				'updated_at' => time(),
+			)
+		);
+
 		do_action( 'blaze_wooless_save_category_page_settings', $options );
 	}
+	
 	public function sync_additional_data() {
 		$options = $this->get_option();
 		$this->update_fields( $options );
