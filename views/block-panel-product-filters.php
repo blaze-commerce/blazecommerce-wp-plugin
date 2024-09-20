@@ -30,5 +30,8 @@
 		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="subCategoryFilters">
 			<div class="content">Filter By Sub Categories</div>
 		</div>
+		<div class="blaze-wooless-draggable-block" data-block_type="multiple" data-block_id="subCategoryFiltersGrouped">
+			<div class="content">Filter By Sub Categories (Grouped)</div>
+		</div>
 	</div>
 </div>
