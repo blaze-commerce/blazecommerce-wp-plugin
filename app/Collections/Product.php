@@ -178,13 +178,14 @@ class Product extends BaseCollection {
 		$this->log_failed_product_import( "============================ START OF PRODUCT IMPORT ============================" );
 
 		try {
-			do_action( 'blaze_wooless_pre_sync_products' );
-
-			// Query judge.me product external_ids and update to options	
-			do_action( 'blaze_wooless_generate_product_reviews_data' );
 			$page = $_REQUEST['page'] ?? 1;
 
 			if ( $page == 1 ) {
+				do_action( 'blaze_wooless_pre_sync_products' );
+
+				// Query judge.me product external_ids and update to options
+				do_action( 'blaze_wooless_generate_product_reviews_data' );
+
 				$this->initialize();
 			}
 
