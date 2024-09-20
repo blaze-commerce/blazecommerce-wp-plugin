@@ -4,7 +4,6 @@ namespace BlazeWooless\Extensions;
 
 class WoocommerceProductAddons {
 	private static $instance = null;
-	private $general_addons = [];
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -23,10 +22,12 @@ class WoocommerceProductAddons {
 	}
 
 	public function prepare_general_product_addons() {
-		// we will get all available general product addons
+		$general_addons = get_transient( 'blaze_commerce_general_product_addons' );
+		if ( $general_addons ) return;
 
 		if ( class_exists( 'WC_Product_Addons_Groups' ) ) {
-			$this->general_addons = \WC_Product_Addons_Groups::get_all_global_groups();
+			$general_addons = \WC_Product_Addons_Groups::get_all_global_groups();
+			set_transient( 'blaze_commerce_general_product_addons', $general_addons, 15 * MINUTE_IN_SECONDS );
 		}
 	}
 
@@ -43,7 +44,9 @@ class WoocommerceProductAddons {
 
 				$available_global_addons = [];
 
-				foreach ( $this->general_addons as $addon ) {
+				$general_addons = get_transient( 'blaze_commerce_general_product_addons' );
+
+				foreach ( $general_addons as $addon ) {
 					$restrict_to_categories = $addon['restrict_to_categories'];
 					if ( count( $restrict_to_categories ) === 0 || array_intersect( $product_categories, $restrict_to_categories ) ) {
 						$available_global_addons += $addon['fields'];
