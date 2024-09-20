@@ -319,7 +319,7 @@ class Product extends BaseCollection {
 		}
 
 		$default_price = array(
-			$currency => floatval( $product->get_price() )
+			$currency => Woocommerce::format_price( $product->get_price() )
 		);
 
 		return apply_filters( 'wooless_product_price', $default_price, $product->get_id(), $product );
@@ -331,7 +331,7 @@ class Product extends BaseCollection {
 		}
 
 		$default_regular_price = array(
-			$currency => floatval( $product->get_regular_price() )
+			$currency => Woocommerce::format_price( $product->get_regular_price() )
 		);
 
 		return apply_filters( 'wooless_product_regular_price', $default_regular_price, $product->get_id(), $product );
@@ -343,7 +343,7 @@ class Product extends BaseCollection {
 		}
 
 		$default_sale_price = array(
-			$currency => floatval( $product->get_sale_price() )
+			$currency => Woocommerce::format_price( $product->get_sale_price() )
 		);
 
 		return apply_filters( 'wooless_product_sale_price', $default_sale_price, $product->get_id(), $product );
