@@ -37,6 +37,7 @@ class Page extends BaseCollection {
 					[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
 					[ 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ],
 					[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
+					[ 'name' => 'author', 'type' => 'object', 'optional' => true ],
 				],
 				'default_sorting_field' => 'updatedAt',
 				'enable_nested_fields' => true
@@ -45,6 +46,21 @@ class Page extends BaseCollection {
 			echo "Error: " . $e->getMessage() . "\n";
 		}
 	}
+
+	public function get_author( $author_id ) {
+		// Check if the author exists by ID
+		if ( ! get_user_by( 'ID', $author_id ) ) {
+			return null;
+		}
+
+		return array(
+			'id' => $author_id,
+			'display_name' => get_the_author_meta( 'display_name', $author_id ),
+			'first_name' => get_the_author_meta( 'first_name', $author_id ),
+			'last_name' => get_the_author_meta( 'last_name', $author_id )
+		);
+	}
+
 
 	public function get_data( $page ) {
 		$page_id         = $page->ID;
@@ -73,6 +89,7 @@ class Page extends BaseCollection {
 			'content' => $page_content,
 			'rawContent' => $content,
 			'seoFullHead' => '',
+			'author' => $this->get_author( $page->post_author )
 		], $page );
 	}
 
