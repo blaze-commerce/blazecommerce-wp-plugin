@@ -328,6 +328,17 @@
                 },
             },
         },
+        subCategoryFiltersGrouped: {
+            config: commonConfig.concat([
+                { name: 'groupName', label: 'Group Name' },
+            ]),
+            fields: Object.assign({}, commonFilterOption, {
+                parentSlug: {
+                    label: 'Parent Slug',
+                    name: 'parent-slug',
+                }
+            }),
+        },
     }
 
     var dynamicConfigFields = {
