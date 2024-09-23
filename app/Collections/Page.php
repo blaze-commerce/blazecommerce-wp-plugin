@@ -55,9 +55,9 @@ class Page extends BaseCollection {
 
 		return array(
 			'id' => $author_id,
-			'display_name' => get_the_author_meta( 'display_name', $author_id ),
-			'first_name' => get_the_author_meta( 'first_name', $author_id ),
-			'last_name' => get_the_author_meta( 'last_name', $author_id )
+			'displayName' => get_the_author_meta( 'display_name', $author_id ),
+			'firstName' => get_the_author_meta( 'first_name', $author_id ),
+			'lastName' => get_the_author_meta( 'last_name', $author_id )
 		);
 	}
 
