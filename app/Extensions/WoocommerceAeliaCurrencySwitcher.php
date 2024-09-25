@@ -403,8 +403,9 @@ class WoocommerceAeliaCurrencySwitcher {
 	}
 
 	public function include_tax_if_has_rates( $include_tax ) {
-		if ( ! is_checkout() || is_admin() )
+		if ( ! is_checkout() || is_admin() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
 			return $include_tax;
+		}
 
 
 		$tax_rates = \WC_Tax::get_rates();
