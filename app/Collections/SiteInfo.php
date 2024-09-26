@@ -119,7 +119,7 @@ class SiteInfo extends BaseCollection {
 					'value' => get_site_icon_url( 512, 'https://blazecommerce.io/wp-content/uploads/2023/09/blaze_commerce_favicon-1.png' ),
 				),
 				array(
-					'name' => 'theme',
+					'name' => 'theme_json',
 					'value' => wp_get_global_settings(),
 				),
 				array(
