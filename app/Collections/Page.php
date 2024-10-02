@@ -38,6 +38,7 @@ class Page extends BaseCollection {
 					[ 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ],
 					[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
 					[ 'name' => 'author', 'type' => 'object', 'optional' => true ],
+					[ 'name' => 'template', 'type' => 'string', 'facet' => true ],
 				],
 				'default_sorting_field' => 'updatedAt',
 				'enable_nested_fields' => true
@@ -59,6 +60,23 @@ class Page extends BaseCollection {
 			'firstName' => get_the_author_meta( 'first_name', $author_id ),
 			'lastName' => get_the_author_meta( 'last_name', $author_id )
 		);
+	}
+
+	public function get_template( $page ) {
+		$template = get_page_template_slug( $page->ID );
+		if ( empty( $template ) ) {
+			$template = 'page';
+		}
+
+		// empty template if home page and other woocommerce pages
+		$front_page_id = get_option( 'page_on_front' );
+		$home_page_id  = get_option( 'page_for_posts' );
+
+		if ( $page->ID == $front_page_id || $page->ID == $home_page_id ) {
+			$template = '';
+		}
+
+		return apply_filters( 'blazecommerce/page/template', $template, $page );
 	}
 
 
@@ -89,7 +107,8 @@ class Page extends BaseCollection {
 			'content' => $page_content,
 			'rawContent' => $content,
 			'seoFullHead' => '',
-			'author' => $this->get_author( $page->post_author )
+			'author' => $this->get_author( $page->post_author ),
+			'template' => $this->get_template( $page )
 		], $page );
 	}
 
