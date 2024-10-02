@@ -384,7 +384,7 @@ class WoocommerceAeliaCurrencySwitcher {
 	}
 
 	public function set_selected_country() {
-		if ( $_SERVER['REQUEST_URI'] === '/graphql' && !isset( $_POST['aelia_from_cart_currency'] ) ) {
+		if ( $_SERVER['REQUEST_URI'] === '/graphql' && ! isset( $_POST['aelia_from_cart_currency'] ) ) {
 			return;
 		}
 
@@ -393,6 +393,11 @@ class WoocommerceAeliaCurrencySwitcher {
 
 			$currency_countries_mappings = get_option( 'wc_aelia_currency_switcher' )['currency_countries_mappings'];
 			$matched_currency = $currency_countries_mappings[ $selected_currency ];
+
+			// ignore this step if an order is created from admin, manually
+			if ( is_admin() && ! isset( $_POST['aelia_from_cart_currency'] ) ) {
+				return;
+			}
 
 			if ( isset( $matched_currency['countries'] ) ) {
 				\WC()->customer->set_shipping_country( $matched_currency['countries'][0] );
