@@ -83,16 +83,21 @@ class Page extends BaseCollection {
 
 	public function get_data( $page ) {
 
+		$excluded_pages = array(
+			get_option( 'tinvwl_wishlist_page_id' ),
+		);
+
 		if ( function_exists( 'wc_get_page_id' ) ) {
 			$woocommerce_pages = [ 
 				wc_get_page_id( 'myaccount' ),
 				wc_get_page_id( 'cart' ),
 				wc_get_page_id( 'checkout' )
 			];
+			$excluded_pages    = array_merge( $excluded_pages, $woocommerce_pages );
+		}
 
-			if ( in_array( $page->ID, $woocommerce_pages ) ) {
-				return null;
-			}
+		if ( ! empty( $excluded_pages ) && in_array( $page->ID, $excluded_pages ) ) {
+			return null;
 		}
 
 		$page_id         = $page->ID;
