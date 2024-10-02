@@ -76,11 +76,25 @@ class Page extends BaseCollection {
 			$template = '';
 		}
 
+
 		return apply_filters( 'blazecommerce/page/template', $template, $page );
 	}
 
 
 	public function get_data( $page ) {
+
+		if ( function_exists( 'wc_get_page_id' ) ) {
+			$woocommerce_pages = [ 
+				wc_get_page_id( 'myaccount' ),
+				wc_get_page_id( 'cart' ),
+				wc_get_page_id( 'checkout' )
+			];
+
+			if ( in_array( $page->ID, $woocommerce_pages ) ) {
+				return null;
+			}
+		}
+
 		$page_id         = $page->ID;
 		$taxonomies_data = $this->get_taxonomies( $page_id, get_post_type() );
 
@@ -140,7 +154,10 @@ class Page extends BaseCollection {
 				while ( $query->have_posts() ) {
 					$query->the_post();
 					global $post;
-					$post_datas[] = $this->get_data( $post );
+					$document = $this->get_data( $post );
+					if ( ! empty( $document ) ) {
+						$post_datas[] = $document;
+					}
 					unset( $document );
 				}
 
