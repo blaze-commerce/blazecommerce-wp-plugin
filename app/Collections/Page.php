@@ -38,6 +38,7 @@ class Page extends BaseCollection {
 					[ 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ],
 					[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
 					[ 'name' => 'author', 'type' => 'object', 'optional' => true ],
+					[ 'name' => 'template', 'type' => 'string', 'facet' => true ],
 				],
 				'default_sorting_field' => 'updatedAt',
 				'enable_nested_fields' => true
@@ -61,8 +62,49 @@ class Page extends BaseCollection {
 		);
 	}
 
+	public function get_template( $page ) {
+		$template = get_page_template_slug( $page->ID );
+		if ( empty( $template ) ) {
+			$template = 'page';
+		}
+
+		// empty template if home page and other woocommerce pages
+		$front_page_id = get_option( 'page_on_front' );
+		$home_page_id  = get_option( 'page_for_posts' );
+
+		if ( $page->ID == $front_page_id || $page->ID == $home_page_id ) {
+			$template = '';
+		}
+
+
+		return apply_filters( 'blazecommerce/page/template', $template, $page );
+	}
+
 
 	public function get_data( $page ) {
+
+		$excluded_pages = array();
+
+		if ( function_exists( 'tinv_get_option' ) ) {
+			$wishlist_page_id = tinv_get_option( 'page', 'wishlist' );
+			if ( ! empty( $wishlist_page_id ) ) {
+				$excluded_pages[] = $wishlist_page_id;
+			}
+		}
+
+		if ( function_exists( 'wc_get_page_id' ) ) {
+			$woocommerce_pages = [ 
+				wc_get_page_id( 'myaccount' ),
+				wc_get_page_id( 'cart' ),
+				wc_get_page_id( 'checkout' )
+			];
+			$excluded_pages    = array_merge( $excluded_pages, $woocommerce_pages );
+		}
+
+		if ( ! empty( $excluded_pages ) && in_array( $page->ID, $excluded_pages ) ) {
+			return null;
+		}
+
 		$page_id         = $page->ID;
 		$taxonomies_data = $this->get_taxonomies( $page_id, get_post_type() );
 
@@ -89,7 +131,8 @@ class Page extends BaseCollection {
 			'content' => $page_content,
 			'rawContent' => $content,
 			'seoFullHead' => '',
-			'author' => $this->get_author( $page->post_author )
+			'author' => $this->get_author( $page->post_author ),
+			'template' => $this->get_template( $page )
 		], $page );
 	}
 
@@ -112,7 +155,8 @@ class Page extends BaseCollection {
 				'posts_per_page' => $batch_size,
 				'paged' => $page,
 				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false
+				'update_post_term_cache' => false,
+				'no_found_rows' => true
 			];
 
 			$query = new \WP_Query( $args );
@@ -121,7 +165,10 @@ class Page extends BaseCollection {
 				while ( $query->have_posts() ) {
 					$query->the_post();
 					global $post;
-					$post_datas[] = $this->get_data( $post );
+					$document = $this->get_data( $post );
+					if ( ! empty( $document ) ) {
+						$post_datas[] = $document;
+					}
 					unset( $document );
 				}
 
