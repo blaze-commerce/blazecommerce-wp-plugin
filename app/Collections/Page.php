@@ -155,7 +155,8 @@ class Page extends BaseCollection {
 				'posts_per_page' => $batch_size,
 				'paged' => $page,
 				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false
+				'update_post_term_cache' => false,
+				'no_found_rows' => true
 			];
 
 			$query = new \WP_Query( $args );
