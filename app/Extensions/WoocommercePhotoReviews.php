@@ -14,14 +14,20 @@ class WoocommercePhotoReviews {
 	}
 
 	public function __construct() {
-		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-photo-reviews/woocommerce-photo-reviews.php' ) && is_plugin_active( 'woo-photo-reviews/woo-photo-reviews.php' ) ) {
-			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'reviews_summary' ), 10, 2 );
-			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'product_reviews' ), 10, 2 );
-			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'additional_meta_fields' ), 10, 1 );
-		}
+
+		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'reviews_summary' ), 10, 2 );
+		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'product_reviews' ), 10, 2 );
+		add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'additional_meta_fields' ), 10, 1 );
+	}
+
+	public function get_review_service() {
+		return apply_filters( 'blaze_wooless_get_review_service', '' );
 	}
 
 	public function additional_meta_fields( $fields ) {
+		if ( $this->get_review_service() !== 'woocommerce_native_reviews' )
+			return $fields;
+
 		$fields[] = array( 'name' => 'metaData.wooProductReviews.stats.average_rating', 'type' => 'float' );
 		return $fields;
 	}
@@ -29,8 +35,6 @@ class WoocommercePhotoReviews {
 
 	protected function get_total_comment_with_images( $product_id ) {
 		global $wpdb;
-
-
 
 		$sql = "SELECT COUNT(comment_ID) as total
                 FROM $wpdb->comments
@@ -69,8 +73,11 @@ class WoocommercePhotoReviews {
 	}
 
 	public function reviews_summary( $product_data, $product_id ) {
+		if ( $this->get_review_service() !== 'woocommerce_native_reviews' )
+			return $product_data;
+
 		if ( ! empty( $product_data ) && $product_id ) {
-			$product = wc_get_product( $product_id );
+			$product = \wc_get_product( $product_id );
 			$review_count = $product->get_review_count();
 			$average_rating = $product->get_average_rating();
 			for ( $i = 5; $i > 0; $i-- ) {
@@ -100,6 +107,9 @@ class WoocommercePhotoReviews {
 	}
 
 	public function product_reviews( $product_data, $product_id ) {
+		if ( $this->get_review_service() !== 'woocommerce_native_reviews' )
+			return $product_data;
+
 		if ( ! empty( $product_data ) && $product_id ) {
 			$args = array(
 				'post_type' => 'product',
