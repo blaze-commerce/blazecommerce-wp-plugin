@@ -387,7 +387,7 @@ class Product extends BaseCollection {
 		$updated_at   = $product->get_date_modified();
 		$created_at   = $product->get_date_created();
 		$current_time = current_time( 'Y-m-d H:i:s' );
-
+		$product_slug = get_post_field( 'post_name', $product->get_id() );
 
 		$product_data = array(
 			'id' => strval( $product->get_id() ),
@@ -397,7 +397,7 @@ class Product extends BaseCollection {
 			'description' => wpautop( $product->get_description() ),
 			'name' => $product->get_name(),
 			'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
-			'slug' => $product->get_slug(),
+			'slug' => $product_slug,
 			'thumbnail' => $this->get_thumnail( $product ),
 			'sku' => $product->get_sku(),
 			'price' => $this->get_price( $product, $currency ),
