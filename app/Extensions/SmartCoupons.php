@@ -5,7 +5,7 @@ namespace BlazeWooless\Extensions;
 use \Wt_Smart_Coupon_Restriction_Public;
 
 class SmartCoupons {
-    private static $instance = null;
+	private static $instance = null;
 	/**
 	 * Wt_Smart_Coupon_Giveaway_Product_Public::class
 	 *
@@ -21,13 +21,13 @@ class SmartCoupons {
 		return self::$instance;
 	}
 
-    public function __construct() {
+	public function __construct() {
 		if ( is_plugin_active( 'wt-smart-coupon-pro/wt-smart-coupon-pro.php' ) ) {
-            add_action( 'graphql_register_types', array( $this, 'register_free_product_types' ) );
-        }
+			add_action( 'graphql_register_types', array( $this, 'register_free_product_types' ) );
+		}
 	}
 
-    public function register_free_product_types() {
+	public function register_free_product_types() {
 		$this->register_types();
 		$this->register_fields();
 		
@@ -36,30 +36,30 @@ class SmartCoupons {
 
 	public function get_non_individual_discount_quantity($coupon_id) {
 		/* allowed quantity */
-        $discount_quantity=BCSmartCouponGiveawayProductPublic::get_instance()->get_coupon_meta_value($coupon_id, '_wt_product_discount_quantity');
-        return (absint($discount_quantity)===0 ? 1 : $discount_quantity);
+		$discount_quantity=BCSmartCouponGiveawayProductPublic::get_instance()->get_coupon_meta_value($coupon_id, '_wt_product_discount_quantity');
+		return (absint($discount_quantity)===0 ? 1 : $discount_quantity);
 	}
 
 	/**
-     *  This method will take coupon applicable count from session created by coupon restriction module
-     *  @since 2.0.5
-     */ 
-    public function get_coupon_applicable_count($coupon_id, $coupon_code)
-    {
-        $frequency=1;
-        if(\Wt_Smart_Coupon_Public::module_exists('coupon_restriction'))
-        {
-            $bogo_applicable_count=Wt_Smart_Coupon_Restriction_Public::get_bogo_applicable_count_session();
-            $coupon_code=wc_format_coupon_code($coupon_code);
-            $frequency=absint(isset($bogo_applicable_count[$coupon_code]) ? $bogo_applicable_count[$coupon_code] : 1);
-            $frequency=($frequency<1 ? 1 : $frequency);
+	 *  This method will take coupon applicable count from session created by coupon restriction module
+	 *  @since 2.0.5
+	 */ 
+	public function get_coupon_applicable_count($coupon_id, $coupon_code)
+	{
+		$frequency=1;
+		if(\Wt_Smart_Coupon_Public::module_exists('coupon_restriction'))
+		{
+			$bogo_applicable_count=Wt_Smart_Coupon_Restriction_Public::get_bogo_applicable_count_session();
+			$coupon_code=wc_format_coupon_code($coupon_code);
+			$frequency=absint(isset($bogo_applicable_count[$coupon_code]) ? $bogo_applicable_count[$coupon_code] : 1);
+			$frequency=($frequency<1 ? 1 : $frequency);
 
-            $wt_sc_bogo_apply_frequency = BCSmartCouponGiveawayProductPublic::get_instance()->get_coupon_meta_value($coupon_id, '_wt_sc_bogo_apply_frequency');
-            $frequency=('once'==$wt_sc_bogo_apply_frequency ? 1 : $frequency);
-        }
+			$wt_sc_bogo_apply_frequency = BCSmartCouponGiveawayProductPublic::get_instance()->get_coupon_meta_value($coupon_id, '_wt_sc_bogo_apply_frequency');
+			$frequency=('once'==$wt_sc_bogo_apply_frequency ? 1 : $frequency);
+		}
 
-        return $frequency;
-    }
+		return $frequency;
+	}
 
 	public function register_types()
 	{
@@ -163,14 +163,14 @@ class SmartCoupons {
 			'type' => ['list_of' => 'SmartCoupons'],
 			'description' => __( 'Smart coupons', 'wp-graphql-woocommerce' ),
 			'resolve' => static function ($cart) {
-                $applied_coupons  = $cart->applied_coupons;
+				$applied_coupons  = $cart->applied_coupons;
 				if(empty($applied_coupons))
 				{
 					return;
 				}
 				$free_products = array();
 				$add_to_cart_all=array();           
-        		$show_quantity_option=array();
+				$show_quantity_option=array();
 
 				foreach($applied_coupons as $coupon_code)
 				{
@@ -263,7 +263,7 @@ class SmartCoupons {
 										}
 										
 									}
-								}                    
+								}
 							}
 						}  
 					}else
