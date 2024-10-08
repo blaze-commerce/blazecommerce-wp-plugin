@@ -23,7 +23,7 @@ class Woocommerce {
 		add_action( 'woocommerce_trash_product', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
 		add_action( 'trashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
 		add_action( 'untrashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
-
+		add_action( 'before_delete_post', array( $this, 'before_delete_product' ) );
 
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'on_checkout_update_order_meta' ), 10, 2 );
 		add_action( 'woocommerce_after_product_ordering', array( $this, 'product_reordering' ), 10, 2 );
@@ -39,6 +39,30 @@ class Woocommerce {
 		// We set the priority to 1 so that this will be the first to be executed as we will mimic how woo is adding product to cart but via graphql
 		add_filter( 'woocommerce_add_cart_item_data', array( $this, 'add_cart_item_data' ), 1, 4 );
 	}
+
+	/**
+	 * Delete typesense product when user permanently deletes a product
+	 * 
+	 * @param mixed $post_id
+	 * @return void
+	 */
+	public function before_delete_product( $post_id ) {
+		$post_type = get_post_type( $post_id );
+		if ( $post_type === 'product' || $post_type === 'product_variation' ) {
+			$product = wc_get_product( $post_id );
+			if ( $product ) {
+				try {
+					Product::get_instance()->collection()->documents[ $post_id ]->delete();
+					do_action( 'ts_product_update', $product->get_id(), $product );
+				} catch (\Exception $e) {
+					$logger  = wc_get_logger();
+					$context = array( 'source' => 'wooless-product-delete' );
+					$logger->debug( 'TS Product Delete Exception: ' . $e->getMessage(), $context );
+				}
+			}
+		}
+	}
+
 
 	public function add_cart_item_data( $cart_item_data, $product_id, $variation_id, $quantity ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
