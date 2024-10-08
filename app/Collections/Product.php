@@ -397,7 +397,7 @@ class Product extends BaseCollection {
 			'description' => wpautop( $product->get_description() ),
 			'name' => $product->get_name(),
 			'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
-			'slug' => $product_slug,
+			'slug' => ! empty( $product_slug ) ? $product_slug : sanitize_title( $product->get_name() ),
 			'thumbnail' => $this->get_thumnail( $product ),
 			'sku' => $product->get_sku(),
 			'price' => $this->get_price( $product, $currency ),
