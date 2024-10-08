@@ -384,6 +384,11 @@ class Product extends BaseCollection {
 			}
 		}
 
+		$updated_at   = $product->get_date_modified();
+		$created_at   = $product->get_date_created();
+		$current_time = current_time( 'Y-m-d H:i:s' );
+
+
 		$product_data = array(
 			'id' => strval( $product->get_id() ),
 			'productId' => strval( $product->get_id() ),
@@ -403,8 +408,8 @@ class Product extends BaseCollection {
 			'stockStatus' => $product->get_stock_status(),
 			'backorder' => $product->get_backorders(),
 			'shippingClass' => $product->get_shipping_class(),
-			'updatedAt' => strtotime( $product->get_date_modified() ),
-			'createdAt' => strtotime( $product->get_date_created() ),
+			'updatedAt' => strtotime( $updated_at ? $updated_at : $current_time ),
+			'createdAt' => strtotime( $created_at ? $created_at : $current_time ),
 			'publishedAt' => (int) $published_at,
 			'daysPassed' => $days_passed,
 			'isFeatured' => $product->get_featured(),
