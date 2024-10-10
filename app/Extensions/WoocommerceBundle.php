@@ -163,8 +163,8 @@ class WoocommerceBundle {
 				'editInCart' => $product->get_editable_in_cart(),
 			),
 			'products' => $bundle_products,
-			'minPrice' => $minPrice,
-			'maxPrice' => $maxPrice,
+			'minPrice' => (float) $minPrice,
+			'maxPrice' => (float) $maxPrice,
 		);
 
 		return apply_filters( 'blaze_wooless_product_bundle_data', $data, $product );
