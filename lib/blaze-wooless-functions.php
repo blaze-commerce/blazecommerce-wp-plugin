@@ -29,3 +29,45 @@ function blaze_woolese_array_camel_case_keys( $array ) {
 	}
 	return $newArray;
 }
+if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'klaviyo/klaviyo.php' ) && is_string_in_current_url('.blz.onl') ) {
+	add_action('wp_footer', 'klaviyo_script');
+}
+
+function klaviyo_script() {
+	$klaviyo_api_key = "W7A7kP";
+	if( ! is_klaviyo_connected() ) {
+		if( $klaviyo_api_key ) {
+			$src_url = 'https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=' . $klaviyo_api_key;
+			?>
+			<script id="klaviyo-staging-script" src="<?php echo $src_url; ?>" async="true"></script>
+			<?php
+		}
+	}
+}
+
+function is_klaviyo_connected() {
+	$klaviyo_api_key = "W7A7kP";
+	if ( ! empty( $klaviyo_api_key ) ) {
+		$url = 'https://a.klaviyo.com/api/v1/metrics?api_key=' . $klaviyo_api_key;
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		$response = curl_exec($ch);
+		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+		if ( $httpcode == 200 ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function is_string_in_current_url( $string ) {
+	$current_url = "https://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+	if ( strpos($current_url, $string) !== false ) {
+		return true;
+	}
+	
+	return false;
+}
