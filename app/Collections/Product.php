@@ -48,8 +48,9 @@ class Product extends BaseCollection {
 			array( 'name' => 'salePrice', 'type' => 'object' ),
 		);
 
-		$currencies = Woocommerce::get_currencies();
-		foreach ( $currencies as $currency ) {
+		$currencies    = Woocommerce::get_currencies();
+		$currency_keys = array_keys( $currencies );
+		foreach ( $currency_keys as $currency ) {
 			$price[] = array( 'name' => 'price.' . $currency, 'type' => 'float', 'optional' => true, 'facet' => true );
 			$price[] = array( 'name' => 'regularPrice.' . $currency, 'type' => 'float', 'optional' => true );
 			$price[] = array( 'name' => 'salePrice.' . $currency, 'type' => 'float', 'optional' => true );
@@ -399,7 +400,7 @@ class Product extends BaseCollection {
 			'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
 			'slug' => ! empty( $product_slug ) ? $product_slug : sanitize_title( $product->get_name() ),
 			'thumbnail' => $this->get_thumnail( $product ),
-			'sku' => $product->get_sku(),
+			'sku' => strval( $product->get_sku() ),
 			'price' => $this->get_price( $product, $currency ),
 			'regularPrice' => $this->get_regular_price( $product, $currency ),
 			'salePrice' => $this->get_sale_price( $product, $currency ),
