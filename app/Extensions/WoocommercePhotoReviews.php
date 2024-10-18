@@ -73,8 +73,6 @@ class WoocommercePhotoReviews {
 	}
 
 	public function reviews_summary( $product_data, $product_id ) {
-		if ( $this->get_review_service() !== 'woocommerce_native_reviews' )
-			return $product_data;
 
 		if ( ! empty( $product_data ) && $product_id ) {
 			$product = \wc_get_product( $product_id );
@@ -107,8 +105,6 @@ class WoocommercePhotoReviews {
 	}
 
 	public function product_reviews( $product_data, $product_id ) {
-		if ( $this->get_review_service() !== 'woocommerce_native_reviews' )
-			return $product_data;
 
 		if ( ! empty( $product_data ) && $product_id ) {
 			$args = array(

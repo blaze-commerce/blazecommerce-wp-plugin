@@ -8,27 +8,12 @@ class Product extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'product';
 
-	private $review_service = 'woocommerce_native_reviews';
-
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
 		}
 
 		return self::$instance;
-	}
-
-	public function __construct() {
-		add_action( 'blaze_woolees_set_review_service', array( $this, 'set_review_service' ), 10, 1 );
-		add_filter( 'blaze_wooless_get_review_service', array( $this, 'get_review_service' ), 10, 1 );
-	}
-
-	public function set_review_service( $service ) {
-		$this->review_service = $service;
-	}
-
-	public function get_review_service() {
-		return $this->review_service;
 	}
 
 	public function log_failed_product_import( $message ) {

@@ -16,15 +16,10 @@ class Yotpo {
 
 	public function __construct() {
 		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'yotpo-social-reviews-for-woocommerce/wc_yotpo.php' ) ) {
-			add_filter( 'blaze_wooless_set_review_service', array( $this, 'set_review_service' ), 10, 1 );
 			add_action( 'blaze_wooless_generate_product_reviews_data', array( $this, 'generate_product_data' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'generate_product_reviews_stats' ), 10, 2 );
 			add_filter( 'blaze_wooless_cross_sell_data_for_typesense', array( $this, 'generate_cross_sell_reviews_stats' ), 10, 2 );
 		}
-	}
-
-	public function set_review_service( $service ) {
-		return 'yotpo';
 	}
 
 	public function get_api_key() {
