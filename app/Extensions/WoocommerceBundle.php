@@ -2,6 +2,8 @@
 
 namespace BlazeWooless\Extensions;
 
+use BlazeWooless\Woocommerce;
+
 class WoocommerceBundle {
 	private static $instance = null;
 
@@ -34,6 +36,12 @@ class WoocommerceBundle {
 
 	public function fields( $fields ) {
 		$fields[] = array( 'name' => 'bundle', 'type' => 'object', 'optional' => true );
+		
+		$currencies = Woocommerce::get_currencies();
+		foreach ( $currencies as $currency ) {
+			$fields[] = array( 'name' => 'bundle.minPrice.' . $currency, 'type' => 'float', 'optional' => true );
+			$fields[] = array( 'name' => 'bundle.maxPrice.' . $currency, 'type' => 'float', 'optional' => true );
+		}
 		return $fields;
 	}
 	protected function set_variation_data( $bundle_data, $bundled_item, $product ) {
