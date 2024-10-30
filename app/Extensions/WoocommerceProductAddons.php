@@ -106,6 +106,7 @@ class WoocommerceProductAddons {
 						$field = new \WC_Product_Addons_Field_Custom($addon, $value);
 						break;
 					case 'select':
+					case 'multiple_choice':
 						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-select.php';
 						$field = new \WC_Product_Addons_Field_Select($addon, $value);
 						break;
