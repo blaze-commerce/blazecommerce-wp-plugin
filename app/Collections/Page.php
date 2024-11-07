@@ -101,6 +101,7 @@ class Page extends BaseCollection {
 			$excluded_pages    = array_merge( $excluded_pages, $woocommerce_pages );
 		}
 
+		$excluded_pages = apply_filters( 'blazecommerce/page/excluded_pages', $excluded_pages, $page );
 		if ( ! empty( $excluded_pages ) && in_array( $page->ID, $excluded_pages ) ) {
 			return null;
 		}
