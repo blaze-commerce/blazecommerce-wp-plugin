@@ -84,14 +84,6 @@ class Page extends BaseCollection {
 	public function get_data( $page ) {
 
 		$excluded_pages = array();
-
-		if ( function_exists( 'tinv_get_option' ) ) {
-			$wishlist_page_id = tinv_get_option( 'page', 'wishlist' );
-			if ( ! empty( $wishlist_page_id ) ) {
-				$excluded_pages[] = $wishlist_page_id;
-			}
-		}
-
 		if ( function_exists( 'wc_get_page_id' ) ) {
 			$woocommerce_pages = [ 
 				wc_get_page_id( 'myaccount' ),
@@ -100,6 +92,8 @@ class Page extends BaseCollection {
 			];
 			$excluded_pages    = array_merge( $excluded_pages, $woocommerce_pages );
 		}
+
+		$excluded_pages = apply_filters( 'blazecommerce/page/excluded_pages', $excluded_pages, $page );
 
 		if ( ! empty( $excluded_pages ) && in_array( $page->ID, $excluded_pages ) ) {
 			return null;
@@ -136,6 +130,30 @@ class Page extends BaseCollection {
 		], $page );
 	}
 
+	public function get_post_ids( $page, $batch_size = 20 ) {
+		global $wpdb;
+		// Calculate the offset
+		$offset = ( $page - 1 ) * $batch_size;
+
+		// Query to select post IDs from the posts table with pagination
+		$query = $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ('post', 'page') AND post_status = 'publish' LIMIT %d OFFSET %d",
+			$batch_size,
+			$offset
+		);
+
+		// Get the results as an array of IDs
+		return $wpdb->get_col( $query );
+	}
+
+	public function get_total_pages( $batch_size = 20 ) {
+		global $wpdb;
+		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ('post', 'page') AND post_status = 'publish'";
+		$total_posts = $wpdb->get_var( $query );
+		$total_pages = ceil( $total_posts / $batch_size );
+		return $total_pages;
+	}
+
 	public function index_to_typesense() {
 		$batch_size      = $_REQUEST['batch_size'] ?? 20;
 		$page            = $_REQUEST['page'] ?? 1;
@@ -149,31 +167,22 @@ class Page extends BaseCollection {
 		}
 
 		try {
-			$args = [ 
-				'post_type' => [ 'page', 'post' ],
-				'post_status' => 'publish',
-				'posts_per_page' => $batch_size,
-				'paged' => $page,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-			];
+			$post_ids = $this->get_post_ids( $page, $batch_size );
+			if ( ! empty( $post_ids ) ) {
 
-			$query = new \WP_Query( $args );
-
-			if ( $query->have_posts() ) {
-				while ( $query->have_posts() ) {
-					$query->the_post();
-					global $post;
-					$document = $this->get_data( $post );
-					if ( ! empty( $document ) ) {
-						$post_datas[] = $document;
+				foreach ( $post_ids as $post_id ) {
+					$post = get_post( $post_id );
+					if ( $post ) {
+						$document = $this->get_data( $post );
+						if ( ! empty( $document ) ) {
+							$post_datas[] = $document;
+						}
+						unset( $document );
 					}
-					unset( $document );
 				}
 
-				$import_response = $this->collection()->documents->import( $post_datas, array(
-					'action' => 'upsert'
-				) );
+
+				$import_response = $this->collection()->documents->import( $post_datas );
 
 				$successful_imports = array_filter( $import_response, function ($batch_result) {
 					return isset( $batch_result['success'] ) && $batch_result['success'] == true;
@@ -181,30 +190,28 @@ class Page extends BaseCollection {
 
 				$imported_count += count( $successful_imports );
 				$total_imports += count( $post_datas );
+				$total_pages    = $this->get_total_pages( $batch_size );
+				$next_page      = $page + 1;
+				$has_next_data  = $page < $total_pages;
 
-				$total_pages   = $query->max_num_pages;
-				$next_page     = $page + 1;
-				$has_next_data = $page < $total_pages;
 
 				wp_send_json( array(
 					'imported_count' => $imported_count,
 					'total_imports' => $total_imports,
 					'next_page' => $has_next_data ? $next_page : null,
-					'query_args' => $args,
+					'page' => $page,
 					'import_response' => $import_response,
 					'import_data_sent' => $post_datas,
 				) );
 
 			}
-			// Restore original post data. 
-			wp_reset_postdata();
+
 
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,
 				'total_imports' => $total_imports,
 				'next_page' => null,
-				'query_args' => $args,
 				'import_response' => $import_response,
 				'import_data_sent' => $post_datas,
 			) );
