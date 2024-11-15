@@ -39,6 +39,7 @@ class Page extends BaseCollection {
 					[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
 					[ 'name' => 'author', 'type' => 'object', 'optional' => true ],
 					[ 'name' => 'template', 'type' => 'string', 'facet' => true ],
+					[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ],
 				],
 				'default_sorting_field' => 'updatedAt',
 				'enable_nested_fields' => true
@@ -126,8 +127,39 @@ class Page extends BaseCollection {
 			'rawContent' => $content,
 			'seoFullHead' => '',
 			'author' => $this->get_author( $page->post_author ),
-			'template' => $this->get_template( $page )
+			'template' => $this->get_template( $page ),
+			'breadcrumbs' => $this->get_breadcrumbs( $page )
 		], $page );
+	}
+
+	public function get_breadcrumbs( $page ) {
+		// Initialize an array for the breadcrumb trail
+		$breadcrumbs = array(
+			array(
+				'title' => 'Home',
+				'url' => site_url()
+			)
+		);
+
+		$ancestors = get_post_ancestors( $page );
+
+		// Reverse the order so the breadcrumbs go from parent to child
+		$ancestors = array_reverse( $ancestors );
+
+		foreach ( $ancestors as $ancestor ) {
+			$breadcrumbs[] = array(
+				'title' => get_the_title( $ancestor ),
+				'url' => get_permalink( $ancestor )
+			);
+		}
+
+		// Add the current page title without a URL
+		$breadcrumbs[] = array(
+			'title' => get_the_title( $page ),
+			'url' => null
+		);
+
+		return $breadcrumbs;
 	}
 
 	public function get_post_ids( $page, $batch_size = 20 ) {
