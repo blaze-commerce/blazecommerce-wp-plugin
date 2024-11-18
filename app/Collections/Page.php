@@ -179,11 +179,7 @@ class Page extends BaseCollection {
 
 		// Query to select post IDs from the posts table with pagination
 		$query = $wpdb->prepare(
-			"SELECT ID
-    		FROM {$wpdb->posts}
-    		WHERE post_type IN ('post', 'page')
-    		AND post_status = 'publish'
-    		LIMIT %d OFFSET %d",
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ('post', 'page') AND post_status = 'publish' LIMIT %d OFFSET %d",
 			$batch_size,
 			$offset
 		);
@@ -194,11 +190,8 @@ class Page extends BaseCollection {
 
 	public function get_total_pages( $batch_size = 20 ) {
 		global $wpdb;
-		$total_posts = $wpdb->get_var( "
-        SELECT COUNT(*)
-        FROM {$wpdb->posts}
-        WHERE post_type IN ('post', 'page')
-        AND post_status = 'publish'" );
+		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ('post', 'page') AND post_status = 'publish'";
+		$total_posts = $wpdb->get_var( $query );
 		$total_pages = ceil( $total_posts / $batch_size );
 		return $total_pages;
 	}
