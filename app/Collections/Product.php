@@ -266,8 +266,43 @@ class Product extends BaseCollection {
 		}
 
 		unset( $additional_tabs );
-
+		$formatted_additional_tabs = $this->get_woocommerce_product_tabs( $product, $formatted_additional_tabs );
 		return apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product );
+	}
+
+	public function get_woocommerce_product_tabs( $product_args, $formatted_additional_tabs ) {
+		global $product;
+		$orginal_product    = $product;
+		$GLOBALS['product'] = $product_args;
+		$product            = $product_args;
+
+		$product_tabs = apply_filters( 'woocommerce_product_tabs', array() );
+		if ( ! empty( $product_tabs ) ) {
+			if ( isset( $product_tabs['description'] ) ) {
+				// We are removing desription because this is processed by the frontend separately 
+				unset( $product_tabs['description'] );
+			}
+
+			foreach ( $product_tabs as $key => $product_tab ) {
+				$content = '';
+				if ( isset( $product_tab['callback'] ) ) {
+					ob_start();
+					call_user_func( $product_tab['callback'], $key, $product_tab );
+					$content = ob_get_clean();
+				}
+
+				$tab_item = [ 
+					'title' => wp_kses_post( apply_filters( 'woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key ) ),
+					'content' => $content,
+					'isOpen' => 0,
+					'location' => ''
+				];
+
+				$formatted_additional_tabs[] = apply_filters( 'wooless_tab_' . $key, $tab_item, $product_tab, $product );
+			}
+		}
+		$product = $orginal_product;
+		return $formatted_additional_tabs;
 	}
 
 	public function get_thumnail( $product ) {
