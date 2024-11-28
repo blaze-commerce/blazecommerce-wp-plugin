@@ -2,6 +2,8 @@
 
 namespace BlazeWooless;
 
+use BlazeWooless\Collections\Product;
+
 class Revalidate {
 	private static $instance = null;
 
@@ -34,8 +36,14 @@ class Revalidate {
 			wp_make_link_relative( $this->get_object_permalink( $product_id ) )
 		);
 
+		$product = wc_get_product( $product_id );
+		$taxonomies = Product::get_instance()->get_taxonomies( $product );
+		$taxonomy_urls = array_map( function( $taxonomy ) {
+			return wp_make_link_relative( $taxonomy['url'] );
+		}, $taxonomies);
+
 		$event_time = WC()->call_function( 'time' ) + 1;
-		as_schedule_single_action( $event_time, 'next_js_revalidation_event', array( $product_url ), 'blaze-wooless', true, 1 );
+		as_schedule_single_action( $event_time, 'next_js_revalidation_event', array( array_merge( $product_url, $taxonomy_urls ) ), 'blaze-wooless', true, 1 );
 	}
 
 	public function revalidate_frontend_path( $product_id, $product ) {
