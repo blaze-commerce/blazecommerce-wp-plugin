@@ -303,7 +303,7 @@ class Woocommerce {
 	public static function get_currencies() {
 		$base_currency = get_woocommerce_currency();
 		return apply_filters( 'blaze_wooless_currencies', array(
-			$base_currency => ''
+			$base_currency => $base_currency
 		) );
 	}
 
