@@ -174,7 +174,7 @@ class Woocommerce {
 		$all_categories = $this->get_all_categories_with_parents( $product_id );
 
 		// Assign the terms to the product
-		wp_set_object_terms( $product_id, $all_categories, 'product_cat' );
+		wp_set_object_terms( $product_id, $all_categories, 'product_cat', true );
 	}
 
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
