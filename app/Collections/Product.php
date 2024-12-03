@@ -387,6 +387,17 @@ class Product extends BaseCollection {
 		return apply_filters( 'wooless_product_sale_price', $default_sale_price, $product->get_id(), $product );
 	}
 
+	public function get_stock_status( $product ) {
+		$type         = $product->get_type();
+		$stock_status = $product->get_stock_status();
+		if ( 'variable' == $type ) {
+			$available_variations = $product->get_available_variations();
+			$stock_status         = ! empty( $available_variations ) ? 'instock' : 'outofstock';
+		}
+
+		return $stock_status;
+	}
+
 	public function generate_typesense_data( $product ) {
 		if ( empty( $product ) ) {
 			return null;
@@ -443,7 +454,7 @@ class Product extends BaseCollection {
 			'salePrice' => $this->get_sale_price( $product, $currency ),
 			'onSale' => $product->is_on_sale(),
 			'stockQuantity' => empty( $stock_quantity ) ? 0 : $stock_quantity,
-			'stockStatus' => $product->get_stock_status(),
+			'stockStatus' => $this->get_stock_status( $product ),
 			'backorder' => $product->get_backorders(),
 			'shippingClass' => $product->get_shipping_class(),
 			'updatedAt' => strtotime( $updated_at ? $updated_at : $current_time ),
