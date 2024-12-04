@@ -615,6 +615,8 @@
         syncPagesLink: '#sync-pages-link',
         syncSiteInfoLink: '#sync-site-info-link',
         syncAllLink: '#sync-all-link',
+        redeployButton: '#redeploy',
+        redeployResultContainer: '#redeploy-result',
 
         syncInProgress: false,
 
@@ -654,6 +656,42 @@
             $(document.body).on('click', this.syncPagesLink, this.importPages.bind(this));
             $(document.body).on('click', this.syncSiteInfoLink, this.importSiteInfo.bind(this));
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
+            $(document.body).on('click', this.redeployButton, this.redeployStoreFront.bind(this));
+        },
+
+        checkDeployment: function () {
+            var _this = this;
+            _this.renderLoader('Checking Deployment..');
+            _this.syncInProgress = true;
+            var data = {
+                'action': 'check_deployment',
+            };
+            $.post(ajaxurl, data).done(function (response) {
+                if (response.state === 'BUILDING') {
+                    _this.renderLoader('Store front is deploying..');
+                    setTimeout(function () {
+                        _this.checkDeployment();
+                    }, 120000);
+                } else if (response.state === 'READY') {
+                    $(_this.redeployButton).prop("disabled", false);
+                    _this.hideLoader();
+                    $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
+                }
+            });
+        },
+        redeployStoreFront: function (e) {
+            var _this = this;
+            e.preventDefault();
+            $(this.redeployButton).prop("disabled", true);
+            _this.renderLoader('Triggering redeploy');
+            _this.syncInProgress = true;
+            var data = {
+                'action': 'redeploy_store_front',
+            };
+            $.post(ajaxurl, data).done(function (response) {
+                _this.renderLoader(response.message);
+                _this.checkDeployment();
+            });
         },
 
         managePaginatedRequests: function ({

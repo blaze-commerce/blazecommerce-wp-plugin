@@ -23,6 +23,9 @@ class Ajax {
 		add_action( 'wp_ajax_index_data_to_typesense', array( $this, 'index_data_to_typesense' ) );
 
 		add_action( 'wp_ajax_check_product_sync_data', array( $this, 'check_product_sync_data' ) );
+
+		add_action( 'wp_ajax_redeploy_store_front', array( $this, 'redeploy_store_front' ) );
+		add_action( 'wp_ajax_check_deployment', array( $this, 'check_deployment' ) );
 	}
 
 	public function check_product_sync_data() {
@@ -37,9 +40,60 @@ class Ajax {
 
 	public function get_headers() {
 		$api_key = bw_get_general_settings( 'typesense_api_key' );
+		$store_id = bw_get_general_settings( 'store_id' );
 		return array(
-			'x-wooless-secret-token: ' . $api_key
+			'x-wooless-secret-token: ' . base64_encode( $api_key . ':' . $store_id )
 		);
+	}
+
+	public function check_deployment() {
+		$api_key = bw_get_general_settings( 'typesense_api_key' );
+		if ( empty( $api_key ) ) {
+			wp_send_json( array(
+				'error' => 'Empty api key.',
+				'message' => 'Empty api key.'
+			) );
+		}
+		$curl = curl_init();
+		curl_setopt_array( $curl, array(
+			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments?checkDeployment=1',
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'GET',
+			CURLOPT_HTTPHEADER => $this->get_headers(),
+		) );
+		$response = curl_exec( $curl );
+		curl_close( $curl );
+		wp_send_json( json_decode( $response ) );
+	}
+
+	public function redeploy_store_front() {
+		$api_key = bw_get_general_settings( 'typesense_api_key' );
+		if ( empty( $api_key ) ) {
+			wp_send_json( array(
+				'error' => 'Empty api key.',
+				'message' => 'Empty api key.'
+			) );
+		}
+		$curl = curl_init();
+		curl_setopt_array( $curl, array(
+			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments',
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => 0,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => 'POST',
+			CURLOPT_HTTPHEADER => $this->get_headers(),
+		) );
+		$response = curl_exec( $curl );
+		curl_close( $curl );
+		wp_send_json( json_decode( $response ) );
 	}
 
 	public function prepare_curl( $url_endpoint, $method ) {
