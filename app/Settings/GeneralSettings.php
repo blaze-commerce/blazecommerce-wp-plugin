@@ -284,6 +284,8 @@ class GeneralSettings extends BaseSettings {
 			<a href="#" id="sync-all-link">Sync All</a>
 			<div id="sync-results-container"></div>
 
+			<button id="redeploy" class="button button-primary">Redeploy Store Front</button>
+
 			<?php
 		endif;
 	}
