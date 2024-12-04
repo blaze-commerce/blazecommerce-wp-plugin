@@ -266,17 +266,55 @@ class Product extends BaseCollection {
 		}
 
 		unset( $additional_tabs );
-
+		$formatted_additional_tabs = $this->get_woocommerce_product_tabs( $product, $formatted_additional_tabs );
 		return apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product );
+	}
+
+	public function get_woocommerce_product_tabs( $product_args, $formatted_additional_tabs ) {
+		global $product;
+		$orginal_product    = $product;
+		$GLOBALS['product'] = $product_args;
+		$product            = $product_args;
+
+		$product_tabs = apply_filters( 'woocommerce_product_tabs', array() );
+		if ( ! empty( $product_tabs ) ) {
+			if ( isset( $product_tabs['description'] ) ) {
+				// We are removing desription because this is processed by the frontend separately 
+				unset( $product_tabs['description'] );
+			}
+
+			foreach ( $product_tabs as $key => $product_tab ) {
+				$content = '';
+				if ( isset( $product_tab['callback'] ) ) {
+					ob_start();
+					call_user_func( $product_tab['callback'], $key, $product_tab );
+					$content = ob_get_clean();
+				}
+
+				$tab_item = [ 
+					'title' => wp_kses_post( apply_filters( 'woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key ) ),
+					'content' => $content,
+					'isOpen' => 0,
+					'location' => ''
+				];
+
+				$formatted_additional_tabs[] = apply_filters( 'wooless_tab_' . $key, $tab_item, $product_tab, $product );
+			}
+		}
+		$product = $orginal_product;
+		return $formatted_additional_tabs;
 	}
 
 	public function get_thumnail( $product ) {
 		// // Get the thumbnail
-		$product_id = $product->get_id();
-		$parent_id  = $product->get_parent_id();
+		$product_id   = $product->get_id();
+		$parent_id    = $product->get_parent_id();
+		$thumbnail_id = get_post_thumbnail_id( $product_id );
 
 		$should_use_parent_thumbnail = $product->is_type( 'variation' ) && empty( $thumbnail_id );
-		$thumbnail_id                = $should_use_parent_thumbnail ? get_post_thumbnail_id( $parent_id ) : get_post_thumbnail_id( $product_id );
+		if ( $should_use_parent_thumbnail ) {
+			$thumbnail_id = get_post_thumbnail_id( $parent_id );
+		}
 
 		$attachment         = get_post( $thumbnail_id );
 		$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
@@ -349,6 +387,26 @@ class Product extends BaseCollection {
 		return apply_filters( 'wooless_product_sale_price', $default_sale_price, $product->get_id(), $product );
 	}
 
+	public function get_stock_status( $product ) {
+		$type         = $product->get_type();
+		$stock_status = $product->get_stock_status();
+		if ( 'variable' == $type ) {
+			$available_variations = $product->get_available_variations();
+			$stock_status         = 'outofstock';
+
+			if ( ! empty( $available_variations ) ) {
+				foreach ( $available_variations as $variation ) {
+					if ( $variation['is_in_stock'] && $variation['is_purchasable'] ) {
+						$stock_status = 'instock';
+						break; // Stop checking once we find a variation in stock
+					}
+				}
+			}
+		}
+
+		return $stock_status;
+	}
+
 	public function generate_typesense_data( $product ) {
 		if ( empty( $product ) ) {
 			return null;
@@ -405,7 +463,7 @@ class Product extends BaseCollection {
 			'salePrice' => $this->get_sale_price( $product, $currency ),
 			'onSale' => $product->is_on_sale(),
 			'stockQuantity' => empty( $stock_quantity ) ? 0 : $stock_quantity,
-			'stockStatus' => $product->get_stock_status(),
+			'stockStatus' => $this->get_stock_status( $product ),
 			'backorder' => $product->get_backorders(),
 			'shippingClass' => $product->get_shipping_class(),
 			'updatedAt' => strtotime( $updated_at ? $updated_at : $current_time ),
