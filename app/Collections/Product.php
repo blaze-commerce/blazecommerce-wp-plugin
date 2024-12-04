@@ -392,7 +392,16 @@ class Product extends BaseCollection {
 		$stock_status = $product->get_stock_status();
 		if ( 'variable' == $type ) {
 			$available_variations = $product->get_available_variations();
-			$stock_status         = ! empty( $available_variations ) ? 'instock' : 'outofstock';
+			$stock_status         = 'outofstock';
+
+			if ( ! empty( $available_variations ) ) {
+				foreach ( $available_variations as $variation ) {
+					if ( $variation['is_in_stock'] && $variation['is_purchasable'] ) {
+						$stock_status = 'instock';
+						break; // Stop checking once we find a variation in stock
+					}
+				}
+			}
 		}
 
 		return $stock_status;
