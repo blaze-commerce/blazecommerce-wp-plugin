@@ -141,6 +141,16 @@ class Page extends BaseCollection {
 			)
 		);
 
+		if ( 'post' == $page->post_type ) {
+			$blog_page = get_option( 'page_for_posts' );
+			if ( ! empty( $blog_page ) ) {
+				$breadcrumbs[] = array(
+					'title' => get_the_title( $blog_page ),
+					'url' => get_permalink( $blog_page )
+				);
+			}
+		}
+
 		$ancestors = get_post_ancestors( $page );
 
 		// Reverse the order so the breadcrumbs go from parent to child
@@ -211,8 +221,11 @@ class Page extends BaseCollection {
 						}
 						unset( $document );
 					}
-				}
 
+				}
+				// Restore original post data. 
+				wp_reset_postdata();
+				wp_reset_query();
 
 				$import_response = $this->collection()->documents->import( $post_datas );
 
