@@ -117,6 +117,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\Elementor',
 			'\\BlazeWooless\\Extensions\\SmartCoupons',
 			'\\BlazeWooless\\Extensions\\NiWooCommerceProductVariationsTable',
+			'\\BlazeWooless\\Extensions\\B2BWholesaleSuite',
 		);
 
 		foreach ( $extensions as $extension ) {
