@@ -94,6 +94,7 @@ class Product extends BaseCollection {
 			array( 'name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true ),
 			array( 'name' => 'taxonomies.breadcrumbs', 'type' => 'object[]', 'optional' => true ),
 			array( 'name' => 'taxonomies.filters', 'type' => 'string[]', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'taxonomies.metaData', 'type' => 'object[]', 'optional' => true, 'facet' => true ),
 			//@TODO - Transfer to judme extension
 			array( 'name' => 'judgemeReviews', 'type' => 'object', 'optional' => true ),
 			array( 'name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true ),
@@ -573,6 +574,7 @@ class Product extends BaseCollection {
 			'parentTerm' => $term_parent,
 			'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
 			'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
+			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $product_term->term_id ),
 		), $product_term );
 	}
 
