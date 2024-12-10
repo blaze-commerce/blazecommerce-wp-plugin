@@ -15,11 +15,38 @@ class WoocommerceGiftCards {
 
 	public function __construct() {
 		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'pw-gift-cards/pw-gift-cards.php' ) ) {
+			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'set_fields' ), 99, 1 );
 			add_filter( 'blaze_wooless_additional_site_info', array( $this, 'giftcard_email_content' ), 10, 1 );
 			add_filter( 'wooless_product_query_args', array( $this, 'giftcard_product_query_args' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_gift_card_data' ), 99, 3 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'set_meta_data' ), 99, 3 );
 		}
+	}
+
+	/**
+	 * Set collection fields for gift card products
+	 * @param array $fields
+	 * @return array
+	 */
+	public function set_fields( $fields ) {
+		$fields[] = array( 'name' => 'metaData.giftCard', 'type' => 'object', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.allowCustomAmount', 'type' => 'bool', 'optional' => true );
+
+		$fields[] = array( 'name' => 'metaData.giftCard.min', 'type' => 'object', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.min.USD', 'type' => 'float', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.min.NZD', 'type' => 'float', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.min.AUD', 'type' => 'float', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.min.CAD', 'type' => 'float', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.min.GBP', 'type' => 'float', 'optional' => true );
+
+		$fields[] = array( 'name' => 'metaData.giftCard.max', 'type' => 'object', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.max.USD', 'type' => 'float', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.max.NZD', 'type' => 'float', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.max.AUD', 'type' => 'float', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.max.CAD', 'type' => 'float', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.giftCard.max.GBP', 'type' => 'float', 'optional' => true );
+
+		return $fields;
 	}
 
 	public function giftcard_email_content( $additional_settings ) {
@@ -97,15 +124,15 @@ class WoocommerceGiftCards {
 			$allowed_custom_amounts = boolval( get_post_meta( $product_id, '_pwgc_custom_amount_allowed', true ) );
 
 			if ( $allowed_custom_amounts ) {
-				$min_price = (string) get_post_meta( $product_id, '_pwgc_custom_amount_min', true );
-				$max_price = (string) get_post_meta( $product_id, '_pwgc_custom_amount_max', true );
+				$min_price = floatval( get_post_meta( $product_id, '_pwgc_custom_amount_min', true ) );
+				$max_price = floatval( get_post_meta( $product_id, '_pwgc_custom_amount_max', true ) );
 			} else {
 				$variation_prices = array_filter( $product->get_variation_prices(), function ($price) {
 					return $price > 0;
 				} );
 
-				$min_price = (string) min( $variation_prices['price'] );
-				$max_price = (string) max( $variation_prices['price'] );
+				$min_price = floatval( min( $variation_prices['price'] ) );
+				$max_price = floatval( max( $variation_prices['price'] ) );
 			}
 
 			// later we need to check if include tax is enabled or multicurrency is enabled
