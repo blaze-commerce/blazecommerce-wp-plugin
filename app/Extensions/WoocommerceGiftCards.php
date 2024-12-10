@@ -64,7 +64,7 @@ class WoocommerceGiftCards {
 			// re-initialize $product if price is 0
 			if ( $product_price == 0 ) {
 
-				$allowed_custom_amounts = boolval( get_post_meta( $product_id, '_pwgc_allowed_custom_amounts', true ) );
+				$allowed_custom_amounts = boolval( get_post_meta( $product_id, '_pwgc_custom_amount_allowed', true ) );
 
 				if ( ! empty( $allowed_custom_amounts ) ) {
 					$product_price = get_post_meta( $product_id, '_pwgc_custom_amount_min', true );
@@ -91,10 +91,33 @@ class WoocommerceGiftCards {
 	public function set_meta_data( $product_data, $product_id, $product ) {
 
 		if ( $product->is_type( 'pw-gift-card' ) ) {
+
+			$currency = get_woocommerce_currency();
+
+			$allowed_custom_amounts = boolval( get_post_meta( $product_id, '_pwgc_custom_amount_allowed', true ) );
+
+			if ( $allowed_custom_amounts ) {
+				$min_price = (string) get_post_meta( $product_id, '_pwgc_custom_amount_min', true );
+				$max_price = (string) get_post_meta( $product_id, '_pwgc_custom_amount_max', true );
+			} else {
+				$variation_prices = array_filter( $product->get_variation_prices(), function ($price) {
+					return $price > 0;
+				} );
+
+				$min_price = (string) min( $variation_prices['price'] );
+				$max_price = (string) max( $variation_prices['price'] );
+			}
+
+			// later we need to check if include tax is enabled or multicurrency is enabled
+
 			$product_data['metaData']['giftCard'] = [ 
-				'allowCustomAmount' => get_post_meta( $product_id, '_pwgc_custom_amount_allowed', true ),
-				'min' => get_post_meta( $product_id, '_pwgc_custom_amount_min', true ),
-				'max' => get_post_meta( $product_id, '_pwgc_custom_amount_max', true ),
+				'allowCustomAmount' => $allowed_custom_amounts,
+				'min' => [ 
+					$currency => $min_price
+				],
+				'max' => [ 
+					$currency => $max_price
+				],
 			];
 		}
 
