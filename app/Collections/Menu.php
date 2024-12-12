@@ -103,12 +103,12 @@ class Menu extends BaseCollection {
 						if ( isset( $menu_items_by_id[ $item->menu_item_parent ] ) ) {
 							$menu_items_by_id[ $item->menu_item_parent ]['children'][] = &$menu_items_by_id[ $item->ID ];
 						} else {
-							// Ensure parent exists, even as a placeholder
-							$menu_items_by_id[ $item->menu_item_parent ] = [
-								'title' => '',
-								'url' => '',
-								'children' => [&$menu_items_by_id[ $item->ID ]],
-							];
+							// If there's a parent, add it as a child of its parent
+							$menu_item_data[ $item->menu_item_parent ]['children'][] = array(
+								'title' => $item->title,
+								'url' => $item->url,
+							);
+							$menu_item_data[ $item->menu_item_parent ]['parentId'] = $item->menu_item_parent;
 						}
 					}
 				}
