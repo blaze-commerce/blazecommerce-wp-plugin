@@ -135,6 +135,30 @@ class Product extends BaseCollection {
 		return apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
 	}
 
+	public function get_product_ids( $page, $batch_size = 20 ) {
+		global $wpdb;
+		// Calculate the offset
+		$offset = ( $page - 1 ) * $batch_size;
+
+		// Query to select post IDs from the posts table with pagination
+		$query = $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ('product', 'product_variation') LIMIT %d OFFSET %d",
+			$batch_size,
+			$offset
+		);
+
+		// Get the results as an array of IDs
+		return $wpdb->get_col( $query );
+	}
+
+	public function get_total_pages( $batch_size = 20 ) {
+		global $wpdb;
+		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ('product', 'product_variation')";
+		$total_posts = $wpdb->get_var( $query );
+		$total_pages = ceil( $total_posts / $batch_size );
+		return $total_pages;
+	}
+
 	public function initialize() {
 		$logger  = wc_get_logger();
 		$context = array( 'source' => 'wooless-product-collection-initialize' );
@@ -193,20 +217,33 @@ class Product extends BaseCollection {
 			$batch_size              = 5; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
-			$query_args              = $this->get_product_query_args( $page, $batch_size );
-
-			$products = \wc_get_products( $query_args );
+			$product_ids             = $this->get_product_ids( $page, $batch_size );
+			$logger->debug(
+				sprintf( 
+					'Page: %d; Batch size: %d; Product Ids: [%s]',
+					$page,
+					$batch_size,
+					implode( ', ', $product_ids )
+				),
+				$context
+			);
 
 			$products_batch = array();
 
 			// Prepare products for indexing in Typesense
-			foreach ( $products as $product ) {
-				$products_batch[] = $this->generate_typesense_data( $product );
+			foreach ( $product_ids as $product_id ) {
+				if ( \get_post_status( $product_id ) !== 'publish' ) {
+					continue;
+				}
+
+				$product = \wc_get_product( $product_id );
+
+				$generated_product = $this->generate_typesense_data( $product );
+				$products_batch[] = $generated_product;
 
 				// Free memory
 				unset( $product_data );
 			}
-
 
 			// Import products to Typesense
 			try {
@@ -227,9 +264,16 @@ class Product extends BaseCollection {
 			}
 
 
-			$next_page          = $page + 1;
-			$query_args['page'] = $next_page;
-			$has_next_data      = ! empty( \wc_get_products( $query_args ) );
+			$total_pages   = $this->get_total_pages( $batch_size );
+			$next_page     = $page + 1;
+			$has_next_data = $page < $total_pages;
+			$logger->debug(
+				sprintf( 
+					'Total pages: %d',
+					$total_pages,
+				),
+				$context
+			);
 			echo json_encode( array(
 				'imported_products_count' => count( $successful_imports ),
 				'total_imports' => $total_imports,
