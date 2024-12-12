@@ -717,16 +717,21 @@
                         if (onApiRequestSuccess) {
                             shouldContinue = onApiRequestSuccess(result, page);
                         }
-                        activePromises--;
-                        if (shouldContinue) {
-                            handleRequest(nextPage++);
-                        }
+                        
+                        setTimeout(function () {
+                            activePromises--;
+                            if (shouldContinue) {
+                                handleRequest(nextPage++);
+                            }
+                        }, 2000);
                     })
             };
 
             // Fire initial requests
             for (var i = 0; i < initialPages.length; i++) {
-                handleRequest(initialPages[i]);
+                setTimeout(function () {
+                    handleRequest(initialPages[i]);
+                }, 1000 * i);
             }
 
             // Wait until all promises have been handled
@@ -740,7 +745,7 @@
                         onFinish(elapsedTime);
                     }
                 }
-            }, 50); // Small delay to avoid tight loop
+            }, 2000); // Small delay to avoid tight loop
         },
 
         importData: function (collection, message, hideLoader = false, params = {}) {
@@ -847,7 +852,7 @@
                 return _this.importProductData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importProductData,
-                        initialPages: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                        initialPages: [2, 3, 4, 5, 6],
                         onApiRequestSuccess: function (result, page) {
                             _this.importedProductsCount += result.imported_products_count;
                             _this.totalProductImports += result.total_imports;
@@ -895,7 +900,7 @@
                 return _this.importTaxonomyTermData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importTaxonomyTermData,
-                        initialPages: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                        initialPages: [2, 3, 4, 5, 6],
                         onApiRequestSuccess: function (result, page) {
                             _this.importedTaxonomyCount += result.imported_count;
                             _this.totalTaxonomyImports += result.total_imports;
