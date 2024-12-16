@@ -717,21 +717,17 @@
                         if (onApiRequestSuccess) {
                             shouldContinue = onApiRequestSuccess(result, page);
                         }
-                        
-                        setTimeout(function () {
-                            activePromises--;
-                            if (shouldContinue) {
-                                handleRequest(nextPage++);
-                            }
-                        }, 2000);
+
+                        activePromises--;
+                        if (shouldContinue) {
+                            handleRequest(nextPage++);
+                        }
                     })
             };
 
             // Fire initial requests
             for (var i = 0; i < initialPages.length; i++) {
-                setTimeout(function () {
-                    handleRequest(initialPages[i]);
-                }, 1000 * i);
+                handleRequest(initialPages[i]);
             }
 
             // Wait until all promises have been handled
@@ -852,7 +848,7 @@
                 return _this.importProductData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importProductData,
-                        initialPages: [2, 3, 4, 5, 6],
+                        initialPages: [2],
                         onApiRequestSuccess: function (result, page) {
                             _this.importedProductsCount += result.imported_products_count;
                             _this.totalProductImports += result.total_imports;
@@ -900,7 +896,7 @@
                 return _this.importTaxonomyTermData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importTaxonomyTermData,
-                        initialPages: [2, 3, 4, 5, 6],
+                        initialPages: [2],
                         onApiRequestSuccess: function (result, page) {
                             _this.importedTaxonomyCount += result.imported_count;
                             _this.totalTaxonomyImports += result.total_imports;
