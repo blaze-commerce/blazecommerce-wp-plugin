@@ -81,6 +81,7 @@ class WoocommerceGiftCards {
 		if ( $product_data['productType'] === 'pw-gift-card' ) {
 
 			$variation_prices = $product->get_variation_prices();
+			$currency = get_woocommerce_currency();
 
 			// find the lowest price and exclude 0
 			$prices = array_filter( $variation_prices['price'], function ($price) {
@@ -100,6 +101,13 @@ class WoocommerceGiftCards {
 			}
 
 			$price = apply_filters( 'blaze_wooless_calculated_converted_single_price', $product_price );
+
+			// fallback if the aelia currency switcher is disabled
+			if ( ! array_key_exists( $currency, $price ) ) {
+				$price = [ 
+					$currency => $price
+				];
+			}
 
 			$product_data['price'] = $price;
 			$product_data['regularPrice'] = $price;
