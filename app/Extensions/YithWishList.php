@@ -50,6 +50,13 @@ class YithWishList {
 				'cookie_hash' => $yith_session['cookie_hash'],
 			];
 
+			foreach ( $_COOKIE as $name => $value ) {
+				if ( strpos( $name, 'yith_wcwl' ) === 0 ) {
+					unset( $_COOKIE[ $name ] );
+					wc_setcookie( $name, '', time() - 3600, '/' );
+				}
+			}
+
 			$use_secure_cookie = apply_filters( 'yith_wcwl_session_use_secure_cookie', wc_site_is_https() && is_ssl() );
 			$cookie_name       = apply_filters( 'yith_wcwl_session_cookie', 'yith_wcwl_session_' . $yith_session['cookie_hash'] );
 			yith_setcookie( $cookie_name, $cookie_value, $yith_session['session_expiration'], $use_secure_cookie, true );
