@@ -20,6 +20,7 @@ class WoocommerceGiftCards {
 			add_filter( 'wooless_product_query_args', array( $this, 'giftcard_product_query_args' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_gift_card_data' ), 99, 3 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'set_meta_data' ), 99, 3 );
+			add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_card_detail' ), 10, 1 );
 		}
 	}
 
@@ -149,5 +150,17 @@ class WoocommerceGiftCards {
 		}
 
 		return $product_data;
+	}
+
+	public function add_card_detail( $site_infos ) {
+		global $pw_gift_cards_email_designer;
+
+		$design = $pw_gift_cards_email_designer->get_design_by_id( 0 );
+
+		$site_infos['gift_card_header_logo'] = $design['logo_image'];
+		$site_infos['gift_card_header_text'] = $design['title'];
+		$site_infos['gift_card_footer_text'] = $design['pdf_link_text'];
+
+		return $site_infos;
 	}
 }
