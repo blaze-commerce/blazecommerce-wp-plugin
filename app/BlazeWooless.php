@@ -111,6 +111,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductAddons',
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
+			'\\BlazeWooless\\Extensions\\WooDiscountRules',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
