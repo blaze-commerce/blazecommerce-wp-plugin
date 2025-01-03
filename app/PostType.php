@@ -95,7 +95,9 @@ class PostType {
 			if ( ! empty( $document ) ) {
 				// Index the page/post data in Typesense
 				try {
+					do_action( 'ts_before_page_upsert', $post );
 					$page_collection->upsert( $document );
+					do_action( 'ts_page_upsert', $post );
 				} catch (\Exception $e) {
 
 				}
