@@ -107,18 +107,6 @@ class WooDiscountRules {
 				}
 			}
 
-			do_action(
-				"inspect",
-				[ 
-					"sync_product_data",
-					[ 
-						"product_categories" => $product_categories,
-						"discount_rules" => $discount_rules,
-						"is_applied" => $is_applied,
-					]
-				]
-			);
-
 			if ( $is_applied ) {
 
 				$product_data['metaData']['discountRule'] = [ 
