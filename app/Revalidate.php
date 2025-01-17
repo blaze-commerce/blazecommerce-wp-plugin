@@ -49,7 +49,7 @@ class Revalidate {
 
 	public function revalidate_page_path( $post ) {
 		$page_url = array(
-			wp_make_link_relative( $this->get_object_permalink( $post->ID ) )
+			'/page/' . $post->post_name
 		);
 
 		$event_time = WC()->call_function( 'time' ) + 1;
