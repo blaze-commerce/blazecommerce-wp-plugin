@@ -86,6 +86,7 @@ class Product extends BaseCollection {
 			array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ),
 			// Had to use string[] to type base on https://github.com/typesense/typesense/issues/227#issuecomment-1364072388 because ts is throwing errors after updgrade that the data is not an array
 			array( 'name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.termId', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
 			array( 'name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true ),
 			array( 'name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
 			array( 'name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
@@ -219,7 +220,7 @@ class Product extends BaseCollection {
 			$total_imports           = 0;
 			$product_ids             = $this->get_product_ids( $page, $batch_size );
 			$logger->debug(
-				sprintf( 
+				sprintf(
 					'Page: %d; Batch size: %d; Product Ids: [%s]',
 					$page,
 					$batch_size,
@@ -239,7 +240,7 @@ class Product extends BaseCollection {
 				$product = \wc_get_product( $product_id );
 
 				$generated_product = $this->generate_typesense_data( $product );
-				$products_batch[] = $generated_product;
+				$products_batch[]  = $generated_product;
 
 				// Free memory
 				unset( $product_data );
@@ -268,7 +269,7 @@ class Product extends BaseCollection {
 			$next_page     = $page + 1;
 			$has_next_data = $page < $total_pages;
 			$logger->debug(
-				sprintf( 
+				sprintf(
 					'Total pages: %d',
 					$total_pages,
 				),
@@ -610,6 +611,7 @@ class Product extends BaseCollection {
 
 		return apply_filters( 'blaze_wooless_product_taxonomy_item', array(
 			'name' => $term_name,
+			'termId' => (string) $product_term->term_id,
 			'url' => get_term_link( $product_term->term_id ),
 			'type' => $taxonomy,
 			'slug' => $term_slug,
