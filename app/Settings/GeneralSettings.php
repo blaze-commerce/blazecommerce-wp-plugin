@@ -264,7 +264,7 @@ class GeneralSettings extends BaseSettings {
 
 
 
-		return $fields;
+		return apply_filters( 'blaze_wooless_general_settings', $fields );
 	}
 
 
