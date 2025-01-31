@@ -139,6 +139,10 @@ class SiteInfo extends BaseCollection {
 					'name' => 'blog_page_slug',
 					'value' => $blog_page ? get_post_field( 'post_name', $blog_page ) : '',
 				),
+				array(
+					'name' => 'woocommerce_permalinks',
+					'value' => get_option( 'woocommerce_permalinks' ),
+				),
 			);
 
 			$datas[] = $this->site_logo_settings();
