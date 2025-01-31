@@ -615,6 +615,8 @@
         syncPagesLink: '#sync-pages-link',
         syncSiteInfoLink: '#sync-site-info-link',
         syncAllLink: '#sync-all-link',
+        redeployButton: '#redeploy',
+        redeployResultContainer: '#redeploy-result',
 
         syncInProgress: false,
 
@@ -654,6 +656,42 @@
             $(document.body).on('click', this.syncPagesLink, this.importPages.bind(this));
             $(document.body).on('click', this.syncSiteInfoLink, this.importSiteInfo.bind(this));
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
+            $(document.body).on('click', this.redeployButton, this.redeployStoreFront.bind(this));
+        },
+
+        checkDeployment: function () {
+            var _this = this;
+            _this.renderLoader('Checking Deployment..');
+            _this.syncInProgress = true;
+            var data = {
+                'action': 'check_deployment',
+            };
+            $.post(ajaxurl, data).done(function (response) {
+                if (response.state === 'BUILDING') {
+                    _this.renderLoader('Store front is deploying..');
+                    setTimeout(function () {
+                        _this.checkDeployment();
+                    }, 120000);
+                } else if (response.state === 'READY') {
+                    $(_this.redeployButton).prop("disabled", false);
+                    _this.hideLoader();
+                    $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
+                }
+            });
+        },
+        redeployStoreFront: function (e) {
+            var _this = this;
+            e.preventDefault();
+            $(this.redeployButton).prop("disabled", true);
+            _this.renderLoader('Triggering redeploy');
+            _this.syncInProgress = true;
+            var data = {
+                'action': 'redeploy_store_front',
+            };
+            $.post(ajaxurl, data).done(function (response) {
+                _this.renderLoader(response.message);
+                _this.checkDeployment();
+            });
         },
 
         managePaginatedRequests: function ({
@@ -679,6 +717,7 @@
                         if (onApiRequestSuccess) {
                             shouldContinue = onApiRequestSuccess(result, page);
                         }
+
                         activePromises--;
                         if (shouldContinue) {
                             handleRequest(nextPage++);
@@ -702,7 +741,7 @@
                         onFinish(elapsedTime);
                     }
                 }
-            }, 50); // Small delay to avoid tight loop
+            }, 2000); // Small delay to avoid tight loop
         },
 
         importData: function (collection, message, hideLoader = false, params = {}) {
@@ -809,7 +848,7 @@
                 return _this.importProductData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importProductData,
-                        initialPages: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                        initialPages: [2],
                         onApiRequestSuccess: function (result, page) {
                             _this.importedProductsCount += result.imported_products_count;
                             _this.totalProductImports += result.total_imports;
@@ -857,7 +896,7 @@
                 return _this.importTaxonomyTermData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importTaxonomyTermData,
-                        initialPages: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                        initialPages: [2],
                         onApiRequestSuccess: function (result, page) {
                             _this.importedTaxonomyCount += result.imported_count;
                             _this.totalTaxonomyImports += result.total_imports;

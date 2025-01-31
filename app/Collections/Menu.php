@@ -74,6 +74,9 @@ class Menu extends BaseCollection {
 				// Initialize an empty array to hold the menu item data
 				$menu_item_data = [];
 
+				// Temporary array for easier nesting
+				$menu_items_by_id = [];
+
 				foreach ( $menu_items as $item ) {
 					$should_generate_menu_item_data = apply_filters( 'blaze_wooless_should_generate_menu_item_data', true, $item );
 
@@ -82,23 +85,35 @@ class Menu extends BaseCollection {
 						continue;
 					}
 
+					// Prepare the current menu item
+					$current_item = [
+						'title' => $item->title,
+						'url'   => $item->url,
+						'children' => [],
+					];
+
+					// Store the current item by its ID
+					$menu_items_by_id[ $item->ID ] = $current_item;
+
 					if ( ! $item->menu_item_parent ) {
-						// If there's no parent, add it to the top level of the nested array
-						$menu_item_data[ $item->ID ] = array(
-							'title' => $item->title,
-							'url' => $item->url,
-							'children' => array(),
-						);
+						// Top-level item
+						$menu_item_data[ $item->ID ] = &$menu_items_by_id[ $item->ID ];
 					} else {
-						// If there's a parent, add it as a child of its parent
-						$menu_item_data[ $item->menu_item_parent ]['children'][] = array(
-							'title' => $item->title,
-							'url' => $item->url,
-						);
-						$menu_item_data[ $item->menu_item_parent ]['parentId'] = $item->menu_item_parent;
+						// Add to parent's children
+						if ( isset( $menu_items_by_id[ $item->menu_item_parent ] ) ) {
+							$menu_items_by_id[ $item->menu_item_parent ]['children'][] = &$menu_items_by_id[ $item->ID ];
+						} else {
+							// If there's a parent, add it as a child of its parent
+							$menu_item_data[ $item->menu_item_parent ]['children'][] = array(
+								'title' => $item->title,
+								'url' => $item->url,
+							);
+							$menu_item_data[ $item->menu_item_parent ]['parentId'] = $item->menu_item_parent;
+						}
 					}
 				}
 
+				// Reset the top-level array to be indexed numerically
 				$menu_item_data = array_values( $menu_item_data );
 
 				// Encode the menu item data as JSON

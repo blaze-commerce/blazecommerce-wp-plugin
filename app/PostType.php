@@ -92,13 +92,17 @@ class PostType {
 		$page_collection = Page::get_instance();
 		if ( ! empty( $page_collection ) ) {
 			$document = $page_collection->get_data( $post );
+			if ( ! empty( $document ) ) {
+				// Index the page/post data in Typesense
+				try {
+					do_action( 'ts_before_page_upsert', $post );
+					$page_collection->upsert( $document );
+					do_action( 'ts_page_upsert', $post );
+				} catch (\Exception $e) {
 
-			// Index the page/post data in Typesense
-			try {
-				$page_collection->upsert( $document );
-			} catch (\Exception $e) {
-
+				}
 			}
+
 		}
 		return;
 	}

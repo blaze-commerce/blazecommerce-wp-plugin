@@ -94,6 +94,7 @@ class Product extends BaseCollection {
 			array( 'name' => 'taxonomies.parentTerm', 'type' => 'string[]', 'optional' => true ),
 			array( 'name' => 'taxonomies.breadcrumbs', 'type' => 'object[]', 'optional' => true ),
 			array( 'name' => 'taxonomies.filters', 'type' => 'string[]', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'taxonomies.metaData', 'type' => 'object[]', 'optional' => true, 'facet' => true ),
 			//@TODO - Transfer to judme extension
 			array( 'name' => 'judgemeReviews', 'type' => 'object', 'optional' => true ),
 			array( 'name' => 'judgemeReviews.id', 'type' => 'int64', 'optional' => true ),
@@ -132,6 +133,30 @@ class Product extends BaseCollection {
 		$fields = array_merge_recursive( $fields, $recommendation_schema );
 		$fields = array_merge_recursive( $fields, $this->get_price_schema() );
 		return apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
+	}
+
+	public function get_product_ids( $page, $batch_size = 20 ) {
+		global $wpdb;
+		// Calculate the offset
+		$offset = ( $page - 1 ) * $batch_size;
+
+		// Query to select post IDs from the posts table with pagination
+		$query = $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ('product', 'product_variation') LIMIT %d OFFSET %d",
+			$batch_size,
+			$offset
+		);
+
+		// Get the results as an array of IDs
+		return $wpdb->get_col( $query );
+	}
+
+	public function get_total_pages( $batch_size = 20 ) {
+		global $wpdb;
+		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ('product', 'product_variation')";
+		$total_posts = $wpdb->get_var( $query );
+		$total_pages = ceil( $total_posts / $batch_size );
+		return $total_pages;
 	}
 
 	public function initialize() {
@@ -192,20 +217,33 @@ class Product extends BaseCollection {
 			$batch_size              = 5; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
-			$query_args              = $this->get_product_query_args( $page, $batch_size );
-
-			$products = \wc_get_products( $query_args );
+			$product_ids             = $this->get_product_ids( $page, $batch_size );
+			$logger->debug(
+				sprintf( 
+					'Page: %d; Batch size: %d; Product Ids: [%s]',
+					$page,
+					$batch_size,
+					implode( ', ', $product_ids )
+				),
+				$context
+			);
 
 			$products_batch = array();
 
 			// Prepare products for indexing in Typesense
-			foreach ( $products as $product ) {
-				$products_batch[] = $this->generate_typesense_data( $product );
+			foreach ( $product_ids as $product_id ) {
+				if ( \get_post_status( $product_id ) !== 'publish' ) {
+					continue;
+				}
+
+				$product = \wc_get_product( $product_id );
+
+				$generated_product = $this->generate_typesense_data( $product );
+				$products_batch[] = $generated_product;
 
 				// Free memory
 				unset( $product_data );
 			}
-
 
 			// Import products to Typesense
 			try {
@@ -226,9 +264,16 @@ class Product extends BaseCollection {
 			}
 
 
-			$next_page          = $page + 1;
-			$query_args['page'] = $next_page;
-			$has_next_data      = ! empty( \wc_get_products( $query_args ) );
+			$total_pages   = $this->get_total_pages( $batch_size );
+			$next_page     = $page + 1;
+			$has_next_data = $page < $total_pages;
+			$logger->debug(
+				sprintf( 
+					'Total pages: %d',
+					$total_pages,
+				),
+				$context
+			);
 			echo json_encode( array(
 				'imported_products_count' => count( $successful_imports ),
 				'total_imports' => $total_imports,
@@ -266,17 +311,55 @@ class Product extends BaseCollection {
 		}
 
 		unset( $additional_tabs );
-
+		$formatted_additional_tabs = $this->get_woocommerce_product_tabs( $product, $formatted_additional_tabs );
 		return apply_filters( 'wooless_product_tabs', $formatted_additional_tabs, $product_id, $product );
+	}
+
+	public function get_woocommerce_product_tabs( $product_args, $formatted_additional_tabs ) {
+		global $product;
+		$orginal_product    = $product;
+		$GLOBALS['product'] = $product_args;
+		$product            = $product_args;
+
+		$product_tabs = apply_filters( 'woocommerce_product_tabs', array() );
+		if ( ! empty( $product_tabs ) ) {
+			if ( isset( $product_tabs['description'] ) ) {
+				// We are removing desription because this is processed by the frontend separately 
+				unset( $product_tabs['description'] );
+			}
+
+			foreach ( $product_tabs as $key => $product_tab ) {
+				$content = '';
+				if ( isset( $product_tab['callback'] ) ) {
+					ob_start();
+					call_user_func( $product_tab['callback'], $key, $product_tab );
+					$content = ob_get_clean();
+				}
+
+				$tab_item = [ 
+					'title' => wp_kses_post( apply_filters( 'woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key ) ),
+					'content' => $content,
+					'isOpen' => 0,
+					'location' => ''
+				];
+
+				$formatted_additional_tabs[] = apply_filters( 'wooless_tab_' . $key, $tab_item, $product_tab, $product );
+			}
+		}
+		$product = $orginal_product;
+		return $formatted_additional_tabs;
 	}
 
 	public function get_thumnail( $product ) {
 		// // Get the thumbnail
-		$product_id = $product->get_id();
-		$parent_id  = $product->get_parent_id();
+		$product_id   = $product->get_id();
+		$parent_id    = $product->get_parent_id();
+		$thumbnail_id = get_post_thumbnail_id( $product_id );
 
 		$should_use_parent_thumbnail = $product->is_type( 'variation' ) && empty( $thumbnail_id );
-		$thumbnail_id                = $should_use_parent_thumbnail ? get_post_thumbnail_id( $parent_id ) : get_post_thumbnail_id( $product_id );
+		if ( $should_use_parent_thumbnail ) {
+			$thumbnail_id = get_post_thumbnail_id( $parent_id );
+		}
 
 		$attachment         = get_post( $thumbnail_id );
 		$thumbnail_alt_text = get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true );
@@ -349,6 +432,26 @@ class Product extends BaseCollection {
 		return apply_filters( 'wooless_product_sale_price', $default_sale_price, $product->get_id(), $product );
 	}
 
+	public function get_stock_status( $product ) {
+		$type         = $product->get_type();
+		$stock_status = $product->get_stock_status();
+		if ( 'variable' == $type ) {
+			$available_variations = $product->get_available_variations();
+			$stock_status         = 'outofstock';
+
+			if ( ! empty( $available_variations ) ) {
+				foreach ( $available_variations as $variation ) {
+					if ( $variation['is_in_stock'] && $variation['is_purchasable'] ) {
+						$stock_status = 'instock';
+						break; // Stop checking once we find a variation in stock
+					}
+				}
+			}
+		}
+
+		return $stock_status;
+	}
+
 	public function generate_typesense_data( $product ) {
 		if ( empty( $product ) ) {
 			return null;
@@ -384,6 +487,11 @@ class Product extends BaseCollection {
 			}
 		}
 
+		$updated_at   = $product->get_date_modified();
+		$created_at   = $product->get_date_created();
+		$current_time = current_time( 'Y-m-d H:i:s' );
+		$product_slug = get_post_field( 'post_name', $product->get_id() );
+
 		$product_data = array(
 			'id' => strval( $product->get_id() ),
 			'productId' => strval( $product->get_id() ),
@@ -392,19 +500,19 @@ class Product extends BaseCollection {
 			'description' => wpautop( $product->get_description() ),
 			'name' => $product->get_name(),
 			'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
-			'slug' => $product->get_slug(),
+			'slug' => ! empty( $product_slug ) ? $product_slug : sanitize_title( $product->get_name() ),
 			'thumbnail' => $this->get_thumnail( $product ),
-			'sku' => $product->get_sku(),
+			'sku' => strval( $product->get_sku() ),
 			'price' => $this->get_price( $product, $currency ),
 			'regularPrice' => $this->get_regular_price( $product, $currency ),
 			'salePrice' => $this->get_sale_price( $product, $currency ),
 			'onSale' => $product->is_on_sale(),
 			'stockQuantity' => empty( $stock_quantity ) ? 0 : $stock_quantity,
-			'stockStatus' => $product->get_stock_status(),
+			'stockStatus' => $this->get_stock_status( $product ),
 			'backorder' => $product->get_backorders(),
 			'shippingClass' => $product->get_shipping_class(),
-			'updatedAt' => strtotime( $product->get_date_modified() ),
-			'createdAt' => strtotime( $product->get_date_created() ),
+			'updatedAt' => strtotime( $updated_at ? $updated_at : $current_time ),
+			'createdAt' => strtotime( $created_at ? $created_at : $current_time ),
 			'publishedAt' => (int) $published_at,
 			'daysPassed' => $days_passed,
 			'isFeatured' => $product->get_featured(),
@@ -447,6 +555,73 @@ class Product extends BaseCollection {
 		}
 	}
 
+
+	public function get_all_parent_categories_recursive( $term_id, $taxonomy, &$parent_terms = [] ) {
+		$term = get_term( $term_id, $taxonomy );
+		if ( $term && $term->parent != 0 && ! in_array( $term->parent, $parent_terms ) ) {
+			$parent_terms[] = $term->parent;
+			$this->get_all_parent_categories_recursive( $term->parent, $taxonomy, $parent_terms );
+		}
+		return $parent_terms;
+	}
+
+
+	public function get_all_categories_with_parents( $product_id ) {
+		$current_categories = wp_get_object_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
+
+		$all_categories = [];
+		foreach ( $current_categories as $category_id ) {
+			if ( ! in_array( $category_id, $all_categories ) ) {
+				$all_categories[] = $category_id;
+			}
+			// Get all parent categories recursively
+			$parent_categories = $this->get_all_parent_categories_recursive( $category_id, 'product_cat' );
+			foreach ( $parent_categories as $parent_category_id ) {
+				if ( ! in_array( $parent_category_id, $all_categories ) ) {
+					$all_categories[] = $parent_category_id;
+				}
+			}
+		}
+
+		return $all_categories;
+	}
+
+	public function get_product_taxonomy_item( $product_term ) {
+		$taxonomy  = $product_term->taxonomy;
+		$term_name = $product_term->name;
+		$term_slug = $product_term->slug;
+		// Get Parent Term
+		$parentTerm       = get_term( $product_term->parent, $taxonomy );
+		$term_parent      = isset( $parentTerm->name ) ? $parentTerm->name : '';
+		$termOrder        = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
+		$term_permalink   = wp_make_link_relative( get_term_link( $product_term->term_id ) );
+		$term_parent_slug = $parentTerm->slug;
+
+		// Get the thumbnail
+		$term_thumbnail_id = get_term_meta( $product_term->term_id, 'thumbnail_id', true );
+		$term_attachment   = get_post( $term_thumbnail_id );
+
+		$term_thumbnail = array(
+			'id' => $term_thumbnail_id,
+			'title' => $term_attachment->post_title,
+			'altText' => strval( get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ) ),
+			'src' => wp_get_attachment_url( $term_thumbnail_id ),
+		);
+
+		return apply_filters( 'blaze_wooless_product_taxonomy_item', array(
+			'name' => $term_name,
+			'url' => get_term_link( $product_term->term_id ),
+			'type' => $taxonomy,
+			'slug' => $term_slug,
+			'nameAndType' => $product_term->name . '|' . $taxonomy,
+			'childAndParentTerm' => $term_parent ? $product_term->name . '|' . $term_parent : '',
+			'parentTerm' => $term_parent,
+			'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
+			'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
+			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $product_term->term_id ),
+		), $product_term );
+	}
+
 	public function get_taxonomies( $product ) {
 		$taxonomies_data = [];
 		$taxonomies      = get_object_taxonomies( 'product' );
@@ -459,7 +634,10 @@ class Product extends BaseCollection {
 
 		foreach ( $taxonomies as $taxonomy ) {
 			// Exclude taxonomies based on their names
-			if ( preg_match( '/^(ef_|elementor|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ) {
+			if (
+				preg_match( '/^(ef_|elementor|nav_|ml-|ufaq|translation_priority|wpcode_)/', $taxonomy ) ||
+				'product_cat' == $taxonomy
+			) {
 				continue;
 			}
 
@@ -467,47 +645,25 @@ class Product extends BaseCollection {
 
 			if ( ! empty( $product_terms ) && ! is_wp_error( $product_terms ) ) {
 				foreach ( $product_terms as $product_term ) {
-
-					$term_name = $product_term->name;
-					$term_slug = $product_term->slug;
-					// Get Parent Term
-					$parentTerm       = get_term( $product_term->parent, $taxonomy );
-					$term_parent      = isset( $parentTerm->name ) ? $parentTerm->name : '';
-					$termOrder        = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
-					$term_permalink   = wp_make_link_relative( get_term_link( $product_term->term_id ) );
-					$term_parent_slug = $parentTerm->slug;
-
-					// Get the thumbnail
-					$term_thumbnail_id = get_term_meta( $product_term->term_id, 'thumbnail_id', true );
-					$term_attachment   = get_post( $term_thumbnail_id );
-
-					$term_thumbnail = array(
-						'id' => $term_thumbnail_id,
-						'title' => $term_attachment->post_title,
-						'altText' => strval( get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ) ),
-						'src' => wp_get_attachment_url( $term_thumbnail_id ),
-					);
-
-
-					$taxonomies_data[] = apply_filters( 'blaze_wooless_product_taxonomy_item', array(
-						'name' => $term_name,
-						'url' => get_term_link( $product_term->term_id ),
-						'type' => $taxonomy,
-						'slug' => $term_slug,
-						'nameAndType' => $product_term->name . '|' . $taxonomy,
-						'childAndParentTerm' => $term_parent ? $product_term->name . '|' . $term_parent : '',
-						'parentTerm' => $term_parent,
-						'breadcrumbs' => apply_filters( 'blaze_wooless_generate_breadcrumbs', $product_term->term_id, $taxonomy ),
-						'filters' => $term_name . '|' . $taxonomy . '|' . $term_slug . '|' . $term_parent . '|' . $termOrder . '|' . $term_permalink . '|' . $term_parent_slug . '|' . $term_thumbnail['src'],
-					), $product_term );
-
-					unset( $parentTerm, $term_name, $term_slug, $term_parent, $termOrder );
+					$taxonomies_data[] = $this->get_product_taxonomy_item( $product_term );
 				}
 
 				unset( $product_terms );
 			}
 		}
 
+		$all_categories = $this->get_all_categories_with_parents( $product_id );
+		if ( ! empty( $all_categories ) ) {
+			$categories = get_terms( array(
+				'taxonomy' => 'product_cat',
+				'include' => $all_categories
+			) );
+			if ( ! empty( $categories ) ) {
+				foreach ( $categories as $product_term ) {
+					$taxonomies_data[] = $this->get_product_taxonomy_item( $product_term );
+				}
+			}
+		}
 		unset( $taxonomies );
 
 		return $taxonomies_data;

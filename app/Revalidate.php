@@ -2,6 +2,8 @@
 
 namespace BlazeWooless;
 
+use BlazeWooless\Collections\Product;
+
 class Revalidate {
 	private static $instance = null;
 
@@ -15,6 +17,7 @@ class Revalidate {
 
 	public function __construct() {
 		add_action( 'ts_product_update', array( $this, 'revalidate_frontend_path' ), 10, 2 );
+		add_action( 'ts_page_upsert', array( $this, 'revalidate_page_path' ), 10, 1 );
 		add_action( 'next_js_revalidation_event', array( $this, 'do_next_js_revalidation_event' ), 10, 1 );
 	}
 
@@ -34,8 +37,23 @@ class Revalidate {
 			wp_make_link_relative( $this->get_object_permalink( $product_id ) )
 		);
 
+		$product       = wc_get_product( $product_id );
+		$taxonomies    = Product::get_instance()->get_taxonomies( $product );
+		$taxonomy_urls = array_map( function ($taxonomy) {
+			return wp_make_link_relative( $taxonomy['url'] );
+		}, $taxonomies );
+
 		$event_time = WC()->call_function( 'time' ) + 1;
-		as_schedule_single_action( $event_time, 'next_js_revalidation_event', array( $product_url ), 'blaze-wooless', true, 1 );
+		as_schedule_single_action( $event_time, 'next_js_revalidation_event', array( array_merge( $product_url, $taxonomy_urls ) ), 'blaze-wooless', true, 1 );
+	}
+
+	public function revalidate_page_path( $post ) {
+		$page_url = array(
+			'/page/' . $post->post_name
+		);
+
+		$event_time = WC()->call_function( 'time' ) + 1;
+		as_schedule_single_action( $event_time, 'next_js_revalidation_event', array( $page_url ), 'blaze-wooless', true, 1 );
 	}
 
 	public function revalidate_frontend_path( $product_id, $product ) {
