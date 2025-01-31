@@ -40,6 +40,8 @@ class SiteInfo extends BaseCollection {
 			);
 
 			$update_at = time();
+			$shop_page = get_option( 'woocommerce_shop_page_id' );
+			$blog_page = get_option( 'page_for_posts' );
 
 			$datas = array(
 				array(
@@ -128,7 +130,19 @@ class SiteInfo extends BaseCollection {
 						'displayPricesIncludingTax' => get_option( 'woocommerce_tax_display_shop' ),
 						'priceDisplaySuffix' => get_option( 'woocommerce_price_display_suffix' ),
 					]
-				)
+				),
+				array(
+					'name' => 'shop_page_slug',
+					'value' => $shop_page ? get_post_field( 'post_name', $shop_page ) : '',
+				),
+				array(
+					'name' => 'blog_page_slug',
+					'value' => $blog_page ? get_post_field( 'post_name', $blog_page ) : '',
+				),
+				array(
+					'name' => 'woocommerce_permalinks',
+					'value' => get_option( 'woocommerce_permalinks' ),
+				),
 			);
 
 			$datas[] = $this->site_logo_settings();

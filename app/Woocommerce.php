@@ -23,7 +23,7 @@ class Woocommerce {
 		add_action( 'woocommerce_trash_product', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
 		add_action( 'trashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
 		add_action( 'untrashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
-
+		add_action( 'before_delete_post', array( $this, 'before_delete_product' ) );
 
 		add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'on_checkout_update_order_meta' ), 10, 2 );
 		add_action( 'woocommerce_after_product_ordering', array( $this, 'product_reordering' ), 10, 2 );
@@ -31,7 +31,6 @@ class Woocommerce {
 		add_action( 'woocommerce_get_checkout_url', array( $this, 'append_cart_in_checkout_url' ) );
 
 		add_action( 'ts_product_update', array( $this, 'update_typesense_variation' ), 10, 2 );
-		add_action( 'ts_before_product_upsert', array( $this, 'auto_assign_parent_categories' ), 10, 1 );
 		add_action( 'wooless_variation_update', array( $this, 'variation_update' ), 10, 1 );
 
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'update_variable_product_price' ), 999, 3 );
@@ -39,6 +38,30 @@ class Woocommerce {
 		// We set the priority to 1 so that this will be the first to be executed as we will mimic how woo is adding product to cart but via graphql
 		add_filter( 'woocommerce_add_cart_item_data', array( $this, 'add_cart_item_data' ), 1, 4 );
 	}
+
+	/**
+	 * Delete typesense product when user permanently deletes a product
+	 * 
+	 * @param mixed $post_id
+	 * @return void
+	 */
+	public function before_delete_product( $post_id ) {
+		$post_type = get_post_type( $post_id );
+		if ( $post_type === 'product' || $post_type === 'product_variation' ) {
+			$product = wc_get_product( $post_id );
+			if ( $product ) {
+				try {
+					Product::get_instance()->collection()->documents[ $post_id ]->delete();
+					do_action( 'ts_product_update', $product->get_id(), $product );
+				} catch (\Exception $e) {
+					$logger  = wc_get_logger();
+					$context = array( 'source' => 'wooless-product-delete' );
+					$logger->debug( 'TS Product Delete Exception: ' . $e->getMessage(), $context );
+				}
+			}
+		}
+	}
+
 
 	public function add_cart_item_data( $cart_item_data, $product_id, $variation_id, $quantity ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
@@ -109,48 +132,18 @@ class Woocommerce {
 				$wc_product = wc_get_product( $product_id );
 
 				if ( $wc_product->get_status() == 'publish' ) {
-					try {
-						$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
-						Product::get_instance()->update( strval( $product_id ), $document_data );
-						do_action( 'ts_product_update', $product_id, $wc_product );
-					} catch (\Exception $e) {
-						error_log( "Error updating product in Typesense during checkout: " . $e->getMessage() );
-					}
+					$this->on_product_save( $product_id, $wc_product );
 				}
 			}
 		}
 	}
 
 	public function on_product_trash_or_untrash( $product_id ) {
-		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
-
-		if ( ! $enable_system ) {
-			return;
-		}
-
 		$wc_product = wc_get_product( $product_id );
 		if ( $wc_product ) {
 			$this->on_product_save( $product_id, $wc_product );
 		}
 
-	}
-
-	/**
-	 * Summary of auto_assign_parent_categories
-	 * 
-	 * We needed this function to auto select the parent product categories when product is saved to typesense. 
-	 * 
-	 * This fixes issues where parent category is not selected and ends up making the frontend not having the products
-	 * 
-	 * @param mixed $product
-	 * @return void
-	 */
-	public function auto_assign_parent_categories( $product ) {
-		$product_id     = $product->get_id();
-		$all_categories = $this->get_all_categories_with_parents( $product_id );
-
-		// Assign the terms to the product
-		wp_set_object_terms( $product_id, $all_categories, 'product_cat' );
 	}
 
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
@@ -165,7 +158,7 @@ class Woocommerce {
 			do_action( 'ts_before_product_upsert', $wc_product );
 			$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
 			Product::get_instance()->upsert( $document_data );
-			do_action( 'ts_product_update', $product_id, $wc_product );
+			do_action( 'ts_product_update', $product_id, $wc_product, $document_data );
 		} catch (\Exception $e) {
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-update' );
@@ -173,35 +166,6 @@ class Woocommerce {
 			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
 			error_log( "Error updating product in Typesense: " . $e->getMessage() );
 		}
-	}
-
-	public function get_all_parent_categories_recursive( $term_id, $taxonomy, &$parent_terms = [] ) {
-		$term = get_term( $term_id, $taxonomy );
-		if ( $term && $term->parent != 0 && ! in_array( $term->parent, $parent_terms ) ) {
-			$parent_terms[] = $term->parent;
-			$this->get_all_parent_categories_recursive( $term->parent, $taxonomy, $parent_terms );
-		}
-		return $parent_terms;
-	}
-
-	public function get_all_categories_with_parents( $product_id ) {
-		$current_categories = wp_get_object_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
-
-		$all_categories = [];
-		foreach ( $current_categories as $category_id ) {
-			if ( ! in_array( $category_id, $all_categories ) ) {
-				$all_categories[] = $category_id;
-			}
-			// Get all parent categories recursively
-			$parent_categories = $this->get_all_parent_categories_recursive( $category_id, 'product_cat' );
-			foreach ( $parent_categories as $parent_category_id ) {
-				if ( ! in_array( $parent_category_id, $all_categories ) ) {
-					$all_categories[] = $parent_category_id;
-				}
-			}
-		}
-
-		return $all_categories;
 	}
 
 	public function update_typesense_variation( $product_id, $wc_product ) {
@@ -258,12 +222,8 @@ class Woocommerce {
 		foreach ( $items as $item ) {
 			$product_id = $item->get_product_id();
 			$wc_product = wc_get_product( $product_id );
-			try {
-				$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
-				Product::get_instance()->update( strval( $product_id ), $document_data );
-				do_action( 'ts_product_update', $product_id, $wc_product );
-			} catch (\Exception $e) {
-				error_log( "Error updating product in Typesense during checkout: " . $e->getMessage() );
+			if ( $wc_product ) {
+				$this->on_product_save( $product_id, $wc_product );
 			}
 
 		}
@@ -279,7 +239,7 @@ class Woocommerce {
 	public static function get_currencies() {
 		$base_currency = get_woocommerce_currency();
 		return apply_filters( 'blaze_wooless_currencies', array(
-			$base_currency => ''
+			$base_currency => $base_currency
 		) );
 	}
 

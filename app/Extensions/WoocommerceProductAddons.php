@@ -18,6 +18,7 @@ class WoocommerceProductAddons {
 			add_action( 'ts_before_product_upsert', array( $this, 'prepare_general_product_addons' ) );
 			add_action( 'blaze_wooless_pre_sync_products', array( $this, 'prepare_general_product_addons' ) );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_product_addons_data' ), 99, 3 );
+			add_filter( 'woocommerce_add_cart_item_data', array( $this, 'woocommerce_add_cart_item_data' ), 99, 3 );
 		}
 	}
 
@@ -62,5 +63,75 @@ class WoocommerceProductAddons {
 		}
 
 		return $product_data;
+	}
+
+	public function woocommerce_add_cart_item_data( $cart_item_data, $product_id, $variation_id ) {
+		$post_data = !empty($cart_item_data['graphqlAddons']) ? $cart_item_data['graphqlAddons']: null;
+		if(empty($post_data)) {
+			// Since the request is not from wpgraphql then we just return $cart_item_data and not modify it to avoid conflicts
+			return $cart_item_data;
+		}
+
+		// Remove custom data
+		unset($cart_item_data['graphqlAddons']);
+
+		$product_addons = \WC_Product_Addons_Helper::get_product_addons($product_id);
+
+		if (empty($cart_item_data['addons'])) {
+			$cart_item_data['addons'] = array();
+		}
+
+		if (is_array($product_addons) && ! empty($product_addons)) {
+			include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/abstract-wc-product-addons-field.php';	
+			foreach ($product_addons as $addon) {
+				$value = isset($post_data[ 'addon-' . $addon['field_name'] ]) ? $post_data[ 'addon-' . $addon['field_name'] ] : '';
+				if (is_array($value)) {
+					$value = array_map('stripslashes', $value);
+				} else {
+					$value = stripslashes($value);
+				}
+	
+				switch ($addon['type']) {
+					case 'checkbox':
+					case 'radiobutton':
+						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-list.php';
+						$field = new \WC_Product_Addons_Field_List($addon, $value);
+						break;
+					case 'custom':
+					case 'custom_text':
+					case 'custom_textarea':
+					case 'custom_price':
+					case 'input_multiplier':
+						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-custom.php';
+						$field = new \WC_Product_Addons_Field_Custom($addon, $value);
+						break;
+					case 'select':
+					case 'multiple_choice':
+						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-select.php';
+						$field = new \WC_Product_Addons_Field_Select($addon, $value);
+						break;
+					case 'file_upload':
+						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-file-upload.php';
+						$field = new \WC_Product_Addons_Field_File_Upload($addon, $value, $test);
+						break;
+				}
+	
+				$data = $field->get_cart_item_data();
+	
+				if (is_wp_error($data)) {
+	
+					if (version_compare(WC_VERSION, '2.3.0', '<')) {
+						$this->add_error($data->get_error_message());
+					} else {
+						// Throw exception for add_to_cart to pickup
+						throw new Exception($data->get_error_message());
+					}
+				} elseif ($data) {
+					$cart_item_data['addons'] = array_merge($cart_item_data['addons'], apply_filters('woocommerce_product_addon_cart_item_data', $data, $addon, $product_id, $post_data));
+				}
+			}
+		}
+
+		return $cart_item_data;
 	}
 }

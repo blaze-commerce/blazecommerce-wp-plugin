@@ -18,6 +18,7 @@ class BlazeWooless {
 
 	public function init() {
 		add_action( 'init', array( $this, 'register_extensions' ) );
+		add_action( 'init', array( $this, 'cors_allow_origin' ) );
 		add_action( 'edited_term', array( Taxonomy::get_instance(), 'update_typesense_document_on_taxonomy_edit' ), 10, 3 );
 
 		add_filter( 'blaze_wooless_generate_breadcrumbs', array( Taxonomy::get_instance(), 'generate_breadcrumbs' ), 10, 2 );
@@ -115,11 +116,26 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
 			'\\BlazeWooless\\Extensions\\Elementor',
+			'\\BlazeWooless\\Extensions\\SmartCoupons',
+			'\\BlazeWooless\\Extensions\\NiWooCommerceProductVariationsTable',
+			'\\BlazeWooless\\Extensions\\B2BWholesaleSuite',
 		);
 
 		foreach ( $extensions as $extension ) {
 			// Instantiating the extension will run all hooks in it's constructor
 			$extension::get_instance();
+		}
+	}
+
+	public function cors_allow_origin() {
+		$shop_domain = bw_get_general_settings( 'shop_domain' );
+		// Allow only your specific domain
+		$allowed_origin = 'https://' . $shop_domain;
+
+		// Check if the current request is from the allowed origin
+		if ( isset( $_SERVER['HTTP_ORIGIN'] ) && $_SERVER['HTTP_ORIGIN'] === $allowed_origin ) {
+			header( "Access-Control-Allow-Origin: $allowed_origin" );
+			header( 'Access-Control-Allow-Credentials: true' );
 		}
 	}
 }
