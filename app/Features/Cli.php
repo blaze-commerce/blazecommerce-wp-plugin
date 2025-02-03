@@ -243,7 +243,7 @@ class Cli extends WP_CLI_Command {
 					$collection->initialize();
 				}
 
-				$query_args = $this->get_query_args( $page, $batch_size );
+				$query_args = $collection->get_query_args( $page, $batch_size );
 				$term_query = new \WP_Term_Query( $query_args );
 
 				if ( is_wp_error( $term_query->terms ) || empty( $term_query->terms ) ) {
