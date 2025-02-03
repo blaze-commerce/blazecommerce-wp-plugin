@@ -30,7 +30,8 @@ class Cli extends WP_CLI_Command {
 	public function product( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all products in batches..." );
-
+			// Start tracking time
+			$start_time              = microtime( true );
 			$product_collection      = Product::get_instance();
 			$batch_size              = Product::BATCH_SIZE;
 			$page                    = 1;
@@ -60,10 +61,20 @@ class Cli extends WP_CLI_Command {
 
 			} while ( true );
 
+
+
 			WP_CLI::success( "All products have been synced." );
 			WP_CLI::success( "Total batch imported: " . $page );
 			WP_CLI::success( "Total import: " . $total_imports );
 			WP_CLI::success( "Successful import: " . $imported_products_count );
+
+			// End tracking time
+			$end_time       = microtime( true );
+			$execution_time = $end_time - $start_time;
+			// Convert execution time to hours, minutes, seconds
+			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+
 			WP_CLI::halt( 0 );
 		}
 
@@ -88,7 +99,8 @@ class Cli extends WP_CLI_Command {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all pages and posts in batches..." );
 
-
+			// Start tracking time
+			$start_time     = microtime( true );
 			$collection     = Page::get_instance();
 			$batch_size     = Page::BATCH_SIZE;
 			$page           = 1;
@@ -122,6 +134,13 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Total batch imported: " . $page );
 			WP_CLI::success( "Total import: " . $total_imports );
 			WP_CLI::success( "Successful import: " . $imported_count );
+
+			// End tracking time
+			$end_time       = microtime( true );
+			$execution_time = $end_time - $start_time;
+			// Convert execution time to hours, minutes, seconds
+			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
 			WP_CLI::halt( 0 );
 		}
 
@@ -146,7 +165,8 @@ class Cli extends WP_CLI_Command {
 	public function menu( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all menus in batches..." );
-
+			// Start tracking time
+			$start_time     = microtime( true );
 			$collection     = Menu::get_instance();
 			$imported_count = 0;
 			$total_imports  = 0;
@@ -162,6 +182,13 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Completed! All menus have been synced." );
 			WP_CLI::success( "Total import: " . $total_imports );
 			WP_CLI::success( "Successful import: " . $imported_count );
+
+			// End tracking time
+			$end_time       = microtime( true );
+			$execution_time = $end_time - $start_time;
+			// Convert execution time to hours, minutes, seconds
+			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
 			WP_CLI::halt( 0 );
 		}
 
@@ -185,7 +212,8 @@ class Cli extends WP_CLI_Command {
 	public function site_info( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all site info in batches..." );
-
+			// Start tracking time
+			$start_time = microtime( true );
 			$collection = SiteInfo::get_instance();
 
 			$imported_count = 0;
@@ -205,6 +233,13 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Completed! All site info have been synced." );
 			WP_CLI::success( "Total import: " . $total_imports );
 			WP_CLI::success( "Successful import: " . $imported_count );
+
+			// End tracking time
+			$end_time       = microtime( true );
+			$execution_time = $end_time - $start_time;
+			// Convert execution time to hours, minutes, seconds
+			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
 			WP_CLI::halt( 0 );
 		}
 
@@ -230,7 +265,8 @@ class Cli extends WP_CLI_Command {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all taxonomies in batches..." );
 
-
+			// Start tracking time
+			$start_time     = microtime( true );
 			$collection     = Taxonomy::get_instance();
 			$batch_size     = Taxonomy::BATCH_SIZE;
 			$page           = 1;
@@ -266,6 +302,13 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Total batch imported: " . $page );
 			WP_CLI::success( "Total import: " . $total_imports );
 			WP_CLI::success( "Successful import: " . $imported_count );
+
+			// End tracking time
+			$end_time       = microtime( true );
+			$execution_time = $end_time - $start_time;
+			// Convert execution time to hours, minutes, seconds
+			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
 			WP_CLI::halt( 0 );
 		}
 
