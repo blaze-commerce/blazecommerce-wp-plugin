@@ -5,6 +5,7 @@ namespace BlazeWooless\Features;
 use BlazeWooless\Collections\Menu;
 use BlazeWooless\Collections\Page;
 use BlazeWooless\Collections\Product;
+use BlazeWooless\Collections\SiteInfo;
 use WP_CLI;
 use WP_CLI_Command;
 
@@ -116,7 +117,7 @@ class Cli extends WP_CLI_Command {
 
 			} while ( true );
 
-			WP_CLI::success( "All page and post have been synced." );
+			WP_CLI::success( "Completed! All page and post have been synced." );
 			WP_CLI::success( "Total batch imported: " . $page );
 			WP_CLI::success( "Total import: " . $total_imports );
 			WP_CLI::success( "Successful import: " . $imported_count );
@@ -146,8 +147,6 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all menus in batches..." );
 
 			$collection     = Menu::get_instance();
-			$batch_size     = Menu::BATCH_SIZE;
-			$page           = 1;
 			$imported_count = 0;
 			$total_imports  = 0;
 
@@ -159,10 +158,7 @@ class Cli extends WP_CLI_Command {
 			$imported_count += count( $successful_imports ); // Increment the count of imported products
 			$total_imports += count( $object_batch ); // Increment the count of imported products
 
-			WP_CLI::success( "Completed batch {$page}..." );
-
-			WP_CLI::success( "All menus been synced." );
-			WP_CLI::success( "Total batch imported: " . $page );
+			WP_CLI::success( "Completed! All menus have been synced." );
 			WP_CLI::success( "Total import: " . $total_imports );
 			WP_CLI::success( "Successful import: " . $imported_count );
 			WP_CLI::halt( 0 );
@@ -170,4 +166,48 @@ class Cli extends WP_CLI_Command {
 
 		WP_CLI::error( "Nothing was sync" );
 	}
+
+	/**
+	 * Sync all site info needed by blazecommerce.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--all]
+	 * : Sync all site_info.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp bc-sync site_info --all
+	 *
+	 * @when after_wp_load
+	 */
+	public function site_info( $args, $assoc_args ) {
+		if ( isset( $assoc_args['all'] ) ) {
+			WP_CLI::line( "Syncing all site info in batches..." );
+
+			$collection = SiteInfo::get_instance();
+
+			$imported_count = 0;
+			$total_imports  = 0;
+
+			// recreate the collection to typesense and do some initialization
+			$collection->initialize();
+
+			$object_batch       = $collection->prepare_batch_data();
+			$successful_imports = $collection->import_prepared_batch( $object_batch );
+			$collection->after_site_info_sync();
+			$imported_count += count( $successful_imports ); // Increment the count of imported products
+			$total_imports += count( $object_batch ); // Increment the count of imported products
+
+
+
+			WP_CLI::success( "Completed! All site info have been synced." );
+			WP_CLI::success( "Total import: " . $total_imports );
+			WP_CLI::success( "Successful import: " . $imported_count );
+			WP_CLI::halt( 0 );
+		}
+
+		WP_CLI::error( "Nothing was sync" );
+	}
+
 }
