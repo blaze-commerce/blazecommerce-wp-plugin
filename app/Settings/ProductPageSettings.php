@@ -224,7 +224,7 @@ class ProductPageSettings extends BaseSettings {
 			array(
 				'id' => '1000001',
 				'name' => 'privacy_policy_content',
-				'value' => $options['privacy_policy'],
+				'value' => isset( $options['privacy_policy'] ) ? $options['privacy_policy'] : '',
 				'updated_at' => time(),
 			)
 		);
