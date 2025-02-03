@@ -79,12 +79,20 @@ class Taxonomy extends BaseCollection {
 		$thumbnail_id = get_term_meta( $term->term_id, 'thumbnail_id', true );
 		$attachment   = get_post( $thumbnail_id );
 
-		$thumbnail = [ 
+		$attachment_title = ( $attachment && ! empty( $attachment->post_title ) ) ? $attachment->post_title : '';
+		$thumbnail        = [ 
 			'id' => $thumbnail_id,
-			'title' => $attachment->post_title,
+			'title' => $attachment_title,
 			'altText' => get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) ?: '',
 			'src' => wp_get_attachment_url( $thumbnail_id ) ?: '',
 		];
+
+		$parent_term_name = '';
+		$parent_term_slug = '0';
+		if ( ! is_wp_error( $parentTerm ) ) {
+			$parent_term_name = $parentTerm->name;
+			$parent_term_slug = $parentTerm->slug;
+		}
 
 		// Prepare the data to be indexed
 		$document = [ 
@@ -97,8 +105,8 @@ class Taxonomy extends BaseCollection {
 			'updatedAt' => time(),
 			'bannerThumbnail' => (string) $bannerThumbnail,
 			'bannerText' => $bannerText,
-			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
-			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '0',
+			'parentTerm' => $parent_term_name,
+			'parentSlug' => $parent_term_slug,
 			'productCount' => (int) $term->count,
 			'order' => (int) $order,
 			'thumbnail' => $thumbnail,
