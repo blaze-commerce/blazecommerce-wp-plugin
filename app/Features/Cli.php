@@ -40,12 +40,12 @@ class Cli extends WP_CLI_Command {
 			do {
 				if ( $page == 1 ) {
 					// recreate the collection to typesense and do some initialization
-					// $product_collection->initialize();
+					$product_collection->initialize();
 				}
 
 				$product_ids = $product_collection->get_product_ids( $page, $batch_size );
 				if ( empty( $product_ids ) ) {
-					break; // No more products left to sync
+					break; // No more data left to sync
 				}
 
 				$products_batch     = $product_collection->prepare_batch_data( $product_ids );
@@ -103,7 +103,7 @@ class Cli extends WP_CLI_Command {
 
 				$ids = $collection->get_post_ids( $page, $batch_size );
 				if ( empty( $ids ) ) {
-					break; // No more products left to sync
+					break; // No more data left to sync
 				}
 
 				$object_batch       = $collection->prepare_batch_data( $ids );
@@ -247,7 +247,7 @@ class Cli extends WP_CLI_Command {
 				$term_query = new \WP_Term_Query( $query_args );
 
 				if ( is_wp_error( $term_query->terms ) || empty( $term_query->terms ) ) {
-					break; // No more products left to sync
+					break; // No more data left to sync
 				}
 
 				$object_batch       = $collection->prepare_batch_data( $term_query->terms );
