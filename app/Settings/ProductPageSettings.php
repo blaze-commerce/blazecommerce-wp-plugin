@@ -215,7 +215,7 @@ class ProductPageSettings extends BaseSettings {
 			array(
 				'id' => '10089554',
 				'name' => 'description_after_content',
-				'value' => $options['description_after_content'],
+				'value' => isset( $options['description_after_content'] ) ? $options['description_after_content'] : '',$options['description_after_content']
 				'updated_at' => time(),
 			)
 		);
