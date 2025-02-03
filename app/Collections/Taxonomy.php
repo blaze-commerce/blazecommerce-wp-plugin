@@ -6,6 +6,8 @@ class Taxonomy extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'taxonomy';
 
+	const BATCH_SIZE = 5;
+
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
@@ -133,6 +135,29 @@ class Taxonomy extends BaseCollection {
 	}
 
 
+	public function prepare_batch_data( $terms ) {
+		$documents = array();
+		if ( empty( $terms ) ) {
+			return $documents;
+		}
+
+		foreach ( $terms as $term ) {
+			$documents[] = $this->generate_typesense_data( $term );
+		}
+
+		return $documents;
+	}
+
+	public function import_prepared_batch( $documents ) {
+		$import_response = $this->collection()->documents->import( $documents );
+
+		$successful_imports = array_filter( $import_response, function ($batch_result) {
+			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+		} );
+
+		return $successful_imports;
+	}
+
 	public function index_to_typesense() {
 
 		$import_logger  = wc_get_logger();
@@ -155,19 +180,12 @@ class Taxonomy extends BaseCollection {
 			$term_query = new \WP_Term_Query( $query_args );
 
 			if ( ! empty( $term_query->terms ) && ! is_wp_error( $term_query->terms ) ) {
-				foreach ( $term_query->terms as $term ) {
-					$taxonomy_datas[] = $this->generate_typesense_data( $term );
-				}
 
-				$import_response = $this->collection()->documents->import( $taxonomy_datas );
-
-
-				$successful_imports = array_filter( $import_response, function ($batch_result) {
-					return isset( $batch_result['success'] ) && $batch_result['success'] == true;
-				} );
+				$taxonomy_datas     = $this->prepare_batch_data( $term_query->terms );
+				$successful_imports = $this->import_prepared_batch( $taxonomy_datas );
 
 				$imported_count = count( $successful_imports );
-				$total_imports = count( $taxonomy_datas );
+				$total_imports  = count( $taxonomy_datas );
 			}
 
 
