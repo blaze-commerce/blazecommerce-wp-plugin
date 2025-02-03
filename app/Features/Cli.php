@@ -6,6 +6,7 @@ use BlazeWooless\Collections\Menu;
 use BlazeWooless\Collections\Page;
 use BlazeWooless\Collections\Product;
 use BlazeWooless\Collections\SiteInfo;
+use BlazeWooless\Collections\Taxonomy;
 use WP_CLI;
 use WP_CLI_Command;
 
@@ -210,4 +211,64 @@ class Cli extends WP_CLI_Command {
 		WP_CLI::error( "Nothing was sync" );
 	}
 
+
+	/**
+	 * Sync all taxonomies.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--all]
+	 * : Sync all taxonomies.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp bc-sync taxonomy --all
+	 *
+	 * @when after_wp_load
+	 */
+	public function taxonomy( $args, $assoc_args ) {
+		if ( isset( $assoc_args['all'] ) ) {
+			WP_CLI::line( "Syncing all taxonomies in batches..." );
+
+
+			$collection     = Taxonomy::get_instance();
+			$batch_size     = Taxonomy::BATCH_SIZE;
+			$page           = 1;
+			$imported_count = 0;
+			$total_imports  = 0;
+
+			do {
+				if ( $page == 1 ) {
+					// recreate the collection to typesense and do some initialization
+					$collection->initialize();
+				}
+
+				$query_args = $this->get_query_args( $page, $batch_size );
+				$term_query = new \WP_Term_Query( $query_args );
+
+				if ( is_wp_error( $term_query->terms ) || empty( $term_query->terms ) ) {
+					break; // No more products left to sync
+				}
+
+				$object_batch       = $collection->prepare_batch_data( $term_query->terms );
+				$successful_imports = $collection->import_prepared_batch( $object_batch );
+
+				$imported_count += count( $successful_imports ); // Increment the count of imported products
+				$total_imports += count( $object_batch ); // Increment the count of imported products
+
+
+				WP_CLI::success( "Completed batch {$page}..." );
+				$page++; // Move to the next batch
+
+			} while ( true );
+
+			WP_CLI::success( "Completed! All taxonomies have been synced." );
+			WP_CLI::success( "Total batch imported: " . $page );
+			WP_CLI::success( "Total import: " . $total_imports );
+			WP_CLI::success( "Successful import: " . $imported_count );
+			WP_CLI::halt( 0 );
+		}
+
+		WP_CLI::error( "Nothing was sync" );
+	}
 }
