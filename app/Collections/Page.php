@@ -6,6 +6,8 @@ class Page extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'page';
 
+	const BATCH_SIZE = 5;
+
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
@@ -196,6 +198,40 @@ class Page extends BaseCollection {
 		return $total_pages;
 	}
 
+	public function prepare_batch_data( $post_ids ) {
+		$post_datas = array();
+		if ( empty( $post_ids ) ) {
+			return $post_datas;
+		}
+
+		foreach ( $post_ids as $post_id ) {
+			$post = get_post( $post_id );
+			if ( $post ) {
+				$document = $this->get_data( $post );
+				if ( ! empty( $document ) ) {
+					$post_datas[] = $document;
+				}
+				unset( $document );
+			}
+
+		}
+		// Restore original post data. 
+		wp_reset_postdata();
+		wp_reset_query();
+
+		return $post_datas;
+	}
+
+	public function import_prepared_batch( $posts_batch ) {
+		$import_response = $this->collection()->documents->import( $posts_batch );
+
+		$successful_imports = array_filter( $import_response, function ($batch_result) {
+			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+		} );
+
+		return $successful_imports;
+	}
+
 	public function index_to_typesense() {
 		$batch_size      = $_REQUEST['batch_size'] ?? 20;
 		$page            = $_REQUEST['page'] ?? 1;
@@ -212,26 +248,8 @@ class Page extends BaseCollection {
 			$post_ids = $this->get_post_ids( $page, $batch_size );
 			if ( ! empty( $post_ids ) ) {
 
-				foreach ( $post_ids as $post_id ) {
-					$post = get_post( $post_id );
-					if ( $post ) {
-						$document = $this->get_data( $post );
-						if ( ! empty( $document ) ) {
-							$post_datas[] = $document;
-						}
-						unset( $document );
-					}
-
-				}
-				// Restore original post data. 
-				wp_reset_postdata();
-				wp_reset_query();
-
-				$import_response = $this->collection()->documents->import( $post_datas );
-
-				$successful_imports = array_filter( $import_response, function ($batch_result) {
-					return isset( $batch_result['success'] ) && $batch_result['success'] == true;
-				} );
+				$post_datas         = $this->prepare_batch_data( $post_ids );
+				$successful_imports = $this->import_prepared_batch( $post_datas );
 
 				$imported_count += count( $successful_imports );
 				$total_imports += count( $post_datas );
