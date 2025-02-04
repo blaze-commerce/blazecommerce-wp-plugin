@@ -54,7 +54,7 @@ class Woocommerce {
 					Product::get_instance()->collection()->documents[ $post_id ]->delete();
 					do_action( 'ts_product_update', $product->get_id(), $product );
 				} catch (\Exception $e) {
-					$logger = wc_get_logger();
+					$logger  = wc_get_logger();
 					$context = array( 'source' => 'wooless-product-delete' );
 					$logger->debug( 'TS Product Delete Exception: ' . $e->getMessage(), $context );
 				}
@@ -109,7 +109,7 @@ class Woocommerce {
 				'action' => 'update'
 			) );
 
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-menu-ordering' );
 			$logger->debug( 'TS Product import response : ' . print_r( $response, 1 ), $context );
 		}
@@ -132,25 +132,13 @@ class Woocommerce {
 				$wc_product = wc_get_product( $product_id );
 
 				if ( $wc_product->get_status() == 'publish' ) {
-					try {
-						$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
-						Product::get_instance()->update( strval( $product_id ), $document_data );
-						do_action( 'ts_product_update', $product_id, $wc_product );
-					} catch (\Exception $e) {
-						error_log( "Error updating product in Typesense during checkout: " . $e->getMessage() );
-					}
+					$this->on_product_save( $product_id, $wc_product );
 				}
 			}
 		}
 	}
 
 	public function on_product_trash_or_untrash( $product_id ) {
-		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
-
-		if ( ! $enable_system ) {
-			return;
-		}
-
 		$wc_product = wc_get_product( $product_id );
 		if ( $wc_product ) {
 			$this->on_product_save( $product_id, $wc_product );
@@ -172,7 +160,7 @@ class Woocommerce {
 			Product::get_instance()->upsert( $document_data );
 			do_action( 'ts_product_update', $product_id, $wc_product, $document_data );
 		} catch (\Exception $e) {
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-update' );
 
 			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
@@ -184,7 +172,7 @@ class Woocommerce {
 
 		if ( $wc_product && $wc_product->is_type( 'variable' ) ) {
 			$variation_ids = $wc_product->get_children();
-			$event_time = WC()->call_function( 'time' ) + 1;
+			$event_time    = WC()->call_function( 'time' ) + 1;
 			as_schedule_single_action( $event_time, 'wooless_variation_update', array( $variation_ids ), 'blaze-wooless', true, 1 );
 
 		}
@@ -193,7 +181,7 @@ class Woocommerce {
 	public function variation_update( $variation_ids ) {
 		try {
 			$typsense_product = Product::get_instance();
-			$variations_data = array();
+			$variations_data  = array();
 			foreach ( $variation_ids as $variation_id ) {
 				$wc_variation = wc_get_product( $variation_id );
 
@@ -206,11 +194,11 @@ class Woocommerce {
 				'action' => 'upsert'
 			) );
 
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-success-import' );
 			$logger->debug( print_r( $import, 1 ), $context );
 		} catch (\Exception $e) {
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-import' );
 			$logger->debug( 'TS Variations Import Exception: ' . $e->getMessage(), $context );
 		}
@@ -234,12 +222,8 @@ class Woocommerce {
 		foreach ( $items as $item ) {
 			$product_id = $item->get_product_id();
 			$wc_product = wc_get_product( $product_id );
-			try {
-				$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
-				Product::get_instance()->update( strval( $product_id ), $document_data );
-				do_action( 'ts_product_update', $product_id, $wc_product );
-			} catch (\Exception $e) {
-				error_log( "Error updating product in Typesense during checkout: " . $e->getMessage() );
+			if ( $wc_product ) {
+				$this->on_product_save( $product_id, $wc_product );
 			}
 
 		}
@@ -283,23 +267,23 @@ class Woocommerce {
 				// find the lowest price among the variations
 				$prices = $variations['price'];
 				if ( ! empty( $prices ) ) {
-					$min_price = min( $prices );
+					$min_price         = min( $prices );
 					$lowest_product_id = array_search( $min_price, $prices );
 
 					if ( $lowest_product_id ) {
 						$lowest_product = wc_get_product( $lowest_product_id );
 						$variation_data = Product::get_instance()->generate_typesense_data( $lowest_product );
 
-						$variation_data = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
-						$product_data['price'] = $variation_data['price'];
+						$variation_data               = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
+						$product_data['price']        = $variation_data['price'];
 						$product_data['regularPrice'] = $variation_data['regularPrice'];
-						$product_data['salePrice'] = $variation_data['salePrice'];
+						$product_data['salePrice']    = $variation_data['salePrice'];
 					} else {
 						throw new \Exception( 'No variations found for product ' . $product_id );
 					}
 				}
 			} catch (\Exception $e) {
-				$logger = wc_get_logger();
+				$logger  = wc_get_logger();
 				$context = array( 'source' => 'wooless-variable-product-price' );
 				$logger->debug( 'TS Variable Product Price Exception: ' . $e->getMessage(), $context );
 			}
