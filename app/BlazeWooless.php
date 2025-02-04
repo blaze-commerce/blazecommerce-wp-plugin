@@ -120,6 +120,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\SmartCoupons',
 			'\\BlazeWooless\\Extensions\\NiWooCommerceProductVariationsTable',
 			'\\BlazeWooless\\Extensions\\B2BWholesaleSuite',
+			'\\BlazeWooless\\Extensions\\Pinterest',
 		);
 
 		foreach ( $extensions as $extension ) {
