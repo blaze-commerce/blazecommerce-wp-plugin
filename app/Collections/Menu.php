@@ -8,6 +8,8 @@ class Menu extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'menu';
 
+	const BATCH_SIZE = 5;
+
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
@@ -16,15 +18,13 @@ class Menu extends BaseCollection {
 		return self::$instance;
 	}
 
-	// Indexes the navigation menus to Typesense
-	public function index_to_typesense() {
+	public function initialize() {
 		try {
 			$this->drop_collection();
 		} catch (\Exception $e) {
 			// Don't error out if the collection was not found
 		}
 
-		//Menu indexing
 		try {
 			// Create the 'menu' collection with the required schema
 			$this->create_collection( [ 
@@ -37,100 +37,113 @@ class Menu extends BaseCollection {
 				],
 				'default_sorting_field' => 'wp_menu_id',
 			] );
+		} catch (\Exception $e) {
+			echo "Error: " . $e->getMessage() . "\n";
+		}
+	}
 
-			// Get all navigation menus
-			$menus = get_terms( 'nav_menu' );
-			// Add WooCommerce my-account links as a menu
-			$my_account_links         = wc_get_account_menu_items();
-			$my_account_menu          = new \stdClass();
-			$my_account_menu->name    = 'WooCommerce My Account';
-			$my_account_menu->term_id = 12444; // Assign a unique ID, can be any unique integer
-			$my_account_menu_items    = [];
-			foreach ( $my_account_links as $endpoint => $link_name ) {
-				$my_account_menu_items[] = (object) [ 
-					'title' => $link_name,
-					'url' => wc_get_endpoint_url( $endpoint, '', wc_get_page_permalink( 'myaccount' ) ),
-				];
-			}
-			$my_account_menu->menu_items = $my_account_menu_items;
-			$document                    = [ 
-				'name' => 'WooCommerce My Account',
-				'wp_menu_id' => 12444,
-				'items' => json_encode( $my_account_menu_items ),
-				'updated_at' => time(), // Converts the timestamp to a 64-bit integer
+	public function prepare_batch_data() {
+
+		$documents = array();
+
+		// Add WooCommerce my-account links as a menu
+		$my_account_links         = wc_get_account_menu_items();
+		$my_account_menu          = new \stdClass();
+		$my_account_menu->name    = 'WooCommerce My Account';
+		$my_account_menu->term_id = 12444; // Assign a unique ID, can be any unique integer
+		$my_account_menu_items    = [];
+		foreach ( $my_account_links as $endpoint => $link_name ) {
+			$my_account_menu_items[] = (object) [ 
+				'title' => $link_name,
+				'url' => wc_get_endpoint_url( $endpoint, '', wc_get_page_permalink( 'myaccount' ) ),
 			];
+		}
+		$my_account_menu->menu_items = $my_account_menu_items;
+		$documents[]                 = array(
+			'name' => 'WooCommerce My Account',
+			'wp_menu_id' => 12444,
+			'items' => json_encode( $my_account_menu_items ),
+			'updated_at' => time(), // Converts the timestamp to a 64-bit integer
+		);
 
+		// Get all navigation menus
+		$menus = get_terms( 'nav_menu' );
+		foreach ( $menus as $menu ) {
+			// Get all the menu items from the current menu
+			//$menu_items = wp_get_nav_menu_items($menu->term_id);
+			$menu_items = isset( $menu->menu_items ) ? $menu->menu_items : wp_get_nav_menu_items( $menu->term_id );
 
-			$this->create( $document );
+			$menu_items = apply_filters( 'blaze_wooless_menu_items', $menu_items, $menu );
 
-			// Loop through each menu and index its items to the 'menu' collection
-			foreach ( $menus as $menu ) {
-				// Get all the menu items from the current menu
-				//$menu_items = wp_get_nav_menu_items($menu->term_id);
-				$menu_items = isset( $menu->menu_items ) ? $menu->menu_items : wp_get_nav_menu_items( $menu->term_id );
+			// Initialize an empty array to hold the menu item data
+			$menu_item_data = [];
 
-				$menu_items = apply_filters( 'blaze_wooless_menu_items', $menu_items, $menu );
+			foreach ( $menu_items as $item ) {
+				$should_generate_menu_item_data = apply_filters( 'blaze_wooless_should_generate_menu_item_data', true, $item );
 
-				// Initialize an empty array to hold the menu item data
-				$menu_item_data = [];
-
-				// Temporary array for easier nesting
-				$menu_items_by_id = [];
-
-				foreach ( $menu_items as $item ) {
-					$should_generate_menu_item_data = apply_filters( 'blaze_wooless_should_generate_menu_item_data', true, $item );
-
-					if ( ! $should_generate_menu_item_data ) {
-						$menu_item_data = apply_filters( 'blaze_wooless_menu_item_data', $menu_item_data, $item );
-						continue;
-					}
-
-					// Prepare the current menu item
-					$current_item = [
-						'title' => $item->title,
-						'url'   => $item->url,
-						'children' => [],
-					];
-
-					// Store the current item by its ID
-					$menu_items_by_id[ $item->ID ] = $current_item;
-
-					if ( ! $item->menu_item_parent ) {
-						// Top-level item
-						$menu_item_data[ $item->ID ] = &$menu_items_by_id[ $item->ID ];
-					} else {
-						// Add to parent's children
-						if ( isset( $menu_items_by_id[ $item->menu_item_parent ] ) ) {
-							$menu_items_by_id[ $item->menu_item_parent ]['children'][] = &$menu_items_by_id[ $item->ID ];
-						} else {
-							// If there's a parent, add it as a child of its parent
-							$menu_item_data[ $item->menu_item_parent ]['children'][] = array(
-								'title' => $item->title,
-								'url' => $item->url,
-							);
-							$menu_item_data[ $item->menu_item_parent ]['parentId'] = $item->menu_item_parent;
-						}
-					}
+				if ( ! $should_generate_menu_item_data ) {
+					$menu_item_data = apply_filters( 'blaze_wooless_menu_item_data', $menu_item_data, $item );
+					continue;
 				}
 
-				// Reset the top-level array to be indexed numerically
-				$menu_item_data = array_values( $menu_item_data );
-
-				// Encode the menu item data as JSON
-				$menu_item_json = json_encode( $menu_item_data );
-
-				// Create a document for the current menu and index it to the 'menu' collection
-				$document = [ 
-					'name' => $menu->name,
-					'wp_menu_id' => (int) $menu->term_id,
-					'items' => $menu_item_json,
-					'updated_at' => intval( strtotime( $menu->post_modified ), 10 ), // Converts the timestamp to a 64-bit integer
-				];
-
-				unset( $menu_items );
-
-				$this->create( $document );
+				if ( ! $item->menu_item_parent ) {
+					// If there's no parent, add it to the top level of the nested array
+					$menu_item_data[ $item->ID ] = array(
+						'title' => $item->title,
+						'url' => $item->url,
+						'children' => array(),
+					);
+				} else {
+					// If there's a parent, add it as a child of its parent
+					$menu_item_data[ $item->menu_item_parent ]['children'][] = array(
+						'title' => $item->title,
+						'url' => $item->url,
+					);
+					$menu_item_data[ $item->menu_item_parent ]['parentId']   = $item->menu_item_parent;
+				}
 			}
+
+			$menu_item_data = array_values( $menu_item_data );
+
+			// Encode the menu item data as JSON
+			$menu_item_json = json_encode( $menu_item_data );
+
+			// Create a document for the current menu and index it to the 'menu' collection
+			$document = [ 
+				'name' => $menu->name,
+				'wp_menu_id' => (int) $menu->term_id,
+				'items' => $menu_item_json,
+				'updated_at' => intval( strtotime( $menu->post_modified ), 10 ), // Converts the timestamp to a 64-bit integer
+			];
+
+			unset( $menu_items );
+
+			$documents[] = $document;
+		}
+
+		return $documents;
+	}
+
+	public function import_prepared_batch( $menus ) {
+		$import_response = $this->collection()->documents->import( $menus );
+
+		$successful_imports = array_filter( $import_response, function ($batch_result) {
+			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+		} );
+
+		return $successful_imports;
+	}
+
+	// Indexes the navigation menus to Typesense
+	public function index_to_typesense() {
+
+
+		$this->initialize();
+		//Menu indexing
+		try {
+
+			$menu_documents = $this->prepare_batch_data();
+			$imported_menus = $this->import_prepared_batch( $menu_documents );
 
 			echo "Menu successfully added\n";
 		} catch (\Exception $e) {

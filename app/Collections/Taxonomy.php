@@ -6,6 +6,8 @@ class Taxonomy extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'taxonomy';
 
+	const BATCH_SIZE = 5;
+
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
@@ -77,12 +79,20 @@ class Taxonomy extends BaseCollection {
 		$thumbnail_id = get_term_meta( $term->term_id, 'thumbnail_id', true );
 		$attachment   = get_post( $thumbnail_id );
 
-		$thumbnail = [ 
+		$attachment_title = ( $attachment && ! empty( $attachment->post_title ) ) ? $attachment->post_title : '';
+		$thumbnail        = [ 
 			'id' => $thumbnail_id,
-			'title' => $attachment->post_title,
+			'title' => $attachment_title,
 			'altText' => get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) ?: '',
 			'src' => wp_get_attachment_url( $thumbnail_id ) ?: '',
 		];
+
+		$parent_term_name = '';
+		$parent_term_slug = '0';
+		if ( ! is_wp_error( $parentTerm ) ) {
+			$parent_term_name = $parentTerm->name;
+			$parent_term_slug = $parentTerm->slug;
+		}
 
 		// Prepare the data to be indexed
 		$document = [ 
@@ -95,8 +105,8 @@ class Taxonomy extends BaseCollection {
 			'updatedAt' => time(),
 			'bannerThumbnail' => (string) $bannerThumbnail,
 			'bannerText' => $bannerText,
-			'parentTerm' => $parentTerm->name ? $parentTerm->name : '',
-			'parentSlug' => $parentTerm->slug ? $parentTerm->slug : '0',
+			'parentTerm' => $parent_term_name,
+			'parentSlug' => $parent_term_slug,
 			'productCount' => (int) $term->count,
 			'order' => (int) $order,
 			'thumbnail' => $thumbnail,
@@ -133,6 +143,29 @@ class Taxonomy extends BaseCollection {
 	}
 
 
+	public function prepare_batch_data( $terms ) {
+		$documents = array();
+		if ( empty( $terms ) ) {
+			return $documents;
+		}
+
+		foreach ( $terms as $term ) {
+			$documents[] = $this->generate_typesense_data( $term );
+		}
+
+		return $documents;
+	}
+
+	public function import_prepared_batch( $documents ) {
+		$import_response = $this->collection()->documents->import( $documents );
+
+		$successful_imports = array_filter( $import_response, function ($batch_result) {
+			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+		} );
+
+		return $successful_imports;
+	}
+
 	public function index_to_typesense() {
 
 		$import_logger  = wc_get_logger();
@@ -155,19 +188,12 @@ class Taxonomy extends BaseCollection {
 			$term_query = new \WP_Term_Query( $query_args );
 
 			if ( ! empty( $term_query->terms ) && ! is_wp_error( $term_query->terms ) ) {
-				foreach ( $term_query->terms as $term ) {
-					$taxonomy_datas[] = $this->generate_typesense_data( $term );
-				}
 
-				$import_response = $this->collection()->documents->import( $taxonomy_datas );
-
-
-				$successful_imports = array_filter( $import_response, function ($batch_result) {
-					return isset( $batch_result['success'] ) && $batch_result['success'] == true;
-				} );
+				$taxonomy_datas     = $this->prepare_batch_data( $term_query->terms );
+				$successful_imports = $this->import_prepared_batch( $taxonomy_datas );
 
 				$imported_count = count( $successful_imports );
-				$total_imports = count( $taxonomy_datas );
+				$total_imports  = count( $taxonomy_datas );
 			}
 
 

@@ -84,11 +84,17 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\TemplateBuilder',
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',
-			'\\BlazeWooless\\Features\\Cli',
 		);
 
 		foreach ( $features as $feature ) {
 			$feature::get_instance();
+		}
+
+		// Register the CLI command
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			add_action( 'cli_init', function () {
+				\WP_CLI::add_command( 'bc-sync', '\BlazeWooless\Features\Cli' );
+			} );
 		}
 	}
 

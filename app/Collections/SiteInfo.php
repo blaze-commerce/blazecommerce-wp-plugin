@@ -16,20 +16,20 @@ class SiteInfo extends BaseCollection {
 		return self::$instance;
 	}
 
-	public function index_to_typesense() {
-		$collection_site_info = $this->collection_name();
-		//Indexing Site Info
+	public function initialize() {
+		// Delete the existing 'site_info' collection (if it exists)
 		try {
-			// Delete the existing 'site_info' collection (if it exists)
-			try {
-				$this->drop_collection();
-			} catch (\Exception $e) {
-				// Don't error out if the collection was not found
-			}
+			$this->drop_collection();
+		} catch (\Exception $e) {
+			// Don't error out if the collection was not found
+		}
+
+		try {
+
 			// Create the 'site_info' collection with the required schema
 			$this->create_collection(
 				array(
-					'name' => $collection_site_info,
+					'name' => $this->collection_name(),
 					'fields' => array(
 						array( 'name' => 'name', 'type' => 'string' ),
 						array( 'name' => '.*', 'type' => 'string*' ),
@@ -38,174 +38,205 @@ class SiteInfo extends BaseCollection {
 					'default_sorting_field' => 'updated_at',
 				),
 			);
+		} catch (\Exception $e) {
+			echo "Error: " . $e->getMessage() . "\n";
+		}
 
-			$update_at = time();
-			$shop_page = get_option( 'woocommerce_shop_page_id' );
-			$blog_page = get_option( 'page_for_posts' );
+	}
 
-			$datas = array(
-				array(
-					'name' => 'site_title',
-					'value' => get_bloginfo( 'name' ),
-				),
-				array(
-					'name' => 'Site_tagline',
-					'value' => get_bloginfo( 'description' ),
-				),
-				array(
-					'name' => 'stock_display_format',
-					'value' => $this->get_stock_display_format(),
-				),
-				array(
-					'name' => 'product_attributes',
-					'value' => $this->get_product_attributes(),
-				),
-				array(
-					'name' => 'permalink_structure',
-					'value' => $this->get_permalink_structure(),
-				),
-				array(
-					'name' => 'reviews_plugin',
-					'value' => $this->get_active_reviews_plugin(),
-				),
-				array(
-					'name' => 'payment_methods',
-					'value' => $this->get_available_payment_methods(),
-				),
-				array(
-					'name' => 'time_format',
-					'value' => get_option( 'time_format' ),
-				),
-				array(
-					'name' => 'search_engine',
-					'value' => get_option( 'blog_public' ),
-				),
-				array(
-					'name' => 'site_id',
-					'value' => strval( get_current_blog_id() ),
-				),
-				array(
-					'name' => 'wordpress_address_url',
-					'value' => get_site_url(),
-				),
-				array(
-					'name' => 'admin_email_address',
-					'value' => get_option( 'admin_email' ),
-					'updated_at' => intval( get_option( 'admin_email_last_updated', $update_at ) ),
-				),
-				array(
-					'name' => 'language',
-					'value' => get_locale(),
-					'updated_at' => intval( get_option( 'locale_last_updated', $update_at ) ),
-				),
-				array(
-					'name' => 'time_zone',
-					'value' => date_default_timezone_get(),
-					'updated_at' => intval( get_option( 'timezone_last_updated', $update_at ) ),
-				),
-				array(
-					'name' => 'date_format',
-					'value' => get_option( 'date_format' ),
-					'updated_at' => intval( get_option( 'date_format_last_updated', $update_at ) ),
-				),
-				array(
-					'name' => 'woocommerce_calc_taxes',
-					'value' => get_option( 'woocommerce_calc_taxes', 'no' ),
-				),
-				array(
-					'name' => 'woocommerce_prices_include_tax',
-					'value' => get_option( 'woocommerce_prices_include_tax', 'no' ),
-				),
-				array(
-					'name' => 'site_icon_url',
-					'value' => get_site_icon_url( 512, 'https://blazecommerce.io/wp-content/uploads/2023/09/blaze_commerce_favicon-1.png' ),
-				),
-				array(
-					'name' => 'theme_json',
-					'value' => wp_get_global_settings(),
-				),
-				array(
-					'name' => 'woocommerce_tax_setup',
-					'value' => [ 
-						'displayPricesIncludingTax' => get_option( 'woocommerce_tax_display_shop' ),
-						'priceDisplaySuffix' => get_option( 'woocommerce_price_display_suffix' ),
-					]
-				),
-				array(
-					'name' => 'shop_page_slug',
-					'value' => $shop_page ? get_post_field( 'post_name', $shop_page ) : '',
-				),
-				array(
-					'name' => 'blog_page_slug',
-					'value' => $blog_page ? get_post_field( 'post_name', $blog_page ) : '',
-				),
-				array(
-					'name' => 'woocommerce_permalinks',
-					'value' => get_option( 'woocommerce_permalinks' ),
-				),
-			);
+	public function prepare_batch_data() {
+		$documents = array();
 
-			$datas[] = $this->site_logo_settings();
-			$datas[] = $this->store_notice_settings();
-			$datas[] = $this->favicon_settings();
+		$update_at = time();
+		$shop_page = get_option( 'woocommerce_shop_page_id' );
+		$blog_page = get_option( 'page_for_posts' );
 
-			foreach ( $datas as $data ) {
-				if ( ! isset( $data['updated_at'] ) ) {
-					$data['updated_at'] = $update_at;
-				}
+		$datas = array(
+			array(
+				'name' => 'site_title',
+				'value' => get_bloginfo( 'name' ),
+			),
+			array(
+				'name' => 'Site_tagline',
+				'value' => get_bloginfo( 'description' ),
+			),
+			array(
+				'name' => 'stock_display_format',
+				'value' => $this->get_stock_display_format(),
+			),
+			array(
+				'name' => 'product_attributes',
+				'value' => $this->get_product_attributes(),
+			),
+			array(
+				'name' => 'permalink_structure',
+				'value' => $this->get_permalink_structure(),
+			),
+			array(
+				'name' => 'reviews_plugin',
+				'value' => $this->get_active_reviews_plugin(),
+			),
+			array(
+				'name' => 'payment_methods',
+				'value' => $this->get_available_payment_methods(),
+			),
+			array(
+				'name' => 'time_format',
+				'value' => get_option( 'time_format' ),
+			),
+			array(
+				'name' => 'search_engine',
+				'value' => get_option( 'blog_public' ),
+			),
+			array(
+				'name' => 'site_id',
+				'value' => strval( get_current_blog_id() ),
+			),
+			array(
+				'name' => 'wordpress_address_url',
+				'value' => get_site_url(),
+			),
+			array(
+				'name' => 'admin_email_address',
+				'value' => get_option( 'admin_email' ),
+				'updated_at' => intval( get_option( 'admin_email_last_updated', $update_at ) ),
+			),
+			array(
+				'name' => 'language',
+				'value' => get_locale(),
+				'updated_at' => intval( get_option( 'locale_last_updated', $update_at ) ),
+			),
+			array(
+				'name' => 'time_zone',
+				'value' => date_default_timezone_get(),
+				'updated_at' => intval( get_option( 'timezone_last_updated', $update_at ) ),
+			),
+			array(
+				'name' => 'date_format',
+				'value' => get_option( 'date_format' ),
+				'updated_at' => intval( get_option( 'date_format_last_updated', $update_at ) ),
+			),
+			array(
+				'name' => 'woocommerce_calc_taxes',
+				'value' => get_option( 'woocommerce_calc_taxes', 'no' ),
+			),
+			array(
+				'name' => 'woocommerce_prices_include_tax',
+				'value' => get_option( 'woocommerce_prices_include_tax', 'no' ),
+			),
+			array(
+				'name' => 'site_icon_url',
+				'value' => get_site_icon_url( 512, 'https://blazecommerce.io/wp-content/uploads/2023/09/blaze_commerce_favicon-1.png' ),
+			),
+			array(
+				'name' => 'theme_json',
+				'value' => wp_get_global_settings(),
+			),
+			array(
+				'name' => 'woocommerce_tax_setup',
+				'value' => [ 
+					'displayPricesIncludingTax' => get_option( 'woocommerce_tax_display_shop' ),
+					'priceDisplaySuffix' => get_option( 'woocommerce_price_display_suffix' ),
+				]
+			),
+			array(
+				'name' => 'shop_page_slug',
+				'value' => $shop_page ? get_post_field( 'post_name', $shop_page ) : '',
+			),
+			array(
+				'name' => 'blog_page_slug',
+				'value' => $blog_page ? get_post_field( 'post_name', $blog_page ) : '',
+			),
+			array(
+				'name' => 'woocommerce_permalinks',
+				'value' => get_option( 'woocommerce_permalinks' ),
+			),
+		);
 
-				if ( is_array( $data['value'] ) ) {
-					$data['value'] = json_encode( $data['value'] );
-				}
+		$datas[] = $this->site_logo_settings();
+		$datas[] = $this->store_notice_settings();
+		$datas[] = $this->favicon_settings();
 
-				$response = $this->create( $data );
+		foreach ( $datas as $data ) {
+			if ( ! isset( $data['updated_at'] ) ) {
+				$data['updated_at'] = $update_at;
 			}
 
-			unset( $datas );
-
-			$initial_additional_data = array();
-
-			$site_currency                         = get_woocommerce_currency();
-			$base_currency                         = WC()->countries->get_base_country();
-			$currencies                            = array(
-				'countries' => [ $base_currency ],
-				'baseCountry' => $base_currency,
-				'currency' => $site_currency,
-				'symbol' => html_entity_decode( get_woocommerce_currency_symbol( $site_currency ) ),
-				'symbolPosition' => get_option( 'woocommerce_currency_pos' ),
-				'thousandSeparator' => get_option( 'woocommerce_price_thousand_sep' ),
-				'decimalSeparator' => get_option( 'woocommerce_price_decimal_sep' ),
-				'precision' => wc_get_price_decimals(),
-				'default' => true,
-			);
-			$initial_additional_data['currencies'] = array( $currencies );
-			$initial_additional_data['regions']    = RegionalSettings::get_selected_regions();
-
-			$additional_data = apply_filters( 'blaze_wooless_additional_site_info', $initial_additional_data );
-			foreach ( $additional_data as $key => $value ) {
-				if ( empty( $value ) ) {
-					continue;
-				}
-
-				if ( is_array( $value ) ) {
-					$value = json_encode( $value );
-				}
-
-				// If it's 'popular_categories', decode it from a JSON string
-				if ( $key == 'popular_categories' ) {
-					$value = json_decode( $value, true );
-				}
-
-				$this->create( [ 
-					'name' => $key,
-					'value' => (string) $value,
-					'updated_at' => time(),
-				] );
+			if ( is_array( $data['value'] ) ) {
+				$data['value'] = json_encode( $data['value'] );
 			}
 
-			unset( $additional_data );
+			$documents[] = $data;
+		}
 
-			do_action( 'blaze_wooless_after_site_info_sync' );
+		unset( $datas );
+
+		$initial_additional_data = array();
+
+		$site_currency                         = get_woocommerce_currency();
+		$base_currency                         = WC()->countries->get_base_country();
+		$currencies                            = array(
+			'countries' => [ $base_currency ],
+			'baseCountry' => $base_currency,
+			'currency' => $site_currency,
+			'symbol' => html_entity_decode( get_woocommerce_currency_symbol( $site_currency ) ),
+			'symbolPosition' => get_option( 'woocommerce_currency_pos' ),
+			'thousandSeparator' => get_option( 'woocommerce_price_thousand_sep' ),
+			'decimalSeparator' => get_option( 'woocommerce_price_decimal_sep' ),
+			'precision' => wc_get_price_decimals(),
+			'default' => true,
+		);
+		$initial_additional_data['currencies'] = array( $currencies );
+		$initial_additional_data['regions']    = RegionalSettings::get_selected_regions();
+
+		$additional_data = apply_filters( 'blaze_wooless_additional_site_info', $initial_additional_data );
+		foreach ( $additional_data as $key => $value ) {
+			if ( empty( $value ) ) {
+				continue;
+			}
+
+			if ( is_array( $value ) ) {
+				$value = json_encode( $value );
+			}
+
+			// If it's 'popular_categories', decode it from a JSON string
+			if ( $key == 'popular_categories' ) {
+				$value = json_decode( $value, true );
+			}
+
+			$documents[] = array(
+				'name' => $key,
+				'value' => (string) $value,
+				'updated_at' => time(),
+			);
+		}
+
+		return $documents;
+	}
+
+	public function import_prepared_batch( $documents ) {
+		$import_response = $this->collection()->documents->import( $documents );
+
+		$successful_imports = array_filter( $import_response, function ($batch_result) {
+			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+		} );
+
+		return $successful_imports;
+	}
+
+	public function after_site_info_sync() {
+		do_action( 'blaze_wooless_after_site_info_sync' );
+	}
+
+	public function index_to_typesense() {
+		$collection_site_info = $this->collection_name();
+		//Indexing Site Info
+		try {
+			$this->initialize();
+
+			$documents = $this->prepare_batch_data();
+			$this->import_prepared_batch( $documents );
+			$this->after_site_info_sync();
 
 			echo "Site info added successfully!";
 		} catch (\Exception $e) {

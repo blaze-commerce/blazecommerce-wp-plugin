@@ -40,7 +40,7 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		$icons = array(
+		$icons                 = array(
 			'select' => 'Select',
 			'CiDeliveryTruck' => 'CiDeliveryTruck',
 			'CiViewList' => 'CiViewList',
@@ -174,10 +174,10 @@ class ProductPageSettings extends BaseSettings {
 				'id' => '10089551',
 				'name' => 'product_page_information_1',
 				'value' => json_encode( array(
-					'title' => $options['information_1_title'],
-					'icon' => $options['information_1_icon'],
-					'content' => $options['information_1_content'],
-					'link' => $options['information_1_link']
+					'title' => isset( $options['information_1_title'] ) ? $options['information_1_title'] : '',
+					'icon' => isset( $options['information_1_icon'] ) ? $options['information_1_icon'] : '',
+					'content' => isset( $options['information_1_content'] ) ? $options['information_1_content'] : '',
+					'link' => isset( $options['information_1_link'] ) ? $options['information_1_link'] : '',
 				) ),
 				'updated_at' => time(),
 			)
@@ -188,10 +188,10 @@ class ProductPageSettings extends BaseSettings {
 				'id' => '10089552',
 				'name' => 'product_page_information_2',
 				'value' => json_encode( array(
-					'title' => $options['information_2_title'],
-					'icon' => $options['information_2_icon'],
-					'content' => $options['information_2_content'],
-					'link' => $options['information_2_link']
+					'title' => isset( $options['information_2_title'] ) ? $options['information_2_title'] : '',
+					'icon' => isset( $options['information_2_icon'] ) ? $options['information_2_icon'] : '',
+					'content' => isset( $options['information_2_content'] ) ? $options['information_2_content'] : '',
+					'link' => isset( $options['information_2_link'] ) ? $options['information_2_link'] : '',
 				) ),
 				'updated_at' => time(),
 			)
@@ -202,10 +202,10 @@ class ProductPageSettings extends BaseSettings {
 				'id' => '10089553',
 				'name' => 'product_page_information_3',
 				'value' => json_encode( array(
-					'title' => $options['information_3_title'],
-					'icon' => $options['information_3_icon'],
-					'content' => $options['information_3_content'],
-					'link' => $options['information_3_link']
+					'title' => isset( $options['information_3_title'] ) ? $options['information_3_title'] : '',
+					'icon' => isset( $options['information_3_icon'] ) ? $options['information_3_icon'] : '',
+					'content' => isset( $options['information_3_content'] ) ? $options['information_3_content'] : '',
+					'link' => isset( $options['information_3_link'] ) ? $options['information_3_link'] : '',
 				) ),
 				'updated_at' => time(),
 			)
@@ -215,7 +215,7 @@ class ProductPageSettings extends BaseSettings {
 			array(
 				'id' => '10089554',
 				'name' => 'description_after_content',
-				'value' => $options['description_after_content'],
+				'value' => isset( $options['description_after_content'] ) ? $options['description_after_content'] : '', $options['description_after_content'],
 				'updated_at' => time(),
 			)
 		);
@@ -224,7 +224,7 @@ class ProductPageSettings extends BaseSettings {
 			array(
 				'id' => '1000001',
 				'name' => 'privacy_policy_content',
-				'value' => $options['privacy_policy'],
+				'value' => isset( $options['privacy_policy'] ) ? $options['privacy_policy'] : '',
 				'updated_at' => time(),
 			)
 		);
@@ -267,7 +267,7 @@ class ProductPageSettings extends BaseSettings {
 		if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
 			$available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
 		} else {
-			$base_currency = get_woocommerce_currency();
+			$base_currency        = get_woocommerce_currency();
 			$available_currencies = [ 
 				$base_currency => ''
 			];
