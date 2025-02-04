@@ -56,16 +56,6 @@ class WooDiscountRules {
 		} );
 
 
-		do_action(
-			"inspect",
-			[ 
-				"prepare_discount_data_ver_2",
-				[ 
-					"rules" => $rules,
-				]
-			]
-		);
-
 		$rules = array_map( function ($rule) {
 			$new_rule = new \stdClass();
 			$new_rule->filters = $rule->rule->filters;
@@ -73,16 +63,6 @@ class WooDiscountRules {
 			$new_rule->advanced_discount_message = $rule->rule->advanced_discount_message;
 			return $new_rule;
 		}, $rules );
-
-		do_action(
-			"inspect",
-			[ 
-				"prepare_discount_data",
-				[ 
-					"rules" => $rules,
-				]
-			]
-		);
 
 		set_transient( 'blaze_commerce_discount_data', $rules, 15 * MINUTE_IN_SECONDS );
 	}
