@@ -61,28 +61,32 @@ class MegaMenu {
 		if ( $megamenu_settings && 'grid' === $megamenu_settings['type'] ) {
 			$children = array_map( function ($grid) {
 				$grid['type'] = 'megamenu';
-				$grid['columns'] = array_map( function ($column) {
-					$column['items'] = array_map( function ($item) {
-						if ( 'item' === $item['type'] ) {
-							$menu_item_object = wp_setup_nav_menu_item( get_post( $item['id'] ) );
 
-							$item['title'] = $menu_item_object->title;
-							$item['url'] = $menu_item_object->url;
-
-							$thumbnail_id = get_woocommerce_term_meta( $menu_item_object->object_id, 'thumbnail_id', true );
-							$image = wp_get_attachment_url( $thumbnail_id );
-							$image_fallback = apply_filters( 'blaze_wooless_menu_item_data_fallback_image', false );
-							$item['image'] = $image ? $image : $image_fallback;
-							$item['id'] = $menu_item_object->ID;
-						} else if ( 'widget' === $item['type'] ) {
-							$item['content'] = $this->get_widget_content( $item['id'] );
+				if ( count($grid['columns']) > 0) {
+					$grid['columns'] = array_map( function ($column) {
+						if ( isset( $column['items'] ) && count( $column['items'] ) > 0) {
+							$column['items'] = array_map( function ($item) {
+								if ( 'item' === $item['type'] ) {
+									$menu_item_object = wp_setup_nav_menu_item( get_post( $item['id'] ) );
+		
+									$item['title'] = $menu_item_object->title;
+									$item['url'] = $menu_item_object->url;
+		
+									$thumbnail_id = get_woocommerce_term_meta( $menu_item_object->object_id, 'thumbnail_id', true );
+									$image = wp_get_attachment_url( $thumbnail_id );
+									$image_fallback = apply_filters( 'blaze_wooless_menu_item_data_fallback_image', false );
+									$item['image'] = $image ? $image : $image_fallback;
+									$item['id'] = $menu_item_object->ID;
+								} else if ( 'widget' === $item['type'] ) {
+									$item['content'] = $this->get_widget_content( $item['id'] );
+								}
+		
+								return $item;
+							}, $column['items'] );
 						}
-
-						return $item;
-					}, $column['items'] );
-
-					return $column;
-				}, $grid['columns'] );
+						return $column;
+					}, $grid['columns'] );
+				}
 
 				return $grid;
 			}, $megamenu_settings['grid'] );
