@@ -36,8 +36,19 @@ class WoocommerceProductAddons {
 				return absint( $a['priority'] ) - absint( $b['priority'] );
 			} );
 
-			set_transient( 'blaze_commerce_general_product_addons', $general_addons, 15 * MINUTE_IN_SECONDS );
+			set_transient( 'blaze_commerce_general_product_addons', $general_addons, DAY_IN_SECONDS );
 		}
+	}
+
+	public function get_product_addons() {
+		$product_addons = get_transient( 'blaze_commerce_general_product_addons' );
+
+		if ( ! $product_addons ) {
+			$this->prepare_general_product_addons();
+			$product_addons = get_transient( 'blaze_commerce_general_product_addons' );
+		}
+
+		return $product_addons;
 	}
 
 	public function sync_product_addons_data( $product_data, $product_id, $product ) {
@@ -53,7 +64,7 @@ class WoocommerceProductAddons {
 
 				$available_global_addons = [];
 
-				$general_addons = get_transient( 'blaze_commerce_general_product_addons' );
+				$general_addons = $this->get_product_addons();
 
 				foreach ( $general_addons as $addon ) {
 					$restrict_to_categories = $addon['restrict_to_categories'];
@@ -94,6 +105,9 @@ class WoocommerceProductAddons {
 		if ( is_array( $product_addons ) && ! empty( $product_addons ) ) {
 			include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/abstract-wc-product-addons-field.php';
 			foreach ( $product_addons as $addon ) {
+				if ( $addon['type'] === 'heading' )
+					continue;
+
 				$value = isset( $post_data[ 'addon-' . $addon['field_name'] ] ) ? $post_data[ 'addon-' . $addon['field_name'] ] : '';
 				if ( is_array( $value ) ) {
 					$value = array_map( 'stripslashes', $value );
@@ -124,6 +138,9 @@ class WoocommerceProductAddons {
 						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-file-upload.php';
 						$field = new \WC_Product_Addons_Field_File_Upload( $addon, $value, $test );
 						break;
+					default:
+						//skip the field if it is not supported to prevent errors
+						continue;
 				}
 
 				$data = $field->get_cart_item_data();
