@@ -17,6 +17,7 @@ class Taxonomy extends BaseCollection {
 	public function get_fields() {
 		$fields = array(
 			array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'termId', 'type' => 'string', 'facet' => true ),
 			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
 			array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true, 'sort' => true ),
 			array( 'name' => 'description', 'type' => 'string' ),
@@ -87,6 +88,7 @@ class Taxonomy extends BaseCollection {
 		// Prepare the data to be indexed
 		$document = [ 
 			'id' => (string) $term->term_id,
+			'termId' => (string) $term->term_id,
 			'slug' => $term->slug,
 			'name' => $term->name,
 			'description' => $term->description,
@@ -167,7 +169,7 @@ class Taxonomy extends BaseCollection {
 				} );
 
 				$imported_count = count( $successful_imports );
-				$total_imports = count( $taxonomy_datas );
+				$total_imports  = count( $taxonomy_datas );
 			}
 
 
