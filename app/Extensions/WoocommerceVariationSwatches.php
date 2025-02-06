@@ -28,8 +28,8 @@ class WoocommerceVariationSwatches {
 		if ( 'pa_' !== substr( $taxonomy_slug, 0, 3 ) ) {
 			return false;
 		}
-		$transient_key = 'wooless_attribute_' . $taxonomy_slug;
-		$attribute_name = str_replace( 'pa_', '', wc_sanitize_taxonomy_name( $taxonomy_slug ) );
+		$transient_key      = 'wooless_attribute_' . $taxonomy_slug;
+		$attribute_name     = str_replace( 'pa_', '', wc_sanitize_taxonomy_name( $taxonomy_slug ) );
 		$attribute_taxonomy = get_transient( $transient_key );
 		if ( false === $attribute_taxonomy ) {
 
@@ -66,7 +66,7 @@ class WoocommerceVariationSwatches {
 	public function add_taxonomy_fields_data( $document, $term ) {
 		$attribute_taxonomy = $this->get_raw_attribute( $term->taxonomy );
 		if ( ! empty( $attribute_taxonomy->attribute_type ) ) {
-			$document['componentType'] = $attribute_taxonomy->attribute_type;
+			$document['componentType']  = $attribute_taxonomy->attribute_type;
 			$document['componentValue'] = $this->get_option_value( $attribute_taxonomy->attribute_type, $term->term_id, (array) $term, );
 
 		}
@@ -77,12 +77,12 @@ class WoocommerceVariationSwatches {
 		// Set default attribute type to select
 		$attribute_to_register['type'] = 'select';
 		if ( $attribute->is_taxonomy() ) {
-			$taxonomy_id = $attribute->get_id();
+			$taxonomy_id      = $attribute->get_id();
 			$swatch_attribute = woo_variation_swatches()->get_frontend()->get_attribute_taxonomy_by_id( $taxonomy_id );
 			if ( $swatch_attribute->attribute_type ) {
 				// Set type depending on what is selected for the woocommerce attribute in wp admin
 				$attribute_to_register['type'] = $swatch_attribute->attribute_type;
-				$attribute_to_register = $this->get_options_value( $attribute_to_register, $attribute );
+				$attribute_to_register         = $this->get_options_value( $attribute_to_register, $attribute );
 			}
 
 		}
@@ -100,7 +100,7 @@ class WoocommerceVariationSwatches {
 
 	public function get_option_value( $type, $term_id, $option ) {
 		// default value will be the option name 
-		$value = $option['label'];
+		$value = isset( $option['label'] ) ? $option['label'] : '';
 		if ( ! empty( $term_id ) ) {
 			switch ( $type ) {
 				case "color":
@@ -119,7 +119,7 @@ class WoocommerceVariationSwatches {
 					$value = $option['label'];
 					break;
 				default:
-					$value = $option['label'];
+					$value = isset( $option['label'] ) ? $option['label'] : '';
 			}
 		}
 
@@ -128,7 +128,7 @@ class WoocommerceVariationSwatches {
 
 	public function get_color_hex( $term_id ) {
 		$swatch_frontend = woo_variation_swatches()->get_frontend();
-		$value = sanitize_hex_color( $swatch_frontend->get_product_attribute_color( $term_id ) );
+		$value           = sanitize_hex_color( $swatch_frontend->get_product_attribute_color( $term_id ) );
 
 		return $value;
 	}
