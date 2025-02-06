@@ -103,15 +103,16 @@ class WoocommerceGiftCards {
 			$price = apply_filters( 'blaze_wooless_calculated_converted_single_price', $product_price );
 
 			// fallback if the aelia currency switcher is disabled
-			if ( ! array_key_exists( $currency, $price ) ) {
+			if ( ! is_array( $price ) || ! array_key_exists( $currency, $price ) ) {
 				$price = [ 
-					$currency => $price
+					$currency => (float) $price
 				];
 			}
 
 			$product_data['price'] = $price;
 			$product_data['regularPrice'] = $price;
 			$product_data['salePrice'] = $price;
+
 		}
 
 		return $product_data;
