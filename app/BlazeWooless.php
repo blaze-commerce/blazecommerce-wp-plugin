@@ -123,6 +123,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\NiWooCommerceProductVariationsTable',
 			'\\BlazeWooless\\Extensions\\B2BWholesaleSuite',
 			'\\BlazeWooless\\Extensions\\Pinterest',
+			'\\BlazeWooless\\Extensions\\AdvancedCustomFields',
 		);
 
 		foreach ( $extensions as $extension ) {
