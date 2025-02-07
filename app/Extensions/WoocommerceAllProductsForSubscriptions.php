@@ -52,16 +52,6 @@ class WoocommerceAllProductsForSubscriptions {
 			'schemes' => $schemes,
 		];
 
-		do_action(
-			"inspect",
-			[ 
-				"sync_product_data_" . rand( 1, 1000 ),
-				[ 
-					"product_data" => $product_data['metaData'],
-				]
-			]
-		);
-
 		return $product_data;
 	}
 }
