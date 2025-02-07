@@ -8,6 +8,8 @@ class Product extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'product';
 
+	const BATCH_SIZE = 5;
+
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
@@ -86,6 +88,7 @@ class Product extends BaseCollection {
 			array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ),
 			// Had to use string[] to type base on https://github.com/typesense/typesense/issues/227#issuecomment-1364072388 because ts is throwing errors after updgrade that the data is not an array
 			array( 'name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.termId', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
 			array( 'name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true ),
 			array( 'name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
 			array( 'name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
@@ -135,7 +138,7 @@ class Product extends BaseCollection {
 		return apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
 	}
 
-	public function get_product_ids( $page, $batch_size = 20 ) {
+	public function get_product_ids( $page, $batch_size = 5 ) {
 		global $wpdb;
 		// Calculate the offset
 		$offset = ( $page - 1 ) * $batch_size;
@@ -160,6 +163,12 @@ class Product extends BaseCollection {
 	}
 
 	public function initialize() {
+
+		do_action( 'blaze_wooless_pre_sync_products' );
+
+		// Query judge.me product external_ids and update to options
+		do_action( 'blaze_wooless_generate_product_reviews_data' );
+
 		$logger  = wc_get_logger();
 		$context = array( 'source' => 'wooless-product-collection-initialize' );
 
@@ -180,7 +189,7 @@ class Product extends BaseCollection {
 		}
 	}
 
-	public function get_product_query_args( $page = 1, $batch_size ) {
+	public function get_product_query_args( $page = 1, $batch_size = 5 ) {
 		return apply_filters( 'wooless_product_query_args', array(
 			'status' => 'publish',
 			'limit' => $batch_size,
@@ -206,11 +215,6 @@ class Product extends BaseCollection {
 			$page = $_REQUEST['page'] ?? 1;
 
 			if ( $page == 1 ) {
-				do_action( 'blaze_wooless_pre_sync_products' );
-
-				// Query judge.me product external_ids and update to options
-				do_action( 'blaze_wooless_generate_product_reviews_data' );
-
 				$this->initialize();
 			}
 
@@ -219,7 +223,7 @@ class Product extends BaseCollection {
 			$total_imports           = 0;
 			$product_ids             = $this->get_product_ids( $page, $batch_size );
 			$logger->debug(
-				sprintf( 
+				sprintf(
 					'Page: %d; Batch size: %d; Product Ids: [%s]',
 					$page,
 					$batch_size,
@@ -228,47 +232,17 @@ class Product extends BaseCollection {
 				$context
 			);
 
-			$products_batch = array();
+			$products_batch = $this->prepare_batch_data( $product_ids );
 
-			// Prepare products for indexing in Typesense
-			foreach ( $product_ids as $product_id ) {
-				if ( \get_post_status( $product_id ) !== 'publish' ) {
-					continue;
-				}
-
-				$product = \wc_get_product( $product_id );
-
-				$generated_product = $this->generate_typesense_data( $product );
-				$products_batch[] = $generated_product;
-
-				// Free memory
-				unset( $product_data );
-			}
-
-			// Import products to Typesense
-			try {
-				$result             = $this->import( $products_batch );
-				$successful_imports = array_filter( $result, function ($batch_result) {
-					$successful_import = isset( $batch_result['success'] ) && $batch_result['success'] == true;
-					if ( ! $successful_import ) {
-						$this->log_failed_product_import( $batch_result );
-					}
-					return $successful_import;
-				} );
-				$logger->debug( 'TS Product Import result: ' . print_r( $result, 1 ), $context );
-				$imported_products_count += count( $successful_imports ); // Increment the count of imported products
-				$total_imports += count( $products_batch ); // Increment the count of imported products
-			} catch (\Exception $e) {
-				$logger->debug( 'TS Product Import Exception: ' . $e->getMessage(), $context );
-				error_log( "Error importing products to Typesense: " . $e->getMessage() );
-			}
-
+			$successful_imports      = $this->import_prepared_batch( $products_batch );
+			$imported_products_count += count( $successful_imports ); // Increment the count of imported products
+			$total_imports += count( $products_batch ); // Increment the count of imported products
 
 			$total_pages   = $this->get_total_pages( $batch_size );
 			$next_page     = $page + 1;
 			$has_next_data = $page < $total_pages;
 			$logger->debug(
-				sprintf( 
+				sprintf(
 					'Total pages: %d',
 					$total_pages,
 				),
@@ -338,7 +312,7 @@ class Product extends BaseCollection {
 
 				$tab_item = [ 
 					'title' => wp_kses_post( apply_filters( 'woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key ) ),
-					'content' => $content,
+					'content' => do_shortcode( $content ),
 					'isOpen' => 0,
 					'location' => ''
 				];
@@ -370,10 +344,12 @@ class Product extends BaseCollection {
 			$thumbnail_src = wc_placeholder_img_src();
 		}
 
+		$attachment_title = ( $attachment && ! empty( $attachment->post_title ) ) ? $attachment->post_title : '';
+
 		return apply_filters( 'wooless_product_thumbnail', array(
 			'id' => $thumbnail_id,
-			'title' => $attachment->post_title,
-			'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title,
+			'title' => $attachment_title,
+			'altText' => $thumbnail_alt_text ? $thumbnail_alt_text : $attachment_title,
 			'src' => $thumbnail_src ? $thumbnail_src : '',
 		), $product );
 	}
@@ -452,6 +428,51 @@ class Product extends BaseCollection {
 		return $stock_status;
 	}
 
+	public function prepare_batch_data( $product_ids ) {
+		$products_batch = array();
+		if ( empty( $product_ids ) ) {
+			return $products_batch;
+		}
+
+		// Prepare products for indexing in Typesense
+		foreach ( $product_ids as $product_id ) {
+			if ( \get_post_status( $product_id ) !== 'publish' ) {
+				continue;
+			}
+
+			$product = \wc_get_product( $product_id );
+
+			$generated_product = $this->generate_typesense_data( $product );
+			$products_batch[]  = $generated_product;
+		}
+
+		return $products_batch;
+	}
+
+	public function import_prepared_batch( $products_batch ) {
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'blazecommerce-product-import' );
+
+		// Import products to Typesense
+		try {
+			$result             = $this->import( $products_batch );
+			$successful_imports = array_filter( $result, function ($batch_result) {
+				$successful_import = isset( $batch_result['success'] ) && $batch_result['success'] == true;
+				if ( ! $successful_import ) {
+					$this->log_failed_product_import( $batch_result );
+				}
+				return $successful_import;
+			} );
+			$logger->debug( 'TS Product Import result: ' . print_r( $result, 1 ), $context );
+
+			return $successful_imports;
+		} catch (\Exception $e) {
+			$logger->debug( 'TS Product Import Exception: ' . $e->getMessage(), $context );
+			error_log( "Error importing products to Typesense: " . $e->getMessage() );
+			return array();
+		}
+	}
+
 	public function generate_typesense_data( $product ) {
 		if ( empty( $product ) ) {
 			return null;
@@ -497,7 +518,7 @@ class Product extends BaseCollection {
 			'productId' => strval( $product->get_id() ),
 			'parentId' => (int) $product->get_parent_id(),
 			'shortDescription' => wpautop( $product->get_short_description() ),
-			'description' => wpautop( $product->get_description() ),
+			'description' => do_shortcode( wpautop( $product->get_description() ) ),
 			'name' => $product->get_name(),
 			'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
 			'slug' => ! empty( $product_slug ) ? $product_slug : sanitize_title( $product->get_name() ),
@@ -592,10 +613,10 @@ class Product extends BaseCollection {
 		$term_slug = $product_term->slug;
 		// Get Parent Term
 		$parentTerm       = get_term( $product_term->parent, $taxonomy );
-		$term_parent      = isset( $parentTerm->name ) ? $parentTerm->name : '';
+		$term_parent      = ! is_wp_error( $parentTerm ) ? $parentTerm->name : '';
 		$termOrder        = is_plugin_active( 'taxonomy-terms-order/taxonomy-terms-order.php' ) ? $product_term->term_order : 0;
 		$term_permalink   = wp_make_link_relative( get_term_link( $product_term->term_id ) );
-		$term_parent_slug = $parentTerm->slug;
+		$term_parent_slug = ! is_wp_error( $parentTerm ) ? $parentTerm->slug : '';
 
 		// Get the thumbnail
 		$term_thumbnail_id = get_term_meta( $product_term->term_id, 'thumbnail_id', true );
@@ -603,13 +624,14 @@ class Product extends BaseCollection {
 
 		$term_thumbnail = array(
 			'id' => $term_thumbnail_id,
-			'title' => $term_attachment->post_title,
+			'title' => $term_attachment && ! empty( $term_attachment->post_title ) ? $term_attachment->post_title : '',
 			'altText' => strval( get_post_meta( $term_thumbnail_id, '_wp_attachment_image_alt', true ) ),
 			'src' => wp_get_attachment_url( $term_thumbnail_id ),
 		);
 
 		return apply_filters( 'blaze_wooless_product_taxonomy_item', array(
 			'name' => $term_name,
+			'termId' => (string) $product_term->term_id,
 			'url' => get_term_link( $product_term->term_id ),
 			'type' => $taxonomy,
 			'slug' => $term_slug,
