@@ -45,7 +45,7 @@ class WoocommerceSubscription {
 	public function sync_product_data( $product_data, $product_id, $product ) {
 
 
-		if ( $product->is_type( [ 'subscription_variation', 'subscription' ] ) ) :
+		if ( $product->is_type( [ 'subscription_variation', 'subscription' ] ) ) {
 
 			$product_data['metaData']['subscriptions'] = [ 
 				'length' => $product->get_meta( '_subscription_length' ),
@@ -56,8 +56,7 @@ class WoocommerceSubscription {
 				'trial_length' => $product->get_meta( '_subscription_trial_length' ),
 			];
 
-
-		endif;
+		}
 
 		return $product_data;
 	}
