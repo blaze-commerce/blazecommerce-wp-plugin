@@ -144,6 +144,11 @@ class WoocommerceBundle {
 		return $bundled_items_data;
 	}
 
+	public function reformat_prices( $prices, $currency ) {
+		$prices = apply_filters( 'blaze_wooless_convert_prices', $prices, $currency );
+		return array_map( [ Woocommerce::class, 'format_price' ], $prices );
+	}
+
 	public function get_bundled_data( $product ) {
 
 		if ( ! $product->is_type( 'bundle' ) ) {
@@ -159,9 +164,6 @@ class WoocommerceBundle {
 		$minPrice[ $currency ] = $product->get_bundle_price( 'min', true );
 		$maxPrice[ $currency ] = $product->get_bundle_price( 'max', true );
 
-		$minPrice = apply_filters( 'blaze_wooless_convert_prices', $minPrice, $currency );
-		$maxPrice = apply_filters( 'blaze_wooless_convert_prices', $maxPrice, $currency );
-
 		$data = array(
 			'settings' => array(
 				'layout' => $product->get_layout(),
@@ -171,8 +173,8 @@ class WoocommerceBundle {
 				'editInCart' => $product->get_editable_in_cart(),
 			),
 			'products' => $bundle_products,
-			'minPrice' => $minPrice,
-			'maxPrice' => $maxPrice,
+			'minPrice' => $this->reformat_prices( $minPrice, $currency ),
+			'maxPrice' => $this->reformat_prices( $maxPrice, $currency ),
 		);
 
 
