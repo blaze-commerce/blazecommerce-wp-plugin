@@ -84,11 +84,17 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\TemplateBuilder',
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',
-			'\\BlazeWooless\\Features\\Cli',
 		);
 
 		foreach ( $features as $feature ) {
 			$feature::get_instance();
+		}
+
+		// Register the CLI command
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			add_action( 'cli_init', function () {
+				\WP_CLI::add_command( 'bc-sync', '\BlazeWooless\Features\Cli' );
+			} );
 		}
 	}
 
@@ -112,6 +118,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductAddons',
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
+			'\\BlazeWooless\\Extensions\\WooDiscountRules',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
@@ -119,6 +126,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\SmartCoupons',
 			'\\BlazeWooless\\Extensions\\NiWooCommerceProductVariationsTable',
 			'\\BlazeWooless\\Extensions\\B2BWholesaleSuite',
+			'\\BlazeWooless\\Extensions\\Pinterest',
 		);
 
 		foreach ( $extensions as $extension ) {
