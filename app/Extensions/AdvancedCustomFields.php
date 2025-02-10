@@ -23,8 +23,8 @@ class AdvancedCustomFields {
 
 	public function set_fields( $fields ) {
 		$fields[] = [ 'name' => 'metaData.acf', 'type' => 'object[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.acf.field_name', 'type' => 'string[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.acf.field_value', 'type' => 'auto', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.acf.field_name', 'type' => 'string', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.acf.field_value', 'type' => 'string', 'optional' => true ];
 
 		return $fields;
 	}
