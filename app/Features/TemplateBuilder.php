@@ -43,6 +43,27 @@ class TemplateBuilder {
 					) );
 			}
 		}
+
+		$query = new \WP_Query( [ 
+			'post_type' => 'wp_template_part',
+			'posts_per_page' => -1,
+		] );
+
+		if ( $query->have_posts() ) {
+			while ( $query->have_posts() ) {
+				$query->the_post();
+
+
+				TypesenseClient::get_instance()
+					->site_info()
+					->upsert( array(
+						'id' => (string) get_the_ID(),
+						'name' => 'site-template-' . $post->post_name,
+						'value' => $post->post_content,
+						'updated_at' => time(),
+					) );
+			}
+		}
 	}
 
 }
