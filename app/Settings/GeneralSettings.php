@@ -66,7 +66,8 @@ class GeneralSettings extends BaseSettings {
 	 */
 	public function redirect_non_admin_user() {
 
-		if ( isset( $_REQUEST['no-redirect'] ) ) {
+		$is_local = strpos( $_SERVER['HTTP_X_FORWARDED_HOST'], 'localhost' ) !== false;
+		if ( isset( $_REQUEST['no-redirect'] ) || $is_local ) {
 			return;
 		}
 
