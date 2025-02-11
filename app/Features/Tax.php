@@ -25,10 +25,40 @@ class Tax {
 			$product_data['metaData'] = array();
 		}
 
-		$price_with_tax                           = $product->get_price_including_tax();
+		$args = array(
+			'qty' => 1,
+			'price' => $product->get_price(),
+		);
+
+		if ( function_exists( 'wc_get_price_including_tax' ) ) { // WC 3.0+
+			$price_with_tax = wc_get_price_including_tax( $product, $args );
+		} else { // WC < 3.0
+			$price_with_tax = $product->get_price_including_tax();
+		}
+
 		$product_data['metaData']['priceWithTax'] = array(
 			$currency => (float) number_format( empty( $price_with_tax ) ? 0 : $price_with_tax, 4, '.', '' ),
 		);
 		return $product_data;
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
