@@ -87,14 +87,14 @@ class GeneralSettings extends BaseSettings {
 			exit;
 		}
 
-		$is_my_account_page                = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
+		$is_my_account_page = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
 		$exclude_page_redirect_to_frontend = apply_filters( 'blaze_wooless_exclude_page_redirect_to_frontend', is_checkout() );
 		if ( $exclude_page_redirect_to_frontend || $is_my_account_page ) {
 			//Since the page is excluded from redirecting to frontend then we just end the function here
 			return;
 		}
 
-		$has_cart_in_url           = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
+		$has_cart_in_url = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
 		$from_vercel_proxy_request = isset( $_SERVER['HTTP_X_VERCEL_PROXY_SIGNATURE'] ) ? true : false;
 
 		// if the url has cart. on it and the request is not from vercel then we redirect it to frontend page without cart in the url
@@ -174,7 +174,7 @@ class GeneralSettings extends BaseSettings {
 			'Ubuntu' => 'Ubuntu',
 			'Work Sans' => 'Work Sans',
 		);
-		$fields        = array(
+		$fields = array(
 			'wooless_general_settings_section' => array(
 				'label' => 'General Settings',
 				'options' => array(
@@ -260,9 +260,16 @@ class GeneralSettings extends BaseSettings {
 				),
 			);
 
+			$fields['wooless_general_settings_section']['options'][] = array(
+				'id' => 'enable_geo_restrictions',
+				'label' => 'Enable Geo Restrictions',
+				'type' => 'checkbox',
+				'args' => array(
+					'description' => 'Check this to enable geo restrictions.'
+				),
+			);
 		}
-
-
+		;
 
 		return apply_filters( 'blaze_wooless_general_settings', $fields );
 	}
@@ -291,10 +298,11 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner']              = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
-		$additional_data['show_free_shipping_minicart_component']  = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner'] = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
-		$additional_data['font_family']                            = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
+		$additional_data['enable_geo_restrictions'] = json_encode( $this->get_option( 'enable_geo_restrictions' ) == 1 ?: false );
+		$additional_data['font_family'] = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
 
 		return $additional_data;
 	}
