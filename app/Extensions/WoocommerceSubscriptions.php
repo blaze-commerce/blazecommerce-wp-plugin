@@ -2,7 +2,7 @@
 
 namespace BlazeWooless\Extensions;
 
-class WoocommerceSubscription {
+class WoocommerceSubscriptions {
 	private static $instance = null;
 
 	private static $post_type = [ 'subscription', 'variable-subscription', 'subscription_variation' ];
@@ -16,12 +16,22 @@ class WoocommerceSubscription {
 		return self::$instance;
 	}
 
+	public function is_plugin_active() {
+		return function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-subscriptions/woocommerce-subscriptions.php' );
+	}
+
 	public function __construct() {
-		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-subscriptions/woocommerce-subscriptions.php' ) ) {
+		if ( $this->is_plugin_active() ) {
+			add_filter( 'blaze_wooless_additional_site_info', array( $this, 'additional_site_info' ), 10, 1 );
 			add_filter( 'wooless_product_query_args', array( $this, 'modify_product_query_args' ), 10 );
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'set_fields' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_product_data' ), 99, 3 );
 		}
+	}
+
+	public function additional_site_info( $additional_data ) {
+		$additional_data['is_subscription_enabled'] = 'true';
+		return $additional_data;
 	}
 
 	public function modify_product_query_args( array $args ) {

@@ -44,7 +44,7 @@ class WoocommerceBundle {
 		}
 		return $fields;
 	}
-	protected function set_variation_data( $bundle_data, $bundled_item, $product ) {
+	protected function set_data( $bundle_data, $bundled_item, $product ) {
 		if ( $product->is_type( 'variable' ) ) {
 
 			$bundle_fields_prefix = apply_filters( 'woocommerce_product_bundle_field_prefix', '', $bundled_item->get_id() );
@@ -93,6 +93,16 @@ class WoocommerceBundle {
 			}
 
 			$bundle_data['variations'] = $variation_bundles;
+		} elseif ( $product->is_type( 'simple' ) ) {
+			$currency = get_option( 'woocommerce_currency' );
+			$price = $product->get_price();
+			$convertedPrice[ $currency ] = $price;
+			$convertedPrice = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
+
+			$bundle_data['product']['price'] = $convertedPrice;
+			// get product published status and link
+			$bundle_data['product']['status'] = $product->get_status();
+			$bundle_data['product']['link'] = get_permalink( $product->get_id() );
 		}
 
 		return $bundle_data;
@@ -138,7 +148,7 @@ class WoocommerceBundle {
 				)
 			);
 
-			array_push( $bundled_items_data, $this->set_variation_data( $data, $bundled_item, $product ) );
+			array_push( $bundled_items_data, $this->set_data( $data, $bundled_item, $product ) );
 
 		}
 		return $bundled_items_data;
