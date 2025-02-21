@@ -113,10 +113,12 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\YoastSEO',
 			'\\BlazeWooless\\Extensions\\RankMath',
 			'\\BlazeWooless\\Extensions\\GraphQL',
+			'\\BlazeWooless\\Extensions\\WoocommerceAllProductsForSubscriptions',
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
 			'\\BlazeWooless\\Extensions\\WoocommercePhotoReviews',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductAddons',
+			'\\BlazeWooless\\Extensions\\WoocommerceSubscription',
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
 			'\\BlazeWooless\\Extensions\\WooDiscountRules',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
@@ -127,6 +129,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\NiWooCommerceProductVariationsTable',
 			'\\BlazeWooless\\Extensions\\B2BWholesaleSuite',
 			'\\BlazeWooless\\Extensions\\Pinterest',
+			'\\BlazeWooless\\Extensions\\AdvancedCustomFields',
 		);
 
 		foreach ( $extensions as $extension ) {
