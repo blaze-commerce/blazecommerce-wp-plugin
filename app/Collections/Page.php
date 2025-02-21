@@ -18,21 +18,26 @@ class Page extends BaseCollection {
 
 	public function get_fields() {
 		$fields = array(
-			[ 'name' => 'name', 'type' => 'string' ],
-			[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
-			[ 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ],
-			[ 'name' => 'permalink', 'type' => 'string' ],
-			[ 'name' => 'type', 'type' => 'string', 'facet' => true ],
-			[ 'name' => 'thumbnail', 'type' => 'object', 'optional' => true ],
-			[ 'name' => 'taxonomies', 'type' => 'object', 'facet' => true, 'optional' => true ],
-			[ 'name' => 'updatedAt', 'type' => 'int64' ],
-			[ 'name' => 'createdAt', 'type' => 'int64' ],
-			[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
-			[ 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ],
-			[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
-			[ 'name' => 'author', 'type' => 'object', 'optional' => true ],
-			[ 'name' => 'template', 'type' => 'string', 'facet' => true ],
-			[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ]
+			array( 'name' => 'name', 'type' => 'string' ),
+			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'permalink', 'type' => 'string' ),
+			array( 'name' => 'type', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'thumbnail', 'type' => 'object', 'optional' => true ),
+			array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.termId', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true ),
+			array( 'name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'updatedAt', 'type' => 'int64' ),
+			array( 'name' => 'createdAt', 'type' => 'int64' ),
+			array( 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'rawContent', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'author', 'type' => 'object', 'optional' => true ),
+			array( 'name' => 'template', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ),
 		);
 
 		return apply_filters( 'blazecommerce/collection/page/typesense_fields', $fields );
@@ -345,6 +350,16 @@ class Page extends BaseCollection {
 		return $thumbnail;
 	}
 
+	public function get_taxonomy_item( $term ) {
+		return apply_filters( 'blazecommerce/collection/page/taxonomy_item', array(
+			'name' => $term->name,
+			'termId' => (string) $term->term_id,
+			'url' => get_term_link( $term->term_id ),
+			'type' => $term->taxonomy,
+			'slug' => $term->slug,
+		) );
+	}
+
 	public function get_taxonomies( $post_id, $post_type ) {
 
 		$taxonomies_data = [];
@@ -360,11 +375,7 @@ class Page extends BaseCollection {
 
 			if ( ! empty( $post_terms ) && ! is_wp_error( $post_terms ) ) {
 				foreach ( $post_terms as $post_term ) {
-					$taxonomies_data[ $taxonomy ][] = [ 
-						'name' => $post_term->name,
-						'url' => get_term_link( $post_term->term_id ),
-						'slug' => $post_term->slug,
-					];
+					$taxonomies_data[] = $this->get_taxonomy_item( $post_term );
 				}
 			}
 			unset( $post_terms );
