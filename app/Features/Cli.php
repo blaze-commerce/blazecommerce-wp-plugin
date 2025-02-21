@@ -38,12 +38,9 @@ class Cli extends WP_CLI_Command {
 			$imported_products_count = 0;
 			$total_imports           = 0;
 
+			// recreate the collection to typesense and do some initialization
+			$product_collection->initialize();
 			do {
-				if ( $page == 1 ) {
-					// recreate the collection to typesense and do some initialization
-					$product_collection->initialize();
-				}
-
 				$product_ids = $product_collection->get_product_ids( $page, $batch_size );
 				if ( empty( $product_ids ) ) {
 					break; // No more data left to sync
