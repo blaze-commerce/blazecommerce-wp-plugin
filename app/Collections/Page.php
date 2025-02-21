@@ -120,7 +120,7 @@ class Page extends BaseCollection {
 		$strip_shortcode_content = preg_replace( '#\[[^\]]+\]#', '', $content );
 		$page_content            = wp_strip_all_tags( apply_filters( 'the_content', $strip_shortcode_content ) );
 
-		return apply_filters( 'blaze_wooless_page_data_for_typesense', [ 
+		$data = array(
 			'id' => (string) $page_id,
 			'slug' => $page->post_name,
 			'name' => $page->post_title,
@@ -137,7 +137,9 @@ class Page extends BaseCollection {
 			'author' => $this->get_author( $page->post_author ),
 			'template' => $this->get_template( $page ),
 			'breadcrumbs' => $this->get_breadcrumbs( $page )
-		], $page );
+		);
+
+		return apply_filters( 'blazecommerce/collection/page/typesense_data', $data, $page );
 	}
 
 	public function get_breadcrumbs( $page ) {
