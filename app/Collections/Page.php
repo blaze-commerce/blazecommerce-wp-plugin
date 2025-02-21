@@ -174,14 +174,26 @@ class Page extends BaseCollection {
 		return $breadcrumbs;
 	}
 
+	public function get_syncable_post_types() {
+		return apply_filters( 'blazecommerce/collection/syncable_post_types', array(
+			'post',
+			'page'
+		) );
+	}
+
+	public function get_post_type_in_query() {
+		return "'" . implode( "', '", $this->get_syncable_post_types() ) . "'";
+	}
+
 	public function get_post_ids( $page, $batch_size = 20 ) {
 		global $wpdb;
 		// Calculate the offset
 		$offset = ( $page - 1 ) * $batch_size;
 
+		$post_types = $this->get_post_type_in_query();
 		// Query to select post IDs from the posts table with pagination
 		$query = $wpdb->prepare(
-			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ('post', 'page') AND post_status = 'publish' LIMIT %d OFFSET %d",
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ({$post_types}) AND post_status = 'publish' LIMIT %d OFFSET %d",
 			$batch_size,
 			$offset
 		);
@@ -192,7 +204,8 @@ class Page extends BaseCollection {
 
 	public function get_total_pages( $batch_size = 20 ) {
 		global $wpdb;
-		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ('post', 'page') AND post_status = 'publish'";
+		$post_types  = $this->get_post_type_in_query();
+		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ({$post_types}) AND post_status = 'publish'";
 		$total_posts = $wpdb->get_var( $query );
 		$total_pages = ceil( $total_posts / $batch_size );
 		return $total_pages;
