@@ -71,15 +71,18 @@ class CalculateShipping {
 					'state' => array(
 						'required' => true,
 					),
+					'post_code' => array(
+						'required' => false,
+					),
 				),
 			)
 		);
 	}
 
 	public function get_available_shipping_methods_callback( \WP_REST_Request $request ) {
-		$products  = $request->get_param( 'products' );
-		$country   = $request->get_param( 'country' );
-		$state     = $request->get_param( 'state' );
+		$products = $request->get_param( 'products' );
+		$country = $request->get_param( 'country' );
+		$state = $request->get_param( 'state' );
 		$post_code = $request->get_param( 'post_code' );
 
 		if ( ! class_exists( 'WooCommerce' ) ) {
@@ -102,15 +105,15 @@ class CalculateShipping {
 		\WC()->session->init();
 		WC()->session->destroy_session();
 
-		$customer      = new \WC_Customer();
+		$customer = new \WC_Customer();
 		WC()->customer = $customer;
 
 		// Create a new cart object
-		$cart       = new \WC_Cart();
+		$cart = new \WC_Cart();
 		\WC()->cart = $cart;
 
 		foreach ( $products as $product ) {
-			$variation_id   = 0;
+			$variation_id = 0;
 			$variation_data = array();
 			if ( isset( $product['variation'] ) ) {
 				$variation_id = $product['variation']['id'];
@@ -124,7 +127,7 @@ class CalculateShipping {
 		WC()->customer->set_shipping_state( $state );
 		WC()->customer->set_shipping_postcode( $post_code );
 
-		$packages         = WC()->cart->get_shipping_packages(); // Prepare the packages
+		$packages = WC()->cart->get_shipping_packages(); // Prepare the packages
 		$shipping_methods = WC()->shipping()->calculate_shipping( $packages ); // Calculate shipping
 
 		$available_methods = $shipping_methods[0];

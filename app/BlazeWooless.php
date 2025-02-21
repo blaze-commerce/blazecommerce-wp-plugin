@@ -118,7 +118,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommercePhotoReviews',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductAddons',
-			'\\BlazeWooless\\Extensions\\WoocommerceSubscription',
+			'\\BlazeWooless\\Extensions\\WoocommerceSubscriptions',
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
 			'\\BlazeWooless\\Extensions\\WooDiscountRules',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
