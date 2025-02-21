@@ -47,9 +47,10 @@ class SiteInfo extends BaseCollection {
 	public function prepare_batch_data() {
 		$documents = array();
 
-		$update_at = time();
-		$shop_page = get_option( 'woocommerce_shop_page_id' );
-		$blog_page = get_option( 'page_for_posts' );
+		$update_at    = time();
+		$shop_page    = get_option( 'woocommerce_shop_page_id' );
+		$blog_page    = get_option( 'page_for_posts' );
+		$cart_page_id = wc_get_page_id( 'cart' );
 
 		$datas = array(
 			array(
@@ -146,6 +147,10 @@ class SiteInfo extends BaseCollection {
 			array(
 				'name' => 'blog_page_slug',
 				'value' => $blog_page ? get_post_field( 'post_name', $blog_page ) : '',
+			),
+			array(
+				'name' => 'cart_page_slug',
+				'value' => $cart_page_id ? get_post_field( 'post_name', $cart_page_id ) : '',
 			),
 			array(
 				'name' => 'woocommerce_permalinks',
