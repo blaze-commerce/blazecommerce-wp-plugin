@@ -103,7 +103,7 @@ class Page extends BaseCollection {
 		}
 
 		$page_id         = $page->ID;
-		$taxonomies_data = $this->get_taxonomies( $page_id, get_post_type() );
+		$taxonomies_data = $this->get_taxonomies( $page_id, $page->post_type );
 
 		$thumbnail_id = get_post_thumbnail_id( $page_id );
 		$thumbnail    = $this->get_thumbnail( $thumbnail_id, $page_id );
