@@ -16,6 +16,28 @@ class Page extends BaseCollection {
 		return self::$instance;
 	}
 
+	public function get_fields() {
+		$fields = array(
+			[ 'name' => 'name', 'type' => 'string' ],
+			[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
+			[ 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ],
+			[ 'name' => 'permalink', 'type' => 'string' ],
+			[ 'name' => 'type', 'type' => 'string', 'facet' => true ],
+			[ 'name' => 'thumbnail', 'type' => 'object', 'optional' => true ],
+			[ 'name' => 'taxonomies', 'type' => 'object', 'facet' => true, 'optional' => true ],
+			[ 'name' => 'updatedAt', 'type' => 'int64' ],
+			[ 'name' => 'createdAt', 'type' => 'int64' ],
+			[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
+			[ 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ],
+			[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
+			[ 'name' => 'author', 'type' => 'object', 'optional' => true ],
+			[ 'name' => 'template', 'type' => 'string', 'facet' => true ],
+			[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ]
+		);
+
+		return apply_filters( 'blazecommerce/collection/page/typesense_fields', $fields );
+	}
+
 	public function initialize() {
 		try {
 			$this->drop_collection();
@@ -26,23 +48,7 @@ class Page extends BaseCollection {
 		try {
 			$this->create_collection( [ 
 				'name' => $this->collection_name(),
-				'fields' => [ 
-					[ 'name' => 'name', 'type' => 'string' ],
-					[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
-					[ 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ],
-					[ 'name' => 'permalink', 'type' => 'string' ],
-					[ 'name' => 'type', 'type' => 'string', 'facet' => true ],
-					[ 'name' => 'thumbnail', 'type' => 'object', 'optional' => true ],
-					[ 'name' => 'taxonomies', 'type' => 'object', 'facet' => true, 'optional' => true ],
-					[ 'name' => 'updatedAt', 'type' => 'int64' ],
-					[ 'name' => 'createdAt', 'type' => 'int64' ],
-					[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
-					[ 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ],
-					[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
-					[ 'name' => 'author', 'type' => 'object', 'optional' => true ],
-					[ 'name' => 'template', 'type' => 'string', 'facet' => true ],
-					[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ],
-				],
+				'fields' => $this->get_fields(),
 				'default_sorting_field' => 'updatedAt',
 				'enable_nested_fields' => true
 			] );
