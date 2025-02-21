@@ -18,7 +18,7 @@ class AdvancedCustomFields {
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'set_fields' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_product_data' ), 99, 3 );
 
-			add_filter( 'blazecommerce/collection/page/typesense_fields', array( $this, 'set_fields' ), 10, 1 );
+			add_filter( 'blazecommerce/collection/page/typesense_fields', array( $this, 'set_page_fields' ), 10, 1 );
 			add_filter( 'blazecommerce/collection/page/typesense_data', array( $this, 'set_page_data' ), 10, 2 );
 			add_action( 'admin_init', array( $this, 'test' ) );
 		}
@@ -28,6 +28,12 @@ class AdvancedCustomFields {
 		$fields[] = [ 'name' => 'metaData.acf', 'type' => 'object[]', 'optional' => true ];
 		$fields[] = [ 'name' => 'metaData.acf.field_name', 'type' => 'string', 'optional' => true ];
 		$fields[] = [ 'name' => 'metaData.acf.field_value', 'type' => 'string', 'optional' => true ];
+
+		return $fields;
+	}
+
+	public function set_page_fields( $fields ) {
+		$fields[] = [ 'name' => 'metaData.acf', 'type' => 'auto', 'optional' => true ];
 
 		return $fields;
 	}
