@@ -28,6 +28,16 @@ class GeneralSettings extends BaseSettings {
 		add_filter( 'post_type_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
 		add_filter( 'page_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
 		add_filter( 'term_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
+
+		add_action( 'wp_enqueue_scripts', function () {
+			$theme = wp_get_theme();
+			wp_enqueue_style(
+				'blazecommerce-frontend-style',
+				$this->remove_cart_from_url( home_url( 'frontend.css' ) ),
+				[],
+				$theme->get( 'Version' ) // Cache-busting with child theme's version
+			);
+		}, 999 );
 	}
 
 	/**
