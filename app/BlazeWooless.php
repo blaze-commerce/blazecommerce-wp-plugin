@@ -122,6 +122,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
 			'\\BlazeWooless\\Extensions\\WooDiscountRules',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
+			'\\BlazeWooless\\Extensions\\OffloadMedia',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
 			'\\BlazeWooless\\Extensions\\Elementor',
