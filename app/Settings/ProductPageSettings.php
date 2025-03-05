@@ -40,7 +40,7 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		$icons                 = array(
+		$icons = array(
 			'select' => 'Select',
 			'CiDeliveryTruck' => 'CiDeliveryTruck',
 			'CiViewList' => 'CiViewList',
@@ -155,6 +155,14 @@ class ProductPageSettings extends BaseSettings {
 						'type' => 'html',
 						'args' => array( 'description' => 'This will be displayed after the description on all products.' ),
 					),
+
+					array(
+						'id' => 'set_hot_sale',
+						'label' => 'Set Hot Sale Metrix',
+						'type' => 'number',
+						'default' => 0,
+						'args' => array( 'description' => 'Set the number of sales for a product to be considered a hot sale. Leave 0 if we dont need to use the bad' ),
+					)
 				)
 			),
 		];
@@ -241,6 +249,17 @@ class ProductPageSettings extends BaseSettings {
 			);
 		}
 
+		$site_info->upsert(
+			array(
+				'id' => '1000909',
+				'name' => 'product_page_settings',
+				'value' => json_encode( array(
+					'hotSale' => isset( $options['set_hot_sale'] ) ? $options['set_hot_sale'] : 0,
+				) ),
+				'updated_at' => time(),
+			)
+		);
+
 		do_action( 'blaze_wooless_save_product_page_settings', $options );
 	}
 
@@ -267,7 +286,7 @@ class ProductPageSettings extends BaseSettings {
 		if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
 			$available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
 		} else {
-			$base_currency        = get_woocommerce_currency();
+			$base_currency = get_woocommerce_currency();
 			$available_currencies = [ 
 				$base_currency => ''
 			];

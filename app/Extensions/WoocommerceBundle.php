@@ -36,7 +36,7 @@ class WoocommerceBundle {
 
 	public function fields( $fields ) {
 		$fields[] = array( 'name' => 'bundle', 'type' => 'object', 'optional' => true );
-		
+
 		$currencies = Woocommerce::get_currencies();
 		foreach ( $currencies as $currency ) {
 			$fields[] = array( 'name' => 'bundle.minPrice.' . $currency, 'type' => 'float', 'optional' => true );
@@ -44,29 +44,29 @@ class WoocommerceBundle {
 		}
 		return $fields;
 	}
-	protected function set_variation_data( $bundle_data, $bundled_item, $product ) {
+	protected function set_data( $bundle_data, $bundled_item, $product ) {
 		if ( $product->is_type( 'variable' ) ) {
 
 			$bundle_fields_prefix = apply_filters( 'woocommerce_product_bundle_field_prefix', '', $bundled_item->get_id() );
 			$variation_attributes = $bundled_item->get_product_variation_attributes();
-			$variation_bundles    = array();
+			$variation_bundles = array();
 
 			foreach ( $variation_attributes as $variation_attribute_name => $variation_attribute_options ) {
 
 				$variation_options = array();
-				$variations        = $bundled_item->get_product_variations();
-				$currency          = get_option( 'woocommerce_currency' );
+				$variations = $bundled_item->get_product_variations();
+				$currency = get_option( 'woocommerce_currency' );
 
 
 				foreach ( (array) $variations as $variation ) {
 					foreach ( $variation['attributes'] as $variation_key => $variation_value ) {
 
-						$variation_id      = $variation['variation_id'];
+						$variation_id = $variation['variation_id'];
 						$variation_product = wc_get_product( $variation_id );
 
-						$price                       = $variation_product->get_price();
+						$price = $variation_product->get_price();
 						$convertedPrice[ $currency ] = $price;
-						$convertedPrice              = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
+						$convertedPrice = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
 
 						$variation_options[ $variation_key ][ $variation_id ] = array(
 							'label' => $variation_value,
@@ -93,6 +93,16 @@ class WoocommerceBundle {
 			}
 
 			$bundle_data['variations'] = $variation_bundles;
+		} elseif ( $product->is_type( 'simple' ) ) {
+			$currency = get_option( 'woocommerce_currency' );
+			$price = $product->get_price();
+			$convertedPrice[ $currency ] = $price;
+			$convertedPrice = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
+
+			$bundle_data['product']['price'] = $convertedPrice;
+			// get product published status and link
+			$bundle_data['product']['status'] = $product->get_status();
+			$bundle_data['product']['link'] = get_permalink( $product->get_id() );
 		}
 
 		return $bundle_data;
@@ -111,7 +121,7 @@ class WoocommerceBundle {
 		foreach ( $bundled_items as $bundled_item ) {
 			$product = $bundled_item->get_product();
 
-			$image     = $product->get_image_id();
+			$image = $product->get_image_id();
 			$image_src = wp_get_attachment_image_src( $image, 'full' );
 
 			$data = array(
@@ -138,10 +148,15 @@ class WoocommerceBundle {
 				)
 			);
 
-			array_push( $bundled_items_data, $this->set_variation_data( $data, $bundled_item, $product ) );
+			array_push( $bundled_items_data, $this->set_data( $data, $bundled_item, $product ) );
 
 		}
 		return $bundled_items_data;
+	}
+
+	public function reformat_prices( $prices, $currency ) {
+		$prices = apply_filters( 'blaze_wooless_convert_prices', $prices, $currency );
+		return array_map( [ Woocommerce::class, 'format_price' ], $prices );
 	}
 
 	public function get_bundled_data( $product ) {
@@ -159,9 +174,6 @@ class WoocommerceBundle {
 		$minPrice[ $currency ] = $product->get_bundle_price( 'min', true );
 		$maxPrice[ $currency ] = $product->get_bundle_price( 'max', true );
 
-		$minPrice = apply_filters( 'blaze_wooless_convert_prices', $minPrice, $currency );
-		$maxPrice = apply_filters( 'blaze_wooless_convert_prices', $maxPrice, $currency );
-
 		$data = array(
 			'settings' => array(
 				'layout' => $product->get_layout(),
@@ -171,9 +183,10 @@ class WoocommerceBundle {
 				'editInCart' => $product->get_editable_in_cart(),
 			),
 			'products' => $bundle_products,
-			'minPrice' => $minPrice,
-			'maxPrice' => $maxPrice,
+			'minPrice' => $this->reformat_prices( $minPrice, $currency ),
+			'maxPrice' => $this->reformat_prices( $maxPrice, $currency ),
 		);
+
 
 		return apply_filters( 'blaze_wooless_product_bundle_data', $data, $product );
 	}
@@ -188,9 +201,9 @@ class WoocommerceBundle {
 		$product_data['bundle'] = $this->get_bundled_data( $product );
 
 		if ( $product_data['price'][ $currency ] === 0 && $product_data['regularPrice'][ $currency ] === 0 ) {
-			$product_data['price'][ $currency ]        = $product_data['bundle']['minPrice'][ $currency ];
+			$product_data['price'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
 			$product_data['regularPrice'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
-			$product_data['salePrice'][ $currency ]    = $product_data['bundle']['minPrice'][ $currency ];
+			$product_data['salePrice'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
 		}
 
 		return $product_data;
@@ -216,7 +229,7 @@ class WoocommerceBundle {
 	public function check_bundle_data( \WP_REST_Request $request ) {
 		try {
 			$product_id = $request->get_param( 'product_id' );
-			$product    = wc_get_product( $product_id );
+			$product = wc_get_product( $product_id );
 
 			if ( ! is_a( $product, 'WC_Product_Bundle' ) ) {
 				throw new \Exception( 'Product is not a bundle' );
