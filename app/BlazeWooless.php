@@ -116,6 +116,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommerceAllProductsForSubscriptions',
 			'\\BlazeWooless\\Extensions\\WoocommerceVariationSwatches',
 			'\\BlazeWooless\\Extensions\\WoocommercePhotoReviews',
+			'\\BlazeWooless\\Extensions\\WoocommerceProducts',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductLabel',
 			'\\BlazeWooless\\Extensions\\WoocommerceProductAddons',
 			'\\BlazeWooless\\Extensions\\WoocommerceSubscriptions',
