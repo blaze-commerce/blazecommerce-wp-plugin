@@ -273,6 +273,15 @@ class GeneralSettings extends BaseSettings {
 					'description' => 'Check this to enable geo restrictions.'
 				),
 			);
+
+			$fields['wooless_general_settings_section']['options'][] = array(
+				'id' => 'enable_override_best_seller',
+				'label' => 'Override Best Seller Functionality',
+				'type' => 'checkbox',
+				'args' => array(
+					'description' => 'Check this to override the best seller products functionality.'
+				),
+			);
 		}
 		;
 
@@ -307,6 +316,7 @@ class GeneralSettings extends BaseSettings {
 		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
 		$additional_data['enable_geo_restrictions'] = json_encode( $this->get_option( 'enable_geo_restrictions' ) == 1 ?: false );
+		$additional_data['enable_override_best_seller'] = json_encode( $this->get_option( 'enable_override_best_seller' ) == 1 ?: false );
 		$additional_data['font_family'] = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
 
 		return $additional_data;
