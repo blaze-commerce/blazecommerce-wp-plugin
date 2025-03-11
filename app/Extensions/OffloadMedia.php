@@ -6,7 +6,7 @@ class OffloadMedia {
 	private static $instance = null;
 
 	public static function get_instance() {
-		return self::$instance ?? (self::$instance = new self());
+		return self::$instance ?? ( self::$instance = new self() );
 	}
 
 	public function __construct() {
