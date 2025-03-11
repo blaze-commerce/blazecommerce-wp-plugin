@@ -2,8 +2,6 @@
 
 namespace BlazeWooless\Collections;
 
-use BlazeWooless\Extensions\OffloadMedia;
-
 class Page extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'page';
@@ -81,10 +79,13 @@ class Page extends BaseCollection {
 			$template = '';
 		}
 
+
 		return apply_filters( 'blazecommerce/page/template', $template, $page );
 	}
 
+
 	public function get_data( $page ) {
+
 		$excluded_pages = array();
 		if ( function_exists( 'wc_get_page_id' ) ) {
 			$woocommerce_pages = [ 
@@ -111,14 +112,6 @@ class Page extends BaseCollection {
 		$content                 = $page->post_content;
 		$strip_shortcode_content = preg_replace( '#\[[^\]]+\]#', '', $content );
 		$page_content            = wp_strip_all_tags( apply_filters( 'the_content', $strip_shortcode_content ) );
-
-		// Use OffloadMedia to modify raw content
-		if ( class_exists( 'BlazeWooless\Extensions\OffloadMedia' ) ) {
-			$offload_media = OffloadMedia::get_instance();
-			$page_content = $offload_media->page_raw_content_url( [
-				'rawContent' => $page_content
-			]);
-		}
 
 		return apply_filters( 'blaze_wooless_page_data_for_typesense', [ 
 			'id' => (string) $page_id,
@@ -263,6 +256,7 @@ class Page extends BaseCollection {
 				$next_page      = $page + 1;
 				$has_next_data  = $page < $total_pages;
 
+
 				wp_send_json( array(
 					'imported_count' => $imported_count,
 					'total_imports' => $total_imports,
@@ -273,6 +267,8 @@ class Page extends BaseCollection {
 				) );
 
 			}
+
+
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,
@@ -328,6 +324,7 @@ class Page extends BaseCollection {
 	}
 
 	public function get_taxonomies( $post_id, $post_type ) {
+
 		$taxonomies_data = [];
 		$taxonomies      = get_object_taxonomies( $post_type );
 
