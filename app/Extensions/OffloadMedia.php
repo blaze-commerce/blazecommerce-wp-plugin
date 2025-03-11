@@ -24,6 +24,12 @@ class OffloadMedia {
 	}
 
 	public function page_raw_content_url( $page ) {
+		// Check if AS3CF_SETTINGS is defined
+		if (!defined('AS3CF_SETTINGS')) {
+			// Handle the case where AS3CF_SETTINGS is not defined
+			return $page; // or you can throw an exception or log an error
+		}
+
 		// Extract the settings from the AS3CF_SETTINGS constant
 		$settings = unserialize( AS3CF_SETTINGS );
 
