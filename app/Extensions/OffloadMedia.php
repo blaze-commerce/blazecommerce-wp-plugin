@@ -29,13 +29,13 @@ class OffloadMedia {
 
 		// Check if bucket and region are set and not empty
 		if ( ! empty( $settings['bucket'] ) && ! empty( $settings['region'] ) ) {
-			$new_domain = 'https://' . esc_url( $settings['bucket'] ) . '.s3.' . esc_url( $settings['region'] ) . '.amazonaws.com';
+			$new_domain = 'https://' . $settings['bucket'] . '.s3.' . $settings['region'] . '.amazonaws.com';
 
 			$pattern = '/<img[^>]+src=[\'"]([^\'"]+)[\'"]/i';
 			
 			// Replace the domain in img src attributes only if it contains /wp-content/uploads
 			$page['rawContent'] = preg_replace_callback( $pattern, function( $matches ) use ( $new_domain ) {
-				$url = esc_url( $matches[1] );
+				$url = $matches[1];
 				if ( strpos( $url, '/wp-content/uploads' ) !== false ) {
 					$updated_url = preg_replace( '/^https?:\/\/[^\/]+/', $new_domain, $url );
 					return str_replace( $url, $updated_url, $matches[0] );
