@@ -36,16 +36,7 @@ class OffloadMedia {
 
 		// Extract the settings from the AS3CF_SETTINGS constant
 		$settings = unserialize( AS3CF_SETTINGS );
-
-		// Check if bucket and region are set and not empty
-		if ( ! empty( $settings['bucket'] ) && ! empty( $settings['region'] ) ) {
-			$new_domain = 'https://' . $settings['bucket'] . '.s3.' . $settings['region'] . '.amazonaws.com';
-
-			$pattern = '/<img[^>]+src=[\'"]([^\'"]+)[\'"]/i';
-			
-			// Replace the domain in img src attributes only if it contains /wp-content/uploads
-			$page['rawContent'] = preg_replace_callback( $pattern, function( $matches ) use ( $new_domain ) {
-				$url = $matches[1];
+			'/url":"(https?:\/\/[^"]*\/wp-content\/uploads\/[^"]+)"|url\'\'(https?:\/\/[^"]*\/wp-content\/uploads\/[^"]+)\'/i'
 				if ( strpos( $url, '/wp-content/uploads' ) !== false ) {
 					$updated_url = preg_replace( '/^https?:\/\/[^\/]+/', $new_domain, $url );
 					return str_replace( $url, $updated_url, $matches[0] );
