@@ -6,11 +6,15 @@ class OffloadMedia {
 	private static $instance = null;
 
 	public static function get_instance() {
-		if ( self::$instance === null ) {
-			self::$instance = new self();
-		}
 
-		return self::$instance;
+	public function __construct() {
+		if ( $this->is_plugin_active() ) {
+			if ( has_filter( 'blazecommerce/collection/page/typesense_data' ) ) {
+				add_filter( 'blaze_wooless_page_data_for_typesense', [ $this, 'page_raw_content_url' ], 10, 1 );
+			} else {
+				add_filter( 'blaze_wooless_page_data_for_typesense', [ $this, 'page_raw_content_url' ], 10, 1 );
+			}
+		}
 	}
 
 	public function is_plugin_active() {
