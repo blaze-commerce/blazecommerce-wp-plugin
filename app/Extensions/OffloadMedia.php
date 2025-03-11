@@ -14,7 +14,7 @@ class OffloadMedia {
 	}
 
 	public function is_plugin_active() {
-		return function_exists( 'is_plugin_active' ) && is_plugin_active( 'xanda-offload-media-extender/xanda-offload-media-extender.php' );
+		return function_exists( 'is_plugin_active' ) && is_plugin_active( 'amazon-s3-and-cloudfront-pro/amazon-s3-and-cloudfront-pro.php' );
 	}
 
 	public function __construct() {
