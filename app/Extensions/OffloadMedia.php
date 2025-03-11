@@ -33,29 +33,9 @@ class OffloadMedia {
 			return $page;
 		}
 
-		$new_domain = sprintf( 'https://%s.s3.%s.amazonaws.com', $settings['bucket'], $settings['region'] );
-		$page['rawContent'] = $this->replace_urls( $page['rawContent'], $new_domain );
+		// Apply the as3cf_filter_post_local_to_provider filter
+		$page['rawContent'] = apply_filters( 'as3cf_filter_post_local_to_provider', $page['rawContent'] );
 
 		return $page;
-	}
-
-	private function replace_urls( $content, $new_domain ) {
-		$patterns = [
-			'/<img[^>]+src=[\'"]([^\'"]+)[\'"]/i',
-			'/url":"(https?:\/\/[^"]*\/wp-content\/uploads\/[^"]+)"|url\'\'(https?:\/\/[^"]*\/wp-content\/uploads\/[^"]+)\'/i'
-		];
-
-		foreach ( $patterns as $pattern ) {
-			$content = preg_replace_callback( $pattern, function( $matches ) use ( $new_domain ) {
-				$url = $matches[1] ?? $matches[2];
-				if ( strpos( $url, '/wp-content/uploads' ) !== false ) {
-					$updated_url = preg_replace( '/^https?:\/\/[^\/]+/', $new_domain, $url );
-					return str_replace( $url, $updated_url, $matches[0] );
-				}
-				return $matches[0];
-			}, $content );
-		}
-
-		return $content;
 	}
 }
