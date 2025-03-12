@@ -16,7 +16,7 @@ class YoastSEO {
 	public function __construct() {
 		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'wordpress-seo/wp-seo.php' ) ) {
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_seo_to_product_schema' ), 10, 2 );
-			add_filter( 'blaze_wooless_page_data_for_typesense', array( $this, 'add_seo_to_page_schema' ), 10, 2 );
+			add_filter( 'blazecommerce/collection/page/typesense_data', array( $this, 'add_seo_to_page_schema' ), 10, 2 );
 			add_filter( 'blaze_wooless_additional_homepage_seo_info', array( $this, 'homepage_seo_settings' ), 10, 1 );
 			add_filter( 'blaze_commerce_taxonomy_data', array( $this, 'add_taxonomy_head' ), 10, 2 );
 			add_theme_support( 'title-tag' );

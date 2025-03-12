@@ -16,7 +16,7 @@ class RankMath {
 	public function __construct() {
 		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'seo-by-rank-math/rank-math.php' ) ) {
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_seo_to_product_schema' ), 10, 3 );
-			add_filter( 'blaze_wooless_page_data_for_typesense', array( $this, 'add_seo_to_page_schema' ), 10, 2 );
+			add_filter( 'blazecommerce/collection/page/typesense_data', array( $this, 'add_seo_to_page_schema' ), 10, 2 );
 			add_filter( 'blaze_wooless_additional_homepage_seo_info', array( $this, 'homepage_seo_settings' ), 10, 1 );
 			add_filter( 'blaze_commerce_taxonomy_data', array( $this, 'add_taxonomy_head' ), 10, 2 );
 		}
@@ -51,7 +51,7 @@ class RankMath {
 		/**
 		 * This is useful when someone created a custom taxonomies and it should have an seoFullhead in the front end. 
 		 */
-		$taxonomies_with_seo = apply_filters( 'wooless_taxonomies_with_seo', array(
+		$taxonomies_with_seo     = apply_filters( 'wooless_taxonomies_with_seo', array(
 			'product_cat',
 			'category',
 			'post_tag',
@@ -63,9 +63,9 @@ class RankMath {
 	}
 
 	public function get_full_head( $url ) {
-		$home_url = home_url();
-		$curl = curl_init();
-		$url = urlencode( $url );
+		$home_url     = home_url();
+		$curl         = curl_init();
+		$url          = urlencode( $url );
 		$curl_options = array(
 			CURLOPT_URL => "{$home_url}/wp-json/rankmath/v1/getHead?url={$url}",
 			CURLOPT_RETURNTRANSFER => true,

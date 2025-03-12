@@ -16,6 +16,33 @@ class Page extends BaseCollection {
 		return self::$instance;
 	}
 
+	public function get_fields() {
+		$fields = array(
+			array( 'name' => 'name', 'type' => 'string' ),
+			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'permalink', 'type' => 'string' ),
+			array( 'name' => 'type', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'thumbnail', 'type' => 'object', 'optional' => true ),
+			array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.name', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.termId', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.url', 'type' => 'string[]', 'optional' => true ),
+			array( 'name' => 'taxonomies.type', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'taxonomies.slug', 'type' => 'string[]', 'facet' => true, 'optional' => true ),
+			array( 'name' => 'updatedAt', 'type' => 'int64' ),
+			array( 'name' => 'createdAt', 'type' => 'int64' ),
+			array( 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'rawContent', 'type' => 'string', 'optional' => true ),
+			array( 'name' => 'author', 'type' => 'object', 'optional' => true ),
+			array( 'name' => 'template', 'type' => 'string', 'facet' => true ),
+			array( 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ),
+		);
+
+		return apply_filters( 'blazecommerce/collection/page/typesense_fields', $fields );
+	}
+
 	public function initialize() {
 		try {
 			$this->drop_collection();
@@ -26,23 +53,7 @@ class Page extends BaseCollection {
 		try {
 			$this->create_collection( [ 
 				'name' => $this->collection_name(),
-				'fields' => [ 
-					[ 'name' => 'name', 'type' => 'string' ],
-					[ 'name' => 'slug', 'type' => 'string', 'facet' => true ],
-					[ 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ],
-					[ 'name' => 'permalink', 'type' => 'string' ],
-					[ 'name' => 'type', 'type' => 'string', 'facet' => true ],
-					[ 'name' => 'thumbnail', 'type' => 'object', 'optional' => true ],
-					[ 'name' => 'taxonomies', 'type' => 'object', 'facet' => true, 'optional' => true ],
-					[ 'name' => 'updatedAt', 'type' => 'int64' ],
-					[ 'name' => 'createdAt', 'type' => 'int64' ],
-					[ 'name' => 'publishedAt', 'type' => 'int64', 'optional' => true, 'facet' => true ],
-					[ 'name' => 'content', 'type' => 'string', 'optional' => true, 'facet' => true ],
-					[ 'name' => 'rawContent', 'type' => 'string', 'optional' => true ],
-					[ 'name' => 'author', 'type' => 'object', 'optional' => true ],
-					[ 'name' => 'template', 'type' => 'string', 'facet' => true ],
-					[ 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ],
-				],
+				'fields' => $this->get_fields(),
 				'default_sorting_field' => 'updatedAt',
 				'enable_nested_fields' => true
 			] );
@@ -102,7 +113,7 @@ class Page extends BaseCollection {
 		}
 
 		$page_id         = $page->ID;
-		$taxonomies_data = $this->get_taxonomies( $page_id, get_post_type() );
+		$taxonomies_data = $this->get_taxonomies( $page_id, $page->post_type );
 
 		$thumbnail_id = get_post_thumbnail_id( $page_id );
 		$thumbnail    = $this->get_thumbnail( $thumbnail_id, $page_id );
@@ -113,7 +124,7 @@ class Page extends BaseCollection {
 		$strip_shortcode_content = preg_replace( '#\[[^\]]+\]#', '', $content );
 		$page_content            = wp_strip_all_tags( apply_filters( 'the_content', $strip_shortcode_content ) );
 
-		return apply_filters( 'blaze_wooless_page_data_for_typesense', [ 
+		$data = array(
 			'id' => (string) $page_id,
 			'slug' => $page->post_name,
 			'name' => $page->post_title,
@@ -130,7 +141,9 @@ class Page extends BaseCollection {
 			'author' => $this->get_author( $page->post_author ),
 			'template' => $this->get_template( $page ),
 			'breadcrumbs' => $this->get_breadcrumbs( $page )
-		], $page );
+		);
+
+		return apply_filters( 'blazecommerce/collection/page/typesense_data', $data, $page );
 	}
 
 	public function get_breadcrumbs( $page ) {
@@ -173,14 +186,26 @@ class Page extends BaseCollection {
 		return $breadcrumbs;
 	}
 
+	public function get_syncable_post_types() {
+		return apply_filters( 'blazecommerce/collection/syncable_post_types', array(
+			'post',
+			'page'
+		) );
+	}
+
+	public function get_post_type_in_query() {
+		return "'" . implode( "', '", $this->get_syncable_post_types() ) . "'";
+	}
+
 	public function get_post_ids( $page, $batch_size = 20 ) {
 		global $wpdb;
 		// Calculate the offset
 		$offset = ( $page - 1 ) * $batch_size;
 
+		$post_types = $this->get_post_type_in_query();
 		// Query to select post IDs from the posts table with pagination
 		$query = $wpdb->prepare(
-			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ('post', 'page') AND post_status = 'publish' LIMIT %d OFFSET %d",
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN ({$post_types}) AND post_status = 'publish' LIMIT %d OFFSET %d",
 			$batch_size,
 			$offset
 		);
@@ -191,7 +216,8 @@ class Page extends BaseCollection {
 
 	public function get_total_pages( $batch_size = 20 ) {
 		global $wpdb;
-		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ('post', 'page') AND post_status = 'publish'";
+		$post_types  = $this->get_post_type_in_query();
+		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type IN ({$post_types}) AND post_status = 'publish'";
 		$total_posts = $wpdb->get_var( $query );
 		$total_pages = ceil( $total_posts / $batch_size );
 		return $total_pages;
@@ -323,6 +349,16 @@ class Page extends BaseCollection {
 		return $thumbnail;
 	}
 
+	public function get_taxonomy_item( $term ) {
+		return apply_filters( 'blazecommerce/collection/page/taxonomy_item', array(
+			'name' => $term->name,
+			'termId' => (string) $term->term_id,
+			'url' => get_term_link( $term->term_id ),
+			'type' => $term->taxonomy,
+			'slug' => $term->slug,
+		) );
+	}
+
 	public function get_taxonomies( $post_id, $post_type ) {
 
 		$taxonomies_data = [];
@@ -338,11 +374,7 @@ class Page extends BaseCollection {
 
 			if ( ! empty( $post_terms ) && ! is_wp_error( $post_terms ) ) {
 				foreach ( $post_terms as $post_term ) {
-					$taxonomies_data[ $taxonomy ][] = [ 
-						'name' => $post_term->name,
-						'url' => get_term_link( $post_term->term_id ),
-						'slug' => $post_term->slug,
-					];
+					$taxonomies_data[] = $this->get_taxonomy_item( $post_term );
 				}
 			}
 			unset( $post_terms );
