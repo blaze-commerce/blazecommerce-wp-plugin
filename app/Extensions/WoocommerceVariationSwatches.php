@@ -127,10 +127,29 @@ class WoocommerceVariationSwatches {
 	}
 
 	public function get_color_hex( $term_id ) {
-		$swatch_frontend = woo_variation_swatches()->get_frontend();
-		$value           = sanitize_hex_color( $swatch_frontend->get_product_attribute_color( $term_id ) );
+		$color = get_term_meta( $term_id, 'pa_colour_swatches_id_color', true );
 
-		return $value;
+		if ( empty( $color ) ) {
+			$color = $this->get_color_from_swatches( $term_id );
+		}
+
+		return ! empty( $color ) ? sanitize_hex_color( $color ) : '';
+	}
+
+	/**
+	 * Get color from WooCommerce Variation Swatches
+	 *
+	 * @param int $term_id Term ID.
+	 * @return string|null Color value
+	 */
+	private function get_color_from_swatches( $term_id ) {
+		$swatch_frontend = woo_variation_swatches()->get_frontend();
+
+		if ( ! $swatch_frontend || ! method_exists( $swatch_frontend, 'get_product_attribute_color' ) ) {
+			return null;
+		}
+
+		return $swatch_frontend->get_product_attribute_color( $term_id );
 	}
 
 	public function get_image_src( $term ) {
