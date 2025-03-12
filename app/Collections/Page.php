@@ -101,7 +101,6 @@ class Page extends BaseCollection {
 		if ( function_exists( 'wc_get_page_id' ) ) {
 			$woocommerce_pages = [ 
 				wc_get_page_id( 'myaccount' ),
-				wc_get_page_id( 'cart' ),
 				wc_get_page_id( 'checkout' )
 			];
 			$excluded_pages    = array_merge( $excluded_pages, $woocommerce_pages );
