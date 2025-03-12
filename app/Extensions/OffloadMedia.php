@@ -12,7 +12,7 @@ class OffloadMedia {
 	public function __construct() {
 		if ( $this->is_plugin_active() ) {
 			if ( has_filter( 'blazecommerce/collection/page/typesense_data' ) ) {
-				add_filter( 'blaze_wooless_page_data_for_typesense', [ $this, 'page_raw_content_url' ], 10, 1 );
+				add_filter( 'blazecommerce/collection/page/typesense_data', [ $this, 'page_raw_content_url' ], 10, 1 );
 			} else {
 				add_filter( 'blaze_wooless_page_data_for_typesense', [ $this, 'page_raw_content_url' ], 10, 1 );
 			}
