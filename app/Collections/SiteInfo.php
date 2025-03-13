@@ -156,6 +156,14 @@ class SiteInfo extends BaseCollection {
 				'name' => 'woocommerce_permalinks',
 				'value' => get_option( 'woocommerce_permalinks' ),
 			),
+			array(
+				'name' => 'wp_page_headless',
+				'value' => 'yes',
+			),
+			array(
+				'name' => 'wp_post_headless',
+				'value' => 'yes',
+			),
 		);
 
 		$datas[] = $this->site_logo_settings();
@@ -171,7 +179,8 @@ class SiteInfo extends BaseCollection {
 				$data['value'] = json_encode( $data['value'] );
 			}
 
-			$documents[] = $data;
+			$data['value'] = apply_filters( 'blazecommerce/settings/' . $data['name'], $data['value'] );
+			$documents[]   = $data;
 		}
 
 		unset( $datas );
@@ -211,7 +220,7 @@ class SiteInfo extends BaseCollection {
 
 			$documents[] = array(
 				'name' => $key,
-				'value' => (string) $value,
+				'value' => (string) apply_filters( 'blazecommerce/settings/' . $key, $value ),
 				'updated_at' => time(),
 			);
 		}
