@@ -79,6 +79,13 @@ class WoocommerceProducts {
 			$product_data['metaData']['bestSeller'] = 'yes' === $product->get_meta( '_set_as_best_seller' );
 		}
 
+		// check if product type is an external product
+		if ( 'external' === $product->get_type() ) {
+			$product_data['metaData']['external'] = true;
+			$product_data['metaData']['externalUrl'] = $product->get_product_url();
+			$product_data['metaData']['buttonText'] = $product->get_button_text();
+		}
+
 		return $product_data;
 	}
 }
