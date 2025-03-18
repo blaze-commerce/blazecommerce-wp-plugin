@@ -225,6 +225,16 @@ class SiteInfo extends BaseCollection {
 			);
 		}
 
+		$category_setttings = apply_filters( 'blazecommerce/settings/category', array(
+			'productPerPage' => apply_filters( 'loop_shop_per_page', wc_get_default_products_per_row() * wc_get_default_product_rows_per_page() )
+		) );
+
+		$documents[] = array(
+			'name' => 'category',
+			'value' => (string) json_encode( $category_setttings, true ),
+			'updated_at' => time(),
+		);
+
 		return $documents;
 	}
 
