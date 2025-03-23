@@ -34,7 +34,7 @@ class Taxonomy extends BaseCollection {
 			array( 'name' => 'productCount', 'type' => 'int64' ),
 			array( 'name' => 'order', 'type' => 'int64' ),
 			array( 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ),
-			array( 'name' => 'metaData', 'type' => 'object[]', 'optional' => true, 'facet' => true ),
+			array( 'name' => 'metaData', 'type' => 'object', 'optional' => true, 'facet' => true ),
 		);
 		$fields = apply_filters( 'blaze_commerce_taxonomy_fields', $fields );
 		return apply_filters( 'blazecommerce/collection/taxonomy/typesense_fields', $fields );
