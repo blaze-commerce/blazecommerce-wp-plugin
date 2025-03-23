@@ -34,9 +34,10 @@ class Taxonomy extends BaseCollection {
 			array( 'name' => 'productCount', 'type' => 'int64' ),
 			array( 'name' => 'order', 'type' => 'int64' ),
 			array( 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ),
-			array( 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ),
+			array( 'name' => 'metaData', 'type' => 'object[]', 'optional' => true, 'facet' => true ),
 		);
-		return apply_filters( 'blaze_commerce_taxonomy_fields', $fields );
+		$fields = apply_filters( 'blaze_commerce_taxonomy_fields', $fields );
+		return apply_filters( 'blazecommerce/collection/taxonomy/typesense_fields', $fields );
 	}
 
 	public function initialize() {
@@ -117,7 +118,9 @@ class Taxonomy extends BaseCollection {
 			'seoFullHead' => '',
 		];
 
-		return apply_filters( 'blaze_commerce_taxonomy_data', $document, $term );
+		$document = apply_filters( 'blaze_commerce_taxonomy_data', $document, $term );
+
+		return apply_filters( 'blazecommerce/collection/taxonomy/typesense_data', $document, $term );
 	}
 
 	public function get_query_args( $page = 1, $batch_size = 50 ) {

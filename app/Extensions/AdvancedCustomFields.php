@@ -20,7 +20,10 @@ class AdvancedCustomFields {
 
 			add_filter( 'blazecommerce/collection/page/typesense_fields', array( $this, 'set_page_fields' ), 10, 1 );
 			add_filter( 'blazecommerce/collection/page/typesense_data', array( $this, 'set_page_data' ), 10, 2 );
-			add_action( 'admin_init', array( $this, 'test' ) );
+
+
+			add_filter( 'blazecommerce/collection/taxonomy/typesense_fields', array( $this, 'set_fields' ), 10, 1 );
+			add_filter( 'blazecommerce/collection/taxonomy/typesense_data', array( $this, 'taxonomy_data' ), 10, 2 );
 		}
 	}
 
@@ -76,6 +79,28 @@ class AdvancedCustomFields {
 			return $document;
 		}
 		$document['metaData']['acf'] = $this->get_acf_fields_values( $page->ID );
+		return $document;
+	}
+
+	public function taxonomy_data( $document, $term ) {
+		if ( ! function_exists( 'acf_get_field_groups' ) ) {
+			return $document;
+		}
+
+		$field_values = [];
+		$field_groups = acf_get_field_groups( array( 'taxonomy' => $term->taxonomy ) );
+		foreach ( $field_groups as $field_group ) {
+			$fields = acf_get_fields( $field_group['key'] );
+
+			if ( $fields ) {
+				foreach ( $fields as $field ) {
+					$field_values[ $field['name'] ] = get_field( $field['name'], "{$term->taxonomy}_{$term->term_id}" );
+				}
+			}
+		}
+
+		$document['metaData']['acf'] = $field_values;
+
 		return $document;
 	}
 }
