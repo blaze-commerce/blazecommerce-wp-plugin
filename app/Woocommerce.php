@@ -179,6 +179,14 @@ class Woocommerce {
 		}
 	}
 
+	public function update_typesense_variation_immediately( $product_id ) {
+		$wc_product = \wc_get_product( $product_id );
+		if ( $wc_product && $wc_product->is_type( 'variable' ) ) {
+			$variation_ids = $wc_product->get_children();
+			$this->variation_update( $variation_ids );
+		}
+	}
+
 	public function variation_update( $variation_ids ) {
 		try {
 			$typsense_product = Product::get_instance();
