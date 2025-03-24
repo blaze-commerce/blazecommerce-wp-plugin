@@ -235,6 +235,9 @@ class Product extends BaseCollection {
 			$products_batch = $this->prepare_batch_data( $product_ids );
 
 			$successful_imports      = $this->import_prepared_batch( $products_batch );
+			foreach ( $products_batch as $product_batch ) {
+				Woocommerce::get_instance()->update_typesense_variation_immediately( $product_batch['id'] );
+			}
 			$imported_products_count += count( $successful_imports ); // Increment the count of imported products
 			$total_imports += count( $products_batch ); // Increment the count of imported products
 
