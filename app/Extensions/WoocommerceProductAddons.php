@@ -18,13 +18,14 @@ class WoocommerceProductAddons {
 			add_action( 'ts_before_product_upsert', array( $this, 'prepare_general_product_addons' ) );
 			add_action( 'blaze_wooless_pre_sync_products', array( $this, 'prepare_general_product_addons' ) );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_product_addons_data' ), 99, 3 );
-			add_filter( 'woocommerce_add_cart_item_data', array( $this, 'filter_addons_data' ), -1, 3 );
 			add_filter( 'woocommerce_add_cart_item_data', array( $this, 'woocommerce_add_cart_item_data' ), 99, 3 );
+			add_filter( 'woocommerce_add_cart_item_data', array( $this, 'filter_addons_data' ), 999999, 3 );
 		}
 	}
 
 	public function prepare_general_product_addons() {
-		$general_addons = get_transient( 'blaze_commerce_general_product_addons' );
+		$general_addons = false;
+		get_transient( 'blaze_commerce_general_product_addons' );
 
 		if ( $general_addons )
 			return;
@@ -89,21 +90,26 @@ class WoocommerceProductAddons {
 
 	public function filter_addons_data( $cart_item_data, $product_id, $variation_id ) {
 
-		if ( empty( $cart_item_data['graphqlAddons'] ) || count( $cart_item_data['graphqlAddons'] ) === 0 ) {
+		if ( empty( $cart_item_data['addons'] ) || count( $cart_item_data['addons'] ) === 0 ) {
 			return $cart_item_data;
 		}
 
-		$enable_custom = false;
+		// cari dalam $cart_item_data['addons'] jika ada array dengan key name "Gift Message"
+		$gift_message = array_filter( $cart_item_data['addons'], function ($addon) {
+			return $addon['name'] === 'Gift Message';
+		} );
 
-		foreach ( $cart_item_data['graphqlAddons'] as $addon ) {
-			if ( is_array( $addon ) && array_intersect( $addon, [ 'i-need-custom-work', 'custom-work' ] ) ) {
-				$enable_custom = true;
-				break;
-			}
-		}
+		// cari dalam $cart_item_data['addons'] jika ada array dengan key name "Gift Wrap"
+		$custom_work = array_filter( $cart_item_data['addons'], function ($addon) {
+			$name = strtoupper( sanitize_title( $addon['name'] ) );
+			return in_array( $name, [ "I-NEED-CUSTOM-WORK", "CUSTOM-WORK", "DO-YOU-NEED-SOMETHING-DIFFERENT" ] );
+		} );
 
-		if ( ! $enable_custom ) {
-			$cart_item_data['graphqlAddons'] = [];
+		// jika tidak ada $custom_work, maka return $cart_item_data
+		if ( empty( $custom_work ) ) {
+			unset( $cart_item_data['addons'] );
+
+			$cart_item_data['addons'] = array_values( $gift_message );
 		}
 
 		return $cart_item_data;
@@ -228,7 +234,7 @@ class WoocommerceProductAddons {
 						case 'file_upload':
 
 							if ( empty( $value ) ) {
-								continue;
+								break;
 							}
 
 							// Mendefinisikan direktori untuk menyimpan file
@@ -246,7 +252,7 @@ class WoocommerceProductAddons {
 							$field = new \WC_Product_Addons_Field_File_Upload( $addon, $saved_file_path, true );
 							break;
 						default:
-							continue;
+							break;
 					}
 
 					if ( $field === null || ! method_exists( $field, 'get_cart_item_data' ) ) {
