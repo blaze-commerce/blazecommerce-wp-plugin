@@ -20,7 +20,10 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * [--all]
 	 * : Sync all products.
-	 *
+	 * 
+	 * [--variants]
+	 * : Sync all products variants.
+	 * 
 	 * ## EXAMPLES
 	 *
 	 *     wp bc-sync product --all
@@ -38,9 +41,12 @@ class Cli extends WP_CLI_Command {
 			$imported_products_count = 0;
 			$total_imports           = 0;
 
-			// recreate the collection to typesense and do some initialization
-			$product_collection->initialize();
 			do {
+				if ( $page == 1 ) {
+					// recreate the collection to typesense and do some initialization
+					$product_collection->initialize();
+				}
+
 				$product_ids = $product_collection->get_product_ids( $page, $batch_size );
 				if ( empty( $product_ids ) ) {
 					break; // No more data left to sync
@@ -73,6 +79,64 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
 
 			WP_CLI::halt( 0 );
+		}
+
+		if ( isset( $assoc_args['variants'] ) ) {
+			$start_time              = microtime( true );
+			$page              		 = 1;
+
+			WP_CLI::line( "Syncing all product variants in batches..." );
+
+			$args = array(
+				'post_type' => 'product',
+				'post_status' => 'publish',
+				'posts_per_page' => -1,
+				'tax_query' => array(
+					array(
+						'taxonomy' => 'product_type',
+						'field'    => 'slug',
+						'terms'    => 'variable',
+					),
+				),
+			);
+	
+			$query = new \WP_Query( $args );
+			$variation_ids = [];
+	
+			if ( $query->have_posts() ) {
+				while ( $query->have_posts() ) {
+					$query->the_post();
+					$product = wc_get_product( get_the_ID() );
+	
+					if ( $product && $product->is_type( 'variable' ) ) {
+						$children = $product->get_children();
+						$variation_ids = array_merge($variation_ids, $children);
+					}
+				}
+	
+				// $event_time = WC()->call_function( 'time' ) + 1;
+				$chunks = array_chunk( $variation_ids, 50 );
+	
+				foreach ( $chunks as $chunk ) {
+					\BlazeWooless\Woocommerce::get_instance()->variation_update( $chunk );
+					
+					WP_CLI::success( "Completed batch {$page}..." );
+					$page++; // Move to the next batch
+				}
+
+				WP_CLI::success( "All product variants have been synced." );
+				WP_CLI::success( "Total variation prouct: " . count($query->posts) );
+				WP_CLI::success( "Total child variation product: " . count($variation_ids) );
+
+				// End tracking time
+				$end_time       = microtime( true );
+				$execution_time = $end_time - $start_time;
+				// Convert execution time to hours, minutes, seconds
+				$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+				WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+
+				WP_CLI::halt( 0 );
+			}
 		}
 
 		WP_CLI::error( "Nothing was sync" );
