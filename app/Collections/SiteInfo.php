@@ -235,7 +235,63 @@ class SiteInfo extends BaseCollection {
 			'updated_at' => time(),
 		);
 
-		return $documents;
+		$product_setttings = apply_filters( 'blazecommerce/settings/product', array(
+			'productDetails' => array(
+				'showSku' => false,
+				'showBrand' => false,
+				'showStockInformation' => true,
+				"emailWhenAvailable" => true,
+				"showCategories" => false,
+				"newsletter" => true,
+				"brandTaxonomyIdentifier" => "",
+				"stockDisplayFormat" => "low_amount"
+			),
+			'features' => array(
+				'shortDescription' => array(
+					"enabled" => true
+				),
+				'recentlyViewed' => array(
+					"enabled" => true,
+					"showNumProducts" => 4
+				),
+				"additionalWarningMessage" => array(
+					"enabled" => false
+				),
+				"calculateShipping" => array(
+					"enabled" => true
+				),
+				"averageRatingText" => array(
+					"enabled" => true
+				)
+			),
+			'productGallery' => array(
+				'newProductBadgeThreshold' => "30",
+				'showNewProductBadge' => true,
+				'zoomType' => '2',
+				'isGrid' => false
+			),
+			'layout' => array(
+				"wishlist" => array(
+					"buttonType" => "1"
+				),
+				"descriptionTabLocation" => "1",
+				"tabsCase" => "2",
+				"productTabs" => "accordion",
+				"recentlyViewedAndCrossSellAlignment" => "left"
+			),
+			"descriptionAfterContent" => "",
+			"usingCompositeProduct" => false,
+			"freeShippingThreshold" => array()
+		) );
+
+		$documents[] = array(
+			'name' => 'product',
+			'value' => (string) json_encode( $product_setttings, true ),
+			'updated_at' => time(),
+		);
+
+
+		return apply_filters( 'blazecommerce/settings', $documents );
 	}
 
 	public function import_prepared_batch( $documents ) {
