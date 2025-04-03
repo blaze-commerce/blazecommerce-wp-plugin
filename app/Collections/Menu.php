@@ -33,6 +33,7 @@ class Menu extends BaseCollection {
 					[ 'name' => 'name', 'type' => 'string' ],
 					[ 'name' => 'wp_menu_id', 'type' => 'int32' ],
 					[ 'name' => 'items', 'type' => 'string' ],
+					[ 'name' => 'menu_items', 'type' => 'string' ],
 					[ 'name' => 'updated_at', 'type' => 'int64' ],
 				],
 				'default_sorting_field' => 'wp_menu_id',
@@ -63,6 +64,7 @@ class Menu extends BaseCollection {
 			'name' => 'WooCommerce My Account',
 			'wp_menu_id' => 12444,
 			'items' => json_encode( $my_account_menu_items ),
+			'menu_items' => json_encode( $my_account_menu_items ),
 			'updated_at' => time(), // Converts the timestamp to a 64-bit integer
 		);
 
@@ -113,6 +115,7 @@ class Menu extends BaseCollection {
 				'name' => $menu->name,
 				'wp_menu_id' => (int) $menu->term_id,
 				'items' => $menu_item_json,
+				'menu_items' => $menu_items,
 				'updated_at' => intval( strtotime( $menu->post_modified ), 10 ), // Converts the timestamp to a 64-bit integer
 			];
 
