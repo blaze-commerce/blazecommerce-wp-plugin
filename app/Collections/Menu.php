@@ -115,7 +115,7 @@ class Menu extends BaseCollection {
 				'name' => $menu->name,
 				'wp_menu_id' => (int) $menu->term_id,
 				'items' => $menu_item_json,
-				'menu_items' => $menu_items,
+				'menu_items' => json_encode( $menu_items ),
 				'updated_at' => intval( strtotime( $menu->post_modified ), 10 ), // Converts the timestamp to a 64-bit integer
 			];
 
@@ -129,6 +129,10 @@ class Menu extends BaseCollection {
 
 	public function import_prepared_batch( $menus ) {
 		$import_response = $this->collection()->documents->import( $menus );
+		$logger          = wc_get_logger();
+		$context         = array( 'source' => 'menu-import-response' );
+
+		$logger->debug( print_r( $import_response, 1 ), $context );
 
 		$successful_imports = array_filter( $import_response, function ($batch_result) {
 			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
