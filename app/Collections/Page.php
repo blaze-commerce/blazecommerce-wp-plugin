@@ -269,6 +269,20 @@ class Page extends BaseCollection {
 			$this->initialize();
 		}
 
+		// the settings to not sync all pageAndPost. Set to false so that no pageAndPost syncs happen
+		$should_sync = apply_filters( 'blazecommerce/settings/sync/pageAndPost', true );
+		if ( ! $should_sync ) {
+			// This prevents syncing all pageAndPost
+			wp_send_json( array(
+				'imported_count' => 0,
+				'total_imports' => 0,
+				'next_page' => null,
+				'page' => 1,
+				'import_response' => [],
+				'import_data_sent' => [],
+			) );
+		}
+
 		try {
 			$post_ids = $this->get_post_ids( $page, $batch_size );
 			if ( ! empty( $post_ids ) ) {
