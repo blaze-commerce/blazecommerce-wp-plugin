@@ -185,7 +185,21 @@ class Taxonomy extends BaseCollection {
 				$this->initialize();
 			}
 
+
 			$query_args = $this->get_query_args( $page, $batch_size );
+
+			// the settings to not sync all taxonomy terms. Set to false so that no taxonomy syncs happen
+			$should_sync = apply_filters( 'blazecommerce/settings/sync/taxonomies', true );
+			if ( ! $should_sync ) {
+				wp_send_json( array(
+					'imported_count' => 0,
+					'total_imports' => 0,
+					'next_page' => null,
+					'query_args' => $query_args,
+					'import_response' => [],
+					'import_data_sent' => [],
+				) );
+			}
 
 			$term_query = new \WP_Term_Query( $query_args );
 
