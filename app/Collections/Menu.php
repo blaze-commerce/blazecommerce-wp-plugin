@@ -43,6 +43,7 @@ class Menu extends BaseCollection {
 	}
 
 	public function process_menu_items( $menu_items ) {
+
 		/**
 		 * for debuging purposes you can return the $menu_items right away so that you can check the data in the frontend or log the data here
 		 * 
@@ -50,7 +51,7 @@ class Menu extends BaseCollection {
 		 */
 		return array_values( array_map( function ($menu_item) {
 			return array(
-				'id' => $menu_item->ID,
+				'id' => (string) $menu_item->ID,
 				'classes' => ! empty( $menu_item->classes ) ? $menu_item->classes : [],
 				'type' => $menu_item->type,
 				'title' => $menu_item->title,
