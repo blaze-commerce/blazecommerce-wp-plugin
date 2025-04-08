@@ -92,12 +92,14 @@ class Menu extends BaseCollection {
 						'title' => $item->title,
 						'url' => $item->url,
 						'children' => array(),
+						'classes' => ! empty( $item->classes ) ? $item->classes : []
 					);
 				} else {
 					// If there's a parent, add it as a child of its parent
 					$menu_item_data[ $item->menu_item_parent ]['children'][] = array(
 						'title' => $item->title,
 						'url' => $item->url,
+						'classes' => ! empty( $item->classes ) ? $item->classes : []
 					);
 					$menu_item_data[ $item->menu_item_parent ]['parentId']   = $item->menu_item_parent;
 				}
