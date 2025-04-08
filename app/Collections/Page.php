@@ -112,6 +112,11 @@ class Page extends BaseCollection {
 			return null;
 		}
 
+		$exclude_page = apply_filters( 'blazecommerce/settings/sync/page/exclude_page', false, $page );
+		if ( $exclude_page ) {
+			return null;
+		}
+
 		$page_id         = $page->ID;
 		$taxonomies_data = $this->get_taxonomies( $page_id, $page->post_type );
 
