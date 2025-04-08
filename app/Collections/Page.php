@@ -292,14 +292,17 @@ class Page extends BaseCollection {
 			$post_ids = $this->get_post_ids( $page, $batch_size );
 			if ( ! empty( $post_ids ) ) {
 
-				$post_datas         = $this->prepare_batch_data( $post_ids );
-				$successful_imports = $this->import_prepared_batch( $post_datas );
+				$post_datas = $this->prepare_batch_data( $post_ids );
+				if ( ! empty( $post_datas ) ) {
+					$successful_imports = $this->import_prepared_batch( $post_datas );
+					$imported_count += count( $successful_imports );
+				}
 
-				$imported_count += count( $successful_imports );
+
 				$total_imports += count( $post_datas );
-				$total_pages    = $this->get_total_pages( $batch_size );
-				$next_page      = $page + 1;
-				$has_next_data  = $page < $total_pages;
+				$total_pages   = $this->get_total_pages( $batch_size );
+				$next_page     = $page + 1;
+				$has_next_data = $page < $total_pages;
 
 
 				wp_send_json( array(
