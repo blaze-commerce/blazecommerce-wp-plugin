@@ -18,7 +18,7 @@ class Tax {
 		add_filter( 'blaze_wooless_cross_sell_data_for_typesense', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
 
-		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_tax_settings_to_site_info' ), 10, 1 );
+		add_filter( 'blazecommerce/settings/tax_rates', array( $this, 'tax_rates' ), 10, 1 );
 	}
 
 	public function add_price_with_tax_meta_data( $product_data, $product_id, $product ) {
@@ -44,23 +44,10 @@ class Tax {
 		return $product_data;
 	}
 
-	public function add_tax_settings_to_site_info( $additional_settings ) {
-		$tax_settings = array(
-			'prices_include_tax' => get_option( 'woocommerce_prices_include_tax' ),
-			'tax_based_on'       => get_option( 'woocommerce_tax_based_on' ),
-			'shipping_tax_class' => get_option( 'woocommerce_shipping_tax_class' ),
-			'tax_round_at_subtotal' => get_option( 'woocommerce_tax_round_at_subtotal' ),
-			'tax_classes'        => array_filter( array_map( 'trim', explode( "\n", get_option( 'woocommerce_tax_classes' ) ) ) ),
-			'tax_display_shop' => get_option( 'woocommerce_tax_display_shop' ),
-			'tax_display_cart' => get_option( 'woocommerce_tax_display_cart' ),
-			'price_display_suffix' => get_option( 'woocommerce_price_display_suffix' ),
-			'tax_total_display' => get_option( 'woocommerce_tax_total_display' ),
-		);
+	public function tax_rates( $tax_rates ) {
+		$tax_rates = $this->get_tax_rates_array();
 
-		$additional_settings['woocommerce_tax_settings'] = $tax_settings;
-		$additional_settings['woocommerce_tax_rates'] = $this->get_tax_rates_array();
-
-		return $additional_settings;
+		return $tax_rates;
 	}
 
 	public function get_tax_rates_array() {

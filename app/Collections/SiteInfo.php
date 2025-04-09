@@ -235,6 +235,32 @@ class SiteInfo extends BaseCollection {
 			'updated_at' => time(),
 		);
 
+		$tax_settings = apply_filters( 'blazecommerce/settings/tax', array(
+			'prices_include_tax' => get_option( 'woocommerce_prices_include_tax' ),
+			'tax_based_on'       => get_option( 'woocommerce_tax_based_on' ),
+			'shipping_tax_class' => get_option( 'woocommerce_shipping_tax_class' ),
+			'tax_round_at_subtotal' => get_option( 'woocommerce_tax_round_at_subtotal' ),
+			'tax_classes'        => array_filter( array_map( 'trim', explode( "\n", get_option( 'woocommerce_tax_classes' ) ) ) ),
+			'tax_display_shop' => get_option( 'woocommerce_tax_display_shop' ),
+			'tax_display_cart' => get_option( 'woocommerce_tax_display_cart' ),
+			'price_display_suffix' => get_option( 'woocommerce_price_display_suffix' ),
+			'tax_total_display' => get_option( 'woocommerce_tax_total_display' ),
+		));
+
+		$documents[] = array(
+			'name' => 'woocommerce_tax_settings',
+			'value' => (string) json_encode( $tax_settings, true ),
+			'updated_at' => time(),
+		);
+
+		$tax_rates = apply_filters( 'blazecommerce/settings/tax_rates', array());
+
+		$documents[] = array(
+			'name' => 'woocommerce_tax_rates',
+			'value' => (string) json_encode( $tax_rates, true ),
+			'updated_at' => time(),
+		);
+
 		$product_setttings = apply_filters( 'blazecommerce/settings/product', array(
 			'productDetails' => array(
 				'showSku' => false,
