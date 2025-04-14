@@ -43,14 +43,13 @@ class Menu extends BaseCollection {
 	}
 
 	public function process_menu_items( $menu_items ) {
-
 		/**
 		 * for debuging purposes you can return the $menu_items right away so that you can check the data in the frontend or log the data here
 		 * 
 		 * return array_values($menu_items);
 		 */
 		return array_values( array_map( function ($menu_item) {
-			return array(
+			$menu_item_data = array(
 				'id' => (string) $menu_item->ID,
 				'classes' => ! empty( $menu_item->classes ) ? $menu_item->classes : [],
 				'type' => $menu_item->type,
@@ -60,6 +59,7 @@ class Menu extends BaseCollection {
 				'displayMode' => ! empty( $menu_item->display_mode ) ? $menu_item->display_mode : '',
 				'submenuType' => $menu_item->parent_submenu_type,
 			);
+			return apply_filters( 'blazecommerce/collection/menu/menu_item_data', $menu_item_data, $menu_item );
 		}, $menu_items ) );
 	}
 
