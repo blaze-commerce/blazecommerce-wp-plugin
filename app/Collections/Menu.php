@@ -110,6 +110,7 @@ class Menu extends BaseCollection {
 				if ( ! $item->menu_item_parent ) {
 					// If there's no parent, add it to the top level of the nested array
 					$menu_item_data[ $item->ID ] = array(
+						'id' => $item->ID,
 						'title' => $item->title,
 						'url' => $item->url,
 						'children' => array(),
@@ -118,6 +119,7 @@ class Menu extends BaseCollection {
 				} else {
 					// If there's a parent, add it as a child of its parent
 					$menu_item_data[ $item->menu_item_parent ]['children'][] = array(
+						'id' => $item->ID,
 						'title' => $item->title,
 						'url' => $item->url,
 						'classes' => ! empty( $item->classes ) ? $item->classes : []
