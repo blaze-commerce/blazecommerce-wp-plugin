@@ -95,6 +95,7 @@ class MegaMenu {
 		}
 
 		$menu_item_data[ $item->ID ] = array(
+			'id' => $item->ID,
 			'title' => $item->title,
 			'url' => $item->url,
 			'children' => $children,
