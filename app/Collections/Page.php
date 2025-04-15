@@ -112,6 +112,11 @@ class Page extends BaseCollection {
 			return null;
 		}
 
+		$exclude_page = apply_filters( 'blazecommerce/settings/sync/page/exclude_page', false, $page );
+		if ( $exclude_page ) {
+			return null;
+		}
+
 		$page_id         = $page->ID;
 		$taxonomies_data = $this->get_taxonomies( $page_id, $page->post_type );
 
@@ -269,18 +274,35 @@ class Page extends BaseCollection {
 			$this->initialize();
 		}
 
+		// the settings to not sync all pageAndPost. Set to false so that no pageAndPost syncs happen
+		$should_sync = apply_filters( 'blazecommerce/settings/sync/pageAndPost', true );
+		if ( ! $should_sync ) {
+			// This prevents syncing all pageAndPost
+			wp_send_json( array(
+				'imported_count' => 0,
+				'total_imports' => 0,
+				'next_page' => null,
+				'page' => 1,
+				'import_response' => [],
+				'import_data_sent' => [],
+			) );
+		}
+
 		try {
 			$post_ids = $this->get_post_ids( $page, $batch_size );
 			if ( ! empty( $post_ids ) ) {
 
-				$post_datas         = $this->prepare_batch_data( $post_ids );
-				$successful_imports = $this->import_prepared_batch( $post_datas );
+				$post_datas = $this->prepare_batch_data( $post_ids );
+				if ( ! empty( $post_datas ) ) {
+					$successful_imports = $this->import_prepared_batch( $post_datas );
+					$imported_count += count( $successful_imports );
+				}
 
-				$imported_count += count( $successful_imports );
+
 				$total_imports += count( $post_datas );
-				$total_pages    = $this->get_total_pages( $batch_size );
-				$next_page      = $page + 1;
-				$has_next_data  = $page < $total_pages;
+				$total_pages   = $this->get_total_pages( $batch_size );
+				$next_page     = $page + 1;
+				$has_next_data = $page < $total_pages;
 
 
 				wp_send_json( array(

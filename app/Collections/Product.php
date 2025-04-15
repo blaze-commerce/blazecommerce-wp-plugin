@@ -218,6 +218,17 @@ class Product extends BaseCollection {
 				$this->initialize();
 			}
 
+			// the settings to not sync all products. Set to false so that no product syncs happen
+			$should_sync = apply_filters( 'blazecommerce/settings/sync/products', true );
+			if ( ! $should_sync ) {
+				echo json_encode( array(
+					'imported_products_count' => 0,
+					'total_imports' => 0,
+					'has_next_data' => false,
+					'next_page' => null,
+				) );
+			}
+
 			$batch_size              = 5; // Adjust the batch size depending on your server's capacity
 			$imported_products_count = 0;
 			$total_imports           = 0;
@@ -234,7 +245,7 @@ class Product extends BaseCollection {
 
 			$products_batch = $this->prepare_batch_data( $product_ids );
 
-			$successful_imports      = $this->import_prepared_batch( $products_batch );
+			$successful_imports = $this->import_prepared_batch( $products_batch );
 			foreach ( $products_batch as $product_batch ) {
 				Woocommerce::get_instance()->update_typesense_variation_immediately( $product_batch['id'] );
 			}

@@ -42,6 +42,27 @@ class Menu extends BaseCollection {
 		}
 	}
 
+	public function process_menu_items( $menu_items ) {
+		/**
+		 * for debuging purposes you can return the $menu_items right away so that you can check the data in the frontend or log the data here
+		 * 
+		 * return array_values($menu_items);
+		 */
+		return array_values( array_map( function ($menu_item) {
+			$menu_item_data = array(
+				'id' => (string) $menu_item->ID,
+				'classes' => ! empty( $menu_item->classes ) ? $menu_item->classes : [],
+				'type' => $menu_item->type,
+				'title' => $menu_item->title,
+				'url' => $menu_item->url,
+				'parent' => $menu_item->menu_item_parent,
+				'displayMode' => ! empty( $menu_item->display_mode ) ? $menu_item->display_mode : '',
+				'submenuType' => $menu_item->parent_submenu_type,
+			);
+			return apply_filters( 'blazecommerce/collection/menu/menu_item_data', $menu_item_data, $menu_item );
+		}, $menu_items ) );
+	}
+
 	public function prepare_batch_data() {
 
 		$documents = array();
@@ -89,15 +110,19 @@ class Menu extends BaseCollection {
 				if ( ! $item->menu_item_parent ) {
 					// If there's no parent, add it to the top level of the nested array
 					$menu_item_data[ $item->ID ] = array(
+						'id' => $item->ID,
 						'title' => $item->title,
 						'url' => $item->url,
 						'children' => array(),
+						'classes' => ! empty( $item->classes ) ? $item->classes : []
 					);
 				} else {
 					// If there's a parent, add it as a child of its parent
 					$menu_item_data[ $item->menu_item_parent ]['children'][] = array(
+						'id' => $item->ID,
 						'title' => $item->title,
 						'url' => $item->url,
+						'classes' => ! empty( $item->classes ) ? $item->classes : []
 					);
 					$menu_item_data[ $item->menu_item_parent ]['parentId']   = $item->menu_item_parent;
 				}
@@ -113,6 +138,7 @@ class Menu extends BaseCollection {
 				'name' => $menu->name,
 				'wp_menu_id' => (int) $menu->term_id,
 				'items' => $menu_item_json,
+				'menu_items' => json_encode( $this->process_menu_items( $menu_items ) ),
 				'updated_at' => intval( strtotime( $menu->post_modified ), 10 ), // Converts the timestamp to a 64-bit integer
 			];
 
