@@ -149,6 +149,10 @@ class SiteInfo extends BaseCollection {
 				'value' => $blog_page ? get_post_field( 'post_name', $blog_page ) : '',
 			),
 			array(
+				'name' => 'blog_page_template',
+				'value' => 'home',
+			),
+			array(
 				'name' => 'cart_page_slug',
 				'value' => $cart_page_id ? get_post_field( 'post_name', $cart_page_id ) : '',
 			),
@@ -237,15 +241,15 @@ class SiteInfo extends BaseCollection {
 
 		$tax_settings = apply_filters( 'blazecommerce/settings/tax', array(
 			'prices_include_tax' => get_option( 'woocommerce_prices_include_tax' ),
-			'tax_based_on'       => get_option( 'woocommerce_tax_based_on' ),
+			'tax_based_on' => get_option( 'woocommerce_tax_based_on' ),
 			'shipping_tax_class' => get_option( 'woocommerce_shipping_tax_class' ),
 			'tax_round_at_subtotal' => get_option( 'woocommerce_tax_round_at_subtotal' ),
-			'tax_classes'        => array_filter( array_map( 'trim', explode( "\n", get_option( 'woocommerce_tax_classes' ) ) ) ),
+			'tax_classes' => array_filter( array_map( 'trim', explode( "\n", get_option( 'woocommerce_tax_classes' ) ) ) ),
 			'tax_display_shop' => get_option( 'woocommerce_tax_display_shop' ),
 			'tax_display_cart' => get_option( 'woocommerce_tax_display_cart' ),
 			'price_display_suffix' => get_option( 'woocommerce_price_display_suffix' ),
 			'tax_total_display' => get_option( 'woocommerce_tax_total_display' ),
-		));
+		) );
 
 		$documents[] = array(
 			'name' => 'woocommerce_tax_settings',
@@ -253,7 +257,7 @@ class SiteInfo extends BaseCollection {
 			'updated_at' => time(),
 		);
 
-		$tax_rates = apply_filters( 'blazecommerce/settings/tax_rates', array());
+		$tax_rates = apply_filters( 'blazecommerce/settings/tax_rates', array() );
 
 		$documents[] = array(
 			'name' => 'woocommerce_tax_rates',
