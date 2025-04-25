@@ -140,18 +140,18 @@ class Product extends BaseCollection {
 
 	protected function get_product_type( $type ) {
 		switch ( $type ) {
-			case 'non-variant':
-				$post_type = "('product')";
+			case 'non-variants':
+				$product_types = [ 'product' ];
 				break;
-			case 'variant':
-				$post_type = "('product_variation')";
+			case 'variants':
+				$product_types = [ 'product_variation' ];
 				break;
 			default:
-				$post_type = "('product', 'product_variation') ";
+				$product_types = [ 'product', 'product_variation' ];
 				break;
 		}
 
-		return $post_type;
+		return $product_types;
 	}
 
 	public function get_product_ids( $page, $batch_size = 5, $type = 'all' ) {
@@ -161,13 +161,21 @@ class Product extends BaseCollection {
 
 		$product_type = $this->get_product_type( $type );
 
-		// Query to select post IDs from the posts table with pagination
-		$query = $wpdb->prepare(
-			"SELECT ID FROM {$wpdb->posts} WHERE post_type IN %s LIMIT %d OFFSET %d",
-			$product_type,
-			$batch_size,
-			$offset
-		);
+		// Use a dynamic query to handle multiple post types
+		$post_type_conditions = array_map( function ($type) {
+			global $wpdb;
+			return $wpdb->prepare( "post_type = %s", $type );
+		}, $product_type );
+
+		$query = "
+            SELECT ID 
+            FROM {$wpdb->posts} 
+            WHERE (" . implode( ' OR ', $post_type_conditions ) . ") 
+            LIMIT %d OFFSET %d
+        ";
+
+		// Prepare the query with LIMIT and OFFSET
+		$query = $wpdb->prepare( $query, $batch_size, $offset );
 
 		// Get the results as an array of IDs
 		return $wpdb->get_col( $query );

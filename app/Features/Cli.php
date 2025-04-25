@@ -7,6 +7,7 @@ use BlazeWooless\Collections\Page;
 use BlazeWooless\Collections\Product;
 use BlazeWooless\Collections\SiteInfo;
 use BlazeWooless\Collections\Taxonomy;
+use WP;
 use WP_CLI;
 use WP_CLI_Command;
 
@@ -24,10 +25,10 @@ class Cli extends WP_CLI_Command {
 	protected function sync_products( $type = "all" ) {
 
 		switch ( $type ) {
-			case 'non-variant':
+			case 'non-variants':
 				$product_type = "all non-variant";
 				break;
-			case 'variant':
+			case 'variants':
 				$product_type = "all variant";
 				break;
 			default:
@@ -35,7 +36,7 @@ class Cli extends WP_CLI_Command {
 				break;
 		}
 
-		WP_CLI::line( sprintf( "Syncing %s products in batches...", $product_type ) );
+		WP_CLI::success( sprintf( "Syncing %s products in batches...", $product_type ) );
 
 		// Start tracking time
 		$start_time = microtime( true );
@@ -45,9 +46,10 @@ class Cli extends WP_CLI_Command {
 		$imported_products_count = 0;
 		$total_imports = 0;
 
-		if ( $page == 1 && $type !== "variant" ) {
+		if ( $page == 1 && $type !== "variants" ) {
 			// recreate the collection to typesense and do some initialization
 			$product_collection->initialize();
+			WP_CLI::success( "Dropping all products..." );
 		}
 
 		do {
@@ -64,7 +66,7 @@ class Cli extends WP_CLI_Command {
 			$total_imports += count( $products_batch ); // Increment the count of imported products
 
 
-			WP_CLI::success( "Completed batch {$page}..." );
+			WP_CLI::success( "Completed batch process {$page}..." );
 			$page++; // Move to the next batch
 			sleep( 1 ); // Sleep for 1 second to avoid overwhelming the server
 		} while ( true );
@@ -162,10 +164,17 @@ class Cli extends WP_CLI_Command {
 	 * 
 	 * [--variants]
 	 * : Sync all products variants.
+	 *
+	 * [--nonvariants]
+	 * : Sync all non products variants.
+	 *
+	 * [--page]
+	 * : Set current page number to start syncing from.
 	 * 
 	 * ## EXAMPLES
 	 *
-	 *     wp bc-sync product --all
+	 * wp bc-sync product --all
+	 * wp bc-sync product --nonvariants
 	 *
 	 * @when after_wp_load
 	 */
@@ -173,11 +182,13 @@ class Cli extends WP_CLI_Command {
 		// Disable PHP warnings and notices
 		error_reporting( E_ERROR );
 
-		$args = wp_parse_args( $args, [ 
+		$assoc_args = wp_parse_args( $assoc_args, [ 
 			'page' => 1
 		] );
 
-		$this->page = $args['page'];
+		$this->page = $assoc_args['page'];
+
+		WP_CLI::success( "Start page : " . $this->page );
 
 		if ( isset( $assoc_args['all'] ) ) {
 			$this->sync_products( 'all' );
@@ -187,7 +198,7 @@ class Cli extends WP_CLI_Command {
 			$this->sync_variants();
 		}
 
-		if ( isset( $assoc_args['non-variants'] ) ) {
+		if ( isset( $assoc_args['nonvariants'] ) ) {
 			$this->sync_products( 'non-variants' );
 		}
 
