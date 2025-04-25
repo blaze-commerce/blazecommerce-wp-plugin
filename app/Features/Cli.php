@@ -13,6 +13,145 @@ use WP_CLI_Command;
 
 class Cli extends WP_CLI_Command {
 
+	private $page = 1;
+
+
+
+	/**
+	 * Sync all products.
+	 * @return void
+	 */
+	protected function sync_products( $type = "all" ) {
+
+		switch ( $type ) {
+			case 'non-variant':
+				$product_type = "all non-variant";
+				break;
+			case 'variant':
+				$product_type = "all variant";
+				break;
+			default:
+				$product_type = "all";
+				break;
+		}
+
+		WP_CLI::line( sprintf( "Syncing %s products in batches...", $product_type ) );
+
+		// Start tracking time
+		$start_time = microtime( true );
+		$product_collection = Product::get_instance();
+		$batch_size = Product::BATCH_SIZE;
+		$page = $this->page;
+		$imported_products_count = 0;
+		$total_imports = 0;
+
+		if ( $page == 1 && $type !== "variant" ) {
+			// recreate the collection to typesense and do some initialization
+			$product_collection->initialize();
+		}
+
+		do {
+			$product_ids = $product_collection->get_product_ids( $page, $batch_size, $type );
+
+			if ( empty( $product_ids ) ) {
+				break; // No more data left to sync
+			}
+
+			$products_batch = $product_collection->prepare_batch_data( $product_ids );
+			$successful_imports = $product_collection->import_prepared_batch( $products_batch );
+
+			$imported_products_count += count( $successful_imports ); // Increment the count of imported products
+			$total_imports += count( $products_batch ); // Increment the count of imported products
+
+
+			WP_CLI::success( "Completed batch {$page}..." );
+			$page++; // Move to the next batch
+			sleep( 1 ); // Sleep for 1 second to avoid overwhelming the server
+		} while ( true );
+
+
+
+		WP_CLI::success( sprintf( "All %s products have been synced.", $product_type ) );
+		WP_CLI::success( "Total batch imported: " . $page );
+		WP_CLI::success( "Total import: " . $total_imports );
+		WP_CLI::success( "Successful import: " . $imported_products_count );
+
+		// End tracking time
+		$end_time = microtime( true );
+		$execution_time = $end_time - $start_time;
+		// Convert execution time to hours, minutes, seconds
+		$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+		WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+
+		WP_CLI::halt( 0 );
+	}
+
+	/**
+	 * Sync all product variants.
+	 */
+
+	protected function sync_variants() {
+		$start_time = microtime( true );
+		$page = $this->page;
+
+		WP_CLI::line( "Syncing all product variants in batches..." );
+
+		$args = array(
+			'post_type' => 'product',
+			'post_status' => 'publish',
+			'posts_per_page' => -1,
+			'tax_query' => array(
+				array(
+					'taxonomy' => 'product_type',
+					'field' => 'slug',
+					'terms' => 'variable',
+				),
+			),
+			'update_post_term_cache' => false,
+			'update_post_meta_cache' => false,
+			'no_found_rows' => true,
+			'ignore_sticky_posts' => true,
+			'field' => 'ids',
+		);
+
+		$query = new \WP_Query( $args );
+		$variation_ids = [];
+
+		if ( $query->posts ) {
+			foreach ( $query->posts as $post_id ) {
+				$product = wc_get_product( $post_id );
+
+				if ( $product && $product->is_type( 'variable' ) ) {
+					$children = $product->get_children();
+					$variation_ids = array_merge( $variation_ids, $children );
+				}
+			}
+
+			// $event_time = WC()->call_function( 'time' ) + 1;
+			$chunks = array_chunk( $variation_ids, 50 );
+
+			foreach ( $chunks as $chunk ) {
+				\BlazeWooless\Woocommerce::get_instance()->variation_update( $chunk );
+
+				WP_CLI::success( "Completed batch {$page}..." );
+				$page++; // Move to the next batch
+			}
+
+			WP_CLI::success( "All product variants have been synced." );
+			WP_CLI::success( "Total variation product: " . count( $query->posts ) );
+			WP_CLI::success( "Total child variation product: " . count( $variation_ids ) );
+
+			// End tracking time
+			$end_time = microtime( true );
+			$execution_time = $end_time - $start_time;
+			// Convert execution time to hours, minutes, seconds
+			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+
+			WP_CLI::halt( 0 );
+		}
+	}
+
 	/**
 	 * Sync all products.
 	 *
@@ -31,112 +170,25 @@ class Cli extends WP_CLI_Command {
 	 * @when after_wp_load
 	 */
 	public function product( $args, $assoc_args ) {
+		// Disable PHP warnings and notices
+		error_reporting( E_ERROR );
+
+		$args = wp_parse_args( $args, [ 
+			'page' => 1
+		] );
+
+		$this->page = $args['page'];
+
 		if ( isset( $assoc_args['all'] ) ) {
-			WP_CLI::line( "Syncing all products in batches..." );
-			// Start tracking time
-			$start_time              = microtime( true );
-			$product_collection      = Product::get_instance();
-			$batch_size              = Product::BATCH_SIZE;
-			$page                    = 1;
-			$imported_products_count = 0;
-			$total_imports           = 0;
-
-			do {
-				if ( $page == 1 ) {
-					// recreate the collection to typesense and do some initialization
-					$product_collection->initialize();
-				}
-
-				$product_ids = $product_collection->get_product_ids( $page, $batch_size );
-				if ( empty( $product_ids ) ) {
-					break; // No more data left to sync
-				}
-
-				$products_batch     = $product_collection->prepare_batch_data( $product_ids );
-				$successful_imports = $product_collection->import_prepared_batch( $products_batch );
-
-				$imported_products_count += count( $successful_imports ); // Increment the count of imported products
-				$total_imports += count( $products_batch ); // Increment the count of imported products
-
-
-				WP_CLI::success( "Completed batch {$page}..." );
-				$page++; // Move to the next batch
-
-			} while ( true );
-
-
-
-			WP_CLI::success( "All products have been synced." );
-			WP_CLI::success( "Total batch imported: " . $page );
-			WP_CLI::success( "Total import: " . $total_imports );
-			WP_CLI::success( "Successful import: " . $imported_products_count );
-
-			// End tracking time
-			$end_time       = microtime( true );
-			$execution_time = $end_time - $start_time;
-			// Convert execution time to hours, minutes, seconds
-			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
-
-			WP_CLI::halt( 0 );
+			$this->sync_products( 'all' );
 		}
 
 		if ( isset( $assoc_args['variants'] ) ) {
-			$start_time              = microtime( true );
-			$page              		 = 1;
+			$this->sync_variants();
+		}
 
-			WP_CLI::line( "Syncing all product variants in batches..." );
-
-			$args = array(
-				'post_type' => 'product',
-				'post_status' => 'publish',
-				'posts_per_page' => -1,
-				'tax_query' => array(
-					array(
-						'taxonomy' => 'product_type',
-						'field'    => 'slug',
-						'terms'    => 'variable',
-					),
-				),
-			);
-	
-			$query = new \WP_Query( $args );
-			$variation_ids = [];
-	
-			if ( $query->have_posts() ) {
-				while ( $query->have_posts() ) {
-					$query->the_post();
-					$product = wc_get_product( get_the_ID() );
-	
-					if ( $product && $product->is_type( 'variable' ) ) {
-						$children = $product->get_children();
-						$variation_ids = array_merge($variation_ids, $children);
-					}
-				}
-	
-				// $event_time = WC()->call_function( 'time' ) + 1;
-				$chunks = array_chunk( $variation_ids, 50 );
-	
-				foreach ( $chunks as $chunk ) {
-					\BlazeWooless\Woocommerce::get_instance()->variation_update( $chunk );
-					
-					WP_CLI::success( "Completed batch {$page}..." );
-					$page++; // Move to the next batch
-				}
-
-				WP_CLI::success( "All product variants have been synced." );
-				WP_CLI::success( "Total variation prouct: " . count($query->posts) );
-				WP_CLI::success( "Total child variation product: " . count($variation_ids) );
-
-				// End tracking time
-				$end_time       = microtime( true );
-				$execution_time = $end_time - $start_time;
-				// Convert execution time to hours, minutes, seconds
-				$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-				WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
-
-				WP_CLI::halt( 0 );
-			}
+		if ( isset( $assoc_args['non-variants'] ) ) {
+			$this->sync_products( 'non-variants' );
 		}
 
 		WP_CLI::error( "Nothing was sync" );
@@ -161,12 +213,12 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all pages and posts in batches..." );
 
 			// Start tracking time
-			$start_time     = microtime( true );
-			$collection     = Page::get_instance();
-			$batch_size     = Page::BATCH_SIZE;
-			$page           = 1;
+			$start_time = microtime( true );
+			$collection = Page::get_instance();
+			$batch_size = Page::BATCH_SIZE;
+			$page = 1;
 			$imported_count = 0;
-			$total_imports  = 0;
+			$total_imports = 0;
 
 			do {
 				if ( $page == 1 ) {
@@ -179,7 +231,7 @@ class Cli extends WP_CLI_Command {
 					break; // No more data left to sync
 				}
 
-				$object_batch       = $collection->prepare_batch_data( $ids );
+				$object_batch = $collection->prepare_batch_data( $ids );
 				$successful_imports = $collection->import_prepared_batch( $object_batch );
 
 				$imported_count += count( $successful_imports ); // Increment the count of imported products
@@ -197,7 +249,7 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Successful import: " . $imported_count );
 
 			// End tracking time
-			$end_time       = microtime( true );
+			$end_time = microtime( true );
 			$execution_time = $end_time - $start_time;
 			// Convert execution time to hours, minutes, seconds
 			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
@@ -227,14 +279,14 @@ class Cli extends WP_CLI_Command {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all menus in batches..." );
 			// Start tracking time
-			$start_time     = microtime( true );
-			$collection     = Menu::get_instance();
+			$start_time = microtime( true );
+			$collection = Menu::get_instance();
 			$imported_count = 0;
-			$total_imports  = 0;
+			$total_imports = 0;
 
 			// recreate the collection to typesense and do some initialization
 			$collection->initialize();
-			$object_batch       = $collection->prepare_batch_data();
+			$object_batch = $collection->prepare_batch_data();
 			$successful_imports = $collection->import_prepared_batch( $object_batch );
 
 			$imported_count += count( $successful_imports ); // Increment the count of imported products
@@ -245,7 +297,7 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Successful import: " . $imported_count );
 
 			// End tracking time
-			$end_time       = microtime( true );
+			$end_time = microtime( true );
 			$execution_time = $end_time - $start_time;
 			// Convert execution time to hours, minutes, seconds
 			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
@@ -278,12 +330,12 @@ class Cli extends WP_CLI_Command {
 			$collection = SiteInfo::get_instance();
 
 			$imported_count = 0;
-			$total_imports  = 0;
+			$total_imports = 0;
 
 			// recreate the collection to typesense and do some initialization
 			$collection->initialize();
 
-			$object_batch       = $collection->prepare_batch_data();
+			$object_batch = $collection->prepare_batch_data();
 			$successful_imports = $collection->import_prepared_batch( $object_batch );
 			$collection->after_site_info_sync();
 			$imported_count += count( $successful_imports ); // Increment the count of imported products
@@ -296,7 +348,7 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Successful import: " . $imported_count );
 
 			// End tracking time
-			$end_time       = microtime( true );
+			$end_time = microtime( true );
 			$execution_time = $end_time - $start_time;
 			// Convert execution time to hours, minutes, seconds
 			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
@@ -327,12 +379,12 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all taxonomies in batches..." );
 
 			// Start tracking time
-			$start_time     = microtime( true );
-			$collection     = Taxonomy::get_instance();
-			$batch_size     = Taxonomy::BATCH_SIZE;
-			$page           = 1;
+			$start_time = microtime( true );
+			$collection = Taxonomy::get_instance();
+			$batch_size = Taxonomy::BATCH_SIZE;
+			$page = 1;
 			$imported_count = 0;
-			$total_imports  = 0;
+			$total_imports = 0;
 
 			do {
 				if ( $page == 1 ) {
@@ -347,7 +399,7 @@ class Cli extends WP_CLI_Command {
 					break; // No more data left to sync
 				}
 
-				$object_batch       = $collection->prepare_batch_data( $term_query->terms );
+				$object_batch = $collection->prepare_batch_data( $term_query->terms );
 				$successful_imports = $collection->import_prepared_batch( $object_batch );
 
 				$imported_count += count( $successful_imports ); // Increment the count of imported products
@@ -365,7 +417,7 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Successful import: " . $imported_count );
 
 			// End tracking time
-			$end_time       = microtime( true );
+			$end_time = microtime( true );
 			$execution_time = $end_time - $start_time;
 			// Convert execution time to hours, minutes, seconds
 			$formatted_time = gmdate( "H:i:s", (int) $execution_time );

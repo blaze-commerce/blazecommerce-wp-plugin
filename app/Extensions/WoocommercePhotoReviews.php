@@ -15,8 +15,8 @@ class WoocommercePhotoReviews {
 
 	public function __construct() {
 		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-photo-reviews/woocommerce-photo-reviews.php' ) && is_plugin_active( 'woo-photo-reviews/woo-photo-reviews.php' ) ) {
-			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'reviews_summary' ), 10, 2 );
-			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'product_reviews' ), 10, 2 );
+			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'reviews_summary' ), 10, 3 );
+			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'product_reviews' ), 10, 3 );
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'additional_meta_fields' ), 10, 1 );
 		}
 	}
@@ -68,9 +68,8 @@ class WoocommercePhotoReviews {
 		return intval( $result );
 	}
 
-	public function reviews_summary( $product_data, $product_id ) {
+	public function reviews_summary( $product_data, $product_id, $product ) {
 		if ( ! empty( $product_data ) && $product_id ) {
-			$product = wc_get_product( $product_id );
 			$review_count = $product->get_review_count();
 			$average_rating = $product->get_average_rating();
 			for ( $i = 5; $i > 0; $i-- ) {
