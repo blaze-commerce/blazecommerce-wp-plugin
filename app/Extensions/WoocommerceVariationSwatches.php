@@ -28,8 +28,8 @@ class WoocommerceVariationSwatches {
 		if ( 'pa_' !== substr( $taxonomy_slug, 0, 3 ) ) {
 			return false;
 		}
-		$transient_key      = 'wooless_attribute_' . $taxonomy_slug;
-		$attribute_name     = str_replace( 'pa_', '', wc_sanitize_taxonomy_name( $taxonomy_slug ) );
+		$transient_key = 'wooless_attribute_' . $taxonomy_slug;
+		$attribute_name = str_replace( 'pa_', '', wc_sanitize_taxonomy_name( $taxonomy_slug ) );
 		$attribute_taxonomy = get_transient( $transient_key );
 		if ( false === $attribute_taxonomy ) {
 
@@ -66,10 +66,11 @@ class WoocommerceVariationSwatches {
 	public function add_taxonomy_fields_data( $document, $term ) {
 		$attribute_taxonomy = $this->get_raw_attribute( $term->taxonomy );
 		if ( ! empty( $attribute_taxonomy->attribute_type ) ) {
-			$document['componentType']  = $attribute_taxonomy->attribute_type;
+			$document['componentType'] = $attribute_taxonomy->attribute_type;
 			$document['componentValue'] = $this->get_option_value( $attribute_taxonomy->attribute_type, $term->term_id, (array) $term, );
 
 		}
+
 		return $document;
 	}
 
@@ -77,12 +78,12 @@ class WoocommerceVariationSwatches {
 		// Set default attribute type to select
 		$attribute_to_register['type'] = 'select';
 		if ( $attribute->is_taxonomy() ) {
-			$taxonomy_id      = $attribute->get_id();
+			$taxonomy_id = $attribute->get_id();
 			$swatch_attribute = woo_variation_swatches()->get_frontend()->get_attribute_taxonomy_by_id( $taxonomy_id );
 			if ( $swatch_attribute->attribute_type ) {
 				// Set type depending on what is selected for the woocommerce attribute in wp admin
 				$attribute_to_register['type'] = $swatch_attribute->attribute_type;
-				$attribute_to_register         = $this->get_options_value( $attribute_to_register, $attribute );
+				$attribute_to_register = $this->get_options_value( $attribute_to_register, $attribute );
 			}
 
 		}
@@ -93,7 +94,21 @@ class WoocommerceVariationSwatches {
 	public function get_options_value( $attribute_to_register, $attribute ) {
 		$type = $attribute_to_register['type'];
 		foreach ( $attribute_to_register['options'] as $key => $option ) {
+			$term_id = $option['term_id'];
+
+			$swatch_type = get_term_meta( $term_id, 'pa_colour_swatches_id_type', true );
+
 			$attribute_to_register['options'][ $key ]['value'] = $this->get_option_value( $type, $option['term_id'], $option );
+			$attribute_to_register['options'][ $key ]['type'] = $swatch_type;
+
+			if ( $swatch_type === 'photo' ) {
+				$image_id = get_term_meta( $term_id, 'pa_colour_swatches_id_photo', true );
+				$image_url = wp_get_attachment_url( $image_id );
+
+				if ( ! empty( $image_url ) ) {
+					$attribute_to_register['options'][ $key ]['value'] = $image_url;
+				}
+			}
 		}
 		return $attribute_to_register;
 	}
@@ -127,8 +142,17 @@ class WoocommerceVariationSwatches {
 	}
 
 	public function get_color_hex( $term_id ) {
+
 		$swatch_frontend = woo_variation_swatches()->get_frontend();
-		$value           = sanitize_hex_color( $swatch_frontend->get_product_attribute_color( $term_id ) );
+		$value = sanitize_hex_color( $swatch_frontend->get_product_attribute_color( $term_id ) );
+
+		if ( empty( $value ) ) {
+			// get value from the term meta with key 'pa_colour_swatches_id_color'
+			$value = get_term_meta( $term_id, 'pa_colour_swatches_id_color', true );
+			if ( ! empty( $value ) ) {
+				$value = sanitize_hex_color( $value );
+			}
+		}
 
 		return $value;
 	}
