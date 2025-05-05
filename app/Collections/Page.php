@@ -21,7 +21,7 @@ class Page extends BaseCollection {
 			array( 'name' => 'name', 'type' => 'string' ),
 			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
 			array( 'name' => 'seoFullHead', 'type' => 'string', 'optional' => true ),
-			array( 'name' => 'permalink', 'type' => 'string' ),
+			array( 'name' => 'permalink', 'type' => 'string', 'facet' => true ),
 			array( 'name' => 'type', 'type' => 'string', 'facet' => true ),
 			array( 'name' => 'thumbnail', 'type' => 'object', 'optional' => true ),
 			array( 'name' => 'taxonomies', 'type' => 'object[]', 'facet' => true, 'optional' => true ),
