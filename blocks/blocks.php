@@ -10,20 +10,20 @@
 add_action( 'enqueue_block_editor_assets', 'extend_block_example_enqueue_block_editor_assets' );
 
 function extend_block_example_enqueue_block_editor_assets() {
-    // Enqueue our script
-    wp_enqueue_script(
-        'blaze-commerce-blocks-script',
-        esc_url( plugins_url( '/build/index.js', __FILE__ ) ),
-        array( 'wp-blocks', 'wp-i18n', 'wp-element', 'wp-editor' ),
-        '1.0.0',
-        true // Enqueue the script in the footer.
-    );
+	// Enqueue our script
+	wp_enqueue_script(
+		'blaze-commerce-blocks-script',
+		esc_url( plugins_url( '/build/index.js', __FILE__ ) ),
+		array( 'wp-blocks', 'wp-i18n', 'wp-element', 'wp-editor', 'wp-block-editor', 'wp-components' ),
+		time(), // Use time as version to prevent caching during development
+		true // Enqueue the script in the footer.
+	);
 
-    $menus = get_terms( 'nav_menu' );
+	$menus = get_terms( 'nav_menu' );
 
-    $config = array(
-        'menus' => $menus,
-    );
+	$config = array(
+		'menus' => $menus,
+	);
 
 	wp_localize_script( 'blaze-commerce-blocks-script', 'blaze_commerce_block_config', $config );
 }
