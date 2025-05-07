@@ -22,7 +22,7 @@ class WoocommerceAllProductsForSubscriptions {
 
 	public function set_fields( $fields ) {
 		$fields[] = [ 'name' => 'metaData.subscriptionsATT', 'type' => 'object', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.subscriptionsATT.has_scheme', 'type' => 'boolean', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.subscriptionsATT.has_scheme', 'type' => 'bool', 'optional' => true ];
 		$fields[] = [ 'name' => 'metaData.subscriptionsATT.schemes', 'type' => 'object[]', 'optional' => true ];
 		$fields[] = [ 'name' => 'metaData.subscriptionsATT.schemes.period', 'type' => 'string[]', 'optional' => true ];
 		$fields[] = [ 'name' => 'metaData.subscriptionsATT.schemes.interval', 'type' => 'int64[]', 'optional' => true ];
@@ -35,7 +35,7 @@ class WoocommerceAllProductsForSubscriptions {
 		$fields[] = [ 'name' => 'metaData.subscriptionsATT.schemes.context', 'type' => 'string[]', 'optional' => true ];
 		$fields[] = [ 'name' => 'metaData.subscriptionsATT.schemes.id', 'type' => 'string[]', 'optional' => true ];
 		$fields[] = [ 'name' => 'metaData.subscriptionsATT.schemes.key', 'type' => 'string[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.subscriptionsATT.schemes.is_synced', 'type' => 'boolean[]', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.subscriptionsATT.schemes.is_synced', 'type' => 'bool[]', 'optional' => true ];
 
 		return $fields;
 	}
