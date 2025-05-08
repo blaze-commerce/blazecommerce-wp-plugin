@@ -194,11 +194,13 @@ class Cli extends WP_CLI_Command {
 					break; // No more data left to sync
 				}
 
-				$object_batch       = $collection->prepare_batch_data( $ids );
-				$successful_imports = $collection->import_prepared_batch( $object_batch );
+				$object_batch = $collection->prepare_batch_data( $ids );
+				if ( ! empty( $object_batch ) ) {
+					$successful_imports = $collection->import_prepared_batch( $object_batch );
+					$imported_count += count( $successful_imports ); // Increment the count of imported products
+					$total_imports += count( $object_batch ); // Increment the count of imported products
+				}
 
-				$imported_count += count( $successful_imports ); // Increment the count of imported products
-				$total_imports += count( $object_batch ); // Increment the count of imported products
 
 
 				WP_CLI::success( "Completed batch {$page}..." );

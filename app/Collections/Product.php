@@ -439,6 +439,13 @@ class Product extends BaseCollection {
 			}
 		}
 
+		if ( 'bundle' == $type ) {
+			// For bundle products, we need to check both the bundle itself and its items
+			if ( ! $product->is_in_stock() ) {
+				$stock_status = 'outofstock';
+			}
+		}
+
 		return $stock_status;
 	}
 
