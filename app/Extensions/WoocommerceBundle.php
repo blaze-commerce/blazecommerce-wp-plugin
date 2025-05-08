@@ -70,6 +70,7 @@ class WoocommerceBundle {
 		$fields[] = array( 'name' => 'bundle.products.settings.shippedIndividually', 'type' => 'bool[]', 'optional' => true );
 		$fields[] = array( 'name' => 'bundle.products.settings.pricedIndividually', 'type' => 'bool[]', 'optional' => true );
 		$fields[] = array( 'name' => 'bundle.products.settings.discountPercent', 'type' => 'float[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.settings.showDiscountedPrice', 'type' => 'bool[]', 'optional' => true );
 
 		// Bundle product variations
 		$fields[] = array( 'name' => 'bundle.products.variations', 'type' => 'object[]', 'optional' => true );
@@ -197,10 +198,10 @@ class WoocommerceBundle {
 		foreach ( $bundled_items as $bundled_item ) {
 			$product = $bundled_item->get_product();
 
-			$image     = $product->get_image_id();
-			$image_src = wp_get_attachment_image_src( $image, 'full' );
-
-			$data = array(
+			$image             = $product->get_image_id();
+			$image_src         = wp_get_attachment_image_src( $image, 'full' );
+			$bundled_item_data = $bundled_item->get_data();
+			$data              = array(
 				'product' => array(
 					'id' => $product->get_id(),
 					'stockStatus' => $product->get_stock_status(),
@@ -215,6 +216,7 @@ class WoocommerceBundle {
 					'shippedIndividually' => $bundled_item->is_shipped_individually(),
 					'pricedIndividually' => $bundled_item->is_priced_individually(),
 					'discountPercent' => $bundled_item->get_discount(),
+					'showDiscountedPrice' => isset( $bundled_item_data['show_discounted_price'] ) && $bundled_item_data['show_discounted_price'] === 'yes',
 					'productVisible' => $bundled_item->is_visible(),
 					'priceVisible' => $bundled_item->is_price_visible(),
 					'overrideTitle' => $bundled_item->has_title_override(),
