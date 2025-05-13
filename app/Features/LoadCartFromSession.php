@@ -44,7 +44,7 @@ class LoadCartFromSession {
 					$unserialized_data = unserialize( urldecode( $_COOKIE[ $cookie_name ] ) );
 					if ( 'cart' === $key ) {
 						$account_cart_data = WC()->cart->get_cart();
-						$merged_cart_data = array_merge( $account_cart_data, $unserialized_data );
+						$merged_cart_data  = array_merge( $account_cart_data, $unserialized_data );
 
 						$current_session->set( $key, $merged_cart_data );
 					} else {
@@ -59,15 +59,21 @@ class LoadCartFromSession {
 			return;
 		}
 
-		// Bail if there isn't any data
 		if ( ! isset( $_COOKIE['woocommerce_customer_session_id'] ) ) {
-			return;
+			if ( isset( $_GET['session_id'] ) ) {
+				$_COOKIE['woocommerce_customer_session_id'] = $_GET['session_id'];
+			}
 		}
 
 		$session_id = sanitize_text_field( $_COOKIE['woocommerce_customer_session_id'] );
 
+		// Bail if there isn't any data
+		if ( empty( $session_id ) ) {
+			return;
+		}
+
 		try {
-			$handler = new \WC_Session_Handler();
+			$handler      = new \WC_Session_Handler();
 			$session_data = $handler->get_session( $session_id );
 
 			// We were passed a session ID, yet no session was found. Let's log this and bail.
@@ -112,7 +118,7 @@ class LoadCartFromSession {
 		$session_id = sanitize_text_field( $_COOKIE['woocommerce_customer_session_id'] );
 
 		try {
-			$handler = new \WC_Session_Handler();
+			$handler      = new \WC_Session_Handler();
 			$session_data = $handler->get_session( $session_id );
 
 
@@ -123,7 +129,7 @@ class LoadCartFromSession {
 
 			if ( $customer = $session_data['customer'] ) {
 				$customer_data = unserialize( $customer );
-				$customer_id = $customer_data['id'];
+				$customer_id   = $customer_data['id'];
 
 				if ( $customer_id ) {
 					// Authenticate the user and set the authentication cookies
