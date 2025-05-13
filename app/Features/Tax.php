@@ -41,6 +41,38 @@ class Tax {
 		$product_data['metaData']['priceWithTax'] = array(
 			$currency => (float) number_format( empty( $price_with_tax ) ? 0 : $price_with_tax, 4, '.', '' ),
 		);
+
+		$tax_rates = $this->get_tax_rate_array( 'Standard' );
+		$prices_by_location = [];
+		$is_tax_inclusive = get_option( 'woocommerce_prices_include_tax' );
+
+		foreach ( $tax_rates as $rate ) {
+			$country = $rate['tax_rate_country'] ?? '*';
+			$state = $rate['tax_rate_state'] ?? '*';
+
+			$regular_price = $product->get_regular_price();
+			$sale_price = $product->get_sale_price();
+
+			// If it has tax
+			if ( floatval($rate['tax_rate']) > 0 && $is_tax_inclusive === 'yes') {
+				$final_regular_price = \wc_get_price_including_tax( $product, array( 'price' => $regular_price ) );
+				$final_sale_price = \wc_get_price_including_tax( $product, array( 'price' => $sale_price ) );
+
+				$prices_by_location['with_tax']['locations'][] = array( 'country' => $country, 'state' => $state );
+				$prices_by_location['with_tax']['regularPrice'] = (float) number_format( $final_regular_price, 2, '.', '' );
+				$prices_by_location['with_tax']['salePrice'] = (float) number_format( $final_sale_price, 2, '.', '' );
+			} else {
+				$final_regular_price = \wc_get_price_excluding_tax( $product, array( 'price' => $regular_price ) );
+				$final_sale_price = \wc_get_price_excluding_tax( $product, array( 'price' => $sale_price ) );
+
+				$prices_by_location['without_tax']['locations'][] = array( 'country' => $country, 'state' => $state );
+				$prices_by_location['without_tax']['regularPrice'] = (float) number_format( $final_regular_price, 2, '.', '' );
+				$prices_by_location['without_tax']['salePrice'] = (float) number_format( $final_sale_price, 2, '.', '' );
+			}
+		}
+
+		$product_data['metaData']['pricesByLocation'] = $prices_by_location;
+
 		return $product_data;
 	}
 
