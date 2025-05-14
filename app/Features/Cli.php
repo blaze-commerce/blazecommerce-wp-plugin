@@ -3,6 +3,7 @@
 namespace BlazeWooless\Features;
 
 use BlazeWooless\Collections\Menu;
+use BlazeWooless\Collections\Navigation;
 use BlazeWooless\Collections\Page;
 use BlazeWooless\Collections\Product;
 use BlazeWooless\Collections\SiteInfo;
@@ -166,13 +167,13 @@ class Cli extends WP_CLI_Command {
 					array(
 						'taxonomy' => 'product_type',
 						'field' => 'slug',
-						'terms' => array('variable'),
+						'terms' => array( 'variable' ),
 						'operator' => 'NOT IN'
 					),
 				),
 			);
 
-			$query = new \WP_Query( $args );
+			$query                  = new \WP_Query( $args );
 			$nonvariant_product_ids = array();
 
 			if ( $query->have_posts() ) {
@@ -186,12 +187,12 @@ class Cli extends WP_CLI_Command {
 				// Initialize the collection if this is the first batch
 				$product_collection->initialize();
 
-				$chunks = array_chunk( $nonvariant_product_ids, 50 );
+				$chunks                  = array_chunk( $nonvariant_product_ids, 50 );
 				$imported_products_count = 0;
-				$total_imports = 0;
+				$total_imports           = 0;
 
 				foreach ( $chunks as $chunk ) {
-					$products_batch = $product_collection->prepare_batch_data( $chunk );
+					$products_batch     = $product_collection->prepare_batch_data( $chunk );
 					$successful_imports = $product_collection->import_prepared_batch( $products_batch );
 
 					$imported_products_count += count( $successful_imports );
@@ -453,6 +454,79 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			WP_CLI::success( "Completed! All taxonomies have been synced." );
+			WP_CLI::success( "Total batch imported: " . $page );
+			WP_CLI::success( "Total import: " . $total_imports );
+			WP_CLI::success( "Successful import: " . $imported_count );
+
+			// End tracking time
+			$end_time       = microtime( true );
+			$execution_time = $end_time - $start_time;
+			// Convert execution time to hours, minutes, seconds
+			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+			WP_CLI::halt( 0 );
+		}
+
+		WP_CLI::error( "Nothing was sync" );
+	}
+
+	/**
+	 * Sync all wp_navigation posts.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--all]
+	 * : Sync all published wp_navigation posts.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp bc-sync navigation --all
+	 *
+	 * @when after_wp_load
+	 */
+	public function navigation( $args, $assoc_args ) {
+		if ( isset( $assoc_args['all'] ) ) {
+			WP_CLI::line( "Syncing all published wp_navigation posts in batches..." );
+
+			// Start tracking time
+			$start_time     = microtime( true );
+			$collection     = Navigation::get_instance();
+			$batch_size     = Navigation::BATCH_SIZE;
+			$page           = 1;
+			$imported_count = 0;
+			$total_imports  = 0;
+
+			do {
+				if ( $page == 1 ) {
+					// recreate the collection to typesense and do some initialization
+					$collection->initialize();
+				}
+
+				// the settings to not sync all navigation. Set to false so that no navigation syncs happen
+				$should_sync = apply_filters( 'blazecommerce/settings/sync/navigation', true );
+				if ( ! $should_sync ) {
+					// This prevents syncing all navigation
+					break;
+				}
+
+				$navigation_ids = $collection->get_navigation_ids( $page, $batch_size );
+				if ( empty( $navigation_ids ) ) {
+					break; // No more data left to sync
+				}
+
+				$object_batch = $collection->prepare_batch_data( $navigation_ids );
+				if ( ! empty( $object_batch ) ) {
+					$successful_imports = $collection->import_prepared_batch( $object_batch );
+					$imported_count += count( $successful_imports ); // Increment the count of imported items
+					$total_imports += count( $object_batch ); // Increment the count of imported items
+				}
+
+				WP_CLI::success( "Completed batch {$page}..." );
+				$page++; // Move to the next batch
+
+			} while ( true );
+
+			WP_CLI::success( "Completed! All published wp_navigation posts have been synced." );
 			WP_CLI::success( "Total batch imported: " . $page );
 			WP_CLI::success( "Total import: " . $total_imports );
 			WP_CLI::success( "Successful import: " . $imported_count );
