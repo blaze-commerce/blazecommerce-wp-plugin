@@ -41,7 +41,7 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	/**
-	 * Helper method to remove "cart." in url 
+	 * Helper method to remove "cart." in url
 	 * @param mixed $url
 	 * @return string
 	 */
@@ -50,9 +50,9 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	/**
-	 * Removes all "cart." in all links when the user is not on admin pages. 
+	 * Removes all "cart." in all links when the user is not on admin pages.
 	 * This function dynamically changes the wordpress site address url in general settings via option_home filter
-	 * 
+	 *
 	 * @param mixed $value
 	 * @param mixed $option
 	 * @return mixed
@@ -70,14 +70,34 @@ class GeneralSettings extends BaseSettings {
 	/**
 	 * Redirect non admin user to non cart.* url
 	 * Hooked into template_redirect, priority -1
-	 * 
+	 *
 	 * @since   1.5.0
 	 * @return  void
 	 */
 	public function redirect_non_admin_user() {
 
-		$is_local = strpos( $_SERVER['HTTP_X_FORWARDED_HOST'], 'localhost' ) !== false;
-		if ( isset( $_REQUEST['no-redirect'] ) || $is_local ) {
+		// Check for localhost in forwarded host
+		$is_local_forwarded = isset($_SERVER['HTTP_X_FORWARDED_HOST']) && strpos( $_SERVER['HTTP_X_FORWARDED_HOST'], 'localhost' ) !== false;
+
+		// Check for applicable domains in the host
+		$host = $_SERVER['HTTP_HOST'];
+		$is_applicable_domain =
+			strpos( $host, '.blz.onl' ) !== false ||
+			strpos( $host, '.local' ) !== false ||
+			strpos( $host, 'localhost' ) !== false;
+
+		// Only check for the cookie if it's an applicable domain
+		$has_no_redirect_cookie = $is_applicable_domain && isset( $_COOKIE['bc_no_redirect'] );
+
+		// Check for any of the no-redirect indicators:
+		// 1. The original no-redirect URL parameter
+		// 2. The new bc-no-redirect URL parameter
+		// 3. The bc_no_redirect cookie (on applicable domains)
+		// 4. Local development environment
+		if ( isset( $_REQUEST['no-redirect'] ) ||
+		     isset( $_REQUEST['bc-no-redirect'] ) ||
+		     $has_no_redirect_cookie ||
+		     $is_local_forwarded ) {
 			return;
 		}
 
@@ -95,7 +115,7 @@ class GeneralSettings extends BaseSettings {
 		}
 
 
-		// Redirect to home page if the user is not logged in and the page is cart 
+		// Redirect to home page if the user is not logged in and the page is cart
 		$restricted_pages = apply_filters( 'blaze_wooless_restricted_pages', is_cart() );
 		if ( $restricted_pages ) {
 			wp_redirect( $this->remove_cart_from_url( home_url() ) );
