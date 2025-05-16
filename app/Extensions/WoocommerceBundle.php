@@ -25,6 +25,9 @@ class WoocommerceBundle {
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'fields' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'data' ), 99, 3 );
 			add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
+
+			// Add filter to modify cart item totals for bundled products in WPGraphQL
+			add_filter( 'graphql_CartItem_fields', array( $this, 'modify_cart_item_fields' ), 10, 1 );
 		}
 
 	}
@@ -384,6 +387,89 @@ class WoocommerceBundle {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Check if a cart item is a bundle container and get its total
+	 *
+	 * @param array $cart_item The cart item
+	 * @param string $type The type of total to get ('total', 'subtotal', etc.)
+	 * @return float|null The total amount or null if not a bundle
+	 */
+	public function get_bundle_cart_item_total( $cart_item, $type = 'total' ) {
+		// Check if this is a bundle container cart item
+		if ( function_exists( 'wc_pb_is_bundle_container_cart_item' ) && wc_pb_is_bundle_container_cart_item( $cart_item ) ) {
+			// Use the WooCommerce Product Bundles function to get the correct total
+			if ( class_exists( 'WC_PB_Display' ) ) {
+				return WC_PB()->display->get_container_cart_item_subtotal_amount( $cart_item, $type );
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Modify the cart item fields in WPGraphQL to include the correct total for bundled products
+	 *
+	 * @param array $fields The cart item fields
+	 * @return array Modified cart item fields
+	 */
+	public function modify_cart_item_fields( $fields ) {
+		// Add a resolver for the total field
+		if ( isset( $fields['total'] ) ) {
+			$original_resolver = $fields['total']['resolve'] ?? null;
+
+			$fields['total']['resolve'] = function ($source, $args, $context, $info) use ($original_resolver) {
+				// Get the cart item from the source
+				$cart_item = $source->cart_item;
+
+				// Get bundle total if this is a bundle
+				$bundle_total = $this->get_bundle_cart_item_total( $cart_item, 'total' );
+				if ( $bundle_total !== null ) {
+					// Format the total according to WooCommerce settings
+					if ( function_exists( 'wc_graphql_price' ) ) {
+						return wc_graphql_price( $bundle_total );
+					}
+					return $bundle_total;
+				}
+
+				// If not a bundle or if the bundle functions aren't available, use the original resolver
+				if ( $original_resolver ) {
+					return $original_resolver( $source, $args, $context, $info );
+				}
+
+				return null;
+			};
+		}
+
+		// Also modify the subtotal field if it exists
+		if ( isset( $fields['subtotal'] ) ) {
+			$original_subtotal_resolver = $fields['subtotal']['resolve'] ?? null;
+
+			$fields['subtotal']['resolve'] = function ($source, $args, $context, $info) use ($original_subtotal_resolver) {
+				// Get the cart item from the source
+				$cart_item = $source->cart_item;
+
+				// Get bundle subtotal if this is a bundle
+				$bundle_subtotal = $this->get_bundle_cart_item_total( $cart_item, 'subtotal' );
+				if ( $bundle_subtotal !== null ) {
+					// Format the subtotal according to WooCommerce settings
+					if ( function_exists( 'wc_graphql_price' ) ) {
+						return wc_graphql_price( $bundle_subtotal );
+					}
+					return $bundle_subtotal;
+				}
+
+				// If not a bundle or if the bundle functions aren't available, use the original resolver
+				if ( $original_subtotal_resolver ) {
+					return $original_subtotal_resolver( $source, $args, $context, $info );
+				}
+
+				return null;
+			};
+		}
+
+		return $fields;
 	}
 
 }
