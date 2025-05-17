@@ -33,13 +33,18 @@ class WoocommerceAeliaCurrencySwitcher {
 
 			add_filter( 'blaze_wooless_convert_prices', array( $this, 'convert_prices' ), 10, 2 );
 			add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 20, 9 );
+
+			add_filter( 'blazecommerce/product/metaData/price_by_location/with_tax/regular_price', array( $this, 'convert_prices' ), 10, 2 );
+			add_filter( 'blazecommerce/product/metaData/price_by_location/with_tax/sale_price', array( $this, 'convert_prices' ), 10, 2 );
+			add_filter( 'blazecommerce/product/metaData/price_by_location/without_tax/regular_price', array( $this, 'convert_prices' ), 10, 2 );
+			add_filter( 'blazecommerce/product/metaData/price_by_location/without_tax/sale_price', array( $this, 'convert_prices' ), 10, 2 );
 		}
 
 		add_filter( 'graphql_RootQuery_fields', array( $this, 'modify_grapqhl_rootquery_cart_fields' ), 99999, 1 );
 	}
 
 	public function get_base_currency() {
-		return get_option( 'wc_aelia_currency_switcher' )['ipgeolocation_default_currency'];
+		return get_woocommerce_currency();
 	}
 
 	public function available_currencies( $currencies = null ) {
@@ -51,7 +56,8 @@ class WoocommerceAeliaCurrencySwitcher {
 		if ( ! isset( $exchange_rates[ $currency ] ) || ! $price ) {
 			return $price;
 		}
-		$currency_rate = $exchange_rates[ $currency ]['rate'];
+
+		$currency_rate = (float) $exchange_rates[ $currency ]['rate'];
 
 		return $price * $currency_rate;
 	}
@@ -142,7 +148,9 @@ class WoocommerceAeliaCurrencySwitcher {
 			$base_price = $prices[ $base_currency ];
 
 			foreach ( $available_currencies as $currency ) {
-
+				if ( $base_currency === $currency ) {
+					continue;
+				} 
 				$prices[ $currency ] = Woocommerce::format_price( $this->calculate_converted_price( $base_price, $currency ) );
 			}
 		}

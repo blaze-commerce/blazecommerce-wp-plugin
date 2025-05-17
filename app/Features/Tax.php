@@ -59,15 +59,23 @@ class Tax {
 				$final_sale_price = \wc_get_price_including_tax( $product, array( 'price' => $sale_price ) );
 
 				$prices_by_location['with_tax']['locations'][] = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['with_tax']['regularPrice'] = (float) number_format( $final_regular_price, 2, '.', '' );
-				$prices_by_location['with_tax']['salePrice'] = (float) number_format( $final_sale_price, 2, '.', '' );
+				$prices_by_location['with_tax']['regularPrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/with_tax/regular_price', array(
+					$currency => (float) number_format( $final_regular_price, 2, '.', '' )
+				), $currency );
+				$prices_by_location['with_tax']['salePrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/with_tax/sale_price', array(
+					$currency => (float) number_format( $final_sale_price, 2, '.', '' )
+				), $currency );
 			} else {
 				$final_regular_price = \wc_get_price_excluding_tax( $product, array( 'price' => $regular_price ) );
 				$final_sale_price = \wc_get_price_excluding_tax( $product, array( 'price' => $sale_price ) );
 
 				$prices_by_location['without_tax']['locations'][] = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['without_tax']['regularPrice'] = (float) number_format( $final_regular_price, 2, '.', '' );
-				$prices_by_location['without_tax']['salePrice'] = (float) number_format( $final_sale_price, 2, '.', '' );
+				$prices_by_location['without_tax']['regularPrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/without_tax/regular_price', array(
+					$currency => (float) number_format( $final_regular_price, 2, '.', '' ),
+				), $currency );
+				$prices_by_location['without_tax']['salePrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/without_tax/sale_price', array(
+					$currency => (float) number_format( $final_sale_price, 2, '.', '' ),
+				), $currency );
 			}
 		}
 
