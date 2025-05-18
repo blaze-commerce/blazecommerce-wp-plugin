@@ -38,6 +38,9 @@ const attributeSchema = {
     menuLinkHoverBackgroundColor: {
         type: 'string',
     },
+    menuLinkActiveBackgroundColor: {
+        type: 'string',
+    },
 
     mobileMenuLinkColor: {
         type: 'string',
@@ -89,6 +92,7 @@ export const MainMenuConfig = ({ attributes, setAttributes }) => {
         menuLinkHoverColor,
         menuLinkBackgroundColor,
         menuLinkHoverBackgroundColor,
+        menuLinkActiveBackgroundColor,
 
         mobileMenuLinkColor,
 
@@ -141,7 +145,7 @@ export const MainMenuConfig = ({ attributes, setAttributes }) => {
             />
 
             <Divider />
-            
+
             <p></p>
             <Flex>
                 <FlexBlock>
@@ -154,7 +158,7 @@ export const MainMenuConfig = ({ attributes, setAttributes }) => {
                     />
                 </FlexItem>
             </Flex>
-            
+
             <p></p>
             <Flex>
                 <FlexBlock>
@@ -189,6 +193,19 @@ export const MainMenuConfig = ({ attributes, setAttributes }) => {
                     <ElementColorSelector
                         value={menuLinkHoverBackgroundColor || menuHoverBackgroundColor}
                         setValue={(selectedColor) => setAttributes({ menuLinkHoverBackgroundColor: selectedColor })}
+                    />
+                </FlexItem>
+            </Flex>
+
+            <p></p>
+            <Flex>
+                <FlexBlock>
+                    Active Link Background Color
+                </FlexBlock>
+                <FlexItem>
+                    <ElementColorSelector
+                        value={menuLinkActiveBackgroundColor}
+                        setValue={(selectedColor) => setAttributes({ menuLinkActiveBackgroundColor: selectedColor })}
                     />
                 </FlexItem>
             </Flex>
