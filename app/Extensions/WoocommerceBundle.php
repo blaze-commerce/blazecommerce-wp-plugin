@@ -26,7 +26,6 @@ class WoocommerceBundle {
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'data' ), 99, 3 );
 			add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
 
-
 			// Add filter to modify cart item totals for bundled products in WPGraphQL
 			add_filter( 'graphql_CartItem_fields', array( $this, 'modify_cart_item_fields' ), 10, 1 );
 		}
