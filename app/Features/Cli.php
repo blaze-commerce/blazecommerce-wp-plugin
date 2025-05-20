@@ -20,17 +20,25 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * [--all]
 	 * : Sync all products.
-	 * 
+	 *
 	 * [--variants]
 	 * : Sync all products variants.
-	 * 
+	 *
+	 * [--nonvariants]
+	 * : Sync only non-variant products (simple, bundle, etc.).
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp bc-sync product --all
+	 *     wp bc-sync product --variants
+	 *     wp bc-sync product --nonvariants
 	 *
 	 * @when after_wp_load
 	 */
 	public function product( $args, $assoc_args ) {
+		// the settings to not sync all products. Set to false so that no product syncs happen
+		$should_sync = apply_filters( 'blazecommerce/settings/sync/products', true );
+
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all products in batches..." );
 			// Start tracking time
@@ -45,6 +53,11 @@ class Cli extends WP_CLI_Command {
 				if ( $page == 1 ) {
 					// recreate the collection to typesense and do some initialization
 					$product_collection->initialize();
+				}
+
+				if ( ! $should_sync ) {
+					// This prevents syncing all products
+					break;
 				}
 
 				$product_ids = $product_collection->get_product_ids( $page, $batch_size );
@@ -81,9 +94,9 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::halt( 0 );
 		}
 
-		if ( isset( $assoc_args['variants'] ) ) {
-			$start_time              = microtime( true );
-			$page              		 = 1;
+		if ( isset( $assoc_args['variants'] ) && $should_sync ) {
+			$start_time = microtime( true );
+			$page       = 1;
 
 			WP_CLI::line( "Syncing all product variants in batches..." );
 
@@ -94,39 +107,104 @@ class Cli extends WP_CLI_Command {
 				'tax_query' => array(
 					array(
 						'taxonomy' => 'product_type',
-						'field'    => 'slug',
-						'terms'    => 'variable',
+						'field' => 'slug',
+						'terms' => 'variable',
 					),
 				),
 			);
-	
-			$query = new \WP_Query( $args );
+
+			$query         = new \WP_Query( $args );
 			$variation_ids = [];
-	
+
 			if ( $query->have_posts() ) {
 				while ( $query->have_posts() ) {
 					$query->the_post();
 					$product = wc_get_product( get_the_ID() );
-	
+
 					if ( $product && $product->is_type( 'variable' ) ) {
-						$children = $product->get_children();
-						$variation_ids = array_merge($variation_ids, $children);
+						$children      = $product->get_children();
+						$variation_ids = array_merge( $variation_ids, $children );
 					}
 				}
-	
+
 				// $event_time = WC()->call_function( 'time' ) + 1;
 				$chunks = array_chunk( $variation_ids, 50 );
-	
+
 				foreach ( $chunks as $chunk ) {
 					\BlazeWooless\Woocommerce::get_instance()->variation_update( $chunk );
-					
+
 					WP_CLI::success( "Completed batch {$page}..." );
 					$page++; // Move to the next batch
 				}
 
 				WP_CLI::success( "All product variants have been synced." );
-				WP_CLI::success( "Total variation prouct: " . count($query->posts) );
-				WP_CLI::success( "Total child variation product: " . count($variation_ids) );
+				WP_CLI::success( "Total variation prouct: " . count( $query->posts ) );
+				WP_CLI::success( "Total child variation product: " . count( $variation_ids ) );
+
+				// End tracking time
+				$end_time       = microtime( true );
+				$execution_time = $end_time - $start_time;
+				// Convert execution time to hours, minutes, seconds
+				$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+				WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+
+				WP_CLI::halt( 0 );
+			}
+		}
+
+		if ( isset( $assoc_args['nonvariants'] ) && $should_sync ) {
+			$start_time = microtime( true );
+			$page       = 1;
+
+			WP_CLI::line( "Syncing all non-variant products in batches..." );
+
+			$args = array(
+				'post_type' => 'product',
+				'post_status' => 'publish',
+				'posts_per_page' => -1,
+				'tax_query' => array(
+					array(
+						'taxonomy' => 'product_type',
+						'field' => 'slug',
+						'terms' => array('variable'),
+						'operator' => 'NOT IN'
+					),
+				),
+			);
+
+			$query = new \WP_Query( $args );
+			$nonvariant_product_ids = array();
+
+			if ( $query->have_posts() ) {
+				while ( $query->have_posts() ) {
+					$query->the_post();
+					$nonvariant_product_ids[] = get_the_ID();
+				}
+
+				$product_collection = Product::get_instance();
+
+				// Initialize the collection if this is the first batch
+				$product_collection->initialize();
+
+				$chunks = array_chunk( $nonvariant_product_ids, 50 );
+				$imported_products_count = 0;
+				$total_imports = 0;
+
+				foreach ( $chunks as $chunk ) {
+					$products_batch = $product_collection->prepare_batch_data( $chunk );
+					$successful_imports = $product_collection->import_prepared_batch( $products_batch );
+
+					$imported_products_count += count( $successful_imports );
+					$total_imports += count( $products_batch );
+
+					WP_CLI::success( "Completed batch {$page}..." );
+					$page++; // Move to the next batch
+				}
+
+				WP_CLI::success( "All non-variant products have been synced." );
+				WP_CLI::success( "Total non-variant products: " . count( $nonvariant_product_ids ) );
+				WP_CLI::success( "Total import: " . $total_imports );
+				WP_CLI::success( "Successful import: " . $imported_products_count );
 
 				// End tracking time
 				$end_time       = microtime( true );
@@ -174,16 +252,25 @@ class Cli extends WP_CLI_Command {
 					$collection->initialize();
 				}
 
+				// the settings to not sync all pageAndPost. Set to false so that no pageAndPost syncs happen
+				$should_sync = apply_filters( 'blazecommerce/settings/sync/pageAndPost', true );
+				if ( ! $should_sync ) {
+					// This prevents syncing all pageAndPost
+					break;
+				}
+
 				$ids = $collection->get_post_ids( $page, $batch_size );
 				if ( empty( $ids ) ) {
 					break; // No more data left to sync
 				}
 
-				$object_batch       = $collection->prepare_batch_data( $ids );
-				$successful_imports = $collection->import_prepared_batch( $object_batch );
+				$object_batch = $collection->prepare_batch_data( $ids );
+				if ( ! empty( $object_batch ) ) {
+					$successful_imports = $collection->import_prepared_batch( $object_batch );
+					$imported_count += count( $successful_imports ); // Increment the count of imported products
+					$total_imports += count( $object_batch ); // Increment the count of imported products
+				}
 
-				$imported_count += count( $successful_imports ); // Increment the count of imported products
-				$total_imports += count( $object_batch ); // Increment the count of imported products
 
 
 				WP_CLI::success( "Completed batch {$page}..." );
@@ -338,6 +425,12 @@ class Cli extends WP_CLI_Command {
 				if ( $page == 1 ) {
 					// recreate the collection to typesense and do some initialization
 					$collection->initialize();
+				}
+
+				// the settings to not sync all taxonomy terms. Set to false so that no taxonomy syncs happen
+				$should_sync = apply_filters( 'blazecommerce/settings/sync/taxonomies', true );
+				if ( ! $should_sync ) {
+					break;
 				}
 
 				$query_args = $collection->get_query_args( $page, $batch_size );

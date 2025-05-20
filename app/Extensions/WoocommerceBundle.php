@@ -37,6 +37,58 @@ class WoocommerceBundle {
 	public function fields( $fields ) {
 		$fields[] = array( 'name' => 'bundle', 'type' => 'object', 'optional' => true );
 
+		// Bundle settings
+		$fields[] = array( 'name' => 'bundle.settings', 'type' => 'object', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.settings.layout', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.settings.formLocation', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.settings.minBundleSize', 'type' => 'int32', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.settings.maxBundleSize', 'type' => 'int32', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.settings.editInCart', 'type' => 'bool', 'optional' => true );
+
+		// Bundle products
+		$fields[] = array( 'name' => 'bundle.products', 'type' => 'object[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product', 'type' => 'object[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.id', 'type' => 'int64[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.stockStatus', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.bundleId', 'type' => 'int64[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.image', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.name', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.slug', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.permalink', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.type', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.sku', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.description', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.shortDescription', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.product.stockQuantity', 'type' => 'int32[]', 'optional' => true );
+
+		// Bundle product settings
+		$fields[] = array( 'name' => 'bundle.products.settings', 'type' => 'object[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.settings.minQuantity', 'type' => 'int32[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.settings.maxQuantity', 'type' => 'int32[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.settings.defaultQuantity', 'type' => 'int32[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.settings.optional', 'type' => 'bool[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.settings.shippedIndividually', 'type' => 'bool[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.settings.pricedIndividually', 'type' => 'bool[]', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.products.settings.discountPercent', 'type' => 'float[]', 'optional' => true );
+
+		// Bundle product variations
+		$fields[] = array( 'name' => 'bundle.products.variations', 'type' => 'object[]', 'optional' => true );
+
+		// Bundle info
+		$fields[] = array( 'name' => 'bundle.bundleInfo', 'type' => 'object', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.id', 'type' => 'int64', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.name', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.slug', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.permalink', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.description', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.shortDescription', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.sku', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.stockStatus', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.stockQuantity', 'type' => 'int32', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.image', 'type' => 'string', 'optional' => true );
+		$fields[] = array( 'name' => 'bundle.bundleInfo.productType', 'type' => 'string', 'optional' => true );
+
+		// Bundle prices
 		$currencies = Woocommerce::get_currencies();
 		foreach ( $currencies as $currency ) {
 			$fields[] = array( 'name' => 'bundle.minPrice.' . $currency, 'type' => 'float', 'optional' => true );
@@ -49,30 +101,34 @@ class WoocommerceBundle {
 
 			$bundle_fields_prefix = apply_filters( 'woocommerce_product_bundle_field_prefix', '', $bundled_item->get_id() );
 			$variation_attributes = $bundled_item->get_product_variation_attributes();
-			$variation_bundles = array();
+			$variation_bundles    = array();
 
 			foreach ( $variation_attributes as $variation_attribute_name => $variation_attribute_options ) {
 
 				$variation_options = array();
-				$variations = $bundled_item->get_product_variations();
-				$currency = get_option( 'woocommerce_currency' );
+				$variations        = $bundled_item->get_product_variations();
+				$currency          = get_option( 'woocommerce_currency' );
 
 
 				foreach ( (array) $variations as $variation ) {
 					foreach ( $variation['attributes'] as $variation_key => $variation_value ) {
 
-						$variation_id = $variation['variation_id'];
+						$variation_id      = $variation['variation_id'];
 						$variation_product = wc_get_product( $variation_id );
 
-						$price = $variation_product->get_price();
+						$price                       = $variation_product->get_price();
 						$convertedPrice[ $currency ] = $price;
-						$convertedPrice = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
+						$convertedPrice              = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
 
 						$variation_options[ $variation_key ][ $variation_id ] = array(
 							'label' => $variation_value,
 							'price' => $convertedPrice,
 							'description' => strip_tags( $variation['variation_description'] ) ?? null,
 							'displayPrice' => boolval( $variation['display_price'] ),
+							'stockStatus' => $variation_product->get_stock_status(),
+							'stockQuantity' => $variation_product->get_stock_quantity(),
+							'sku' => $variation_product->get_sku(),
+							'id' => $variation_id,
 						);
 					}
 				}
@@ -93,19 +149,39 @@ class WoocommerceBundle {
 			}
 
 			$bundle_data['variations'] = $variation_bundles;
+
+			// Add additional product data for grid display
+			$bundle_data['product']['name']             = $product->get_name();
+			$bundle_data['product']['slug']             = $product->get_slug();
+			$bundle_data['product']['permalink']        = get_permalink( $product->get_id() );
+			$bundle_data['product']['type']             = 'variable';
+			$bundle_data['product']['status']           = $product->get_status();
+			$bundle_data['product']['sku']              = $product->get_sku();
+			$bundle_data['product']['description']      = $product->get_description();
+			$bundle_data['product']['shortDescription'] = $product->get_short_description();
+
 		} elseif ( $product->is_type( 'simple' ) ) {
-			$currency = get_option( 'woocommerce_currency' );
-			$price = $product->get_price();
+			$currency                    = get_option( 'woocommerce_currency' );
+			$price                       = $product->get_price();
 			$convertedPrice[ $currency ] = $price;
-			$convertedPrice = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
+			$convertedPrice              = apply_filters( 'blaze_wooless_convert_prices', $convertedPrice, $currency );
 
 			$bundle_data['product']['price'] = $convertedPrice;
 			// get product published status and link
-			$bundle_data['product']['status'] = $product->get_status();
-			$bundle_data['product']['link'] = get_permalink( $product->get_id() );
+			$bundle_data['product']['status']           = $product->get_status();
+			$bundle_data['product']['link']             = get_permalink( $product->get_id() );
+			$bundle_data['product']['name']             = $product->get_name();
+			$bundle_data['product']['slug']             = $product->get_slug();
+			$bundle_data['product']['type']             = 'simple';
+			$bundle_data['product']['sku']              = $product->get_sku();
+			$bundle_data['product']['description']      = $product->get_description();
+			$bundle_data['product']['shortDescription'] = $product->get_short_description();
+			$bundle_data['product']['stockStatus']      = $product->get_stock_status();
+			$bundle_data['product']['stockQuantity']    = $product->get_stock_quantity();
 		}
 
-		return $bundle_data;
+		// Clean the data by removing empty values
+		return $this->remove_empty_values( $bundle_data );
 	}
 
 	public function get_bundled_items( $bundle ) {
@@ -121,7 +197,7 @@ class WoocommerceBundle {
 		foreach ( $bundled_items as $bundled_item ) {
 			$product = $bundled_item->get_product();
 
-			$image = $product->get_image_id();
+			$image     = $product->get_image_id();
 			$image_src = wp_get_attachment_image_src( $image, 'full' );
 
 			$data = array(
@@ -174,6 +250,14 @@ class WoocommerceBundle {
 		$minPrice[ $currency ] = $product->get_bundle_price( 'min', true );
 		$maxPrice[ $currency ] = $product->get_bundle_price( 'max', true );
 
+		// Get product image
+		$image_id  = $product->get_image_id();
+		$image_url = null;
+		if ( $image_id ) {
+			$image_src = wp_get_attachment_image_src( $image_id, 'full' );
+			$image_url = $image_src ? $image_src[0] : null;
+		}
+
 		$data = array(
 			'settings' => array(
 				'layout' => $product->get_layout(),
@@ -185,10 +269,52 @@ class WoocommerceBundle {
 			'products' => $bundle_products,
 			'minPrice' => $this->reformat_prices( $minPrice, $currency ),
 			'maxPrice' => $this->reformat_prices( $maxPrice, $currency ),
+			'bundleInfo' => array(
+				'id' => $product->get_id(),
+				'name' => $product->get_name(),
+				'slug' => $product->get_slug(),
+				'permalink' => get_permalink( $product->get_id() ),
+				'description' => $product->get_description(),
+				'shortDescription' => $product->get_short_description(),
+				'sku' => $product->get_sku(),
+				'stockStatus' => $product->get_stock_status(),
+				'stockQuantity' => $product->get_stock_quantity(),
+				'image' => $image_url,
+				'productType' => 'bundle',
+			),
 		);
 
+		// Clean the data by removing empty values
+		$data = $this->remove_empty_values( $data );
 
 		return apply_filters( 'blaze_wooless_product_bundle_data', $data, $product );
+	}
+
+	/**
+	 * Recursively remove empty values from an array
+	 *
+	 * @param array $array The array to clean and avoid typesense error if field is optional
+	 * @return array The cleaned array
+	 */
+	protected function remove_empty_values( $array ) {
+		foreach ( $array as $key => $value ) {
+			// If value is an array, recursively clean it
+			if ( is_array( $value ) ) {
+				$array[ $key ] = $this->remove_empty_values( $value );
+
+				// If the array is now empty, remove it
+				if ( empty( $array[ $key ] ) ) {
+					unset( $array[ $key ] );
+				}
+			} else {
+				// Remove empty strings, null values, and empty arrays
+				if ( $value === '' || $value === null || ( is_array( $value ) && empty( $value ) ) ) {
+					unset( $array[ $key ] );
+				}
+			}
+		}
+
+		return $array;
 	}
 
 	public function data( $product_data, $product_id, $product ) {
@@ -198,12 +324,17 @@ class WoocommerceBundle {
 		}
 		$currency = get_option( 'woocommerce_currency' );
 
-		$product_data['bundle'] = $this->get_bundled_data( $product );
+		$bundle_data = $this->get_bundled_data( $product );
+
+		// Clean the bundle data by removing empty values
+		$bundle_data = $this->remove_empty_values( $bundle_data );
+
+		$product_data['bundle'] = $bundle_data;
 
 		if ( $product_data['price'][ $currency ] === 0 && $product_data['regularPrice'][ $currency ] === 0 ) {
-			$product_data['price'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
+			$product_data['price'][ $currency ]        = $product_data['bundle']['minPrice'][ $currency ];
 			$product_data['regularPrice'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
-			$product_data['salePrice'][ $currency ] = $product_data['bundle']['minPrice'][ $currency ];
+			$product_data['salePrice'][ $currency ]    = $product_data['bundle']['minPrice'][ $currency ];
 		}
 
 		return $product_data;
@@ -223,19 +354,21 @@ class WoocommerceBundle {
 				),
 			)
 		);
-
 	}
 
 	public function check_bundle_data( \WP_REST_Request $request ) {
 		try {
 			$product_id = $request->get_param( 'product_id' );
-			$product = wc_get_product( $product_id );
+			$product    = wc_get_product( $product_id );
 
 			if ( ! is_a( $product, 'WC_Product_Bundle' ) ) {
 				throw new \Exception( 'Product is not a bundle' );
 			}
 
 			$data = $this->get_bundled_data( $product );
+
+			// Clean the data by removing empty values
+			$data = $this->remove_empty_values( $data );
 
 			$response = new \WP_REST_Response( $data );
 
