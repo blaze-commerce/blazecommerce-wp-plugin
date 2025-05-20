@@ -1,0 +1,41 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "blaze-commerce/service-features",
+	"version": "0.1.0",
+	"title": "Service Features",
+	"category": "widgets",
+	"icon": "admin-generic",
+	"description": "Display service features with logo, text, and trigger",
+	"supports": {
+		"html": false,
+		"align": true
+	},
+	"attributes": {
+		"align": {
+			"type": "string",
+			"default": "left"
+		},
+		"items": {
+			"type": "array",
+			"default": [
+				{
+					"id": "item-1",
+					"logo": {
+						"url": "",
+						"alt": ""
+					},
+					"text": "Service Feature",
+					"triggerType": "link",
+					"triggerText": "Learn More",
+					"triggerLink": "#",
+					"triggerTarget": ""
+				}
+			]
+		}
+	},
+	"textdomain": "blaze-commerce",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css"
+}

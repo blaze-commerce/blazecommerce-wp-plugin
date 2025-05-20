@@ -1,0 +1,90 @@
+/**
+ * The following styles get applied both on the front of your site
+ * and in the editor.
+ */
+
+.wp-block-blaze-commerce-service-features {
+	margin-bottom: 30px;
+	
+	.service-features-container {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 20px;
+		
+		.service-feature-item {
+			flex: 1;
+			min-width: 200px;
+			padding: 15px;
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			
+			.service-feature-logo {
+				margin-bottom: 15px;
+				
+				img {
+					max-width: 60px;
+					height: auto;
+				}
+			}
+			
+			.service-feature-text {
+				margin-bottom: 10px;
+				
+				p {
+					margin: 0;
+					font-size: 16px;
+				}
+			}
+			
+			.service-feature-trigger {
+				.service-feature-link,
+				.service-feature-target {
+					color: #0066cc;
+					text-decoration: none;
+					cursor: pointer;
+					font-size: 14px;
+					
+					&:hover {
+						text-decoration: underline;
+					}
+				}
+			}
+		}
+	}
+	
+	&.align-center {
+		.service-features-container {
+			justify-content: center;
+			text-align: center;
+			
+			.service-feature-item {
+				align-items: center;
+			}
+		}
+	}
+	
+	&.align-right {
+		.service-features-container {
+			justify-content: flex-end;
+			text-align: right;
+			
+			.service-feature-item {
+				align-items: flex-end;
+			}
+		}
+	}
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+	.wp-block-blaze-commerce-service-features {
+		.service-features-container {
+			flex-direction: column;
+			
+			.service-feature-item {
+				width: 100%;
+			}
+		}
+	}
+}
