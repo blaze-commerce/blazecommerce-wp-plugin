@@ -164,6 +164,10 @@ class SiteInfo extends BaseCollection {
 				'name' => 'wp_post_headless',
 				'value' => 'yes',
 			),
+			array(
+				'name' => 'cookie_domain',
+				'value' => defined( 'COOKIE_DOMAIN' ) ? COOKIE_DOMAIN : get_graphql_setting( 'cookie_domain', '', 'graphql_cors_settings' ),
+			),
 		);
 
 		$datas[] = $this->site_logo_settings();
