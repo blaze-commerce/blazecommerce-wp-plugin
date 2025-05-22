@@ -26,7 +26,7 @@ class WooDiscountRules {
 			add_action( 'ts_before_product_upsert', array( $this, 'prepare_discount_data' ) );
 			add_action( 'blaze_wooless_pre_sync_products', array( $this, 'prepare_discount_data' ) );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_product_data' ), 99, 3 );
-			add_action('woocommerce_add_to_cart', array( $this, 'woocommerce_add_to_cart'), 999, 2);
+			add_action( 'woocommerce_add_to_cart', array( $this, 'woocommerce_add_to_cart' ), 999, 2 );
 		}
 	}
 
@@ -49,7 +49,7 @@ class WooDiscountRules {
 			return;
 
 		$rule_helper = new \Wdr\App\Helpers\Rule();
-		$rules = $rule_helper->getAllRules( [] );
+		$rules       = $rule_helper->getAllRules( [] );
 
 		// filter rules to get only active rules by checking property enabled is true
 		$rules = array_filter( $rules, function ($rule) {
@@ -58,9 +58,9 @@ class WooDiscountRules {
 
 
 		$rules = array_map( function ($rule) {
-			$new_rule = new \stdClass();
-			$new_rule->filters = $rule->rule->filters;
-			$new_rule->bulk_adjustments = $rule->rule->bulk_adjustments;
+			$new_rule                            = new \stdClass();
+			$new_rule->filters                   = $rule->rule->filters;
+			$new_rule->bulk_adjustments          = $rule->rule->bulk_adjustments;
 			$new_rule->advanced_discount_message = $rule->rule->advanced_discount_message;
 			return $new_rule;
 		}, $rules );
@@ -75,7 +75,7 @@ class WooDiscountRules {
 			$is_applied = true;
 
 			$product_categories = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
-			$discount_rules = get_transient( 'blaze_commerce_discount_data' );
+			$discount_rules     = get_transient( 'blaze_commerce_discount_data' );
 
 			foreach ( $discount_rules as $rule ) {
 
@@ -102,15 +102,18 @@ class WooDiscountRules {
 	}
 
 	public function woocommerce_add_to_cart( $cart_item_key, $product_id ) {
-		$awdr_auto_added_cart_items = \Wdr\App\Helpers\Woocommerce::getSession(\WDRPro\App\Rules\BXGYAutoAdd::$session_key_auto_added_cart_items);
-		$auto_added_products = array_keys( $awdr_auto_added_cart_items );
-		$cart = \WC()->cart->get_cart();
-		foreach ( $cart as $cart_item_key => $cart_item ) {
-			if ( isset( $cart[ $cart_item_key ] ) ) {
-				$cart[ $cart_item_key ]['free_product'] = in_array( $cart_item_key, $auto_added_products ) ? '1' : '0';
-				\WC()->cart->cart_contents[ $cart_item_key ] = $cart[ $cart_item_key ];
+		if ( class_exists( '\Wdr\App\Helpers\Woocommerce' ) && class_exists( '\WDRPro\App\Rules\BXGYAutoAdd' ) ) {
+			$awdr_auto_added_cart_items = \Wdr\App\Helpers\Woocommerce::getSession( \WDRPro\App\Rules\BXGYAutoAdd::$session_key_auto_added_cart_items );
+			$auto_added_products        = array_keys( $awdr_auto_added_cart_items );
+			$cart                       = \WC()->cart->get_cart();
+			foreach ( $cart as $cart_item_key => $cart_item ) {
+				if ( isset( $cart[ $cart_item_key ] ) ) {
+					$cart[ $cart_item_key ]['free_product']      = in_array( $cart_item_key, $auto_added_products ) ? '1' : '0';
+					\WC()->cart->cart_contents[ $cart_item_key ] = $cart[ $cart_item_key ];
+				}
 			}
+			\WC()->cart->calculate_totals();
 		}
-		\WC()->cart->calculate_totals();
+
 	}
 }

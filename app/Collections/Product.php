@@ -135,7 +135,9 @@ class Product extends BaseCollection {
 
 		$fields = array_merge_recursive( $fields, $recommendation_schema );
 		$fields = array_merge_recursive( $fields, $this->get_price_schema() );
-		return apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
+
+		$fields = apply_filters( 'blaze_wooless_product_for_typesense_fields', $fields );
+		return apply_filters( 'blazecommerce/collection/product/typesense_fields', $fields );
 	}
 
 	public function get_product_ids( $page, $batch_size = 5 ) {
@@ -571,7 +573,10 @@ class Product extends BaseCollection {
 			'metaData' => array(),
 			'seoFullHead' => '',
 		);
-		return apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
+
+		$product_data = apply_filters( 'blaze_wooless_product_data_for_typesense', $product_data, $product_id, $product );
+
+		return apply_filters( 'blazecommerce/collection/product/typesense_data', $product_data, $product_id, $product );
 	}
 
 	public function sync( $product ) {

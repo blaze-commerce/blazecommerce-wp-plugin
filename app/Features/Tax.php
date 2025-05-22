@@ -1,6 +1,7 @@
 <?php
 
 namespace BlazeWooless\Features;
+use BlazeWooless\Woocommerce;
 
 class Tax {
 	private static $instance = null;
@@ -16,9 +17,20 @@ class Tax {
 	public function __construct() {
 		add_filter( 'blaze_commerce_variation_data', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
 		add_filter( 'blaze_wooless_cross_sell_data_for_typesense', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
-		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
+
+		add_filter( 'blazecommerce/collection/product/typesense_fields', array( $this, 'add_price_with_tax_meta_data_fields' ), 10, 1 );
+		add_filter( 'blazecommerce/collection/product/typesense_data', array( $this, 'add_price_with_tax_meta_data' ), 10, 3 );
 
 		add_filter( 'blazecommerce/settings/tax_rates', array( $this, 'tax_rates' ), 10, 1 );
+	}
+
+	public function add_price_with_tax_meta_data_fields( $fields ) {
+		$fields[] = [ 'name' => 'metaData.pricesByLocation', 'type' => 'object', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax', 'type' => 'object', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax.regularPrice', 'type' => 'float', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax.salePrice', 'type' => 'float', 'optional' => true ];
+
+		return $fields;
 	}
 
 	public function add_price_with_tax_meta_data( $product_data, $product_id, $product ) {
@@ -42,40 +54,32 @@ class Tax {
 			$currency => (float) number_format( empty( $price_with_tax ) ? 0 : $price_with_tax, 4, '.', '' ),
 		);
 
-		$tax_rates = $this->get_tax_rate_array( 'Standard' );
+		$tax_rates          = $this->get_tax_rate_array( 'Standard' );
 		$prices_by_location = [];
-		$is_tax_inclusive = get_option( 'woocommerce_prices_include_tax' );
+		$is_tax_inclusive   = get_option( 'woocommerce_prices_include_tax' );
 
 		foreach ( $tax_rates as $rate ) {
 			$country = $rate['tax_rate_country'] ?? '*';
-			$state = $rate['tax_rate_state'] ?? '*';
+			$state   = $rate['tax_rate_state'] ?? '*';
 
 			$regular_price = $product->get_regular_price();
-			$sale_price = $product->get_sale_price();
+			$sale_price    = $product->get_sale_price();
 
 			// If it has tax
-			if ( floatval($rate['tax_rate']) > 0 && $is_tax_inclusive === 'yes') {
+			if ( floatval( $rate['tax_rate'] ) > 0 && $is_tax_inclusive === 'yes' ) {
 				$final_regular_price = \wc_get_price_including_tax( $product, array( 'price' => $regular_price ) );
-				$final_sale_price = \wc_get_price_including_tax( $product, array( 'price' => $sale_price ) );
+				$final_sale_price    = \wc_get_price_including_tax( $product, array( 'price' => $sale_price ) );
 
-				$prices_by_location['with_tax']['locations'][] = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['with_tax']['regularPrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/with_tax/regular_price', array(
-					$currency => (float) number_format( $final_regular_price, 2, '.', '' )
-				), $currency );
-				$prices_by_location['with_tax']['salePrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/with_tax/sale_price', array(
-					$currency => (float) number_format( $final_sale_price, 2, '.', '' )
-				), $currency );
+				$prices_by_location['with_tax']['locations'][]  = array( 'country' => $country, 'state' => $state );
+				$prices_by_location['with_tax']['regularPrice'] = Woocommerce::format_price( $final_regular_price );
+				$prices_by_location['with_tax']['salePrice']    = Woocommerce::format_price( $final_sale_price );
 			} else {
 				$final_regular_price = \wc_get_price_excluding_tax( $product, array( 'price' => $regular_price ) );
-				$final_sale_price = \wc_get_price_excluding_tax( $product, array( 'price' => $sale_price ) );
+				$final_sale_price    = \wc_get_price_excluding_tax( $product, array( 'price' => $sale_price ) );
 
-				$prices_by_location['without_tax']['locations'][] = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['without_tax']['regularPrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/without_tax/regular_price', array(
-					$currency => (float) number_format( $final_regular_price, 2, '.', '' ),
-				), $currency );
-				$prices_by_location['without_tax']['salePrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/without_tax/sale_price', array(
-					$currency => (float) number_format( $final_sale_price, 2, '.', '' ),
-				), $currency );
+				$prices_by_location['without_tax']['locations'][]  = array( 'country' => $country, 'state' => $state );
+				$prices_by_location['without_tax']['regularPrice'] = Woocommerce::format_price( $final_regular_price );
+				$prices_by_location['without_tax']['salePrice']    = Woocommerce::format_price( $final_sale_price );
 			}
 		}
 
@@ -91,13 +95,13 @@ class Tax {
 	}
 
 	public function get_tax_rates_array() {
-		$tax_rates = [];
+		$tax_rates   = [];
 		$tax_classes = \WC_Tax::get_tax_classes();
 
 		$tax_rates['Standard'] = $this->get_tax_rate_array( 'Standard' );
 
 		foreach ( $tax_classes as $class ) {
-			$tax_rates[$class] = $this->get_tax_rate_array( $class );
+			$tax_rates[ $class ] = $this->get_tax_rate_array( $class );
 		}
 
 		return $tax_rates;
@@ -105,8 +109,8 @@ class Tax {
 
 	public function get_tax_rate_array( $rate_name ) {
 		$tax_rates = \WC_Tax::get_rates_for_tax_class( $rate_name );
-		$tax_rates = array_map( function ( $rate ) {
-			return (array)$rate;
+		$tax_rates = array_map( function ($rate) {
+			return (array) $rate;
 		}, $tax_rates );
 
 		return array_values( $tax_rates );
