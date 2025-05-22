@@ -95,61 +95,7 @@ class Cli extends WP_CLI_Command {
 		}
 
 		if ( isset( $assoc_args['variants'] ) && $should_sync ) {
-			$start_time = microtime( true );
-			$page       = 1;
-
-			WP_CLI::line( "Syncing all product variants in batches..." );
-
-			$args = array(
-				'post_type' => 'product',
-				'post_status' => 'publish',
-				'posts_per_page' => -1,
-				'tax_query' => array(
-					array(
-						'taxonomy' => 'product_type',
-						'field' => 'slug',
-						'terms' => 'variable',
-					),
-				),
-			);
-
-			$query         = new \WP_Query( $args );
-			$variation_ids = [];
-
-			if ( $query->have_posts() ) {
-				while ( $query->have_posts() ) {
-					$query->the_post();
-					$product = wc_get_product( get_the_ID() );
-
-					if ( $product && $product->is_type( 'variable' ) ) {
-						$children      = $product->get_children();
-						$variation_ids = array_merge( $variation_ids, $children );
-					}
-				}
-
-				// $event_time = WC()->call_function( 'time' ) + 1;
-				$chunks = array_chunk( $variation_ids, 50 );
-
-				foreach ( $chunks as $chunk ) {
-					\BlazeWooless\Woocommerce::get_instance()->variation_update( $chunk );
-
-					WP_CLI::success( "Completed batch {$page}..." );
-					$page++; // Move to the next batch
-				}
-
-				WP_CLI::success( "All product variants have been synced." );
-				WP_CLI::success( "Total variation prouct: " . count( $query->posts ) );
-				WP_CLI::success( "Total child variation product: " . count( $variation_ids ) );
-
-				// End tracking time
-				$end_time       = microtime( true );
-				$execution_time = $end_time - $start_time;
-				// Convert execution time to hours, minutes, seconds
-				$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-				WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
-
-				WP_CLI::halt( 0 );
-			}
+			$this->sync_product_variants_with_timeout_protection( $assoc_args );
 		}
 
 		if ( isset( $assoc_args['nonvariants'] ) && $should_sync ) {
@@ -467,5 +413,155 @@ class Cli extends WP_CLI_Command {
 		}
 
 		WP_CLI::error( "Nothing was sync" );
+	}
+
+	/**
+	 * Sync product variants with timeout protection to avoid "Maximum execution time exceeded" errors
+	 *
+	 * @param array $assoc_args CLI arguments
+	 */
+	private function sync_product_variants_with_timeout_protection( $assoc_args ) {
+		// Set execution time limit to prevent timeout
+		if ( function_exists( 'set_time_limit' ) ) {
+			set_time_limit( 0 ); // Remove time limit for CLI
+		}
+
+		// Increase memory limit if possible
+		if ( function_exists( 'ini_set' ) ) {
+			ini_set( 'memory_limit', '512M' );
+		}
+
+		$start_time = microtime( true );
+		$max_execution_time = 240; // 4 minutes safety margin (less than 5 min default)
+		$batch_size = 25; // Smaller batch size to reduce memory usage
+		$variable_products_per_batch = 10; // Process fewer variable products at once
+
+		WP_CLI::line( "Syncing product variants with timeout protection..." );
+		WP_CLI::line( "Batch size: {$batch_size} variations per batch" );
+		WP_CLI::line( "Variable products per batch: {$variable_products_per_batch}" );
+
+		$page = 1;
+		$total_variations_synced = 0;
+		$total_variable_products = 0;
+
+		do {
+			$batch_start_time = microtime( true );
+
+			// Check if we're approaching time limit
+			$elapsed_time = $batch_start_time - $start_time;
+			if ( $elapsed_time > $max_execution_time ) {
+				WP_CLI::warning( "Approaching time limit. Stopping sync to prevent timeout." );
+				WP_CLI::line( "Resume sync by running the command again." );
+				break;
+			}
+
+			// Get variable products in smaller batches
+			$args = array(
+				'post_type' => 'product',
+				'post_status' => 'publish',
+				'posts_per_page' => $variable_products_per_batch,
+				'paged' => $page,
+				'tax_query' => array(
+					array(
+						'taxonomy' => 'product_type',
+						'field' => 'slug',
+						'terms' => 'variable',
+					),
+				),
+			);
+
+			$query = new \WP_Query( $args );
+
+			if ( ! $query->have_posts() ) {
+				break; // No more variable products to process
+			}
+
+			$variation_ids = [];
+			$current_batch_variable_products = 0;
+
+			while ( $query->have_posts() ) {
+				$query->the_post();
+				$product = wc_get_product( get_the_ID() );
+
+				if ( $product && $product->is_type( 'variable' ) ) {
+					$children = $product->get_children();
+					$variation_ids = array_merge( $variation_ids, $children );
+					$current_batch_variable_products++;
+					$total_variable_products++;
+				}
+
+				// Clear memory
+				unset( $product );
+			}
+
+			wp_reset_postdata();
+
+			if ( ! empty( $variation_ids ) ) {
+				// Process variations in smaller chunks
+				$variation_chunks = array_chunk( $variation_ids, $batch_size );
+
+				foreach ( $variation_chunks as $chunk_index => $chunk ) {
+					// Check time limit before each chunk
+					$current_time = microtime( true );
+					$elapsed_time = $current_time - $start_time;
+
+					if ( $elapsed_time > $max_execution_time ) {
+						WP_CLI::warning( "Time limit reached during chunk processing. Stopping." );
+						break 2; // Break out of both loops
+					}
+
+					try {
+						\BlazeWooless\Woocommerce::get_instance()->variation_update( $chunk );
+						$total_variations_synced += count( $chunk );
+
+						WP_CLI::success( "Batch {$page}, Chunk " . ($chunk_index + 1) . ": Synced " . count( $chunk ) . " variations" );
+
+						// Small delay to prevent overwhelming the server
+						usleep( 100000 ); // 0.1 second delay
+
+					} catch ( \Exception $e ) {
+						WP_CLI::warning( "Error syncing chunk: " . $e->getMessage() );
+						continue;
+					}
+
+					// Clear memory after each chunk
+					unset( $chunk );
+				}
+			}
+
+			$batch_end_time = microtime( true );
+			$batch_duration = $batch_end_time - $batch_start_time;
+
+			WP_CLI::line( sprintf(
+				"Page %d completed: %d variable products, %d variations (%.2f seconds)",
+				$page,
+				$current_batch_variable_products,
+				count( $variation_ids ),
+				$batch_duration
+			) );
+
+			// Clear memory
+			unset( $variation_ids, $query );
+
+			// Force garbage collection
+			if ( function_exists( 'gc_collect_cycles' ) ) {
+				gc_collect_cycles();
+			}
+
+			$page++;
+
+		} while ( true );
+
+		// Final summary
+		$end_time = microtime( true );
+		$execution_time = $end_time - $start_time;
+		$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+
+		WP_CLI::success( "Variant sync completed!" );
+		WP_CLI::success( "Total variable products processed: " . $total_variable_products );
+		WP_CLI::success( "Total variations synced: " . $total_variations_synced );
+		WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+
+		WP_CLI::halt( 0 );
 	}
 }
