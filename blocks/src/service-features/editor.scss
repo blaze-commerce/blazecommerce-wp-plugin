@@ -5,12 +5,12 @@
 .wp-block-blaze-commerce-service-features {
 	border: 1px dashed #ccc;
 	padding: 20px;
-	
+
 	.service-features-container {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 20px;
-		
+
 		.service-feature-item {
 			flex: 1;
 			min-width: 200px;
@@ -18,81 +18,143 @@
 			border: 1px solid #e0e0e0;
 			border-radius: 5px;
 			background-color: #f9f9f9;
-			
-			.service-feature-header {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				margin-bottom: 10px;
-				
-				h4 {
-					margin: 0;
-				}
+			position: relative;
+			cursor: pointer;
+			transition: all 0.2s ease;
+
+			&:hover {
+				border-color: #007cba;
+				box-shadow: 0 0 0 1px #007cba;
 			}
-			
+
+			&.is-selected {
+				border-color: #007cba;
+				box-shadow: 0 0 0 2px #007cba;
+			}
+
 			.service-feature-logo {
 				margin-bottom: 15px;
-				
-				.logo-upload-container {
-					display: flex;
-					flex-direction: column;
-					align-items: center;
-					
-					.logo-upload-button {
-						width: 100%;
-						justify-content: center;
-						height: 100px;
-						border: 1px dashed #ccc;
-					}
-					
-					.logo-preview {
-						position: relative;
-						width: 100%;
-						
-						img {
-							width: 100%;
-							height: auto;
-							max-height: 100px;
-							object-fit: contain;
-						}
-						
-						.logo-actions {
-							display: flex;
-							justify-content: center;
-							gap: 10px;
-							margin-top: 5px;
-						}
-					}
+
+				img {
+					max-width: 60px;
+					height: auto;
 				}
 			}
-			
+
 			.service-feature-text {
-				margin-bottom: 15px;
+				margin-bottom: 10px;
+
+				p {
+					margin: 0;
+					font-size: 16px;
+				}
 			}
-			
+
 			.service-feature-trigger {
-				margin-bottom: 15px;
+				.service-feature-link,
+				.service-feature-target {
+					color: #0066cc;
+					text-decoration: none;
+					cursor: pointer;
+					font-size: 14px;
+				}
 			}
-		}
-		
-		.add-service-feature {
-			width: 100%;
-			justify-content: center;
-			margin-top: 20px;
+
+			.service-feature-item-overlay {
+				position: absolute;
+				top: 5px;
+				right: 5px;
+
+				.service-feature-item-number {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					width: 24px;
+					height: 24px;
+					background-color: #007cba;
+					color: white;
+					border-radius: 50%;
+					font-size: 12px;
+					font-weight: bold;
+				}
+			}
 		}
 	}
-	
+
 	&.align-center {
 		.service-features-container {
 			justify-content: center;
 			text-align: center;
+
+			.service-feature-item {
+				align-items: center;
+				display: flex;
+				flex-direction: column;
+			}
 		}
 	}
-	
+
 	&.align-right {
 		.service-features-container {
 			justify-content: flex-end;
 			text-align: right;
+
+			.service-feature-item {
+				align-items: flex-end;
+				display: flex;
+				flex-direction: column;
+			}
+		}
+	}
+}
+
+// Sidebar styles
+.service-features-tabs {
+	.components-tab-panel__tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 5px;
+		margin-bottom: 15px;
+
+		.components-button {
+			flex: 1;
+			justify-content: center;
+			border: 1px solid #ccc;
+			border-radius: 4px;
+
+			&.active-tab {
+				background-color: #007cba;
+				color: white;
+			}
+		}
+	}
+
+	.service-feature-item-settings {
+		.service-feature-item-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 10px;
+
+			h3 {
+				margin: 0;
+			}
+		}
+
+		.logo-upload-container {
+			margin-bottom: 15px;
+
+			.logo-preview {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+
+				.logo-actions {
+					display: flex;
+					gap: 10px;
+					margin-top: 10px;
+				}
+			}
 		}
 	}
 }

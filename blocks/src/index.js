@@ -3,8 +3,9 @@ import { TypographyConfig } from "./components/maxmegamenu/typography-config";
 import { MainMenuConfig } from "./components/maxmegamenu/main-menu-config";
 import { SubmenuConfig } from "./components/maxmegamenu/submenu-config";
 
-// Import Service Features block
+// Import blocks
 import "./service-features";
+import "./stock-status";
 
 const { createHigherOrderComponent } = wp.compose;
 const { Fragment } = wp.element;
