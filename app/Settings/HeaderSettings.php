@@ -95,7 +95,7 @@ class HeaderSettings extends BaseSettings {
 		add_filter( 'set_blaze_setting_data', array( $this, 'set_blaze_setting_data' ), 10, 2 );
 		// remove_action( 'generate_header', 'generate_construct_header' );
 		add_action( 'generate_header', array( $this, 'render_wp_header' ), 10 );
-		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'save_on_site_info_sync' ), 10 );
+		add_filter( 'blazecommerce/settings', array( $this, 'add_header_settings_to_documents' ), 10, 1 );
 	}
 
 	public function set_blaze_setting_data( $blaze_settings, $post_id ) {
@@ -129,19 +129,18 @@ class HeaderSettings extends BaseSettings {
 		echo $content;
 	}
 
-	public function save_on_site_info_sync() {
+	public function add_header_settings_to_documents( $documents ) {
 		$post = $this->get_post();
 		if ( $post ) {
-			$post_id = $post->ID;
-			TypesenseClient::get_instance()
-				->site_info()
-				->upsert( array(
-					'id' => (string) $post_id,
-					'name' => 'site-header',
-					'value' => get_post_field( 'post_content', $post_id ),
-					'updated_at' => time(),
-				) );
+			$documents[] = array(
+				'id' => (string) $post->ID,
+				'name' => 'site-header',
+				'value' => get_post_field( 'post_content', $post->ID ),
+				'updated_at' => time(),
+			);
 		}
+
+		return $documents;
 	}
 }
 
