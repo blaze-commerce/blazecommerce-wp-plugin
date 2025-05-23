@@ -220,5 +220,75 @@ if ( ! defined( 'ABSPATH' ) ) {
 				$importBtn.prop('disabled', true);
 			}
 		});
+
+		// Import button click handler
+		$('#blaze-import-btn').on('click', function (e) {
+			e.preventDefault();
+
+			var file = $('#import_file')[0].files[0];
+			if (!file) {
+				alert('Please select a file to import.');
+				return false;
+			}
+
+			// Show confirmation
+			if (!confirm('Are you sure you want to import these settings? This will overwrite your current configuration.')) {
+				return false;
+			}
+
+			var $btn = $(this);
+			var $spinner = $('#import-spinner');
+
+			// Show spinner and disable button
+			$spinner.addClass('is-active');
+			$btn.prop('disabled', true);
+
+			// Create form data
+			var formData = new FormData();
+			formData.append('action', 'blaze_import_settings');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'blaze_export_import_nonce' ); ?>');
+			formData.append('import_file', file);
+
+			// Make AJAX request
+			$.ajax({
+				url: ajaxurl,
+				type: 'POST',
+				data: formData,
+				processData: false,
+				contentType: false,
+				success: function (response) {
+					if (response.success) {
+						alert('Import successful: ' + response.data.message);
+
+						// Show any warnings
+						if (response.data.errors && response.data.errors.length > 0) {
+							var warnings = response.data.errors.join('\n');
+							alert('Warnings:\n' + warnings);
+						}
+
+						// Reload page to show updated settings
+						window.location.reload();
+					} else {
+						alert('Import failed: ' + response.data.message);
+
+						// Show any errors
+						if (response.data.errors && response.data.errors.length > 0) {
+							var errors = response.data.errors.join('\n');
+							alert('Errors:\n' + errors);
+						}
+					}
+				},
+				error: function (xhr, status, error) {
+					console.error('Import AJAX error:', error);
+					alert('Import failed. Please try again.');
+				},
+				complete: function () {
+					$spinner.removeClass('is-active');
+					$btn.prop('disabled', false);
+				}
+			});
+
+			return false;
+		});
 	});
 </script>

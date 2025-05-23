@@ -189,6 +189,57 @@ class ExportImportSettings extends BaseSettings {
 	}
 
 	/**
+	 * Handle AJAX import request
+	 */
+	public function handle_import_settings() {
+		// Check nonce and permissions
+		if ( ! wp_verify_nonce( $_POST['nonce'], 'blaze_export_import_nonce' ) || ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Security check failed' ) );
+		}
+
+		// Check if file was uploaded
+		if ( ! isset( $_FILES['import_file'] ) || empty( $_FILES['import_file']['tmp_name'] ) ) {
+			wp_send_json_error( array( 'message' => 'No file uploaded' ) );
+		}
+
+		$file = $_FILES['import_file'];
+
+		// Validate file
+		if ( $file['error'] !== UPLOAD_ERR_OK ) {
+			wp_send_json_error( array( 'message' => 'File upload failed' ) );
+		}
+
+		// Check file type
+		$file_info = pathinfo( $file['name'] );
+		if ( strtolower( $file_info['extension'] ) !== 'json' ) {
+			wp_send_json_error( array( 'message' => 'Please upload a JSON file' ) );
+		}
+
+		// Read and decode JSON
+		$json_content = file_get_contents( $file['tmp_name'] );
+		$import_data = json_decode( $json_content, true );
+
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			wp_send_json_error( array( 'message' => 'Invalid JSON file format' ) );
+		}
+
+		// Import settings
+		$result = $this->import_settings( $import_data );
+
+		if ( $result['success'] ) {
+			wp_send_json_success( array(
+				'message' => $result['message'],
+				'errors' => $result['errors']
+			) );
+		} else {
+			wp_send_json_error( array(
+				'message' => $result['message'],
+				'errors' => $result['errors']
+			) );
+		}
+	}
+
+	/**
 	 * Handle form-based export (fallback)
 	 */
 	public function handle_form_export() {
@@ -206,12 +257,43 @@ class ExportImportSettings extends BaseSettings {
 	 * Handle file upload import
 	 */
 	private function handle_import_file() {
-		// Check nonce and permissions
-		if ( ! wp_verify_nonce( $_POST['import_nonce'], 'blaze_import_settings_nonce' ) || ! current_user_can( 'manage_options' ) ) {
+		// Check permissions first
+		if ( ! current_user_can( 'manage_options' ) ) {
 			add_settings_error(
 				'blaze_import_error',
 				'security_error',
-				'Security check failed.',
+				'You do not have permission to import settings.',
+				'error'
+			);
+			return;
+		}
+
+		// Check nonce - WordPress settings API uses different nonce
+		$nonce_valid = false;
+
+		// Try our custom nonce first
+		if ( isset( $_POST['import_nonce'] ) && wp_verify_nonce( $_POST['import_nonce'], 'blaze_import_settings_nonce' ) ) {
+			$nonce_valid = true;
+		}
+
+		// Try WordPress settings API nonce as fallback
+		if ( ! $nonce_valid && isset( $_POST['_wpnonce'] ) && wp_verify_nonce( $_POST['_wpnonce'], $this->option_key . '-options' ) ) {
+			$nonce_valid = true;
+		}
+
+		if ( ! $nonce_valid ) {
+			// Debug information (remove in production)
+			$debug_info = '';
+			if ( WP_DEBUG ) {
+				$debug_info = ' Debug: ';
+				$debug_info .= isset( $_POST['import_nonce'] ) ? 'Custom nonce present, ' : 'Custom nonce missing, ';
+				$debug_info .= isset( $_POST['_wpnonce'] ) ? 'WP nonce present' : 'WP nonce missing';
+			}
+
+			add_settings_error(
+				'blaze_import_error',
+				'security_error',
+				'Security check failed. Please try again.' . $debug_info,
 				'error'
 			);
 			return;
