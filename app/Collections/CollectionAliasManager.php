@@ -265,4 +265,19 @@ class CollectionAliasManager {
 		$old_name = $collection_type . '-' . $this->typesense->store_id;
 		return $this->typesense->client()->collections[ $old_name ];
 	}
+
+	/**
+	 * Get all collection alias names based on supported collection types
+	 * Returns an array of alias names using the naming convention: {type}-{site_url}
+	 */
+	public function get_all_alias_names() {
+		$collection_types = array( 'product', 'taxonomy', 'page', 'menu', 'site_info', 'navigation' );
+		$alias_names      = array();
+
+		foreach ( $collection_types as $type ) {
+			$alias_names[ $type ] = $this->get_alias_name( $type );
+		}
+
+		return $alias_names;
+	}
 }

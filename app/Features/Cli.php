@@ -588,6 +588,9 @@ class Cli extends WP_CLI_Command {
 	 * [--list]
 	 * : List all aliases and their target collections.
 	 *
+	 * [--get-aliases]
+	 * : Get all collection alias names only.
+	 *
 	 * [--status]
 	 * : Show status of collection aliases for all types.
 	 *
@@ -600,6 +603,7 @@ class Cli extends WP_CLI_Command {
 	 * ## EXAMPLES
 	 *
 	 *     wp bc-sync alias --list
+	 *     wp bc-sync alias --get-aliases
 	 *     wp bc-sync alias --status
 	 *     wp bc-sync alias --cleanup=product
 	 *     wp bc-sync alias --force-alias=product
@@ -632,6 +636,26 @@ class Cli extends WP_CLI_Command {
 			} catch (\Exception $e) {
 				WP_CLI::error( "Failed to retrieve aliases: " . $e->getMessage() );
 			}
+		}
+
+		if ( isset( $assoc_args['get-aliases'] ) ) {
+			WP_CLI::line( "Getting all collection alias names..." );
+
+			$alias_names = $alias_manager->get_all_alias_names();
+
+			if ( empty( $alias_names ) ) {
+				WP_CLI::success( "No alias names configured." );
+				return;
+			}
+
+			WP_CLI::line( "Collection Alias Names:" );
+			WP_CLI::line( str_repeat( "-", 30 ) );
+
+			foreach ( $alias_names as $alias_name ) {
+				WP_CLI::line( $alias_name );
+			}
+
+			WP_CLI::success( "Found " . count( $alias_names ) . " alias names." );
 		}
 
 		if ( isset( $assoc_args['status'] ) ) {

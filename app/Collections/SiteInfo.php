@@ -206,6 +206,10 @@ class SiteInfo extends BaseCollection {
 			),
 		);
 
+		$datas[] = array(
+			'name' => 'collections',
+			'value' => $this->alias_manager->get_all_alias_names(),
+		);
 		$datas[] = $this->site_logo_settings();
 		$datas[] = $this->store_notice_settings();
 		$datas[] = $this->favicon_settings();
