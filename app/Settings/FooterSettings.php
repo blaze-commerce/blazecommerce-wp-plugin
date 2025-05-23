@@ -27,7 +27,7 @@ class FooterSettings extends BaseSettings {
 	}
 
 	public function get_post() {
-		$args = array(
+		$args      = array(
 			'post_type' => 'blaze_settings',
 			'name' => $this->setting_page_name,
 		);
@@ -49,7 +49,7 @@ class FooterSettings extends BaseSettings {
 			return $post->ID;
 		}
 
-		$content = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
+		$content        = '<!-- wp:generateblocks/container {"uniqueId":"8f65657a","backgroundColor":"#090E1A","isDynamic":true,"blockVersion":4,"display":"flex","justifyContent":"center","spacing":{"paddingTop":"24px","paddingLeft":"24px","paddingRight":"24px","paddingBottom":"24px"}} -->
 <!-- wp:paragraph {"style":{"color":{"text":"#ffffffcc"},"elements":{"link":{"color":{"text":"#ffffffcc"}}}}} -->
 <p class="has-text-color has-link-color" style="color:#ffffffcc">Built with <a href="https://blazecommerce.io/">Blaze Commerce</a></p>
 <!-- /wp:paragraph -->
@@ -65,7 +65,7 @@ class FooterSettings extends BaseSettings {
 		return wp_insert_post( $default_footer );
 	}
 	public function footer_callback() {
-		$post_id = $this->maybe_save_settings();
+		$post_id   = $this->maybe_save_settings();
 		$edit_link = get_edit_post_link( $post_id, '&' );
 		wp_redirect( $edit_link );
 	}
@@ -77,7 +77,7 @@ class FooterSettings extends BaseSettings {
 	public function register_hooks() {
 		add_filter( 'set_blaze_setting_data', array( $this, 'set_blaze_setting_data' ), 10, 2 );
 		add_action( 'generate_footer', array( $this, 'render_wp_footer' ), 10 );
-		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'save_on_site_info_sync' ), 10 );
+		add_filter( 'blazecommerce/settings', array( $this, 'add_footer_settings_to_documents' ), 10, 1 );
 	}
 
 	public function set_blaze_setting_data( $blaze_settings, $post_id ) {
@@ -111,18 +111,18 @@ class FooterSettings extends BaseSettings {
 		echo $content;
 	}
 
-	public function save_on_site_info_sync() {
+	public function add_footer_settings_to_documents( $documents ) {
 		$post = $this->get_post();
 		if ( $post ) {
-			TypesenseClient::get_instance()
-				->site_info()
-				->upsert( array(
-					'id' => (string) $post->ID,
-					'name' => 'site-footer',
-					'value' => get_post_field( 'post_content', $post->ID ),
-					'updated_at' => time(),
-				) );
+			$documents[] = array(
+				'id' => (string) $post->ID,
+				'name' => 'site-footer',
+				'value' => get_post_field( 'post_content', $post->ID ),
+				'updated_at' => time(),
+			);
 		}
+
+		return $documents;
 	}
 }
 
