@@ -16,26 +16,26 @@ class CollectionAliasManager {
 
 	/**
 	 * Generate alias name based on collection type and site URL
-	 * Format: {type}_{site_url}
+	 * Format: {type}-{site_url}
 	 */
 	public function get_alias_name( $collection_type ) {
-		return $collection_type . '_' . $this->site_url;
+		return $collection_type . '-' . $this->site_url;
 	}
 
 	/**
 	 * Generate collection name with suffix (a or b)
-	 * Format: {type}_{site_url}_a or {type}_{site_url}_b
+	 * Format: {type}-{site_url}-a or {type}-{site_url}-b
 	 */
 	public function get_collection_name( $collection_type, $suffix = null ) {
 		if ( $suffix === null ) {
 			$suffix = $this->get_next_collection_suffix( $collection_type );
 		}
-		return $collection_type . '_' . $this->site_url . '_' . $suffix;
+		return $collection_type . '-' . $this->site_url . '-' . $suffix;
 	}
 
 	/**
 	 * Determine which collection suffix (a or b) to use for the next sync
-	 * If current alias points to _a, return 'b'. If points to _b, return 'a'.
+	 * If current alias points to -a, return 'b'. If points to -b, return 'a'.
 	 * If no alias exists, return 'a' as default.
 	 */
 	public function get_next_collection_suffix( $collection_type ) {
@@ -68,17 +68,17 @@ class CollectionAliasManager {
 	}
 
 	/**
-	 * Get all collections for a specific type (both _a and _b)
+	 * Get all collections for a specific type (both -a and -b)
 	 */
 	public function get_all_collections_for_type( $collection_type ) {
 		try {
 			$all_collections = $this->typesense->client()->collections->retrieve();
-			$prefix          = $collection_type . '_' . $this->site_url . '_';
+			$prefix          = $collection_type . '-' . $this->site_url . '-';
 
 			$matching_collections = array();
 			foreach ( $all_collections['collections'] as $collection ) {
 				if ( strpos( $collection['name'], $prefix ) === 0 ) {
-					// Only include collections that end with '_a' or '_b'
+					// Only include collections that end with '-a' or '-b'
 					$suffix = $this->extract_suffix_from_collection_name( $collection['name'] );
 					if ( $suffix === 'a' || $suffix === 'b' ) {
 						$matching_collections[] = $collection['name'];
@@ -99,7 +99,7 @@ class CollectionAliasManager {
 	 * Extract suffix (a or b) from collection name
 	 */
 	private function extract_suffix_from_collection_name( $collection_name ) {
-		$parts  = explode( '_', $collection_name );
+		$parts  = explode( '-', $collection_name );
 		$suffix = end( $parts );
 
 		// Validate that it's either 'a' or 'b'
