@@ -5,6 +5,7 @@ namespace BlazeWooless;
 use Exception;
 use Symfony\Component\HttpClient\HttplugClient;
 use Typesense\Client;
+use BlazeWooless\Collections\CollectionAliasManager;
 
 class TypesenseClient {
 	private static $instance = null;
@@ -13,6 +14,7 @@ class TypesenseClient {
 	public $store_id = null;
 	private $client = null;
 	private $site_url = null;
+	private $alias_manager = null;
 
 	/**
 	 * Returns the current class
@@ -53,6 +55,10 @@ class TypesenseClient {
 			$this->client = null;
 		}
 
+		// Initialize alias manager if client is available
+		if ( $this->client !== null ) {
+			$this->alias_manager = new CollectionAliasManager();
+		}
 	}
 
 	public function can_connect() {
@@ -127,20 +133,34 @@ class TypesenseClient {
 		return $this->client->collections[ $collection ]->documents;
 	}
 
+	/**
+	 * Get collection access object with alias support
+	 * Falls back to legacy naming if alias manager is not available
+	 */
+	private function get_collection_access( $collection_type ) {
+		if ( $this->alias_manager !== null ) {
+			return $this->alias_manager->get_collection_access( $collection_type );
+		}
+
+		// Fallback to legacy naming
+		$legacy_name = $collection_type . '-' . $this->store_id;
+		return $this->client->collections[ $legacy_name ];
+	}
+
 	public function site_info() {
-		return $this->get_documents( 'site_info-' . $this->store_id );
+		return $this->get_collection_access( 'site_info' )->documents;
 	}
 
 	public function taxonomy() {
-		return $this->get_documents( 'taxonomy-' . $this->store_id );
+		return $this->get_collection_access( 'taxonomy' )->documents;
 	}
 
 	public function product() {
-		return $this->get_documents( 'product-' . $this->store_id );
+		return $this->get_collection_access( 'product' )->documents;
 	}
 
 	public function menu() {
-		return $this->get_documents( 'menu-' . $this->store_id );
+		return $this->get_collection_access( 'menu' )->documents;
 	}
 
 	public function test_connection( $api_key, $store_id, $environement ) {
@@ -163,7 +183,7 @@ class TypesenseClient {
 				throw new Exception( 'TypesenseClient is not initialized' );
 			}
 
-			$synonims = $this->client->collections[ 'product-' . $this->store_id ]->synonyms->retrieve();
+			$synonims = $this->get_collection_access( 'product' )->synonyms->retrieve();
 			if ( ! isset( $synonims['synonyms'] ) || count( $synonims['synonyms'] ) === 0 ) {
 				throw new Exception( 'No synonyms found' );
 			}
@@ -171,7 +191,7 @@ class TypesenseClient {
 			$delete_report = array();
 
 			foreach ( $synonims['synonyms'] as $synonym ) {
-				$delete_report = $this->client->collections[ 'product-' . $this->store_id ]->synonyms[ $synonym['id'] ]->delete();
+				$delete_report = $this->get_collection_access( 'product' )->synonyms[ $synonym['id'] ]->delete();
 			}
 
 			do_action(
@@ -219,7 +239,7 @@ class TypesenseClient {
 				);
 			}
 
-			$response = $this->client->collections[ 'product-' . $this->store_id ]->synonyms->upsert( $synonym_key, $synonym_data );
+			$response = $this->get_collection_access( 'product' )->synonyms->upsert( $synonym_key, $synonym_data );
 
 			do_action(
 				"inspect",
