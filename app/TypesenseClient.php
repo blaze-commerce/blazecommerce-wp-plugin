@@ -12,6 +12,7 @@ class TypesenseClient {
 	protected $host = null;
 	public $store_id = null;
 	private $client = null;
+	private $site_url = null;
 
 	/**
 	 * Returns the current class
@@ -39,6 +40,7 @@ class TypesenseClient {
 			$this->api_key  = $settings['typesense_api_key'];
 			$this->store_id = $settings['store_id'];
 			$this->host     = $settings['typesense_host'];
+			$this->site_url = $this->normalize_site_url( site_url() );
 
 			try {
 				$client = $this->get_client( $this->api_key, $settings['typesense_host'] );
@@ -95,6 +97,30 @@ class TypesenseClient {
 
 	public function get_host() {
 		return $this->host;
+	}
+
+	public function get_site_url() {
+		return $this->site_url;
+	}
+
+	/**
+	 * Normalize site URL for collection naming
+	 * Removes protocol, www, and trailing slashes
+	 */
+	public function normalize_site_url( $url ) {
+		// Remove protocol
+		$url = preg_replace( '/^https?:\/\//', '', $url );
+
+		// Remove www
+		$url = preg_replace( '/^www\./', '', $url );
+
+		// Remove trailing slash
+		$url = rtrim( $url, '/' );
+
+		// Replace special characters except dots and hyphens with underscores for collection naming
+		$url = preg_replace( '/[^a-zA-Z0-9_.-]/', '_', $url );
+
+		return $url;
 	}
 
 	public function get_documents( $collection ) {
