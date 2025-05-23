@@ -63,6 +63,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Settings\\FooterSettings',
 			'\\BlazeWooless\\Settings\\HomePageSettings',
 			'\\BlazeWooless\\Settings\\SynonymSettings',
+			'\\BlazeWooless\\Settings\\ExportImportSettings',
 		);
 
 		foreach ( $settings as $setting ) {
