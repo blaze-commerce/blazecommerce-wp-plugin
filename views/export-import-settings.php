@@ -25,6 +25,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<?php _e( 'Export Settings', 'blaze-commerce' ); ?>
 				</button>
 				<span class="spinner" id="export-spinner"></span>
+
+				<!-- Fallback form for export -->
+				<form id="export-fallback-form" method="post" style="display: none;">
+					<?php wp_nonce_field( 'blaze_export_settings_form', 'export_form_nonce' ); ?>
+					<input type="hidden" name="action" value="blaze_export_settings_form">
+				</form>
 			</div>
 		</div>
 
@@ -141,36 +147,49 @@ if ( ! defined( 'ABSPATH' ) ) {
 			formData.append('action', 'blaze_export_settings');
 			formData.append('nonce', '<?php echo wp_create_nonce( 'blaze_export_import_nonce' ); ?>');
 
-			// Make AJAX request
-			$.ajax({
-				url: ajaxurl,
-				type: 'POST',
-				data: formData,
-				processData: false,
-				contentType: false,
-				xhrFields: {
-					responseType: 'blob'
-				},
-				success: function (data, status, xhr) {
-					// Create download link
-					var blob = new Blob([data], { type: 'application/json' });
-					var url = window.URL.createObjectURL(blob);
-					var a = document.createElement('a');
-					a.href = url;
-					a.download = 'blaze-commerce-settings-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
-					document.body.appendChild(a);
-					a.click();
-					window.URL.revokeObjectURL(url);
-					document.body.removeChild(a);
-				},
-				error: function () {
-					alert('Export failed. Please try again.');
-				},
-				complete: function () {
-					$btn.prop('disabled', false);
-					$spinner.removeClass('is-active');
+			// Use XMLHttpRequest for better blob handling
+			var xhr = new XMLHttpRequest();
+			xhr.open('POST', ajaxurl, true);
+			xhr.responseType = 'blob';
+
+			xhr.onload = function () {
+				if (xhr.status === 200) {
+					// Check if response is actually a blob
+					if (xhr.response instanceof Blob) {
+						// Create download link
+						var blob = xhr.response;
+						var url = window.URL.createObjectURL(blob);
+						var a = document.createElement('a');
+						a.href = url;
+						a.download = 'blaze-commerce-settings-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.json';
+						document.body.appendChild(a);
+						a.click();
+						window.URL.revokeObjectURL(url);
+						document.body.removeChild(a);
+					} else {
+						console.error('Response is not a blob:', xhr.response);
+						console.log('Trying fallback method...');
+						// Try fallback form submission
+						$('#export-fallback-form').submit();
+					}
+				} else {
+					console.error('Export failed with status:', xhr.status);
+					alert('Export failed. Please try again. (Status: ' + xhr.status + ')');
 				}
-			});
+
+				$btn.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			};
+
+			xhr.onerror = function () {
+				console.error('AJAX export failed, trying fallback method...');
+				// Try fallback form submission
+				$('#export-fallback-form').submit();
+				$btn.prop('disabled', false);
+				$spinner.removeClass('is-active');
+			};
+
+			xhr.send(formData);
 		});
 
 		// Import file selection

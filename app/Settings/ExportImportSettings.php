@@ -18,6 +18,7 @@ class ExportImportSettings extends BaseSettings {
 	public function register_hooks() {
 		add_action( 'wp_ajax_blaze_export_settings', array( $this, 'handle_export_settings' ) );
 		add_action( 'wp_ajax_blaze_import_settings', array( $this, 'handle_import_settings' ) );
+		add_action( 'admin_init', array( $this, 'handle_form_export' ) );
 	}
 
 	public function settings_callback( $options ) {
@@ -168,14 +169,37 @@ class ExportImportSettings extends BaseSettings {
 		}
 
 		$export_data = $this->export_settings();
+		$json_content = json_encode( $export_data, JSON_PRETTY_PRINT );
 		$filename = 'blaze-commerce-settings-' . date( 'Y-m-d-H-i-s' ) . '.json';
 
-		header( 'Content-Type: application/json' );
-		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
-		header( 'Content-Length: ' . strlen( json_encode( $export_data ) ) );
+		// Clear any previous output
+		if ( ob_get_level() ) {
+			ob_end_clean();
+		}
 
-		echo json_encode( $export_data, JSON_PRETTY_PRINT );
+		// Set proper headers for file download
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		header( 'Content-Length: ' . strlen( $json_content ) );
+		header( 'Cache-Control: no-cache, must-revalidate' );
+		header( 'Expires: 0' );
+
+		echo $json_content;
 		wp_die();
+	}
+
+	/**
+	 * Handle form-based export (fallback)
+	 */
+	public function handle_form_export() {
+		if ( isset( $_POST['action'] ) && $_POST['action'] === 'blaze_export_settings_form' ) {
+			// Check nonce and permissions
+			if ( ! wp_verify_nonce( $_POST['export_form_nonce'], 'blaze_export_settings_form' ) || ! current_user_can( 'manage_options' ) ) {
+				wp_die( 'Security check failed' );
+			}
+
+			$this->handle_export_settings();
+		}
 	}
 
 	/**
