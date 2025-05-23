@@ -77,10 +77,12 @@ class SiteInfo extends BaseCollection {
 	public function prepare_batch_data() {
 		$documents = array();
 
-		$update_at    = time();
-		$shop_page    = get_option( 'woocommerce_shop_page_id' );
-		$blog_page    = get_option( 'page_for_posts' );
-		$cart_page_id = wc_get_page_id( 'cart' );
+		$update_at      = time();
+		$shop_page      = get_option( 'woocommerce_shop_page_id' );
+		$blog_page      = get_option( 'page_for_posts' );
+		$cart_page_id   = wc_get_page_id( 'cart' );
+		$home_page_id   = get_option( 'page_on_front' );
+		$home_page_slug = $home_page_id ? get_post_field( 'post_name', $home_page_id ) : '';
 
 		$datas = array(
 			array(
@@ -197,6 +199,10 @@ class SiteInfo extends BaseCollection {
 			array(
 				'name' => 'cookie_domain',
 				'value' => defined( 'COOKIE_DOMAIN' ) ? COOKIE_DOMAIN : get_graphql_setting( 'cookie_domain', '', 'graphql_cors_settings' ),
+			),
+			array(
+				'name' => 'homepage_slug',
+				'value' => $home_page_slug,
 			),
 		);
 
