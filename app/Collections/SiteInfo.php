@@ -17,31 +17,61 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function initialize() {
-		// Delete the existing 'site_info' collection (if it exists)
-		try {
-			$this->drop_collection();
-		} catch (\Exception $e) {
-			// Don't error out if the collection was not found
-		}
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'wooless-site-info-collection-initialize' );
 
-		try {
+		// Check if we should use the new alias system
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
 
-			// Create the 'site_info' collection with the required schema
-			$this->create_collection(
-				array(
-					'name' => $this->collection_name(),
+		if ( $use_aliases ) {
+			try {
+				$schema = array(
 					'fields' => array(
 						array( 'name' => 'name', 'type' => 'string' ),
 						array( 'name' => '.*', 'type' => 'string*' ),
 						array( 'name' => 'updated_at', 'type' => 'int64' ),
 					),
 					'default_sorting_field' => 'updated_at',
-				),
-			);
-		} catch (\Exception $e) {
-			echo "Error: " . $e->getMessage() . "\n";
-		}
+				);
 
+				$new_collection_name = $this->initialize_with_alias( $schema );
+				$logger->debug( 'TS SiteInfo collection (alias): ' . $new_collection_name, $context );
+
+				// Store the new collection name for later use in complete_sync
+				$this->current_sync_collection = $new_collection_name;
+
+			} catch (\Exception $e) {
+				$logger->debug( 'TS SiteInfo collection alias initialize Exception: ' . $e->getMessage(), $context );
+				throw $e;
+			}
+		} else {
+			// Legacy behavior
+			// Delete the existing 'site_info' collection (if it exists)
+			try {
+				$this->drop_collection();
+			} catch (\Exception $e) {
+				// Don't error out if the collection was not found
+			}
+
+			try {
+				$logger->debug( 'TS SiteInfo collection: ' . $this->collection_name(), $context );
+				// Create the 'site_info' collection with the required schema
+				$this->create_collection(
+					array(
+						'name' => $this->collection_name(),
+						'fields' => array(
+							array( 'name' => 'name', 'type' => 'string' ),
+							array( 'name' => '.*', 'type' => 'string*' ),
+							array( 'name' => 'updated_at', 'type' => 'int64' ),
+						),
+						'default_sorting_field' => 'updated_at',
+					),
+				);
+			} catch (\Exception $e) {
+				$logger->debug( 'TS SiteInfo collection initialize Exception: ' . $e->getMessage(), $context );
+				echo "Error: " . $e->getMessage() . "\n";
+			}
+		}
 	}
 
 	public function prepare_batch_data() {
@@ -332,13 +362,51 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function import_prepared_batch( $documents ) {
-		$import_response = $this->collection()->documents->import( $documents );
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'blazecommerce-site-info-import' );
 
-		$successful_imports = array_filter( $import_response, function ($batch_result) {
-			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
-		} );
+		// Import site info to Typesense using the correct collection (alias-aware)
+		try {
+			$result             = $this->import( $documents );
+			$successful_imports = array_filter( $result, function ($batch_result) {
+				return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+			} );
+			$logger->debug( 'TS SiteInfo Import result: ' . print_r( $result, 1 ), $context );
 
-		return $successful_imports;
+			return $successful_imports;
+		} catch (\Exception $e) {
+			$logger->debug( 'TS SiteInfo Import Exception: ' . $e->getMessage(), $context );
+			error_log( "Error importing site info to Typesense: " . $e->getMessage() );
+			return array();
+		}
+	}
+
+	/**
+	 * Complete the site info sync by updating alias
+	 * This should be called after all site info has been synced
+	 */
+	public function complete_site_info_sync() {
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
+			$logger  = wc_get_logger();
+			$context = array( 'source' => 'wooless-site-info-collection-complete-sync' );
+
+			try {
+				$result = $this->complete_sync( $this->current_sync_collection );
+				$logger->debug( 'TS SiteInfo sync completed: ' . json_encode( $result ), $context );
+
+				// Clear the current sync collection
+				$this->current_sync_collection = null;
+
+				return $result;
+			} catch (\Exception $e) {
+				$logger->debug( 'TS SiteInfo complete sync Exception: ' . $e->getMessage(), $context );
+				throw $e;
+			}
+		}
+
+		return array( 'success' => true, 'message' => 'No alias sync needed' );
 	}
 
 	public function after_site_info_sync() {
@@ -346,17 +414,28 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function index_to_typesense() {
-		$collection_site_info = $this->collection_name();
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'wooless-site-info-collection-index' );
+
 		//Indexing Site Info
 		try {
 			$this->initialize();
 
 			$documents = $this->prepare_batch_data();
 			$this->import_prepared_batch( $documents );
+
+			// Complete the sync if using aliases
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases && isset( $this->current_sync_collection ) ) {
+				$sync_result = $this->complete_site_info_sync();
+				$logger->debug( 'TS SiteInfo sync result: ' . json_encode( $sync_result ), $context );
+			}
+
 			$this->after_site_info_sync();
 
 			echo "Site info added successfully!";
 		} catch (\Exception $e) {
+			$logger->debug( 'TS SiteInfo index Exception: ' . $e->getMessage(), $context );
 			echo $e->getMessage();
 		}
 	}
