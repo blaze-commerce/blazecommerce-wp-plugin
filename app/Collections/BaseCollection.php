@@ -39,10 +39,17 @@ class BaseCollection {
 	}
 
 	/**
-	 * Get new collection name with timestamp
+	 * Get new collection name with suffix (a or b)
 	 */
-	public function get_new_collection_name( $timestamp = null ) {
-		return $this->alias_manager->get_collection_name( $this->collection_name, $timestamp );
+	public function get_new_collection_name( $suffix = null ) {
+		return $this->alias_manager->get_collection_name( $this->collection_name, $suffix );
+	}
+
+	/**
+	 * Get the inactive collection name (for blue-green deployment)
+	 */
+	public function get_inactive_collection_name() {
+		return $this->alias_manager->get_inactive_collection( $this->collection_name );
 	}
 
 	/**
@@ -135,40 +142,40 @@ class BaseCollection {
 	}
 
 	/**
-	 * Initialize collection with alias support
+	 * Initialize collection with alias support using blue-green deployment
 	 * This method handles the new alias-based sync process
 	 */
 	public function initialize_with_alias( $schema ) {
-		// Clean up any newer collections from interrupted syncs
-		$this->alias_manager->cleanup_newer_collections( $this->collection_name );
-
-		// Create new timestamped collection
-		$new_collection_name = $this->get_new_collection_name();
-		$schema['name']      = $new_collection_name;
+		// Get the inactive collection name (the one we'll sync to)
+		$inactive_collection_name = $this->get_inactive_collection_name();
+		$schema['name']           = $inactive_collection_name;
 
 		try {
+			// Try to delete the inactive collection if it exists (cleanup from previous sync)
+			$this->alias_manager->delete_collection( $inactive_collection_name );
+
+			// Create the new collection
 			$this->create_collection( $schema );
-			return $new_collection_name;
+			return $inactive_collection_name;
 		} catch (\Exception $e) {
 			throw new \Exception( "Failed to create new collection: " . $e->getMessage() );
 		}
 	}
 
 	/**
-	 * Complete the sync by updating alias and cleaning up
+	 * Complete the sync by updating alias (blue-green deployment)
 	 */
 	public function complete_sync( $new_collection_name ) {
 		try {
-			// Update alias to point to new collection
+			// Update alias to point to new collection (atomic switch)
 			$this->alias_manager->update_alias( $this->collection_name, $new_collection_name );
 
-			// Clean up old collections (keep 1 previous)
-			$deleted = $this->alias_manager->cleanup_old_collections( $this->collection_name, 1 );
-
+			// In blue-green deployment, we don't clean up the old collection immediately
+			// It becomes the inactive collection for the next sync
 			return array(
 				'success' => true,
 				'new_collection' => $new_collection_name,
-				'deleted_collections' => $deleted
+				'switched_alias' => true
 			);
 		} catch (\Exception $e) {
 			throw new \Exception( "Failed to complete sync: " . $e->getMessage() );

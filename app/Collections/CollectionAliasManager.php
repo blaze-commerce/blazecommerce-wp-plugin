@@ -11,7 +11,7 @@ class CollectionAliasManager {
 
 	public function __construct() {
 		$this->typesense = TypesenseClient::get_instance();
-		$this->site_url = $this->typesense->get_site_url();
+		$this->site_url  = $this->typesense->get_site_url();
 	}
 
 	/**
@@ -23,14 +23,34 @@ class CollectionAliasManager {
 	}
 
 	/**
-	 * Generate collection name with timestamp
-	 * Format: {type}_{site_url}_{timestamp}
+	 * Generate collection name with suffix (a or b)
+	 * Format: {type}_{site_url}_a or {type}_{site_url}_b
 	 */
-	public function get_collection_name( $collection_type, $timestamp = null ) {
-		if ( $timestamp === null ) {
-			$timestamp = time();
+	public function get_collection_name( $collection_type, $suffix = null ) {
+		if ( $suffix === null ) {
+			$suffix = $this->get_next_collection_suffix( $collection_type );
 		}
-		return $collection_type . '_' . $this->site_url . '_' . $timestamp;
+		return $collection_type . '_' . $this->site_url . '_' . $suffix;
+	}
+
+	/**
+	 * Determine which collection suffix (a or b) to use for the next sync
+	 * If current alias points to _a, return 'b'. If points to _b, return 'a'.
+	 * If no alias exists, return 'a' as default.
+	 */
+	public function get_next_collection_suffix( $collection_type ) {
+		$current_collection = $this->get_current_collection( $collection_type );
+
+		if ( ! $current_collection ) {
+			// No alias exists yet, start with 'a'
+			return 'a';
+		}
+
+		// Extract suffix from current collection name
+		$current_suffix = $this->extract_suffix_from_collection_name( $current_collection );
+
+		// Return the opposite suffix
+		return $current_suffix === 'a' ? 'b' : 'a';
 	}
 
 	/**
@@ -41,100 +61,122 @@ class CollectionAliasManager {
 			$alias_name = $this->get_alias_name( $collection_type );
 			$alias_info = $this->typesense->client()->aliases[ $alias_name ]->retrieve();
 			return $alias_info['collection_name'] ?? null;
-		} catch ( Exception $e ) {
+		} catch (Exception $e) {
 			// Alias doesn't exist yet
 			return null;
 		}
 	}
 
 	/**
-	 * Get all collections for a specific type
+	 * Get all collections for a specific type (both _a and _b)
 	 */
 	public function get_all_collections_for_type( $collection_type ) {
 		try {
 			$all_collections = $this->typesense->client()->collections->retrieve();
-			$prefix = $collection_type . '_' . $this->site_url . '_';
-			
+			$prefix          = $collection_type . '_' . $this->site_url . '_';
+
 			$matching_collections = array();
 			foreach ( $all_collections['collections'] as $collection ) {
 				if ( strpos( $collection['name'], $prefix ) === 0 ) {
-					$matching_collections[] = $collection['name'];
+					// Only include collections that end with '_a' or '_b'
+					$suffix = $this->extract_suffix_from_collection_name( $collection['name'] );
+					if ( $suffix === 'a' || $suffix === 'b' ) {
+						$matching_collections[] = $collection['name'];
+					}
 				}
 			}
-			
-			// Sort by timestamp (newest first)
-			usort( $matching_collections, function( $a, $b ) {
-				$timestamp_a = $this->extract_timestamp_from_collection_name( $a );
-				$timestamp_b = $this->extract_timestamp_from_collection_name( $b );
-				return $timestamp_b - $timestamp_a;
-			});
-			
+
+			// Sort alphabetically (a comes before b)
+			sort( $matching_collections );
+
 			return $matching_collections;
-		} catch ( Exception $e ) {
+		} catch (Exception $e) {
 			return array();
 		}
 	}
 
 	/**
-	 * Extract timestamp from collection name
+	 * Extract suffix (a or b) from collection name
 	 */
-	private function extract_timestamp_from_collection_name( $collection_name ) {
-		$parts = explode( '_', $collection_name );
-		return intval( end( $parts ) );
+	private function extract_suffix_from_collection_name( $collection_name ) {
+		$parts  = explode( '_', $collection_name );
+		$suffix = end( $parts );
+
+		// Validate that it's either 'a' or 'b'
+		if ( $suffix === 'a' || $suffix === 'b' ) {
+			return $suffix;
+		}
+
+		// Fallback for legacy collections or invalid names
+		return null;
 	}
 
 	/**
-	 * Determine collections that are newer than the current alias target
+	 * Get the inactive collection (the one not currently pointed to by alias)
+	 * In blue-green deployment, this is the collection we can safely sync to
+	 */
+	public function get_inactive_collection( $collection_type ) {
+		$current_collection = $this->get_current_collection( $collection_type );
+
+		if ( ! $current_collection ) {
+			// No alias exists, return the 'a' collection as default
+			return $this->get_collection_name( $collection_type, 'a' );
+		}
+
+		$current_suffix  = $this->extract_suffix_from_collection_name( $current_collection );
+		$inactive_suffix = $current_suffix === 'a' ? 'b' : 'a';
+
+		return $this->get_collection_name( $collection_type, $inactive_suffix );
+	}
+
+	/**
+	 * Get collections that should be cleaned up
+	 * In blue-green deployment, we only keep the current active collection
+	 * and clean up any orphaned collections from interrupted syncs
+	 */
+	public function get_collections_to_cleanup( $collection_type ) {
+		$current_collection = $this->get_current_collection( $collection_type );
+		$all_collections    = $this->get_all_collections_for_type( $collection_type );
+
+		if ( ! $current_collection ) {
+			// No alias exists, clean up all collections
+			return $all_collections;
+		}
+
+		$collections_to_cleanup = array();
+		foreach ( $all_collections as $collection ) {
+			if ( $collection !== $current_collection ) {
+				$collections_to_cleanup[] = $collection;
+			}
+		}
+
+		return $collections_to_cleanup;
+	}
+
+	/**
+	 * Legacy method for backward compatibility - now returns empty array
+	 * In blue-green deployment, "newer" collections don't apply
 	 */
 	public function get_newer_collections( $collection_type ) {
-		$current_collection = $this->get_current_collection( $collection_type );
-		if ( ! $current_collection ) {
-			return array();
-		}
+		// Suppress unused parameter warning - kept for backward compatibility
+		unset( $collection_type );
 
-		$current_timestamp = $this->extract_timestamp_from_collection_name( $current_collection );
-		$all_collections = $this->get_all_collections_for_type( $collection_type );
-		
-		$newer_collections = array();
-		foreach ( $all_collections as $collection ) {
-			$timestamp = $this->extract_timestamp_from_collection_name( $collection );
-			if ( $timestamp > $current_timestamp ) {
-				$newer_collections[] = $collection;
-			}
-		}
-		
-		return $newer_collections;
+		// In blue-green deployment, "newer" doesn't apply
+		// Return empty array to maintain compatibility
+		return array();
 	}
 
 	/**
-	 * Determine collections that are older than the current alias target
+	 * Legacy method for backward compatibility - now returns collections to cleanup
 	 */
 	public function get_older_collections( $collection_type, $keep_count = 1 ) {
-		$current_collection = $this->get_current_collection( $collection_type );
-		if ( ! $current_collection ) {
-			return array();
+		if ( $keep_count >= 1 ) {
+			// Keep current collection, return others for cleanup
+			return $this->get_collections_to_cleanup( $collection_type );
 		}
 
-		$current_timestamp = $this->extract_timestamp_from_collection_name( $current_collection );
-		$all_collections = $this->get_all_collections_for_type( $collection_type );
-		
-		$older_collections = array();
-		foreach ( $all_collections as $collection ) {
-			$timestamp = $this->extract_timestamp_from_collection_name( $collection );
-			if ( $timestamp < $current_timestamp ) {
-				$older_collections[] = $collection;
-			}
-		}
-		
-		// Sort by timestamp (newest first) and keep only the ones beyond keep_count
-		usort( $older_collections, function( $a, $b ) {
-			$timestamp_a = $this->extract_timestamp_from_collection_name( $a );
-			$timestamp_b = $this->extract_timestamp_from_collection_name( $b );
-			return $timestamp_b - $timestamp_a;
-		});
-		
-		// Return collections to delete (keep the most recent $keep_count)
-		return array_slice( $older_collections, $keep_count );
+		// If keep_count is 0, return all collections
+		return $this->get_all_collections_for_type( $collection_type );
 	}
 
 	/**
@@ -143,10 +185,10 @@ class CollectionAliasManager {
 	public function update_alias( $collection_type, $target_collection ) {
 		try {
 			$alias_name = $this->get_alias_name( $collection_type );
-			$mapping = array( 'collection_name' => $target_collection );
-			
+			$mapping    = array( 'collection_name' => $target_collection );
+
 			return $this->typesense->client()->aliases->upsert( $alias_name, $mapping );
-		} catch ( Exception $e ) {
+		} catch (Exception $e) {
 			throw new Exception( "Failed to update alias: " . $e->getMessage() );
 		}
 	}
@@ -157,7 +199,7 @@ class CollectionAliasManager {
 	public function delete_collection( $collection_name ) {
 		try {
 			return $this->typesense->client()->collections[ $collection_name ]->delete();
-		} catch ( Exception $e ) {
+		} catch (Exception $e) {
 			// Collection might not exist, which is fine
 			return false;
 		}
@@ -168,14 +210,14 @@ class CollectionAliasManager {
 	 */
 	public function cleanup_old_collections( $collection_type, $keep_count = 1 ) {
 		$collections_to_delete = $this->get_older_collections( $collection_type, $keep_count );
-		$deleted_collections = array();
-		
+		$deleted_collections   = array();
+
 		foreach ( $collections_to_delete as $collection ) {
 			if ( $this->delete_collection( $collection ) ) {
 				$deleted_collections[] = $collection;
 			}
 		}
-		
+
 		return $deleted_collections;
 	}
 
@@ -184,14 +226,14 @@ class CollectionAliasManager {
 	 */
 	public function cleanup_newer_collections( $collection_type ) {
 		$collections_to_delete = $this->get_newer_collections( $collection_type );
-		$deleted_collections = array();
-		
+		$deleted_collections   = array();
+
 		foreach ( $collections_to_delete as $collection ) {
 			if ( $this->delete_collection( $collection ) ) {
 				$deleted_collections[] = $collection;
 			}
 		}
-		
+
 		return $deleted_collections;
 	}
 
@@ -203,7 +245,7 @@ class CollectionAliasManager {
 			$alias_name = $this->get_alias_name( $collection_type );
 			$this->typesense->client()->aliases[ $alias_name ]->retrieve();
 			return true;
-		} catch ( Exception $e ) {
+		} catch (Exception $e) {
 			return false;
 		}
 	}
@@ -214,11 +256,11 @@ class CollectionAliasManager {
 	 */
 	public function get_collection_access( $collection_type ) {
 		$alias_name = $this->get_alias_name( $collection_type );
-		
+
 		if ( $this->alias_exists( $collection_type ) ) {
 			return $this->typesense->client()->collections[ $alias_name ];
 		}
-		
+
 		// Fallback to old naming for backward compatibility
 		$old_name = $collection_type . '-' . $this->typesense->store_id;
 		return $this->typesense->client()->collections[ $old_name ];
