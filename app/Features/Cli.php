@@ -78,7 +78,18 @@ class Cli extends WP_CLI_Command {
 
 			} while ( true );
 
-
+			// Complete the sync by updating alias if using new system
+			try {
+				$sync_result = $product_collection->complete_product_sync();
+				if ( $sync_result ) {
+					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
+					if ( ! empty( $sync_result['deleted_collections'] ) ) {
+						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
+					}
+				}
+			} catch (\Exception $e) {
+				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
+			}
 
 			WP_CLI::success( "All products have been synced." );
 			WP_CLI::success( "Total batch imported: " . $page );
@@ -200,6 +211,19 @@ class Cli extends WP_CLI_Command {
 
 					WP_CLI::success( "Completed batch {$page}..." );
 					$page++; // Move to the next batch
+				}
+
+				// Complete the sync by updating alias if using new system
+				try {
+					$sync_result = $product_collection->complete_product_sync();
+					if ( $sync_result ) {
+						WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
+						if ( ! empty( $sync_result['deleted_collections'] ) ) {
+							WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
+						}
+					}
+				} catch (\Exception $e) {
+					WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
 				}
 
 				WP_CLI::success( "All non-variant products have been synced." );
@@ -453,6 +477,19 @@ class Cli extends WP_CLI_Command {
 
 			} while ( true );
 
+			// Complete the sync by updating alias if using new system
+			try {
+				$sync_result = $collection->complete_taxonomy_sync();
+				if ( $sync_result ) {
+					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
+					if ( ! empty( $sync_result['deleted_collections'] ) ) {
+						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
+					}
+				}
+			} catch (\Exception $e) {
+				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
+			}
+
 			WP_CLI::success( "Completed! All taxonomies have been synced." );
 			WP_CLI::success( "Total batch imported: " . $page );
 			WP_CLI::success( "Total import: " . $total_imports );
@@ -541,5 +578,134 @@ class Cli extends WP_CLI_Command {
 		}
 
 		WP_CLI::error( "Nothing was sync" );
+	}
+
+	/**
+	 * Manage Typesense collection aliases.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--list]
+	 * : List all aliases and their target collections.
+	 *
+	 * [--status]
+	 * : Show status of collection aliases for all types.
+	 *
+	 * [--cleanup=<type>]
+	 * : Clean up old collections for a specific type (product, taxonomy, page, menu, site_info, navigation).
+	 *
+	 * [--force-alias=<type>]
+	 * : Force create alias for existing collection type.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp bc-sync alias --list
+	 *     wp bc-sync alias --status
+	 *     wp bc-sync alias --cleanup=product
+	 *     wp bc-sync alias --force-alias=product
+	 *
+	 * @when after_wp_load
+	 */
+	public function alias( $args, $assoc_args ) {
+		$alias_manager = new \BlazeWooless\Collections\CollectionAliasManager();
+
+		if ( isset( $assoc_args['list'] ) ) {
+			WP_CLI::line( "Listing all Typesense aliases..." );
+
+			try {
+				$typesense = \BlazeWooless\TypesenseClient::get_instance();
+				$aliases   = $typesense->client()->aliases->retrieve();
+
+				if ( empty( $aliases['aliases'] ) ) {
+					WP_CLI::success( "No aliases found." );
+					return;
+				}
+
+				WP_CLI::line( sprintf( "%-30s %-50s", "Alias Name", "Target Collection" ) );
+				WP_CLI::line( str_repeat( "-", 80 ) );
+
+				foreach ( $aliases['aliases'] as $alias ) {
+					WP_CLI::line( sprintf( "%-30s %-50s", $alias['name'], $alias['collection_name'] ) );
+				}
+
+				WP_CLI::success( "Found " . count( $aliases['aliases'] ) . " aliases." );
+			} catch (\Exception $e) {
+				WP_CLI::error( "Failed to retrieve aliases: " . $e->getMessage() );
+			}
+		}
+
+		if ( isset( $assoc_args['status'] ) ) {
+			WP_CLI::line( "Checking alias status for all collection types..." );
+
+			$collection_types = array( 'product', 'taxonomy', 'page', 'menu', 'site_info', 'navigation' );
+
+			foreach ( $collection_types as $type ) {
+				$alias_name         = $alias_manager->get_alias_name( $type );
+				$current_collection = $alias_manager->get_current_collection( $type );
+				$all_collections    = $alias_manager->get_all_collections_for_type( $type );
+
+				WP_CLI::line( "\n" . strtoupper( $type ) . " Collections:" );
+				WP_CLI::line( "  Alias: " . $alias_name );
+				WP_CLI::line( "  Current: " . ( $current_collection ?: 'No alias found' ) );
+				WP_CLI::line( "  All collections: " . ( empty( $all_collections ) ? 'None' : implode( ', ', $all_collections ) ) );
+
+				if ( $current_collection ) {
+					$newer = $alias_manager->get_newer_collections( $type );
+					$older = $alias_manager->get_older_collections( $type, 1 );
+
+					if ( ! empty( $newer ) ) {
+						WP_CLI::line( "  ⚠️  Newer collections (should be cleaned): " . implode( ', ', $newer ) );
+					}
+
+					if ( ! empty( $older ) ) {
+						WP_CLI::line( "  🗑️  Old collections (can be cleaned): " . implode( ', ', $older ) );
+					}
+				}
+			}
+		}
+
+		if ( isset( $assoc_args['cleanup'] ) ) {
+			$type = $assoc_args['cleanup'];
+			WP_CLI::line( "Cleaning up old collections for type: " . $type );
+
+			try {
+				$deleted = $alias_manager->cleanup_old_collections( $type, 1 );
+
+				if ( empty( $deleted ) ) {
+					WP_CLI::success( "No old collections to clean up for " . $type );
+				} else {
+					WP_CLI::success( "Deleted old collections: " . implode( ', ', $deleted ) );
+				}
+			} catch (\Exception $e) {
+				WP_CLI::error( "Failed to cleanup collections: " . $e->getMessage() );
+			}
+		}
+
+		if ( isset( $assoc_args['force-alias'] ) ) {
+			$type = $assoc_args['force-alias'];
+			WP_CLI::line( "Force creating alias for type: " . $type );
+
+			try {
+				$all_collections = $alias_manager->get_all_collections_for_type( $type );
+
+				if ( empty( $all_collections ) ) {
+					WP_CLI::error( "No collections found for type: " . $type );
+					return;
+				}
+
+				// Use the newest collection
+				$target_collection = $all_collections[0]; // Already sorted newest first
+
+				$result = $alias_manager->update_alias( $type, $target_collection );
+				WP_CLI::success( "Created alias " . $alias_manager->get_alias_name( $type ) . " pointing to " . $target_collection );
+
+			} catch (\Exception $e) {
+				WP_CLI::error( "Failed to create alias: " . $e->getMessage() );
+			}
+		}
+
+		if ( empty( $assoc_args ) ) {
+			WP_CLI::error( "Please specify an option. Use --help for available options." );
+		}
 	}
 }

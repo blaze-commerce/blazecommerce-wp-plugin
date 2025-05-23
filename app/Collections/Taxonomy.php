@@ -40,20 +40,79 @@ class Taxonomy extends BaseCollection {
 	}
 
 	public function initialize() {
-		$collection_taxonomy = $this->collection_name();
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'wooless-taxonomy-collection-initialize' );
 
-		try {
-			$this->drop_collection();
-		} catch (\Exception $e) {
-			// Don't error out if the collection was not found
+		// Check if we should use the new alias system
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases ) {
+			try {
+				$schema = array(
+					'fields' => $this->get_fields(),
+					'default_sorting_field' => 'updatedAt',
+					'enable_nested_fields' => true
+				);
+
+				$new_collection_name = $this->initialize_with_alias( $schema );
+				$logger->debug( 'TS Taxonomy collection (alias): ' . $new_collection_name, $context );
+
+				// Store the new collection name for later use in complete_sync
+				$this->current_sync_collection = $new_collection_name;
+
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Taxonomy collection alias initialize Exception: ' . $e->getMessage(), $context );
+				throw $e;
+			}
+		} else {
+			// Legacy behavior
+			$collection_taxonomy = $this->collection_name();
+
+			try {
+				$this->drop_collection();
+			} catch (\Exception $e) {
+				// Don't error out if the collection was not found
+			}
+
+			$logger->debug( 'TS Taxonomy collection: ' . $collection_taxonomy, $context );
+
+			$this->create_collection( [ 
+				'name' => $collection_taxonomy,
+				'fields' => $this->get_fields(),
+				'default_sorting_field' => 'updatedAt',
+				'enable_nested_fields' => true,
+			] );
+		}
+	}
+
+	/**
+	 * Complete the taxonomy sync by updating alias
+	 * This should be called after all taxonomies have been synced
+	 */
+	public function complete_taxonomy_sync() {
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
+			try {
+				$result = $this->complete_sync( $this->current_sync_collection );
+
+				$logger  = wc_get_logger();
+				$context = array( 'source' => 'wooless-taxonomy-collection-complete' );
+				$logger->debug( 'TS Taxonomy sync completed: ' . print_r( $result, true ), $context );
+
+				// Clear the current sync collection
+				unset( $this->current_sync_collection );
+
+				return $result;
+			} catch (\Exception $e) {
+				$logger  = wc_get_logger();
+				$context = array( 'source' => 'wooless-taxonomy-collection-complete' );
+				$logger->debug( 'TS Taxonomy sync completion failed: ' . $e->getMessage(), $context );
+				throw $e;
+			}
 		}
 
-		$this->create_collection( [ 
-			'name' => $collection_taxonomy,
-			'fields' => $this->get_fields(),
-			'default_sorting_field' => 'updatedAt',
-			'enable_nested_fields' => true,
-		] );
+		return null;
 	}
 
 	public function generate_typesense_data( $term ) {
@@ -70,7 +129,7 @@ class Taxonomy extends BaseCollection {
 		$parentTerm = get_term( $term->parent, $taxonomy );
 
 		/**
-		 * set gb product ingredient image to banneThumbnail. 
+		 * set gb product ingredient image to banneThumbnail.
 		 */
 		if ( $taxonomy == 'product_ingredients' && function_exists( 'z_taxonomy_image_url' ) ) {
 			$bannerThumbnail = \z_taxonomy_image_url( $term->term_id );
@@ -265,7 +324,7 @@ class Taxonomy extends BaseCollection {
 			'separator' => '[blz-commerce]',
 		);
 
-		// Get Term Parent, Child, and Grand Child 
+		// Get Term Parent, Child, and Grand Child
 		$parents_list = get_term_parents_list( $term_id, $taxonomy, $args );
 
 		$parents_list_array = explode( '[blz-commerce]', $parents_list );
