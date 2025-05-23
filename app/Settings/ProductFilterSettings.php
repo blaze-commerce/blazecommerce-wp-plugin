@@ -47,7 +47,7 @@ class ProductFilterSettings extends BaseSettings {
 
 	public function register_hooks() {
 		add_action( 'blazecommerce/settings/render_settings_tab_content_footer', array( $this, 'default_draggable_data' ), 10 );
-		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'add_product_filters_data' ), 10, 2 );
+		add_filter( 'blazecommerce/settings', array( $this, 'add_product_filters_settings_to_documents' ), 10, 1 );
 	}
 
 	public function footer_callback() {
@@ -65,14 +65,17 @@ class ProductFilterSettings extends BaseSettings {
 		<?php
 	}
 
-	public function add_product_filters_data() {
+	public function add_product_filters_settings_to_documents( $documents ) {
 		$product_filters_content = get_option( 'blaze_wooless_product_filters_content', '' );
-		TypesenseClient::get_instance()->site_info()->upsert( [ 
+
+		$documents[] = array(
 			'id' => '1000010',
 			'name' => 'product_filters_content',
 			'value' => json_encode( $product_filters_content ),
 			'updated_at' => time(),
-		] );
+		);
+
+		return $documents;
 	}
 }
 
