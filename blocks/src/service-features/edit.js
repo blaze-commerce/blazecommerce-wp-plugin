@@ -24,7 +24,7 @@ import {
 	TabPanel,
 	Icon,
 } from "@wordpress/components";
-import { useState } from "@wordpress/element";
+import { useState, useCallback, useMemo } from "@wordpress/element";
 
 /**
  * Internal dependencies
@@ -50,8 +50,8 @@ export default function Edit({ attributes, setAttributes }) {
 		items.length > 0 ? items[0].id : null,
 	);
 
-	// Function to add a new item
-	const addItem = () => {
+	// Memoized function to add a new item
+	const addItem = useCallback(() => {
 		const newItem = {
 			id: `item-${Date.now()}`,
 			logo: {
@@ -72,56 +72,127 @@ export default function Edit({ attributes, setAttributes }) {
 
 		// Select the newly added item
 		setSelectedItemId(newItem.id);
-	};
+	}, [items, setAttributes]);
 
-	// Function to remove an item
-	const removeItem = (id) => {
-		const newItems = items.filter((item) => item.id !== id);
-		setAttributes({
-			items: newItems,
-		});
+	// Memoized function to remove an item
+	const removeItem = useCallback(
+		(id) => {
+			const newItems = items.filter((item) => item.id !== id);
+			setAttributes({
+				items: newItems,
+			});
 
-		// If we removed the selected item, select the first remaining item or null if none left
-		if (id === selectedItemId) {
-			setSelectedItemId(newItems.length > 0 ? newItems[0].id : null);
-		}
-	};
+			// If we removed the selected item, select the first remaining item or null if none left
+			if (id === selectedItemId) {
+				setSelectedItemId(newItems.length > 0 ? newItems[0].id : null);
+			}
+		},
+		[items, selectedItemId, setAttributes],
+	);
 
-	// Function to update an item
-	const updateItem = (id, property, value) => {
-		setAttributes({
-			items: items.map((item) => {
-				if (item.id === id) {
-					if (property.includes(".")) {
-						const [parent, child] = property.split(".");
+	// Memoized function to update an item
+	const updateItem = useCallback(
+		(id, property, value) => {
+			setAttributes({
+				items: items.map((item) => {
+					if (item.id === id) {
+						if (property.includes(".")) {
+							const [parent, child] = property.split(".");
+							return {
+								...item,
+								[parent]: {
+									...item[parent],
+									[child]: value,
+								},
+							};
+						}
 						return {
 							...item,
-							[parent]: {
-								...item[parent],
-								[child]: value,
-							},
+							[property]: value,
 						};
 					}
-					return {
-						...item,
-						[property]: value,
-					};
-				}
-				return item;
-			}),
-		});
-	};
+					return item;
+				}),
+			});
+		},
+		[items, setAttributes],
+	);
 
-	// Get the currently selected item
-	const selectedItem = items.find((item) => item.id === selectedItemId) || null;
+	// Memoized alignment change handler
+	const handleAlignmentChange = useCallback(
+		(newAlign) => {
+			setAttributes({ align: newAlign });
+		},
+		[setAttributes],
+	);
+
+	// Memoized selected item
+	const selectedItem = useMemo(() => {
+		return items.find((item) => item.id === selectedItemId) || null;
+	}, [items, selectedItemId]);
+
+	// Memoized tabs for TabPanel
+	const tabs = useMemo(() => {
+		return items.map((item, index) => ({
+			name: item.id,
+			title: __("Item", "blaze-commerce") + " " + (index + 1),
+			className: "service-feature-tab",
+		}));
+	}, [items]);
+
+	// Memoized alignment options
+	const alignmentOptions = useMemo(
+		() => [
+			{ label: __("Left", "blaze-commerce"), value: "left" },
+			{ label: __("Center", "blaze-commerce"), value: "center" },
+			{ label: __("Right", "blaze-commerce"), value: "right" },
+		],
+		[],
+	);
+
+	// Memoized trigger type options
+	const triggerTypeOptions = useMemo(
+		() => [
+			{ label: __("Link", "blaze-commerce"), value: "link" },
+			{ label: __("Text", "blaze-commerce"), value: "text" },
+		],
+		[],
+	);
+
+	// Memoized item selector options
+	const itemSelectorOptions = useMemo(() => {
+		return items.map((item, index) => ({
+			label:
+				__("Item", "blaze-commerce") +
+				" " +
+				(index + 1) +
+				(item.text ? ` - ${item.text}` : ""),
+			value: item.id,
+		}));
+	}, [items]);
+
+	// Memoized media upload handlers
+	const handleMediaSelect = useCallback(
+		(media) => {
+			if (selectedItem) {
+				updateItem(selectedItem.id, "logo.url", media.url);
+				updateItem(selectedItem.id, "logo.alt", media.alt || "");
+			}
+		},
+		[selectedItem, updateItem],
+	);
+
+	const handleLogoRemove = useCallback(() => {
+		if (selectedItem) {
+			updateItem(selectedItem.id, "logo.url", "");
+			updateItem(selectedItem.id, "logo.alt", "");
+		}
+	}, [selectedItem, updateItem]);
 
 	return (
 		<>
 			<BlockControls>
-				<AlignmentToolbar
-					value={align}
-					onChange={(newAlign) => setAttributes({ align: newAlign })}
-				/>
+				<AlignmentToolbar value={align} onChange={handleAlignmentChange} />
 			</BlockControls>
 			<InspectorControls>
 				<PanelBody
@@ -130,12 +201,8 @@ export default function Edit({ attributes, setAttributes }) {
 					<SelectControl
 						label={__("Alignment", "blaze-commerce")}
 						value={align}
-						options={[
-							{ label: __("Left", "blaze-commerce"), value: "left" },
-							{ label: __("Center", "blaze-commerce"), value: "center" },
-							{ label: __("Right", "blaze-commerce"), value: "right" },
-						]}
-						onChange={(newAlign) => setAttributes({ align: newAlign })}
+						options={alignmentOptions}
+						onChange={handleAlignmentChange}
 					/>
 
 					<Button
@@ -148,167 +215,146 @@ export default function Edit({ attributes, setAttributes }) {
 					</Button>
 				</PanelBody>
 
-				{items.length > 0 && (
+				{items.length > 0 && selectedItem && (
 					<PanelBody
 						title={__("Service Feature Items", "blaze-commerce")}
 						initialOpen={true}>
-						<TabPanel
-							className="service-features-tabs"
-							activeClass="active-tab"
-							tabs={items.map((item, index) => ({
-								name: item.id,
-								title: __("Item", "blaze-commerce") + " " + (index + 1),
-								className: "service-feature-tab",
-							}))}
-							onSelect={(tabName) => setSelectedItemId(tabName)}>
-							{(tab) => {
-								const item = items.find((i) => i.id === tab.name);
-								if (!item) return null;
+						<div className="service-features-item-selector">
+							<SelectControl
+								label={__("Select Item to Edit", "blaze-commerce")}
+								value={selectedItemId}
+								options={itemSelectorOptions}
+								onChange={setSelectedItemId}
+							/>
+						</div>
 
-								return (
-									<div className="service-feature-item-settings">
-										<div className="service-feature-item-header">
-											<h3>
-												{__("Item", "blaze-commerce")} #
-												{items.findIndex((i) => i.id === item.id) + 1}
-											</h3>
-											<Button
-												isDestructive
-												onClick={() => removeItem(item.id)}
-												icon="trash"
-												label={__("Remove item", "blaze-commerce")}
-											/>
-										</div>
+						<div className="service-feature-item-settings">
+							<div className="service-feature-item-header">
+								<h3>
+									{__("Item", "blaze-commerce")} #
+									{items.findIndex((i) => i.id === selectedItem.id) + 1}
+								</h3>
+								<Button
+									isDestructive
+									onClick={() => removeItem(selectedItem.id)}
+									icon="trash"
+									label={__("Remove item", "blaze-commerce")}
+								/>
+							</div>
 
-										<Divider />
+							<Divider />
 
-										<div className="service-feature-logo">
-											<p>{__("Logo", "blaze-commerce")}</p>
-											<MediaUploadCheck>
-												<MediaUpload
-													onSelect={(media) => {
-														updateItem(item.id, "logo.url", media.url);
-														updateItem(item.id, "logo.alt", media.alt || "");
-													}}
-													allowedTypes={["image"]}
-													value={item.logo.url}
-													render={({ open }) => (
-														<div className="logo-upload-container">
-															{!item.logo.url ? (
-																<Button
-																	onClick={open}
-																	icon="format-image"
-																	className="logo-upload-button"
-																	style={{
-																		width: "100%",
-																		justifyContent: "center",
-																		height: "80px",
-																	}}>
-																	{__("Upload Logo", "blaze-commerce")}
-																</Button>
-															) : (
-																<div className="logo-preview">
-																	<img
-																		src={item.logo.url}
-																		alt={item.logo.alt}
-																		style={{
-																			maxHeight: "80px",
-																			maxWidth: "100%",
-																			objectFit: "contain",
-																		}}
-																	/>
-																	<div className="logo-actions">
-																		<Button
-																			onClick={open}
-																			variant="secondary"
-																			isSmall>
-																			{__("Replace", "blaze-commerce")}
-																		</Button>
-																		<Button
-																			onClick={() => {
-																				updateItem(item.id, "logo.url", "");
-																				updateItem(item.id, "logo.alt", "");
-																			}}
-																			isDestructive
-																			isSmall>
-																			{__("Remove", "blaze-commerce")}
-																		</Button>
-																	</div>
-																</div>
-															)}
+							<div className="service-feature-logo">
+								<p>{__("Logo", "blaze-commerce")}</p>
+								<MediaUploadCheck>
+									<MediaUpload
+										onSelect={handleMediaSelect}
+										allowedTypes={["image"]}
+										value={selectedItem.logo.url}
+										render={({ open }) => (
+											<div className="logo-upload-container">
+												{!selectedItem.logo.url ? (
+													<Button
+														onClick={open}
+														icon="format-image"
+														className="logo-upload-button"
+														style={{
+															width: "100%",
+															justifyContent: "center",
+															height: "80px",
+														}}>
+														{__("Upload Logo", "blaze-commerce")}
+													</Button>
+												) : (
+													<div className="logo-preview">
+														<img
+															src={selectedItem.logo.url}
+															alt={selectedItem.logo.alt}
+															style={{
+																maxHeight: "80px",
+																maxWidth: "100%",
+																objectFit: "contain",
+															}}
+														/>
+														<div className="logo-actions">
+															<Button
+																onClick={open}
+																variant="secondary"
+																isSmall>
+																{__("Replace", "blaze-commerce")}
+															</Button>
+															<Button
+																onClick={handleLogoRemove}
+																isDestructive
+																isSmall>
+																{__("Remove", "blaze-commerce")}
+															</Button>
 														</div>
-													)}
-												/>
-											</MediaUploadCheck>
-										</div>
+													</div>
+												)}
+											</div>
+										)}
+									/>
+								</MediaUploadCheck>
+							</div>
 
-										<Divider />
+							<Divider />
 
-										<div className="service-feature-text">
-											<TextControl
-												label={__("Text", "blaze-commerce")}
-												value={item.text}
-												onChange={(value) => updateItem(item.id, "text", value)}
-											/>
-										</div>
+							<div className="service-feature-text">
+								<TextControl
+									label={__("Text", "blaze-commerce")}
+									value={selectedItem.text}
+									onChange={(value) =>
+										updateItem(selectedItem.id, "text", value)
+									}
+								/>
+							</div>
 
-										<Divider />
+							<Divider />
 
-										<div className="service-feature-trigger">
-											<SelectControl
-												label={__("Trigger Type", "blaze-commerce")}
-												value={item.triggerType}
-												options={[
-													{
-														label: __("Link", "blaze-commerce"),
-														value: "link",
-													},
-													{
-														label: __("Text", "blaze-commerce"),
-														value: "text",
-													},
-												]}
-												onChange={(value) =>
-													updateItem(item.id, "triggerType", value)
-												}
-											/>
+							<div className="service-feature-trigger">
+								<SelectControl
+									label={__("Trigger Type", "blaze-commerce")}
+									value={selectedItem.triggerType}
+									options={triggerTypeOptions}
+									onChange={(value) =>
+										updateItem(selectedItem.id, "triggerType", value)
+									}
+								/>
 
-											<TextControl
-												label={__("Trigger Text", "blaze-commerce")}
-												value={item.triggerText}
-												onChange={(value) =>
-													updateItem(item.id, "triggerText", value)
-												}
-											/>
+								<TextControl
+									label={__("Trigger Text", "blaze-commerce")}
+									value={selectedItem.triggerText}
+									onChange={(value) =>
+										updateItem(selectedItem.id, "triggerText", value)
+									}
+								/>
 
-											{item.triggerType === "link" && (
-												<TextControl
-													label={__("Link URL", "blaze-commerce")}
-													value={item.triggerLink}
-													onChange={(value) =>
-														updateItem(item.id, "triggerLink", value)
-													}
-												/>
-											)}
+								{selectedItem.triggerType === "link" && (
+									<TextControl
+										label={__("Link URL", "blaze-commerce")}
+										value={selectedItem.triggerLink}
+										onChange={(value) =>
+											updateItem(selectedItem.id, "triggerLink", value)
+										}
+									/>
+								)}
 
-											{item.triggerType === "text" && (
-												<TextControl
-													label={__("Target ID", "blaze-commerce")}
-													value={item.triggerTarget}
-													onChange={(value) =>
-														updateItem(item.id, "triggerTarget", value)
-													}
-													help={__(
-														"ID of the element to scroll to when clicked",
-														"blaze-commerce",
-													)}
-												/>
-											)}
-										</div>
-									</div>
-								);
-							}}
-						</TabPanel>
+								{selectedItem.triggerType === "text" && (
+									<TextControl
+										label={__("Target ID", "blaze-commerce")}
+										value={selectedItem.triggerTarget}
+										onChange={(value) =>
+											updateItem(selectedItem.id, "triggerTarget", value)
+										}
+										help={__(
+											"ID of the element to scroll to when clicked",
+											"blaze-commerce",
+										)}
+									/>
+								)}
+							</div>
+						</div>
 					</PanelBody>
 				)}
 			</InspectorControls>
@@ -328,46 +374,51 @@ export default function Edit({ attributes, setAttributes }) {
 							</Button>
 						</Placeholder>
 					) : (
-						items.map((item, index) => (
-							<div
-								className={`service-feature-item ${
-									selectedItemId === item.id ? "is-selected" : ""
-								}`}
-								key={item.id}
-								onClick={() => setSelectedItemId(item.id)}>
-								{item.logo.url && (
-									<div className="service-feature-logo">
-										<img src={item.logo.url} alt={item.logo.alt} />
-									</div>
-								)}
+						items.map((item, index) => {
+							const isSelected = selectedItemId === item.id;
+							const handleItemClick = () => setSelectedItemId(item.id);
 
-								{item.text && (
-									<div className="service-feature-text">
-										<p>{item.text}</p>
-									</div>
-								)}
+							return (
+								<div
+									className={`service-feature-item ${
+										isSelected ? "is-selected" : ""
+									}`}
+									key={item.id}
+									onClick={handleItemClick}>
+									{item.logo.url && (
+										<div className="service-feature-logo">
+											<img src={item.logo.url} alt={item.logo.alt} />
+										</div>
+									)}
 
-								{item.triggerText && (
-									<div className="service-feature-trigger">
-										{item.triggerType === "link" ? (
-											<span className="service-feature-link">
-												{item.triggerText}
-											</span>
-										) : (
-											<span className="service-feature-target">
-												{item.triggerText}
-											</span>
-										)}
-									</div>
-								)}
+									{item.text && (
+										<div className="service-feature-text">
+											<p>{item.text}</p>
+										</div>
+									)}
 
-								<div className="service-feature-item-overlay">
-									<span className="service-feature-item-number">
-										{index + 1}
-									</span>
+									{item.triggerText && (
+										<div className="service-feature-trigger">
+											{item.triggerType === "link" ? (
+												<span className="service-feature-link">
+													{item.triggerText}
+												</span>
+											) : (
+												<span className="service-feature-target">
+													{item.triggerText}
+												</span>
+											)}
+										</div>
+									)}
+
+									<div className="service-feature-item-overlay">
+										<span className="service-feature-item-number">
+											{index + 1}
+										</span>
+									</div>
 								</div>
-							</div>
-						))
+							);
+						})
 					)}
 				</div>
 			</div>
