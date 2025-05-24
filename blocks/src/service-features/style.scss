@@ -5,72 +5,129 @@
 
 .wp-block-blaze-commerce-service-features {
 	margin-bottom: 30px;
-	
+
+	// CSS Variables for styling
+	--text-color: #333333;
+	--text-size: 16px;
+	--trigger-color: #0066cc;
+	--trigger-size: 14px;
+	--logo-size: 60px;
+	--spacing: 20px;
+
 	.service-features-container {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 20px;
-		
+		gap: var(--spacing);
+
 		.service-feature-item {
-			flex: 1;
-			min-width: 200px;
-			padding: 15px;
 			display: flex;
-			flex-direction: column;
-			align-items: flex-start;
-			
+			flex-direction: row; // Always horizontal layout for logo + content
+			align-items: center;
+			padding: 15px;
+			border: 1px solid #e0e0e0;
+			border-radius: 8px;
+			background-color: #f9f9f9;
+			transition: all 0.3s ease;
+
+			&:hover {
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			}
+
 			.service-feature-logo {
-				margin-bottom: 15px;
-				
+				margin-right: var(--spacing);
+				margin-bottom: 0; // Always no bottom margin
+				flex-shrink: 0;
+
 				img {
-					max-width: 60px;
-					height: auto;
+					width: var(--logo-size);
+					height: var(--logo-size);
+					object-fit: contain;
 				}
 			}
-			
-			.service-feature-text {
-				margin-bottom: 10px;
-				
-				p {
-					margin: 0;
-					font-size: 16px;
+
+			.service-feature-content {
+				flex: 1;
+
+				.service-feature-text {
+					margin-bottom: 8px;
+
+					p {
+						margin: 0;
+						font-size: var(--text-size);
+						color: var(--text-color);
+						font-weight: 500;
+					}
 				}
-			}
-			
-			.service-feature-trigger {
-				.service-feature-link,
-				.service-feature-target {
-					color: #0066cc;
-					text-decoration: none;
-					cursor: pointer;
-					font-size: 14px;
-					
-					&:hover {
-						text-decoration: underline;
+
+				.service-feature-trigger {
+					.service-feature-link,
+					.service-feature-target {
+						color: var(--trigger-color);
+						text-decoration: none;
+						cursor: pointer;
+						font-size: var(--trigger-size);
+
+						&:hover {
+							text-decoration: underline;
+						}
 					}
 				}
 			}
 		}
 	}
-	
+
+	// Items Direction - How multiple items are arranged
+	&.items-horizontal {
+		.service-features-container {
+			flex-direction: row;
+			flex-wrap: wrap;
+
+			.service-feature-item {
+				flex: 1;
+				min-width: 250px;
+			}
+		}
+	}
+
+	&.items-vertical {
+		.service-features-container {
+			flex-direction: column;
+
+			.service-feature-item {
+				width: 100%;
+				margin-bottom: var(--spacing);
+
+				&:last-child {
+					margin-bottom: 0;
+				}
+			}
+		}
+	}
+
+	// Note: Logo and content are always arranged horizontally within each item
+
+	// Alignment styles
 	&.align-center {
 		.service-features-container {
 			justify-content: center;
 			text-align: center;
-			
+
 			.service-feature-item {
-				align-items: center;
+				.service-feature-content {
+					text-align: center;
+				}
 			}
 		}
 	}
-	
+
 	&.align-right {
 		.service-features-container {
 			justify-content: flex-end;
 			text-align: right;
-			
+
 			.service-feature-item {
-				align-items: flex-end;
+				.service-feature-content {
+					text-align: right;
+				}
 			}
 		}
 	}
@@ -79,11 +136,27 @@
 /* Responsive styles */
 @media (max-width: 768px) {
 	.wp-block-blaze-commerce-service-features {
-		.service-features-container {
-			flex-direction: column;
-			
-			.service-feature-item {
-				width: 100%;
+		&.items-horizontal {
+			.service-features-container {
+				flex-direction: column;
+
+				.service-feature-item {
+					width: 100%;
+					min-width: auto;
+					margin-bottom: var(--spacing);
+
+					&:last-child {
+						margin-bottom: 0;
+					}
+				}
+			}
+		}
+
+		// Logo and content remain horizontal even on mobile
+		// Only reduce spacing for better mobile experience
+		.service-feature-item {
+			.service-feature-logo {
+				margin-right: calc(var(--spacing) / 2);
 			}
 		}
 	}

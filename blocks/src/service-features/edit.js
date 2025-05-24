@@ -23,6 +23,8 @@ import {
 	__experimentalDivider as Divider,
 	TabPanel,
 	Icon,
+	ColorPicker,
+	RangeControl,
 } from "@wordpress/components";
 import { useState, useCallback, useMemo } from "@wordpress/element";
 
@@ -40,9 +42,27 @@ import "./editor.scss";
  * @return {WPElement} Element to render.
  */
 export default function Edit({ attributes, setAttributes }) {
-	const { items, align } = attributes;
+	const {
+		items,
+		align,
+		itemsDirection,
+		textColor,
+		textSize,
+		triggerColor,
+		triggerSize,
+		logoSize,
+		spacing,
+	} = attributes;
 	const blockProps = useBlockProps({
-		className: `service-features align-${align}`,
+		className: `service-features align-${align} items-${itemsDirection}`,
+		style: {
+			"--text-color": textColor,
+			"--text-size": `${textSize}px`,
+			"--trigger-color": triggerColor,
+			"--trigger-size": `${triggerSize}px`,
+			"--logo-size": `${logoSize}px`,
+			"--spacing": `${spacing}px`,
+		},
 	});
 
 	// State to track the currently selected item for editing in the sidebar
@@ -150,6 +170,18 @@ export default function Edit({ attributes, setAttributes }) {
 		[],
 	);
 
+	// Memoized items direction options
+	const itemsDirectionOptions = useMemo(
+		() => [
+			{
+				label: __("Horizontal (Side by Side)", "blaze-commerce"),
+				value: "horizontal",
+			},
+			{ label: __("Vertical (Stacked)", "blaze-commerce"), value: "vertical" },
+		],
+		[],
+	);
+
 	// Memoized trigger type options
 	const triggerTypeOptions = useMemo(
 		() => [
@@ -199,6 +231,14 @@ export default function Edit({ attributes, setAttributes }) {
 					title={__("Service Features Settings", "blaze-commerce")}
 					initialOpen={true}>
 					<SelectControl
+						label={__("Items Direction", "blaze-commerce")}
+						value={itemsDirection}
+						options={itemsDirectionOptions}
+						onChange={(value) => setAttributes({ itemsDirection: value })}
+						help={__("How multiple items are arranged", "blaze-commerce")}
+					/>
+
+					<SelectControl
 						label={__("Alignment", "blaze-commerce")}
 						value={align}
 						options={alignmentOptions}
@@ -213,6 +253,56 @@ export default function Edit({ attributes, setAttributes }) {
 						style={{ marginTop: "10px", width: "100%" }}>
 						{__("Add Service Feature", "blaze-commerce")}
 					</Button>
+				</PanelBody>
+
+				<PanelBody title={__("Styling", "blaze-commerce")} initialOpen={false}>
+					<RangeControl
+						label={__("Logo Size (px)", "blaze-commerce")}
+						value={logoSize}
+						onChange={(value) => setAttributes({ logoSize: value })}
+						min={20}
+						max={120}
+					/>
+
+					<RangeControl
+						label={__("Spacing (px)", "blaze-commerce")}
+						value={spacing}
+						onChange={(value) => setAttributes({ spacing: value })}
+						min={10}
+						max={50}
+					/>
+
+					<Divider />
+
+					<p>{__("Text Color", "blaze-commerce")}</p>
+					<ColorPicker
+						color={textColor}
+						onChange={(value) => setAttributes({ textColor: value })}
+					/>
+
+					<RangeControl
+						label={__("Text Size (px)", "blaze-commerce")}
+						value={textSize}
+						onChange={(value) => setAttributes({ textSize: value })}
+						min={12}
+						max={24}
+					/>
+
+					<Divider />
+
+					<p>{__("Trigger Color", "blaze-commerce")}</p>
+					<ColorPicker
+						color={triggerColor}
+						onChange={(value) => setAttributes({ triggerColor: value })}
+					/>
+
+					<RangeControl
+						label={__("Trigger Size (px)", "blaze-commerce")}
+						value={triggerSize}
+						onChange={(value) => setAttributes({ triggerSize: value })}
+						min={10}
+						max={20}
+					/>
 				</PanelBody>
 
 				{items.length > 0 && selectedItem && (
@@ -391,25 +481,27 @@ export default function Edit({ attributes, setAttributes }) {
 										</div>
 									)}
 
-									{item.text && (
-										<div className="service-feature-text">
-											<p>{item.text}</p>
-										</div>
-									)}
+									<div className="service-feature-content">
+										{item.text && (
+											<div className="service-feature-text">
+												<p>{item.text}</p>
+											</div>
+										)}
 
-									{item.triggerText && (
-										<div className="service-feature-trigger">
-											{item.triggerType === "link" ? (
-												<span className="service-feature-link">
-													{item.triggerText}
-												</span>
-											) : (
-												<span className="service-feature-target">
-													{item.triggerText}
-												</span>
-											)}
-										</div>
-									)}
+										{item.triggerText && (
+											<div className="service-feature-trigger">
+												{item.triggerType === "link" ? (
+													<span className="service-feature-link">
+														{item.triggerText}
+													</span>
+												) : (
+													<span className="service-feature-target">
+														{item.triggerText}
+													</span>
+												)}
+											</div>
+										)}
+									</div>
 
 									<div className="service-feature-item-overlay">
 										<span className="service-feature-item-number">

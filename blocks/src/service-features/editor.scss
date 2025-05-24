@@ -8,7 +8,6 @@
 
 	.service-features-container {
 		display: flex;
-		flex-wrap: wrap;
 		gap: 20px;
 
 		.service-feature-item {
@@ -21,6 +20,9 @@
 			position: relative;
 			cursor: pointer;
 			transition: all 0.2s ease;
+			display: flex;
+			flex-direction: row; // Always horizontal layout for logo + content
+			align-items: center;
 
 			&:hover {
 				border-color: #007cba;
@@ -33,7 +35,9 @@
 			}
 
 			.service-feature-logo {
-				margin-bottom: 15px;
+				margin-right: 15px;
+				margin-bottom: 0;
+				flex-shrink: 0;
 
 				img {
 					max-width: 60px;
@@ -41,12 +45,16 @@
 				}
 			}
 
-			.service-feature-text {
-				margin-bottom: 10px;
+			.service-feature-content {
+				flex: 1;
 
-				p {
-					margin: 0;
-					font-size: 16px;
+				.service-feature-text {
+					margin-bottom: 8px;
+
+					p {
+						margin: 0;
+						font-size: 16px;
+					}
 				}
 			}
 
@@ -81,6 +89,26 @@
 		}
 	}
 
+	// Items Direction
+	&.items-horizontal {
+		.service-features-container {
+			flex-direction: row;
+			flex-wrap: wrap;
+		}
+	}
+
+	&.items-vertical {
+		.service-features-container {
+			flex-direction: column;
+
+			.service-feature-item {
+				width: 100%;
+			}
+		}
+	}
+
+	// Note: Logo and content are always arranged horizontally within each item
+
 	&.align-center {
 		.service-features-container {
 			justify-content: center;
@@ -88,8 +116,6 @@
 
 			.service-feature-item {
 				align-items: center;
-				display: flex;
-				flex-direction: column;
 			}
 		}
 	}
@@ -101,8 +127,6 @@
 
 			.service-feature-item {
 				align-items: flex-end;
-				display: flex;
-				flex-direction: column;
 			}
 		}
 	}

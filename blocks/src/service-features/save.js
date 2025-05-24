@@ -1,8 +1,8 @@
 /**
  * WordPress dependencies
  */
-import { __ } from '@wordpress/i18n';
-import { useBlockProps } from '@wordpress/block-editor';
+import { __ } from "@wordpress/i18n";
+import { useBlockProps } from "@wordpress/block-editor";
 
 /**
  * The save function for the Service Features block.
@@ -12,9 +12,27 @@ import { useBlockProps } from '@wordpress/block-editor';
  * @return {WPElement} Element to render.
  */
 export default function save({ attributes }) {
-	const { items, align } = attributes;
+	const {
+		items,
+		align,
+		itemsDirection,
+		textColor,
+		textSize,
+		triggerColor,
+		triggerSize,
+		logoSize,
+		spacing,
+	} = attributes;
 	const blockProps = useBlockProps.save({
-		className: `service-features align-${align}`,
+		className: `service-features align-${align} items-${itemsDirection}`,
+		style: {
+			"--text-color": textColor,
+			"--text-size": `${textSize}px`,
+			"--trigger-color": triggerColor,
+			"--trigger-size": `${triggerSize}px`,
+			"--logo-size": `${logoSize}px`,
+			"--spacing": `${spacing}px`,
+		},
 	});
 
 	return (
@@ -27,35 +45,40 @@ export default function save({ attributes }) {
 								<img src={item.logo.url} alt={item.logo.alt} />
 							</div>
 						)}
-						
-						{item.text && (
-							<div className="service-feature-text">
-								<p>{item.text}</p>
-							</div>
-						)}
-						
-						{item.triggerText && (
-							<div className="service-feature-trigger">
-								{item.triggerType === 'link' ? (
-									<a href={item.triggerLink || '#'} className="service-feature-link">
-										{item.triggerText}
-									</a>
-								) : (
-									<span 
-										className="service-feature-target" 
-										data-target={item.triggerTarget}
-										onClick={() => {
-											const target = document.getElementById(item.triggerTarget);
-											if (target) {
-												target.scrollIntoView({ behavior: 'smooth' });
-											}
-										}}
-									>
-										{item.triggerText}
-									</span>
-								)}
-							</div>
-						)}
+
+						<div className="service-feature-content">
+							{item.text && (
+								<div className="service-feature-text">
+									<p>{item.text}</p>
+								</div>
+							)}
+
+							{item.triggerText && (
+								<div className="service-feature-trigger">
+									{item.triggerType === "link" ? (
+										<a
+											href={item.triggerLink || "#"}
+											className="service-feature-link">
+											{item.triggerText}
+										</a>
+									) : (
+										<span
+											className="service-feature-target"
+											data-target={item.triggerTarget}
+											onClick={() => {
+												const target = document.getElementById(
+													item.triggerTarget,
+												);
+												if (target) {
+													target.scrollIntoView({ behavior: "smooth" });
+												}
+											}}>
+											{item.triggerText}
+										</span>
+									)}
+								</div>
+							)}
+						</div>
 					</div>
 				))}
 			</div>
