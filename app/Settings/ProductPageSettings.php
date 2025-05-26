@@ -347,6 +347,8 @@ class ProductPageSettings extends BaseSettings {
 				'updated_at' => time(),
 			);
 
+			$documents = apply_filters( 'blazecommerce/settings/product_page', $documents, $options );
+
 			do_action( 'blaze_wooless_save_product_page_settings', $options );
 		}
 
