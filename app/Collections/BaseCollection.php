@@ -16,7 +16,21 @@ class BaseCollection {
 	}
 
 	public function collection() {
-		return $this->alias_manager->get_collection_access( $this->collection_name );
+		// Cache the collection access object to avoid repeated alias manager calls
+		static $cached_collections = array();
+		static $last_cache_times = array();
+		static $cache_ttl = 300; // 5 minutes
+
+		$cache_key = $this->collection_name;
+
+		if ( ! isset( $cached_collections[ $cache_key ] ) ||
+			! isset( $last_cache_times[ $cache_key ] ) ||
+			( time() - $last_cache_times[ $cache_key ] ) > $cache_ttl ) {
+			$cached_collections[ $cache_key ] = $this->alias_manager->get_collection_access( $this->collection_name );
+			$last_cache_times[ $cache_key ]   = time();
+		}
+
+		return $cached_collections[ $cache_key ];
 	}
 
 	public function client() {
@@ -203,5 +217,16 @@ class BaseCollection {
 	 */
 	public function get_direct_collection( $collection_name ) {
 		return $this->client()->collections[ $collection_name ];
+	}
+
+	/**
+	 * Clear collection cache (useful when aliases change)
+	 */
+	public static function clear_collection_cache() {
+		// Reset static variables in collection() method
+		static $cached_collections = array();
+		static $last_cache_times = array();
+		$cached_collections = array();
+		$last_cache_times   = array();
 	}
 }

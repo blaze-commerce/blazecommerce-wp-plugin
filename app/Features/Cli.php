@@ -772,4 +772,60 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::error( "Please specify an option. Use --help for available options." );
 		}
 	}
+
+	/**
+	 * Show cache statistics for performance debugging.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--clear]
+	 * : Clear all caches.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp bc-sync cache
+	 *     wp bc-sync cache --clear
+	 *
+	 * @when after_wp_load
+	 */
+	public function cache( $args, $assoc_args ) {
+		$alias_manager = new \BlazeWooless\Collections\CollectionAliasManager();
+
+		if ( isset( $assoc_args['clear'] ) ) {
+			WP_CLI::line( "Clearing all caches..." );
+
+			// Clear alias manager caches
+			$alias_manager->clear_all_caches();
+
+			// Clear BaseCollection caches
+			\BlazeWooless\Collections\BaseCollection::clear_collection_cache();
+
+			WP_CLI::success( "All caches cleared successfully." );
+			return;
+		}
+
+		// Show cache statistics
+		WP_CLI::line( "Cache Statistics:" );
+		WP_CLI::line( str_repeat( "-", 40 ) );
+
+		$stats = $alias_manager->get_cache_stats();
+
+		WP_CLI::line( "Alias Manager Caches:" );
+		WP_CLI::line( "  - Alias cache entries: " . $stats['alias_cache_count'] );
+		WP_CLI::line( "  - Current collection cache entries: " . $stats['current_collection_cache_count'] );
+		WP_CLI::line( "  - Alias exists cache entries: " . $stats['alias_exists_cache_count'] );
+		WP_CLI::line( "  - Cache TTL: " . $stats['cache_ttl'] . " seconds" );
+
+		WP_CLI::line( "\nMemory Usage:" );
+		WP_CLI::line( "  - Current: " . size_format( memory_get_usage( true ) ) );
+		WP_CLI::line( "  - Peak: " . size_format( memory_get_peak_usage( true ) ) );
+
+		$total_cache_entries = $stats['alias_cache_count'] + $stats['current_collection_cache_count'] + $stats['alias_exists_cache_count'];
+
+		if ( $total_cache_entries > 0 ) {
+			WP_CLI::success( "Total cache entries: " . $total_cache_entries );
+		} else {
+			WP_CLI::line( "No cache entries found." );
+		}
+	}
 }
