@@ -50,7 +50,19 @@ class Cli extends WP_CLI_Command {
 			$imported_products_count = 0;
 			$total_imports           = 0;
 
+			// Add safety counter to prevent infinite loops
+			$max_iterations  = 1000; // Reasonable limit for large catalogs
+			$iteration_count = 0;
+
 			do {
+				$iteration_count++;
+
+				// Safety check to prevent infinite loops
+				if ( $iteration_count > $max_iterations ) {
+					WP_CLI::warning( "Reached maximum iteration limit ($max_iterations). Stopping sync to prevent memory issues." );
+					break;
+				}
+
 				if ( $page == 1 ) {
 					// recreate the collection to typesense and do some initialization
 					$product_collection->initialize();
@@ -64,6 +76,14 @@ class Cli extends WP_CLI_Command {
 				$product_ids = $product_collection->get_product_ids( $page, $batch_size );
 				if ( empty( $product_ids ) ) {
 					break; // No more data left to sync
+				}
+
+				// Memory optimization: Force garbage collection every 10 iterations
+				if ( $iteration_count % 10 === 0 ) {
+					if ( function_exists( 'gc_collect_cycles' ) ) {
+						gc_collect_cycles();
+					}
+					WP_CLI::line( "Memory usage: " . size_format( memory_get_usage( true ) ) );
 				}
 
 				$products_batch     = $product_collection->prepare_batch_data( $product_ids );
@@ -446,7 +466,19 @@ class Cli extends WP_CLI_Command {
 			$imported_count = 0;
 			$total_imports  = 0;
 
+			// Add safety counter to prevent infinite loops
+			$max_iterations  = 500; // Reasonable limit for taxonomy terms
+			$iteration_count = 0;
+
 			do {
+				$iteration_count++;
+
+				// Safety check to prevent infinite loops
+				if ( $iteration_count > $max_iterations ) {
+					WP_CLI::warning( "Reached maximum iteration limit ($max_iterations). Stopping sync to prevent memory issues." );
+					break;
+				}
+
 				if ( $page == 1 ) {
 					// recreate the collection to typesense and do some initialization
 					$collection->initialize();
@@ -463,6 +495,14 @@ class Cli extends WP_CLI_Command {
 
 				if ( is_wp_error( $term_query->terms ) || empty( $term_query->terms ) ) {
 					break; // No more data left to sync
+				}
+
+				// Memory optimization: Force garbage collection every 10 iterations
+				if ( $iteration_count % 10 === 0 ) {
+					if ( function_exists( 'gc_collect_cycles' ) ) {
+						gc_collect_cycles();
+					}
+					WP_CLI::line( "Memory usage: " . size_format( memory_get_usage( true ) ) );
 				}
 
 				$object_batch       = $collection->prepare_batch_data( $term_query->terms );

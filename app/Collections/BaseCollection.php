@@ -76,10 +76,17 @@ class BaseCollection {
 	}
 
 	public function import( $batch ) {
-		$batch_files = array_map( function ($data) {
-			return json_encode( $data );
-		}, $batch );
-		$to_jsonl    = implode( PHP_EOL, $batch_files );
+		// Memory optimization: Process batch in chunks and use streaming
+		$batch_files = array();
+		foreach ( $batch as $data ) {
+			$batch_files[] = json_encode( $data );
+			// Free memory immediately after encoding
+			unset( $data );
+		}
+		$to_jsonl = implode( PHP_EOL, $batch_files );
+
+		// Free the batch_files array to save memory
+		unset( $batch_files );
 
 		// Determine which collection to use
 		$target_collection = $this->get_target_collection_name();

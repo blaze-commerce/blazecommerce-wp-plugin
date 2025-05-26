@@ -69,30 +69,35 @@ class CollectionAliasManager {
 
 	/**
 	 * Get all collections for a specific type (both -a and -b)
+	 * Optimized to check specific collections instead of loading all collections
 	 */
 	public function get_all_collections_for_type( $collection_type ) {
+		$matching_collections = array();
+
+		// Check for specific -a and -b collections instead of loading all collections
+		$collection_a = $this->get_collection_name( $collection_type, 'a' );
+		$collection_b = $this->get_collection_name( $collection_type, 'b' );
+
 		try {
-			$all_collections = $this->typesense->client()->collections->retrieve();
-			$prefix          = $collection_type . '-' . $this->site_url . '-';
-
-			$matching_collections = array();
-			foreach ( $all_collections['collections'] as $collection ) {
-				if ( strpos( $collection['name'], $prefix ) === 0 ) {
-					// Only include collections that end with '-a' or '-b'
-					$suffix = $this->extract_suffix_from_collection_name( $collection['name'] );
-					if ( $suffix === 'a' || $suffix === 'b' ) {
-						$matching_collections[] = $collection['name'];
-					}
-				}
-			}
-
-			// Sort alphabetically (a comes before b)
-			sort( $matching_collections );
-
-			return $matching_collections;
+			// Check if collection -a exists
+			$this->typesense->client()->collections[ $collection_a ]->retrieve();
+			$matching_collections[] = $collection_a;
 		} catch (Exception $e) {
-			return array();
+			// Collection -a doesn't exist, which is fine
 		}
+
+		try {
+			// Check if collection -b exists
+			$this->typesense->client()->collections[ $collection_b ]->retrieve();
+			$matching_collections[] = $collection_b;
+		} catch (Exception $e) {
+			// Collection -b doesn't exist, which is fine
+		}
+
+		// Sort alphabetically (a comes before b)
+		sort( $matching_collections );
+
+		return $matching_collections;
 	}
 
 	/**
