@@ -9,6 +9,12 @@ class CollectionAliasManager {
 	private $typesense;
 	private $site_url;
 
+	// Performance optimization: Cache frequently accessed data
+	private static $alias_cache = array();
+	private static $current_collection_cache = array();
+	private static $alias_exists_cache = array();
+	private static $cache_ttl = 300; // 5 minutes cache TTL
+
 	public function __construct() {
 		$this->typesense = TypesenseClient::get_instance();
 		$this->site_url  = $this->typesense->get_site_url();
@@ -55,14 +61,37 @@ class CollectionAliasManager {
 
 	/**
 	 * Get current live collection name by checking where alias points
+	 * Cached for performance optimization
 	 */
 	public function get_current_collection( $collection_type ) {
+		$cache_key = 'current_collection_' . $collection_type;
+
+		// Check cache first
+		if ( isset( self::$current_collection_cache[ $cache_key ] ) ) {
+			$cached_data = self::$current_collection_cache[ $cache_key ];
+			if ( time() - $cached_data['timestamp'] < self::$cache_ttl ) {
+				return $cached_data['value'];
+			}
+		}
+
 		try {
 			$alias_name = $this->get_alias_name( $collection_type );
 			$alias_info = $this->typesense->client()->aliases[ $alias_name ]->retrieve();
-			return $alias_info['collection_name'] ?? null;
+			$result     = $alias_info['collection_name'] ?? null;
+
+			// Cache the result
+			self::$current_collection_cache[ $cache_key ] = array(
+				'value' => $result,
+				'timestamp' => time()
+			);
+
+			return $result;
 		} catch (Exception $e) {
-			// Alias doesn't exist yet
+			// Cache the null result for failed lookups
+			self::$current_collection_cache[ $cache_key ] = array(
+				'value' => null,
+				'timestamp' => time()
+			);
 			return null;
 		}
 	}
@@ -192,7 +221,12 @@ class CollectionAliasManager {
 			$alias_name = $this->get_alias_name( $collection_type );
 			$mapping    = array( 'collection_name' => $target_collection );
 
-			return $this->typesense->client()->aliases->upsert( $alias_name, $mapping );
+			$result = $this->typesense->client()->aliases->upsert( $alias_name, $mapping );
+
+			// Clear cache for this collection type since alias has changed
+			$this->clear_cache_for_collection_type( $collection_type );
+
+			return $result;
 		} catch (Exception $e) {
 			throw new Exception( "Failed to update alias: " . $e->getMessage() );
 		}
@@ -244,13 +278,37 @@ class CollectionAliasManager {
 
 	/**
 	 * Check if alias exists
+	 * Cached for performance optimization
 	 */
 	public function alias_exists( $collection_type ) {
+		$cache_key = 'alias_exists_' . $collection_type;
+
+		// Check cache first
+		if ( isset( self::$alias_exists_cache[ $cache_key ] ) ) {
+			$cached_data = self::$alias_exists_cache[ $cache_key ];
+			if ( time() - $cached_data['timestamp'] < self::$cache_ttl ) {
+				return $cached_data['value'];
+			}
+		}
+
 		try {
 			$alias_name = $this->get_alias_name( $collection_type );
 			$this->typesense->client()->aliases[ $alias_name ]->retrieve();
+
+			// Cache the positive result
+			self::$alias_exists_cache[ $cache_key ] = array(
+				'value' => true,
+				'timestamp' => time()
+			);
+
 			return true;
 		} catch (Exception $e) {
+			// Cache the negative result
+			self::$alias_exists_cache[ $cache_key ] = array(
+				'value' => false,
+				'timestamp' => time()
+			);
+
 			return false;
 		}
 	}
@@ -258,17 +316,37 @@ class CollectionAliasManager {
 	/**
 	 * Get collection access object (for backward compatibility)
 	 * Returns the alias if it exists, otherwise falls back to old naming
+	 * Cached for performance optimization
 	 */
 	public function get_collection_access( $collection_type ) {
-		$alias_name = $this->get_alias_name( $collection_type );
+		$cache_key = 'collection_access_' . $collection_type;
 
-		if ( $this->alias_exists( $collection_type ) ) {
-			return $this->typesense->client()->collections[ $alias_name ];
+		// Check cache first
+		if ( isset( self::$alias_cache[ $cache_key ] ) ) {
+			$cached_data = self::$alias_cache[ $cache_key ];
+			if ( time() - $cached_data['timestamp'] < self::$cache_ttl ) {
+				return $cached_data['value'];
+			}
 		}
 
-		// Fallback to old naming for backward compatibility
-		$old_name = $collection_type . '-' . $this->typesense->store_id;
-		return $this->typesense->client()->collections[ $old_name ];
+		$alias_name        = $this->get_alias_name( $collection_type );
+		$collection_access = null;
+
+		if ( $this->alias_exists( $collection_type ) ) {
+			$collection_access = $this->typesense->client()->collections[ $alias_name ];
+		} else {
+			// Fallback to old naming for backward compatibility
+			$old_name          = $collection_type . '-' . $this->typesense->store_id;
+			$collection_access = $this->typesense->client()->collections[ $old_name ];
+		}
+
+		// Cache the result
+		self::$alias_cache[ $cache_key ] = array(
+			'value' => $collection_access,
+			'timestamp' => time()
+		);
+
+		return $collection_access;
 	}
 
 	/**
@@ -284,5 +362,43 @@ class CollectionAliasManager {
 		}
 
 		return $alias_names;
+	}
+
+	/**
+	 * Clear cache for a specific collection type
+	 */
+	private function clear_cache_for_collection_type( $collection_type ) {
+		$cache_keys = array(
+			'current_collection_' . $collection_type,
+			'alias_exists_' . $collection_type,
+			'collection_access_' . $collection_type,
+		);
+
+		foreach ( $cache_keys as $key ) {
+			unset( self::$current_collection_cache[ $key ] );
+			unset( self::$alias_exists_cache[ $key ] );
+			unset( self::$alias_cache[ $key ] );
+		}
+	}
+
+	/**
+	 * Clear all caches (useful for debugging or when needed)
+	 */
+	public function clear_all_caches() {
+		self::$alias_cache              = array();
+		self::$current_collection_cache = array();
+		self::$alias_exists_cache       = array();
+	}
+
+	/**
+	 * Get cache statistics for debugging
+	 */
+	public function get_cache_stats() {
+		return array(
+			'alias_cache_count' => count( self::$alias_cache ),
+			'current_collection_cache_count' => count( self::$current_collection_cache ),
+			'alias_exists_cache_count' => count( self::$alias_exists_cache ),
+			'cache_ttl' => self::$cache_ttl,
+		);
 	}
 }
