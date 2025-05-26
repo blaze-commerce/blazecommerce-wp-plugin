@@ -42,9 +42,20 @@ class Cli extends WP_CLI_Command {
 
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all products in batches..." );
+
+			// Display the collection name we'll be syncing to
+			$product_collection = Product::get_instance();
+			$use_aliases        = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases ) {
+				$target_collection = $product_collection->get_inactive_collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			} else {
+				$target_collection = $product_collection->collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			}
+
 			// Start tracking time
 			$start_time              = microtime( true );
-			$product_collection      = Product::get_instance();
 			$batch_size              = Product::BATCH_SIZE;
 			$page                    = 1;
 			$imported_products_count = 0;
@@ -215,6 +226,16 @@ class Cli extends WP_CLI_Command {
 
 				$product_collection = Product::get_instance();
 
+				// Display the collection name we'll be syncing to
+				$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+				if ( $use_aliases ) {
+					$target_collection = $product_collection->get_inactive_collection_name();
+					WP_CLI::line( "Target collection: " . $target_collection );
+				} else {
+					$target_collection = $product_collection->collection_name();
+					WP_CLI::line( "Target collection: " . $target_collection );
+				}
+
 				// Initialize the collection if this is the first batch
 				$product_collection->initialize();
 
@@ -283,9 +304,13 @@ class Cli extends WP_CLI_Command {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all pages and posts in batches..." );
 
+			// Display the collection name we'll be syncing to
+			$collection        = Page::get_instance();
+			$target_collection = $collection->collection_name();
+			WP_CLI::line( "Target collection: " . $target_collection );
+
 			// Start tracking time
 			$start_time     = microtime( true );
-			$collection     = Page::get_instance();
 			$batch_size     = Page::BATCH_SIZE;
 			$page           = 1;
 			$imported_count = 0;
@@ -358,9 +383,14 @@ class Cli extends WP_CLI_Command {
 	public function menu( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all menus in batches..." );
+
+			// Display the collection name we'll be syncing to
+			$collection        = Menu::get_instance();
+			$target_collection = $collection->collection_name();
+			WP_CLI::line( "Target collection: " . $target_collection );
+
 			// Start tracking time
 			$start_time     = microtime( true );
-			$collection     = Menu::get_instance();
 			$imported_count = 0;
 			$total_imports  = 0;
 
@@ -405,9 +435,20 @@ class Cli extends WP_CLI_Command {
 	public function site_info( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all site info in batches..." );
+
+			// Display the collection name we'll be syncing to
+			$collection  = SiteInfo::get_instance();
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases ) {
+				$target_collection = $collection->get_inactive_collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			} else {
+				$target_collection = $collection->collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			}
+
 			// Start tracking time
 			$start_time = microtime( true );
-			$collection = SiteInfo::get_instance();
 
 			$imported_count = 0;
 			$total_imports  = 0;
@@ -458,9 +499,19 @@ class Cli extends WP_CLI_Command {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all taxonomies in batches..." );
 
+			// Display the collection name we'll be syncing to
+			$collection  = Taxonomy::get_instance();
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases ) {
+				$target_collection = $collection->get_inactive_collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			} else {
+				$target_collection = $collection->collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			}
+
 			// Start tracking time
 			$start_time     = microtime( true );
-			$collection     = Taxonomy::get_instance();
 			$batch_size     = Taxonomy::BATCH_SIZE;
 			$page           = 1;
 			$imported_count = 0;
@@ -565,9 +616,13 @@ class Cli extends WP_CLI_Command {
 		if ( isset( $assoc_args['all'] ) ) {
 			WP_CLI::line( "Syncing all published wp_navigation posts in batches..." );
 
+			// Display the collection name we'll be syncing to
+			$collection        = Navigation::get_instance();
+			$target_collection = $collection->collection_name();
+			WP_CLI::line( "Target collection: " . $target_collection );
+
 			// Start tracking time
 			$start_time     = microtime( true );
-			$collection     = Navigation::get_instance();
 			$batch_size     = Navigation::BATCH_SIZE;
 			$page           = 1;
 			$imported_count = 0;
