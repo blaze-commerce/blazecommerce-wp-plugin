@@ -458,11 +458,23 @@ class Cli extends WP_CLI_Command {
 
 			$object_batch       = $collection->prepare_batch_data();
 			$successful_imports = $collection->import_prepared_batch( $object_batch );
-			$collection->after_site_info_sync();
 			$imported_count += count( $successful_imports ); // Increment the count of imported products
 			$total_imports += count( $object_batch ); // Increment the count of imported products
 
+			// Complete the sync by updating alias if using new system
+			try {
+				$sync_result = $collection->complete_site_info_sync();
+				if ( $sync_result ) {
+					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
+					if ( ! empty( $sync_result['deleted_collections'] ) ) {
+						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
+					}
+				}
+			} catch (\Exception $e) {
+				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
+			}
 
+			$collection->after_site_info_sync();
 
 			WP_CLI::success( "Completed! All site info have been synced." );
 			WP_CLI::success( "Total import: " . $total_imports );
