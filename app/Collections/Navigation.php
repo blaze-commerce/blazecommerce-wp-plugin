@@ -82,29 +82,7 @@ class Navigation extends BaseCollection {
 	 * This should be called after all navigation items have been synced
 	 */
 	public function complete_navigation_sync() {
-		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-
-		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
-			try {
-				$result = $this->complete_sync( $this->current_sync_collection );
-
-				$logger  = wc_get_logger();
-				$context = array( 'source' => 'wooless-navigation-collection-complete' );
-				$logger->debug( 'TS Navigation sync completed: ' . print_r( $result, true ), $context );
-
-				// Clear the current sync collection
-				unset( $this->current_sync_collection );
-
-				return $result;
-			} catch (\Exception $e) {
-				$logger  = wc_get_logger();
-				$context = array( 'source' => 'wooless-navigation-collection-complete' );
-				$logger->debug( 'TS Navigation sync completion failed: ' . $e->getMessage(), $context );
-				throw $e;
-			}
-		}
-
-		return null;
+		return $this->complete_collection_sync( 'navigation' );
 	}
 
 	public function get_data( $navigation ) {

@@ -402,27 +402,7 @@ class SiteInfo extends BaseCollection {
 	 * This should be called after all site info has been synced
 	 */
 	public function complete_site_info_sync() {
-		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-
-		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
-			$logger  = wc_get_logger();
-			$context = array( 'source' => 'wooless-site-info-collection-complete-sync' );
-
-			try {
-				$result = $this->complete_sync( $this->current_sync_collection );
-				$logger->debug( 'TS SiteInfo sync completed: ' . json_encode( $result ), $context );
-
-				// Clear the current sync collection
-				$this->current_sync_collection = null;
-
-				return $result;
-			} catch (\Exception $e) {
-				$logger->debug( 'TS SiteInfo complete sync Exception: ' . $e->getMessage(), $context );
-				throw $e;
-			}
-		}
-
-		return array( 'success' => true, 'message' => 'No alias sync needed' );
+		return $this->complete_collection_sync( 'site_info', array( 'fallback_message' => 'No alias sync needed' ) );
 	}
 
 	public function after_site_info_sync() {
