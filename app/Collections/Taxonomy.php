@@ -218,7 +218,7 @@ class Taxonomy extends BaseCollection {
 	}
 
 	public function import_prepared_batch( $documents ) {
-		$import_response = $this->collection()->documents->import( $documents );
+		$import_response = $this->import( $documents );
 
 		$successful_imports = array_filter( $import_response, function ($batch_result) {
 			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
