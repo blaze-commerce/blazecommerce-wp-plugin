@@ -216,13 +216,7 @@ class Product extends BaseCollection {
 		}
 	}
 
-	/**
-	 * Complete the product sync by updating alias
-	 * This should be called after all products have been synced
-	 */
-	public function complete_product_sync() {
-		return $this->complete_collection_sync( 'product' );
-	}
+
 
 	public function get_product_query_args( $page = 1, $batch_size = 5 ) {
 		return apply_filters( 'wooless_product_query_args', array(

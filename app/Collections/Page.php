@@ -94,14 +94,7 @@ class Page extends BaseCollection {
 		}
 	}
 
-	/**
-	 * Complete the page sync by updating alias
-	 * This should be called after all pages have been synced
-	 */
-	public function complete_page_sync() {
-		$transient_key = 'page_sync_collection_' . $this->typesense->store_id;
-		return $this->complete_collection_sync( 'page', array( 'clear_transient' => $transient_key ) );
-	}
+
 
 	public function get_author( $author_id ) {
 		// Check if the author exists by ID
@@ -384,7 +377,9 @@ class Page extends BaseCollection {
 
 
 
-			$this->complete_page_sync();
+			// Clear the page sync transient
+			$transient_key = 'page_sync_collection_' . $this->typesense->store_id;
+			$this->complete_collection_sync( array( 'clear_transient' => $transient_key ) );
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,

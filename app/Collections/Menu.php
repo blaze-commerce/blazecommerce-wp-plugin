@@ -75,13 +75,7 @@ class Menu extends BaseCollection {
 		}
 	}
 
-	/**
-	 * Complete the menu sync by updating alias
-	 * This should be called after all menus have been synced
-	 */
-	public function complete_menu_sync() {
-		return $this->complete_collection_sync( 'menu' );
-	}
+
 
 	public function process_menu_items( $menu_items ) {
 		/**

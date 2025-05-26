@@ -77,13 +77,7 @@ class Navigation extends BaseCollection {
 		}
 	}
 
-	/**
-	 * Complete the navigation sync by updating alias
-	 * This should be called after all navigation items have been synced
-	 */
-	public function complete_navigation_sync() {
-		return $this->complete_collection_sync( 'navigation' );
-	}
+
 
 	public function get_data( $navigation ) {
 		$navigation_id = $navigation->ID;

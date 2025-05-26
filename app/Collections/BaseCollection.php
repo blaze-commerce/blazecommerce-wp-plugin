@@ -207,23 +207,23 @@ class BaseCollection {
 
 	/**
 	 * Unified method to complete collection sync with standardized logging and cleanup
+	 * Automatically uses the child class's $collection_name property
 	 *
-	 * @param string $collection_type The type of collection (e.g., 'product', 'taxonomy', 'page', etc.)
 	 * @param array $options Optional parameters for specific collection needs
 	 *                      - 'clear_transient' => string: transient key to clear (used by Page collection)
 	 *                      - 'fallback_message' => string: custom message when no alias sync needed
 	 * @return array|null Result of sync operation or null if no sync needed
 	 */
-	public function complete_collection_sync( $collection_type, $options = array() ) {
+	public function complete_collection_sync( $options = array() ) {
 		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
 
 		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
 			$logger  = wc_get_logger();
-			$context = array( 'source' => 'wooless-' . $collection_type . '-collection-complete' );
+			$context = array( 'source' => 'wooless-' . $this->collection_name . '-collection-complete' );
 
 			try {
 				$result = $this->complete_sync( $this->current_sync_collection );
-				$logger->debug( 'TS ' . ucfirst( $collection_type ) . ' sync completed: ' . print_r( $result, true ), $context );
+				$logger->debug( 'TS ' . ucfirst( $this->collection_name ) . ' sync completed: ' . print_r( $result, true ), $context );
 
 				// Clear the current sync collection
 				unset( $this->current_sync_collection );
@@ -235,7 +235,7 @@ class BaseCollection {
 
 				return $result;
 			} catch (\Exception $e) {
-				$logger->debug( 'TS ' . ucfirst( $collection_type ) . ' sync completion failed: ' . $e->getMessage(), $context );
+				$logger->debug( 'TS ' . ucfirst( $this->collection_name ) . ' sync completion failed: ' . $e->getMessage(), $context );
 				throw $e;
 			}
 		}

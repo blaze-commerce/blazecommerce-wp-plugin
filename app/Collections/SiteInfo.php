@@ -397,13 +397,7 @@ class SiteInfo extends BaseCollection {
 		}
 	}
 
-	/**
-	 * Complete the site info sync by updating alias
-	 * This should be called after all site info has been synced
-	 */
-	public function complete_site_info_sync() {
-		return $this->complete_collection_sync( 'site_info', array( 'fallback_message' => 'No alias sync needed' ) );
-	}
+
 
 	public function after_site_info_sync() {
 		do_action( 'blaze_wooless_after_site_info_sync' );
@@ -423,7 +417,7 @@ class SiteInfo extends BaseCollection {
 			// Complete the sync if using aliases
 			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
 			if ( $use_aliases && isset( $this->current_sync_collection ) ) {
-				$sync_result = $this->complete_site_info_sync();
+				$sync_result = $this->complete_collection_sync();
 				$logger->debug( 'TS SiteInfo sync result: ' . json_encode( $sync_result ), $context );
 			}
 
