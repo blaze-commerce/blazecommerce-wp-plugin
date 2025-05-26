@@ -85,13 +85,7 @@ class Taxonomy extends BaseCollection {
 		}
 	}
 
-	/**
-	 * Complete the taxonomy sync by updating alias
-	 * This should be called after all taxonomies have been synced
-	 */
-	public function complete_taxonomy_sync() {
-		return $this->complete_collection_sync( 'taxonomy' );
-	}
+
 
 	public function generate_typesense_data( $term ) {
 		$taxonomy = $term->taxonomy;
