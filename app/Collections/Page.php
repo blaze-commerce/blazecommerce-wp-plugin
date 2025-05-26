@@ -44,22 +44,81 @@ class Page extends BaseCollection {
 	}
 
 	public function initialize() {
-		try {
-			$this->drop_collection();
-		} catch (\Exception $e) {
-			// Don't error out if the collection was not found
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'wooless-page-collection-initialize' );
+
+		// Check if we should use the new alias system
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases ) {
+			try {
+				$schema = array(
+					'fields' => $this->get_fields(),
+					'default_sorting_field' => 'updatedAt',
+					'enable_nested_fields' => true
+				);
+
+				$new_collection_name = $this->initialize_with_alias( $schema );
+				$logger->debug( 'TS Page collection (alias): ' . $new_collection_name, $context );
+
+				// Store the new collection name for later use in complete_sync
+				$this->current_sync_collection = $new_collection_name;
+
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Page collection alias initialize Exception: ' . $e->getMessage(), $context );
+				throw $e;
+			}
+		} else {
+			// Legacy behavior
+			try {
+				$this->drop_collection();
+			} catch (\Exception $e) {
+				// Don't error out if the collection was not found
+			}
+
+			try {
+				$logger->debug( 'TS Page collection: ' . $this->collection_name(), $context );
+				$this->create_collection( [ 
+					'name' => $this->collection_name(),
+					'fields' => $this->get_fields(),
+					'default_sorting_field' => 'updatedAt',
+					'enable_nested_fields' => true
+				] );
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Page collection initialize Exception: ' . $e->getMessage(), $context );
+				echo "Error: " . $e->getMessage() . "\n";
+			}
+		}
+	}
+
+	/**
+	 * Complete the page sync by updating alias
+	 * This should be called after all pages have been synced
+	 */
+	public function complete_page_sync() {
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
+			try {
+				$result = $this->complete_sync( $this->current_sync_collection );
+
+				$logger  = wc_get_logger();
+				$context = array( 'source' => 'wooless-page-collection-complete' );
+				$logger->debug( 'TS Page sync completed: ' . print_r( $result, true ), $context );
+
+				// Clear the current sync collection
+				unset( $this->current_sync_collection );
+
+				return $result;
+			} catch (\Exception $e) {
+				$logger  = wc_get_logger();
+				$context = array( 'source' => 'wooless-page-collection-complete' );
+				$logger->debug( 'TS Page sync completion failed: ' . $e->getMessage(), $context );
+				throw $e;
+			}
 		}
 
-		try {
-			$this->create_collection( [ 
-				'name' => $this->collection_name(),
-				'fields' => $this->get_fields(),
-				'default_sorting_field' => 'updatedAt',
-				'enable_nested_fields' => true
-			] );
-		} catch (\Exception $e) {
-			echo "Error: " . $e->getMessage() . "\n";
-		}
+		return null;
 	}
 
 	public function get_author( $author_id ) {
@@ -245,7 +304,7 @@ class Page extends BaseCollection {
 			}
 
 		}
-		// Restore original post data. 
+		// Restore original post data.
 		wp_reset_postdata();
 		wp_reset_query();
 
@@ -317,6 +376,21 @@ class Page extends BaseCollection {
 			}
 
 
+
+			// Complete the sync if using aliases
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases && isset( $this->current_sync_collection ) ) {
+				try {
+					$sync_result = $this->complete_page_sync();
+					$logger      = wc_get_logger();
+					$context     = array( 'source' => 'wooless-page-collection-sync' );
+					$logger->debug( 'TS Page sync result: ' . json_encode( $sync_result ), $context );
+				} catch (\Exception $e) {
+					$logger  = wc_get_logger();
+					$context = array( 'source' => 'wooless-page-collection-sync' );
+					$logger->debug( 'TS Page sync completion failed: ' . $e->getMessage(), $context );
+				}
+			}
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,
