@@ -425,6 +425,19 @@ export default function Edit({ attributes, setAttributes }) {
 						help={__("How multiple items are arranged", "blaze-commerce")}
 					/>
 
+					<Divider />
+
+					<SelectControl
+						label={__("Alignment", "blaze-commerce")}
+						value={align}
+						options={alignmentOptions}
+						onChange={(value) => setAttributes({ align: value })}
+						help={__(
+							"How items are aligned within the container",
+							"blaze-commerce",
+						)}
+					/>
+
 					<Button
 						variant="primary"
 						className="add-service-feature-sidebar"
@@ -717,7 +730,7 @@ export default function Edit({ attributes, setAttributes }) {
 
 										{item.text && (
 											<div
-												className={`m-0 ${getTextSizeClass()} ${getTextTransformClass()} ${getTextFontWeightClass()} ${getTextLineHeightClass()}`}
+												className={`m-0 ${getTextSizeClass()} ${getTextTransformClass()} ${getTextFontWeightClass()} ${getTextLineHeightClass()} ${getTriggerSizeClass()} `}
 												style={{ color: textColor }}>
 												{item.text}
 											</div>
