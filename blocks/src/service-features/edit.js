@@ -13,16 +13,10 @@ import {
 	PanelBody,
 	Button,
 	TextControl,
-	TextareaControl,
 	SelectControl,
 	ToggleControl,
 	Placeholder,
-	Flex,
-	FlexItem,
-	FlexBlock,
 	__experimentalDivider as Divider,
-	TabPanel,
-	Icon,
 	ColorPicker,
 	RangeControl,
 } from "@wordpress/components";
@@ -62,11 +56,17 @@ export default function Edit({ attributes, setAttributes }) {
 	const getAlignmentClass = () => {
 		switch (align) {
 			case "center":
-				return "justify-center text-center";
+				return itemsDirection === "horizontal"
+					? "justify-center"
+					: "items-center text-center";
 			case "right":
-				return "justify-end text-right";
+				return itemsDirection === "horizontal"
+					? "justify-end"
+					: "items-end text-right";
 			default:
-				return "justify-start text-left";
+				return itemsDirection === "horizontal"
+					? "justify-start"
+					: "items-start text-left";
 		}
 	};
 
@@ -599,13 +599,13 @@ export default function Edit({ attributes, setAttributes }) {
 															<Button
 																onClick={open}
 																variant="secondary"
-																isSmall>
+																size="small">
 																{__("Replace", "blaze-commerce")}
 															</Button>
 															<Button
 																onClick={handleLogoRemove}
 																isDestructive
-																isSmall>
+																size="small">
 																{__("Remove", "blaze-commerce")}
 															</Button>
 														</div>
@@ -703,16 +703,15 @@ export default function Edit({ attributes, setAttributes }) {
 						</Placeholder>
 					) : (
 						items.map((item, index) => {
-							const isSelected = selectedItemId === item.id;
 							const handleItemClick = () => setSelectedItemId(item.id);
 
 							return (
 								<>
 									<div
 										key={item.id}
-										className={`flex flex-row items-center relative cursor-pointer transition-all duration-200 ${
+										className={`flex flex-row items-center relative cursor-pointer ${
 											itemsDirection === "horizontal"
-												? "flex-1 min-w-[200px]"
+												? "min-w-[200px]"
 												: "w-full"
 										} ${
 											itemsDirection === "horizontal"

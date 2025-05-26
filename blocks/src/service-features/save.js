@@ -32,11 +32,17 @@ export default function save({ attributes }) {
 	const getAlignmentClass = () => {
 		switch (align) {
 			case "center":
-				return "justify-center text-center";
+				return itemsDirection === "horizontal"
+					? "justify-center"
+					: "items-center text-center";
 			case "right":
-				return "justify-end text-right";
+				return itemsDirection === "horizontal"
+					? "justify-end"
+					: "items-end text-right";
 			default:
-				return "justify-start text-left";
+				return itemsDirection === "horizontal"
+					? "justify-start"
+					: "items-start text-left";
 		}
 	};
 
