@@ -206,9 +206,15 @@ class SiteInfo extends BaseCollection {
 			),
 		);
 
+		// Cache alias names to avoid multiple calls
+		static $cached_alias_names = null;
+		if ( $cached_alias_names === null ) {
+			$cached_alias_names = $this->alias_manager->get_all_alias_names();
+		}
+
 		$datas[] = array(
 			'name' => 'collections',
-			'value' => $this->alias_manager->get_all_alias_names(),
+			'value' => $cached_alias_names,
 		);
 		$datas[] = $this->site_logo_settings();
 		$datas[] = $this->store_notice_settings();
