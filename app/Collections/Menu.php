@@ -80,29 +80,7 @@ class Menu extends BaseCollection {
 	 * This should be called after all menus have been synced
 	 */
 	public function complete_menu_sync() {
-		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-
-		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
-			try {
-				$result = $this->complete_sync( $this->current_sync_collection );
-
-				$logger  = wc_get_logger();
-				$context = array( 'source' => 'wooless-menu-collection-complete' );
-				$logger->debug( 'TS Menu sync completed: ' . print_r( $result, true ), $context );
-
-				// Clear the current sync collection
-				unset( $this->current_sync_collection );
-
-				return $result;
-			} catch (\Exception $e) {
-				$logger  = wc_get_logger();
-				$context = array( 'source' => 'wooless-menu-collection-complete' );
-				$logger->debug( 'TS Menu sync completion failed: ' . $e->getMessage(), $context );
-				throw $e;
-			}
-		}
-
-		return null;
+		return $this->complete_collection_sync( 'menu' );
 	}
 
 	public function process_menu_items( $menu_items ) {

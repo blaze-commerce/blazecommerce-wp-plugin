@@ -99,31 +99,8 @@ class Page extends BaseCollection {
 	 * This should be called after all pages have been synced
 	 */
 	public function complete_page_sync() {
-		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-
-		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
-			try {
-				$result = $this->complete_sync( $this->current_sync_collection );
-
-				$logger  = wc_get_logger();
-				$context = array( 'source' => 'wooless-page-collection-complete' );
-				$logger->debug( 'TS Page sync completed: ' . print_r( $result, true ), $context );
-
-				// Clear the current sync collection and transient
-				unset( $this->current_sync_collection );
-				$transient_key = 'page_sync_collection_' . $this->typesense->store_id;
-				delete_transient( $transient_key );
-
-				return $result;
-			} catch (\Exception $e) {
-				$logger  = wc_get_logger();
-				$context = array( 'source' => 'wooless-page-collection-complete' );
-				$logger->debug( 'TS Page sync completion failed: ' . $e->getMessage(), $context );
-				throw $e;
-			}
-		}
-
-		return null;
+		$transient_key = 'page_sync_collection_' . $this->typesense->store_id;
+		return $this->complete_collection_sync( 'page', array( 'clear_transient' => $transient_key ) );
 	}
 
 	public function get_author( $author_id ) {
