@@ -15,9 +15,14 @@ class CollectionAliasManager {
 	private static $alias_exists_cache = array();
 	private static $cache_ttl = 300; // 5 minutes cache TTL
 
-	public function __construct() {
-		$this->typesense = TypesenseClient::get_instance();
-		$this->site_url  = $this->typesense->get_site_url();
+	public function __construct( $typesense_client = null ) {
+		// Accept TypesenseClient instance to avoid circular dependency
+		if ( $typesense_client !== null ) {
+			$this->typesense = $typesense_client;
+		} else {
+			$this->typesense = TypesenseClient::get_instance();
+		}
+		$this->site_url = $this->typesense->get_site_url();
 	}
 
 	/**

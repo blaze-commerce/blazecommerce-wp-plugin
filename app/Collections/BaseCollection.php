@@ -10,27 +10,29 @@ class BaseCollection {
 	public $collection_name;
 	public $current_sync_collection = null;
 
+	// Class-level cache for collection access objects
+	private static $collection_cache = array();
+	private static $collection_cache_times = array();
+	private static $collection_cache_ttl = 300; // 5 minutes
+
 	public function __construct() {
-		$this->typesense     = TypesenseClient::get_instance();
-		$this->alias_manager = new CollectionAliasManager();
+		$this->typesense = TypesenseClient::get_instance();
+		// Pass TypesenseClient instance to avoid circular dependency
+		$this->alias_manager = new CollectionAliasManager( $this->typesense );
 	}
 
 	public function collection() {
-		// Cache the collection access object to avoid repeated alias manager calls
-		static $cached_collections = array();
-		static $last_cache_times = array();
-		static $cache_ttl = 300; // 5 minutes
-
+		// Use class-level static cache instead of method-level static
 		$cache_key = $this->collection_name;
 
-		if ( ! isset( $cached_collections[ $cache_key ] ) ||
-			! isset( $last_cache_times[ $cache_key ] ) ||
-			( time() - $last_cache_times[ $cache_key ] ) > $cache_ttl ) {
-			$cached_collections[ $cache_key ] = $this->alias_manager->get_collection_access( $this->collection_name );
-			$last_cache_times[ $cache_key ]   = time();
+		if ( ! isset( self::$collection_cache[ $cache_key ] ) ||
+			! isset( self::$collection_cache_times[ $cache_key ] ) ||
+			( time() - self::$collection_cache_times[ $cache_key ] ) > self::$collection_cache_ttl ) {
+			self::$collection_cache[ $cache_key ]       = $this->alias_manager->get_collection_access( $this->collection_name );
+			self::$collection_cache_times[ $cache_key ] = time();
 		}
 
-		return $cached_collections[ $cache_key ];
+		return self::$collection_cache[ $cache_key ];
 	}
 
 	public function client() {
@@ -223,10 +225,8 @@ class BaseCollection {
 	 * Clear collection cache (useful when aliases change)
 	 */
 	public static function clear_collection_cache() {
-		// Reset static variables in collection() method
-		static $cached_collections = array();
-		static $last_cache_times = array();
-		$cached_collections = array();
-		$last_cache_times   = array();
+		// Clear the class-level static cache
+		self::$collection_cache       = array();
+		self::$collection_cache_times = array();
 	}
 }

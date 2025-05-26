@@ -55,10 +55,8 @@ class TypesenseClient {
 			$this->client = null;
 		}
 
-		// Initialize alias manager if client is available
-		if ( $this->client !== null ) {
-			$this->alias_manager = new CollectionAliasManager();
-		}
+		// Don't initialize alias manager in constructor to avoid circular dependency
+		// It will be initialized lazily when needed
 	}
 
 	public function can_connect() {
@@ -134,12 +132,25 @@ class TypesenseClient {
 	}
 
 	/**
+	 * Get alias manager instance (lazy initialization to avoid circular dependency)
+	 */
+	private function get_alias_manager() {
+		if ( $this->alias_manager === null && $this->client !== null ) {
+			// Pass $this to avoid circular dependency
+			$this->alias_manager = new CollectionAliasManager( $this );
+		}
+		return $this->alias_manager;
+	}
+
+	/**
 	 * Get collection access object with alias support
 	 * Falls back to legacy naming if alias manager is not available
 	 */
 	private function get_collection_access( $collection_type ) {
-		if ( $this->alias_manager !== null ) {
-			return $this->alias_manager->get_collection_access( $collection_type );
+		$alias_manager = $this->get_alias_manager();
+
+		if ( $alias_manager !== null ) {
+			return $alias_manager->get_collection_access( $collection_type );
 		}
 
 		// Fallback to legacy naming
