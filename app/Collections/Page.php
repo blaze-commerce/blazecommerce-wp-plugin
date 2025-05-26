@@ -64,6 +64,9 @@ class Page extends BaseCollection {
 				// Store the new collection name for later use in complete_sync
 				$this->current_sync_collection = $new_collection_name;
 
+				// Store in transient for persistence across requests
+				set_transient( 'page_sync_collection_' . $this->typesense->store_id, $new_collection_name, HOUR_IN_SECONDS );
+
 			} catch (\Exception $e) {
 				$logger->debug( 'TS Page collection alias initialize Exception: ' . $e->getMessage(), $context );
 				throw $e;
@@ -106,8 +109,10 @@ class Page extends BaseCollection {
 				$context = array( 'source' => 'wooless-page-collection-complete' );
 				$logger->debug( 'TS Page sync completed: ' . print_r( $result, true ), $context );
 
-				// Clear the current sync collection
+				// Clear the current sync collection and transient
 				unset( $this->current_sync_collection );
+				$transient_key = 'page_sync_collection_' . $this->typesense->store_id;
+				delete_transient( $transient_key );
 
 				return $result;
 			} catch (\Exception $e) {
@@ -311,8 +316,33 @@ class Page extends BaseCollection {
 		return $post_datas;
 	}
 
+	/**
+	 * Get the target collection name for operations
+	 * Override BaseCollection to check transient for persistent sync collection
+	 */
+	public function get_target_collection_name() {
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases ) {
+			// Check if current_sync_collection is set in this instance
+			if ( isset( $this->current_sync_collection ) ) {
+				return $this->current_sync_collection;
+			}
+
+			// If not set, try to retrieve from transient (for persistence across requests)
+			$transient_key   = 'page_sync_collection_' . $this->typesense->store_id;
+			$sync_collection = get_transient( $transient_key );
+			if ( $sync_collection ) {
+				$this->current_sync_collection = $sync_collection;
+				return $sync_collection;
+			}
+		}
+
+		return $this->collection_name();
+	}
+
 	public function import_prepared_batch( $posts_batch ) {
-		$import_response = $this->collection()->documents->import( $posts_batch );
+		$import_response = $this->import( $posts_batch );
 
 		$successful_imports = array_filter( $import_response, function ($batch_result) {
 			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
@@ -377,20 +407,7 @@ class Page extends BaseCollection {
 
 
 
-			// Complete the sync if using aliases
-			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-			if ( $use_aliases && isset( $this->current_sync_collection ) ) {
-				try {
-					$sync_result = $this->complete_page_sync();
-					$logger      = wc_get_logger();
-					$context     = array( 'source' => 'wooless-page-collection-sync' );
-					$logger->debug( 'TS Page sync result: ' . json_encode( $sync_result ), $context );
-				} catch (\Exception $e) {
-					$logger  = wc_get_logger();
-					$context = array( 'source' => 'wooless-page-collection-sync' );
-					$logger->debug( 'TS Page sync completion failed: ' . $e->getMessage(), $context );
-				}
-			}
+			$this->complete_page_sync();
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,
