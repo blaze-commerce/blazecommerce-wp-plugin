@@ -404,9 +404,15 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all menus in batches..." );
 
 			// Display the collection name we'll be syncing to
-			$collection        = Menu::get_instance();
-			$target_collection = $collection->collection_name();
-			WP_CLI::line( "Target collection: " . $target_collection );
+			$collection  = Menu::get_instance();
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases ) {
+				$target_collection = $collection->get_inactive_collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			} else {
+				$target_collection = $collection->collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			}
 
 			// Start tracking time
 			$start_time     = microtime( true );
@@ -420,6 +426,19 @@ class Cli extends WP_CLI_Command {
 
 			$imported_count += count( $successful_imports ); // Increment the count of imported products
 			$total_imports += count( $object_batch ); // Increment the count of imported products
+
+			// Complete the sync by updating alias if using new system
+			try {
+				$sync_result = $collection->complete_menu_sync();
+				if ( $sync_result ) {
+					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
+					if ( ! empty( $sync_result['deleted_collections'] ) ) {
+						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
+					}
+				}
+			} catch (\Exception $e) {
+				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
+			}
 
 			WP_CLI::success( "Completed! All menus have been synced." );
 			WP_CLI::success( "Total import: " . $total_imports );
@@ -648,9 +667,15 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all published wp_navigation posts in batches..." );
 
 			// Display the collection name we'll be syncing to
-			$collection        = Navigation::get_instance();
-			$target_collection = $collection->collection_name();
-			WP_CLI::line( "Target collection: " . $target_collection );
+			$collection  = Navigation::get_instance();
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases ) {
+				$target_collection = $collection->get_inactive_collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			} else {
+				$target_collection = $collection->collection_name();
+				WP_CLI::line( "Target collection: " . $target_collection );
+			}
 
 			// Start tracking time
 			$start_time     = microtime( true );
@@ -688,6 +713,19 @@ class Cli extends WP_CLI_Command {
 				$page++; // Move to the next batch
 
 			} while ( true );
+
+			// Complete the sync by updating alias if using new system
+			try {
+				$sync_result = $collection->complete_navigation_sync();
+				if ( $sync_result ) {
+					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
+					if ( ! empty( $sync_result['deleted_collections'] ) ) {
+						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
+					}
+				}
+			} catch (\Exception $e) {
+				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
+			}
 
 			WP_CLI::success( "Completed! All published wp_navigation posts have been synced." );
 			WP_CLI::success( "Total batch imported: " . $page );
