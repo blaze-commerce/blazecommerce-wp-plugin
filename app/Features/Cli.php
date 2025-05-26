@@ -15,6 +15,70 @@ use WP_CLI_Command;
 class Cli extends WP_CLI_Command {
 
 	/**
+	 * Display target collection name for CLI sync operations
+	 *
+	 * @param object $collection Collection instance
+	 * @return string Target collection name
+	 */
+	private function display_target_collection( $collection ) {
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+		if ( $use_aliases ) {
+			$target_collection = $collection->get_inactive_collection_name();
+			WP_CLI::line( "Target collection: " . $target_collection );
+		} else {
+			$target_collection = $collection->collection_name();
+			WP_CLI::line( "Target collection: " . $target_collection );
+		}
+		return $target_collection;
+	}
+
+	/**
+	 * Complete sync operation with standardized error handling and success messages
+	 *
+	 * @param object $collection Collection instance
+	 * @param string $sync_method Method name to call for completing sync (e.g., 'complete_product_sync')
+	 * @return void
+	 */
+	private function complete_collection_sync( $collection, $sync_method ) {
+		try {
+			$sync_result = $collection->$sync_method();
+			if ( $sync_result ) {
+				WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
+				if ( ! empty( $sync_result['deleted_collections'] ) ) {
+					WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
+				}
+			}
+		} catch (\Exception $e) {
+			WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
+		}
+	}
+
+	/**
+	 * Display standardized sync completion statistics
+	 *
+	 * @param int $start_time Start time in microtime
+	 * @param int $total_imports Total number of items processed
+	 * @param int $successful_imports Number of successfully imported items
+	 * @param int $page_count Number of batches processed (optional)
+	 * @param string $item_type Type of items synced (e.g., 'products', 'pages')
+	 * @return void
+	 */
+	private function display_sync_stats( $start_time, $total_imports, $successful_imports, $page_count = null, $item_type = 'items' ) {
+		if ( $page_count !== null ) {
+			WP_CLI::success( "Total batch imported: " . $page_count );
+		}
+		WP_CLI::success( "Total import: " . $total_imports );
+		WP_CLI::success( "Successful import: " . $successful_imports );
+
+		// End tracking time
+		$end_time       = microtime( true );
+		$execution_time = $end_time - $start_time;
+		// Convert execution time to hours, minutes, seconds
+		$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+		WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+	}
+
+	/**
 	 * Sync all products.
 	 *
 	 * ## OPTIONS
@@ -45,14 +109,7 @@ class Cli extends WP_CLI_Command {
 
 			// Display the collection name we'll be syncing to
 			$product_collection = Product::get_instance();
-			$use_aliases        = apply_filters( 'blazecommerce/use_collection_aliases', true );
-			if ( $use_aliases ) {
-				$target_collection = $product_collection->get_inactive_collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			} else {
-				$target_collection = $product_collection->collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			}
+			$this->display_target_collection( $product_collection );
 
 			// Start tracking time
 			$start_time              = microtime( true );
@@ -110,29 +167,10 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			try {
-				$sync_result = $product_collection->complete_product_sync();
-				if ( $sync_result ) {
-					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
-					if ( ! empty( $sync_result['deleted_collections'] ) ) {
-						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
-					}
-				}
-			} catch (\Exception $e) {
-				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
-			}
+			$this->complete_collection_sync( $product_collection, 'complete_product_sync' );
 
 			WP_CLI::success( "All products have been synced." );
-			WP_CLI::success( "Total batch imported: " . $page );
-			WP_CLI::success( "Total import: " . $total_imports );
-			WP_CLI::success( "Successful import: " . $imported_products_count );
-
-			// End tracking time
-			$end_time       = microtime( true );
-			$execution_time = $end_time - $start_time;
-			// Convert execution time to hours, minutes, seconds
-			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+			$this->display_sync_stats( $start_time, $total_imports, $imported_products_count, $page );
 
 			WP_CLI::halt( 0 );
 		}
@@ -227,14 +265,7 @@ class Cli extends WP_CLI_Command {
 				$product_collection = Product::get_instance();
 
 				// Display the collection name we'll be syncing to
-				$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-				if ( $use_aliases ) {
-					$target_collection = $product_collection->get_inactive_collection_name();
-					WP_CLI::line( "Target collection: " . $target_collection );
-				} else {
-					$target_collection = $product_collection->collection_name();
-					WP_CLI::line( "Target collection: " . $target_collection );
-				}
+				$this->display_target_collection( $product_collection );
 
 				// Initialize the collection if this is the first batch
 				$product_collection->initialize();
@@ -255,29 +286,11 @@ class Cli extends WP_CLI_Command {
 				}
 
 				// Complete the sync by updating alias if using new system
-				try {
-					$sync_result = $product_collection->complete_product_sync();
-					if ( $sync_result ) {
-						WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
-						if ( ! empty( $sync_result['deleted_collections'] ) ) {
-							WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
-						}
-					}
-				} catch (\Exception $e) {
-					WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
-				}
+				$this->complete_collection_sync( $product_collection, 'complete_product_sync' );
 
 				WP_CLI::success( "All non-variant products have been synced." );
 				WP_CLI::success( "Total non-variant products: " . count( $nonvariant_product_ids ) );
-				WP_CLI::success( "Total import: " . $total_imports );
-				WP_CLI::success( "Successful import: " . $imported_products_count );
-
-				// End tracking time
-				$end_time       = microtime( true );
-				$execution_time = $end_time - $start_time;
-				// Convert execution time to hours, minutes, seconds
-				$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-				WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+				$this->display_sync_stats( $start_time, $total_imports, $imported_products_count );
 
 				WP_CLI::halt( 0 );
 			}
@@ -305,15 +318,8 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all pages and posts in batches..." );
 
 			// Display the collection name we'll be syncing to
-			$collection  = Page::get_instance();
-			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-			if ( $use_aliases ) {
-				$target_collection = $collection->get_inactive_collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			} else {
-				$target_collection = $collection->collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			}
+			$collection = Page::get_instance();
+			$this->display_target_collection( $collection );
 
 			// Start tracking time
 			$start_time     = microtime( true );
@@ -355,29 +361,10 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			try {
-				$sync_result = $collection->complete_page_sync();
-				if ( $sync_result ) {
-					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
-					if ( ! empty( $sync_result['deleted_collections'] ) ) {
-						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
-					}
-				}
-			} catch (\Exception $e) {
-				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
-			}
+			$this->complete_collection_sync( $collection, 'complete_page_sync' );
 
 			WP_CLI::success( "Completed! All page and post have been synced." );
-			WP_CLI::success( "Total batch imported: " . $page );
-			WP_CLI::success( "Total import: " . $total_imports );
-			WP_CLI::success( "Successful import: " . $imported_count );
-
-			// End tracking time
-			$end_time       = microtime( true );
-			$execution_time = $end_time - $start_time;
-			// Convert execution time to hours, minutes, seconds
-			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
 			WP_CLI::halt( 0 );
 		}
 
@@ -404,15 +391,8 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all menus in batches..." );
 
 			// Display the collection name we'll be syncing to
-			$collection  = Menu::get_instance();
-			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-			if ( $use_aliases ) {
-				$target_collection = $collection->get_inactive_collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			} else {
-				$target_collection = $collection->collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			}
+			$collection = Menu::get_instance();
+			$this->display_target_collection( $collection );
 
 			// Start tracking time
 			$start_time     = microtime( true );
@@ -428,28 +408,10 @@ class Cli extends WP_CLI_Command {
 			$total_imports += count( $object_batch ); // Increment the count of imported products
 
 			// Complete the sync by updating alias if using new system
-			try {
-				$sync_result = $collection->complete_menu_sync();
-				if ( $sync_result ) {
-					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
-					if ( ! empty( $sync_result['deleted_collections'] ) ) {
-						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
-					}
-				}
-			} catch (\Exception $e) {
-				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
-			}
+			$this->complete_collection_sync( $collection, 'complete_menu_sync' );
 
 			WP_CLI::success( "Completed! All menus have been synced." );
-			WP_CLI::success( "Total import: " . $total_imports );
-			WP_CLI::success( "Successful import: " . $imported_count );
-
-			// End tracking time
-			$end_time       = microtime( true );
-			$execution_time = $end_time - $start_time;
-			// Convert execution time to hours, minutes, seconds
-			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+			$this->display_sync_stats( $start_time, $total_imports, $imported_count );
 			WP_CLI::halt( 0 );
 		}
 
@@ -475,15 +437,8 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all site info in batches..." );
 
 			// Display the collection name we'll be syncing to
-			$collection  = SiteInfo::get_instance();
-			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-			if ( $use_aliases ) {
-				$target_collection = $collection->get_inactive_collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			} else {
-				$target_collection = $collection->collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			}
+			$collection = SiteInfo::get_instance();
+			$this->display_target_collection( $collection );
 
 			// Start tracking time
 			$start_time = microtime( true );
@@ -500,30 +455,12 @@ class Cli extends WP_CLI_Command {
 			$total_imports += count( $object_batch ); // Increment the count of imported products
 
 			// Complete the sync by updating alias if using new system
-			try {
-				$sync_result = $collection->complete_site_info_sync();
-				if ( $sync_result ) {
-					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
-					if ( ! empty( $sync_result['deleted_collections'] ) ) {
-						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
-					}
-				}
-			} catch (\Exception $e) {
-				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
-			}
+			$this->complete_collection_sync( $collection, 'complete_site_info_sync' );
 
 			$collection->after_site_info_sync();
 
 			WP_CLI::success( "Completed! All site info have been synced." );
-			WP_CLI::success( "Total import: " . $total_imports );
-			WP_CLI::success( "Successful import: " . $imported_count );
-
-			// End tracking time
-			$end_time       = microtime( true );
-			$execution_time = $end_time - $start_time;
-			// Convert execution time to hours, minutes, seconds
-			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+			$this->display_sync_stats( $start_time, $total_imports, $imported_count );
 			WP_CLI::halt( 0 );
 		}
 
@@ -550,15 +487,8 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all taxonomies in batches..." );
 
 			// Display the collection name we'll be syncing to
-			$collection  = Taxonomy::get_instance();
-			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-			if ( $use_aliases ) {
-				$target_collection = $collection->get_inactive_collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			} else {
-				$target_collection = $collection->collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			}
+			$collection = Taxonomy::get_instance();
+			$this->display_target_collection( $collection );
 
 			// Start tracking time
 			$start_time     = microtime( true );
@@ -619,29 +549,10 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			try {
-				$sync_result = $collection->complete_taxonomy_sync();
-				if ( $sync_result ) {
-					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
-					if ( ! empty( $sync_result['deleted_collections'] ) ) {
-						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
-					}
-				}
-			} catch (\Exception $e) {
-				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
-			}
+			$this->complete_collection_sync( $collection, 'complete_taxonomy_sync' );
 
 			WP_CLI::success( "Completed! All taxonomies have been synced." );
-			WP_CLI::success( "Total batch imported: " . $page );
-			WP_CLI::success( "Total import: " . $total_imports );
-			WP_CLI::success( "Successful import: " . $imported_count );
-
-			// End tracking time
-			$end_time       = microtime( true );
-			$execution_time = $end_time - $start_time;
-			// Convert execution time to hours, minutes, seconds
-			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
 			WP_CLI::halt( 0 );
 		}
 
@@ -667,15 +578,8 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::line( "Syncing all published wp_navigation posts in batches..." );
 
 			// Display the collection name we'll be syncing to
-			$collection  = Navigation::get_instance();
-			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-			if ( $use_aliases ) {
-				$target_collection = $collection->get_inactive_collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			} else {
-				$target_collection = $collection->collection_name();
-				WP_CLI::line( "Target collection: " . $target_collection );
-			}
+			$collection = Navigation::get_instance();
+			$this->display_target_collection( $collection );
 
 			// Start tracking time
 			$start_time     = microtime( true );
@@ -715,29 +619,10 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			try {
-				$sync_result = $collection->complete_navigation_sync();
-				if ( $sync_result ) {
-					WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
-					if ( ! empty( $sync_result['deleted_collections'] ) ) {
-						WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
-					}
-				}
-			} catch (\Exception $e) {
-				WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
-			}
+			$this->complete_collection_sync( $collection, 'complete_navigation_sync' );
 
 			WP_CLI::success( "Completed! All published wp_navigation posts have been synced." );
-			WP_CLI::success( "Total batch imported: " . $page );
-			WP_CLI::success( "Total import: " . $total_imports );
-			WP_CLI::success( "Successful import: " . $imported_count );
-
-			// End tracking time
-			$end_time       = microtime( true );
-			$execution_time = $end_time - $start_time;
-			// Convert execution time to hours, minutes, seconds
-			$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-			WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
 			WP_CLI::halt( 0 );
 		}
 
