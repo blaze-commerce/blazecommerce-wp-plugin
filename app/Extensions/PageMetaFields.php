@@ -26,6 +26,9 @@ class PageMetaFields {
 		// Enqueue admin scripts for Select2
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
 
+		// AJAX handlers for page search
+		add_action( 'wp_ajax_blaze_search_pages', array( $this, 'ajax_search_pages' ) );
+
 		// Hook into Typesense data
 		add_filter( 'blazecommerce/collection/page/typesense_fields', array( $this, 'set_page_fields' ), 10, 1 );
 		add_filter( 'blazecommerce/collection/page/typesense_data', array( $this, 'set_page_data' ), 10, 2 );
@@ -94,6 +97,13 @@ class PageMetaFields {
 			true
 		);
 
+		// Localize script for AJAX
+		wp_localize_script( 'blaze-page-meta-select2', 'blazePageMeta', array(
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'nonce' => wp_create_nonce( 'blaze_page_search_nonce' ),
+			'current_page_id' => isset( $post->ID ) ? $post->ID : 0
+		) );
+
 		// Enqueue custom CSS for Select2 styling
 		wp_enqueue_style(
 			'blaze-page-meta-select2-css',
@@ -131,8 +141,14 @@ class PageMetaFields {
 		// Get available regions from Aelia extension
 		$available_regions = $this->get_available_regions();
 
-		// Get all published pages for related page selector
-		$available_pages = $this->get_available_pages( $post->ID );
+		// Get currently selected page info for display
+		$selected_page_title = '';
+		if ( $related_page ) {
+			$selected_page = get_post( $related_page );
+			if ( $selected_page && $selected_page->post_status === 'publish' ) {
+				$selected_page_title = $selected_page->post_title;
+			}
+		}
 
 		?>
 		<table class="form-table">
@@ -153,15 +169,15 @@ class PageMetaFields {
 			<tr>
 				<td>
 					<label for="blaze_related_page"><strong>Related Page</strong></label>
-					<select id="blaze_related_page" name="blaze_related_page" class="blaze-select2" style="width: 100%;" data-placeholder="Select a related page...">
-						<option value="">Select a related page...</option>
-						<?php foreach ( $available_pages as $page_id => $page_title ) : ?>
-							<option value="<?php echo esc_attr( $page_id ); ?>" <?php selected( $related_page, $page_id ); ?>>
-								<?php echo esc_html( $page_title ); ?>
+					<select id="blaze_related_page" name="blaze_related_page" class="blaze-select2-ajax" style="width: 100%;" data-placeholder="Search for a page...">
+						<option value="">Search for a page...</option>
+						<?php if ( $related_page && $selected_page_title ) : ?>
+							<option value="<?php echo esc_attr( $related_page ); ?>" selected="selected">
+								<?php echo esc_html( $selected_page_title ); ?>
 							</option>
-						<?php endforeach; ?>
+						<?php endif; ?>
 					</select>
-					<p class="description">Select a related page. The permalink will be included in search data.</p>
+					<p class="description">Search and select a related page. The permalink will be included in search data.</p>
 				</td>
 			</tr>
 		</table>
@@ -222,15 +238,12 @@ class PageMetaFields {
 
 		$currency_mappings = $aelia_options['currency_countries_mappings'];
 
-		// Build regions array - use simple currency labels for now
-		// (WooCommerce country names can be added later if needed)
+		// Build regions array - use currency as key for consistency
 		foreach ( $currency_mappings as $currency => $mapping ) {
 			if ( isset( $mapping['countries'] ) && ! empty( $mapping['countries'] ) ) {
-				$country = $mapping['countries'][0];
-				$regions[ $country ] = array(
-					'label' => $country . ' (' . $currency . ')',
+				$regions[ $currency ] = array(
+					'label' => $currency . ' (' . implode( ', ', $mapping['countries'] ) . ')',
 					'currency' => $currency,
-					'country' => $country,
 					'countries' => $mapping['countries']
 				);
 			}
@@ -266,6 +279,73 @@ class PageMetaFields {
 		}
 
 		return $pages;
+	}
+
+	/**
+	 * AJAX handler for page search
+	 */
+	public function ajax_search_pages() {
+		// Check if it's a valid AJAX request
+		if ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) {
+			wp_send_json_error( 'Invalid request' );
+		}
+
+		// Check nonce for security
+		$nonce = isset( $_POST['nonce'] ) ? $_POST['nonce'] : '';
+		if ( ! wp_verify_nonce( $nonce, 'blaze_page_search_nonce' ) ) {
+			wp_send_json_error( 'Security check failed' );
+		}
+
+		// Check user permissions
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( 'Insufficient permissions' );
+		}
+
+		$search_term = isset( $_POST['search'] ) ? sanitize_text_field( $_POST['search'] ) : '';
+		$current_page_id = isset( $_POST['current_page_id'] ) ? absint( $_POST['current_page_id'] ) : 0;
+		$page = isset( $_POST['page'] ) ? absint( $_POST['page'] ) : 1;
+		$per_page = 20; // Limit results for performance
+
+		$query_args = array(
+			'post_type' => 'page',
+			'post_status' => 'publish',
+			'posts_per_page' => $per_page,
+			'paged' => $page,
+			'orderby' => 'title',
+			'order' => 'ASC',
+		);
+
+		// Always exclude current page if provided
+		if ( $current_page_id > 0 ) {
+			$query_args['post__not_in'] = array( $current_page_id );
+		}
+
+		// Add search if provided
+		if ( ! empty( $search_term ) ) {
+			$query_args['s'] = $search_term;
+		}
+
+		$page_query = new \WP_Query( $query_args );
+		$results = array();
+
+		if ( $page_query->have_posts() ) {
+			while ( $page_query->have_posts() ) {
+				$page_query->the_post();
+				$results[] = array(
+					'id' => get_the_ID(),
+					'text' => get_the_title(),
+				);
+			}
+			wp_reset_postdata();
+		}
+
+		// Return results in Select2 format
+		wp_send_json_success( array(
+			'results' => $results,
+			'pagination' => array(
+				'more' => $page_query->max_num_pages > $page
+			)
+		) );
 	}
 
 	/**
