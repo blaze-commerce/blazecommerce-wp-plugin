@@ -1,0 +1,84 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, intl
+        tools: composer
+        
+    - name: Install dependencies
+      run: |
+        npm install
+        composer install --no-dev --optimize-autoloader
+        
+    - name: Build blocks
+      run: |
+        cd blocks
+        npm install
+        npm run build
+        
+    - name: Extract version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+    - name: Create plugin ZIP
+      run: |
+        # Create a temporary directory for the plugin
+        mkdir -p /tmp/blazecommerce-wp-plugin
+        
+        # Copy plugin files (exclude development files)
+        rsync -av --exclude-from='.github/workflows/.zipignore' . /tmp/blazecommerce-wp-plugin/
+        
+        # Create the ZIP file
+        cd /tmp
+        zip -r blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip blazecommerce-wp-plugin/
+        
+        # Move ZIP back to workspace
+        mv blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
+        
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        # Extract changelog for this version
+        if [ -f CHANGELOG.md ]; then
+          # Get content between this version and next version header
+          awk '/^## \[${{ steps.version.outputs.VERSION }}\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md > release_notes.txt
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "RELEASE_NOTES=Release version ${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ steps.version.outputs.VERSION }}
+        body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+        files: |
+          blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
