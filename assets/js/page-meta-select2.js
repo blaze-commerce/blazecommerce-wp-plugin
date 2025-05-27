@@ -20,36 +20,67 @@ jQuery(document).ready(function($) {
             minimumResultsForSearch: 5 // Show search only if more than 5 options
         });
 
-        // Initialize Select2 for related page dropdown
-        $('#blaze_related_page.blaze-select2').select2({
-            placeholder: 'Select a related page...',
+        // Initialize Select2 for related page dropdown with AJAX
+        $('#blaze_related_page.blaze-select2-ajax').select2({
+            placeholder: 'Search for a page...',
             allowClear: true,
             width: '100%',
             theme: 'default',
             dropdownParent: $('#blaze-page-meta-fields'),
             dropdownAutoWidth: true,
-            // Enable search for pages since there could be many
-            minimumInputLength: 0,
-            minimumResultsForSearch: 0, // Always show search for pages
-            // Custom matcher for better search
-            matcher: function(params, data) {
-                // If there are no search terms, return all data
-                if ($.trim(params.term) === '') {
-                    return data;
-                }
+            minimumInputLength: 2, // Require at least 2 characters to search
+            ajax: {
+                url: blazePageMeta.ajax_url,
+                type: 'POST', // Explicitly set to POST
+                dataType: 'json',
+                delay: 250, // Delay to reduce server requests
+                data: function (params) {
+                    return {
+                        action: 'blaze_search_pages',
+                        search: params.term || '',
+                        page: params.page || 1,
+                        nonce: blazePageMeta.nonce,
+                        current_page_id: blazePageMeta.current_page_id
+                    };
+                },
+                processResults: function (data, params) {
+                    params.page = params.page || 1;
 
-                // Skip if there is no 'text' property
-                if (typeof data.text === 'undefined') {
-                    return null;
+                    // Handle WordPress AJAX response format
+                    if (data.success && data.data) {
+                        return {
+                            results: data.data.results || [],
+                            pagination: {
+                                more: (data.data.pagination && data.data.pagination.more) || false
+                            }
+                        };
+                    } else {
+                        console.error('AJAX Error:', data.data || 'Unknown error');
+                        return {
+                            results: [],
+                            pagination: {
+                                more: false
+                            }
+                        };
+                    }
+                },
+                cache: true,
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    console.error('Response:', xhr.responseText);
                 }
-
-                // Check if the text contains the term (case insensitive)
-                if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
-                    return data;
+            },
+            // Show loading message
+            language: {
+                searching: function () {
+                    return 'Searching pages...';
+                },
+                inputTooShort: function () {
+                    return 'Please enter 2 or more characters';
+                },
+                noResults: function () {
+                    return 'No pages found';
                 }
-
-                // Return null if the term should not be displayed
-                return null;
             }
         });
 
@@ -61,7 +92,9 @@ jQuery(document).ready(function($) {
 
     // Re-initialize if the meta box is dynamically loaded (for Gutenberg compatibility)
     $(document).on('DOMNodeInserted', function(e) {
-        if ($(e.target).find('.blaze-select2').length > 0 || $(e.target).hasClass('blaze-select2')) {
+        if ($(e.target).find('.blaze-select2, .blaze-select2-ajax').length > 0 ||
+            $(e.target).hasClass('blaze-select2') ||
+            $(e.target).hasClass('blaze-select2-ajax')) {
             setTimeout(function() {
                 initBlazeSelect2();
             }, 100);

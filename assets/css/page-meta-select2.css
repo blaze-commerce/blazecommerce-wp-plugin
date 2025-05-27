@@ -28,7 +28,8 @@
 }
 
 /* Select2 selection rendered text */
-.blaze-select2 + .select2-container .select2-selection__rendered {
+.blaze-select2 + .select2-container .select2-selection__rendered,
+.blaze-select2-ajax + .select2-container .select2-selection__rendered {
 	color: #32373c !important;
 	line-height: normal !important;
 	padding-left: 8px !important;
