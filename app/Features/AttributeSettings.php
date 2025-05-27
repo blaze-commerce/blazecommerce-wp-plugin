@@ -91,7 +91,7 @@ class AttributeSettings {
 
 				if ( $attribute->is_taxonomy() ) {
 					$options = array_map( function ($term) {
-						return [ 
+						return [
 							'label' => $term->name,
 							'slug' => $term->slug,
 							'name' => $term->slug,
@@ -101,7 +101,7 @@ class AttributeSettings {
 					}, $attribute->get_terms() );
 				} else {
 					$options = array_map( function ($option) {
-						return [ 
+						return [
 							'label' => $option,
 							'slug' => $option,
 							'name' => $option,
@@ -128,7 +128,20 @@ class AttributeSettings {
 		if ( $product->is_type( 'variation' ) ) {
 			$generated_attributes = array();
 			foreach ( $attributes as $key => $attribute ) {
-				$generated_attributes[ 'attribute_' . $key ] = $attribute;
+				// Extract the actual attribute value instead of storing the whole object
+				if ( is_object( $attribute ) && method_exists( $attribute, 'get_slug' ) ) {
+					// For WC_Product_Attribute objects, get the slug
+					$generated_attributes[ 'attribute_' . $key ] = $attribute->get_slug();
+				} elseif ( is_array( $attribute ) && isset( $attribute['slug'] ) ) {
+					// For array attributes, get the slug
+					$generated_attributes[ 'attribute_' . $key ] = $attribute['slug'];
+				} elseif ( is_array( $attribute ) && isset( $attribute['name'] ) ) {
+					// Fallback to name if slug not available
+					$generated_attributes[ 'attribute_' . $key ] = $attribute['name'];
+				} else {
+					// For simple string values, use as-is
+					$generated_attributes[ 'attribute_' . $key ] = $attribute;
+				}
 			}
 			$product_data['attributes'] = $generated_attributes;
 		}
@@ -170,7 +183,7 @@ class AttributeSettings {
 		$attributes = array_filter( $options, function ($option, $key) {
 			return str_starts_with( $key, 'attribute_' );
 		}, ARRAY_FILTER_USE_BOTH );
-		TypesenseClient::get_instance()->site_info()->upsert( [ 
+		TypesenseClient::get_instance()->site_info()->upsert( [
 			'id' => '1000023',
 			'name' => 'attribute_display_type',
 			'value' => json_encode( $attributes ),
