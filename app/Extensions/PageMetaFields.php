@@ -23,6 +23,9 @@ class PageMetaFields {
 		// Hook into post save
 		add_action( 'save_post', array( $this, 'save_page_meta' ), 10, 2 );
 
+		// Enqueue admin scripts for Select2
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
+
 		// Hook into Typesense data
 		add_filter( 'blazecommerce/collection/page/typesense_fields', array( $this, 'set_page_fields' ), 10, 1 );
 		add_filter( 'blazecommerce/collection/page/typesense_data', array( $this, 'set_page_data' ), 10, 2 );
@@ -64,6 +67,43 @@ class PageMetaFields {
 	}
 
 	/**
+	 * Enqueue admin scripts and styles
+	 */
+	public function enqueue_admin_scripts( $hook ) {
+		// Only load on page edit screens
+		if ( ! in_array( $hook, array( 'post.php', 'post-new.php' ) ) ) {
+			return;
+		}
+
+		// Only load for pages
+		global $post;
+		if ( ! $post || $post->post_type !== 'page' ) {
+			return;
+		}
+
+		// Enqueue Select2 (WordPress includes it by default)
+		wp_enqueue_script( 'select2' );
+		wp_enqueue_style( 'select2' );
+
+		// Enqueue our custom script
+		wp_enqueue_script(
+			'blaze-page-meta-select2',
+			BLAZE_WOOLESS_PLUGIN_URL . 'assets/js/page-meta-select2.js',
+			array( 'jquery', 'select2' ),
+			BLAZE_WOOLESS_VERSION,
+			true
+		);
+
+		// Enqueue custom CSS for Select2 styling
+		wp_enqueue_style(
+			'blaze-page-meta-select2-css',
+			BLAZE_WOOLESS_PLUGIN_URL . 'assets/css/page-meta-select2.css',
+			array( 'select2' ),
+			BLAZE_WOOLESS_VERSION
+		);
+	}
+
+	/**
 	 * Add meta boxes
 	 */
 	public function add_meta_boxes() {
@@ -99,7 +139,7 @@ class PageMetaFields {
 			<tr>
 				<td>
 					<label for="blaze_page_region"><strong>Page Region</strong></label>
-					<select id="blaze_page_region" name="blaze_page_region" style="width: 100%;">
+					<select id="blaze_page_region" name="blaze_page_region" class="blaze-select2" style="width: 100%;" data-placeholder="Select a region...">
 						<option value="">Select a region...</option>
 						<?php foreach ( $available_regions as $region_code => $region_data ) : ?>
 							<option value="<?php echo esc_attr( $region_code ); ?>" <?php selected( $page_region, $region_code ); ?>>
@@ -113,7 +153,7 @@ class PageMetaFields {
 			<tr>
 				<td>
 					<label for="blaze_related_page"><strong>Related Page</strong></label>
-					<select id="blaze_related_page" name="blaze_related_page" style="width: 100%;">
+					<select id="blaze_related_page" name="blaze_related_page" class="blaze-select2" style="width: 100%;" data-placeholder="Select a related page...">
 						<option value="">Select a related page...</option>
 						<?php foreach ( $available_pages as $page_id => $page_title ) : ?>
 							<option value="<?php echo esc_attr( $page_id ); ?>" <?php selected( $related_page, $page_id ); ?>>
@@ -121,7 +161,7 @@ class PageMetaFields {
 							</option>
 						<?php endforeach; ?>
 					</select>
-					<p class="description">Select a related page. The page slug will be included in search data.</p>
+					<p class="description">Select a related page. The permalink will be included in search data.</p>
 				</td>
 			</tr>
 		</table>

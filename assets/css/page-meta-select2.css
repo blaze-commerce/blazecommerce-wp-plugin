@@ -1,0 +1,161 @@
+/* Blaze Page Meta Select2 Styling */
+
+/* Container styling for meta box */
+#blaze-page-meta-fields .form-table {
+	margin: 0;
+}
+
+#blaze-page-meta-fields .form-table td {
+	padding: 10px 0;
+	vertical-align: top;
+}
+
+/* Select2 container styling */
+.blaze-select2 + .select2-container {
+	width: 100% !important;
+	max-width: 100%;
+}
+
+/* Select2 selection styling */
+.blaze-select2 + .select2-container .select2-selection--single {
+	height: 30px !important;
+	border: 1px solid #8c8f94 !important;
+	border-radius: 3px !important;
+	background-color: #fff !important;
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07) !important;
+	font-size: 13px !important;
+	line-height: 1.4 !important;
+}
+
+/* Select2 selection rendered text */
+.blaze-select2 + .select2-container .select2-selection__rendered {
+	color: #32373c !important;
+	line-height: normal !important;
+	padding-left: 8px !important;
+	padding-right: 20px !important;
+}
+
+/* Select2 arrow styling */
+.blaze-select2 + .select2-container .select2-selection__arrow {
+	height: 28px !important;
+	right: 1px !important;
+	width: 20px !important;
+}
+
+.blaze-select2 + .select2-container .select2-selection__arrow b {
+	border-color: #8c8f94 transparent transparent transparent !important;
+	border-style: solid !important;
+	border-width: 5px 4px 0 4px !important;
+	height: 0 !important;
+	left: 50% !important;
+	margin-left: -4px !important;
+	margin-top: -2px !important;
+	position: absolute !important;
+	top: 50% !important;
+	width: 0 !important;
+}
+
+/* Select2 clear button styling */
+.blaze-select2 + .select2-container .select2-selection__clear {
+	color: #999 !important;
+	cursor: pointer !important;
+	float: right !important;
+	font-weight: bold !important;
+	margin-right: 10px !important;
+	position: relative !important;
+	right: 20px !important;
+}
+
+.blaze-select2 + .select2-container .select2-selection__clear:hover {
+	color: #333 !important;
+}
+
+/* Select2 placeholder styling */
+.blaze-select2 + .select2-container .select2-selection__placeholder {
+	color: #8c8f94 !important;
+}
+
+/* Select2 dropdown styling */
+.select2-dropdown {
+	border: 1px solid #8c8f94 !important;
+	border-radius: 3px !important;
+	background-color: #fff !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.13) !important;
+}
+
+/* Select2 search input styling */
+.select2-search--dropdown .select2-search__field {
+	border: 1px solid #ddd !important;
+	border-radius: 3px !important;
+	padding: 4px 6px !important;
+	font-size: 13px !important;
+}
+
+/* Select2 results styling */
+.select2-results__options {
+	max-height: 200px !important;
+}
+
+.select2-results__option {
+	padding: 6px 12px !important;
+	font-size: 13px !important;
+	line-height: 1.4 !important;
+	color: #32373c !important;
+}
+
+.select2-results__option--highlighted {
+	background-color: #0073aa !important;
+	color: #fff !important;
+}
+
+.select2-results__option[aria-selected="true"] {
+	background-color: #e5f5fa !important;
+	color: #32373c !important;
+}
+
+/* Focus states */
+.blaze-select2 + .select2-container--focus .select2-selection--single {
+	border-color: #0073aa !important;
+	box-shadow: 0 0 0 1px #0073aa !important;
+}
+
+/* Opened state */
+.blaze-select2 + .select2-container--open .select2-selection--single {
+	border-color: #0073aa !important;
+	box-shadow: 0 0 0 1px #0073aa !important;
+}
+
+.blaze-select2 + .select2-container--open .select2-selection__arrow b {
+	border-color: transparent transparent #8c8f94 transparent !important;
+	border-width: 0 4px 5px 4px !important;
+}
+
+/* Responsive adjustments for smaller screens */
+@media screen and (max-width: 782px) {
+	.blaze-select2 + .select2-container .select2-selection--single {
+		height: 40px !important;
+		font-size: 16px !important;
+	}
+	
+	.blaze-select2 + .select2-container .select2-selection__rendered {
+		line-height: 38px !important;
+		padding-left: 10px !important;
+	}
+	
+	.blaze-select2 + .select2-container .select2-selection__arrow {
+		height: 38px !important;
+	}
+}
+
+/* Ensure proper spacing in meta box */
+#blaze-page-meta-fields label {
+	display: block !important;
+	margin-bottom: 5px !important;
+	font-weight: 600 !important;
+}
+
+#blaze-page-meta-fields .description {
+	margin-top: 5px !important;
+	font-style: italic !important;
+	color: #646970 !important;
+}
