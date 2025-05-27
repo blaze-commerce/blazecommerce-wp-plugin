@@ -132,6 +132,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\B2BWholesaleSuite',
 			'\\BlazeWooless\\Extensions\\Pinterest',
 			'\\BlazeWooless\\Extensions\\AdvancedCustomFields',
+			'\\BlazeWooless\\Extensions\\PageMetaFields',
 		);
 
 		foreach ( $extensions as $extension ) {
