@@ -38,9 +38,6 @@ class PageMetaFields {
 	 * Register meta fields for pages
 	 */
 	public function register_meta_fields() {
-		// Debug: Log that we're registering meta fields
-		error_log( 'Blaze PageMetaFields: Registering meta fields' );
-
 		// Page region - maps to Aelia currency regions
 		register_post_meta( 'page', 'blaze_page_region', array(
 			'show_in_rest' => true,
@@ -64,9 +61,6 @@ class PageMetaFields {
 				return current_user_can( 'edit_posts' );
 			}
 		) );
-
-		// Debug: Log that meta fields registration is complete
-		error_log( 'Blaze PageMetaFields: Meta fields registration complete' );
 	}
 
 	/**
