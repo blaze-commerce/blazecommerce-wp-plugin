@@ -1,0 +1,57 @@
+# BlazeCommerce WordPress Plugin Development Guidelines
+
+## Version Management
+- Plugin version is managed in two places:
+  - Plugin header in `blaze-wooless.php` (line 6)
+  - Version constant `BLAZE_WOOLESS_VERSION` (line 19)
+- Both must be updated together for consistency
+- Use semantic versioning (MAJOR.MINOR.PATCH)
+
+## Commit Guidelines
+- Follow conventional commit format: `type(scope): description`
+- Types: feat, fix, docs, style, refactor, test, chore
+- Include version bump in commit when releasing
+- Use `>commit` shortcut for automated commits
+
+## Release Process
+1. Update version in both locations in `blaze-wooless.php`
+2. Update CHANGELOG.md with release notes
+3. Commit changes with conventional format
+4. Create GitHub release with tag matching version
+5. Automated workflow will build and package plugin
+
+## Build Process
+- Run `yarn build` in `/blocks` directory after making block changes
+- Ensure all assets are compiled before committing
+- Test plugin functionality after build
+
+## Code Standards
+- Follow WordPress coding standards
+- Use proper PHP namespacing under `BlazeWooless`
+- Maintain backward compatibility
+- Document all public methods and classes
+
+## Testing
+- Test plugin with latest WordPress version
+- Verify WooCommerce compatibility
+- Test all required plugin dependencies
+- Validate GraphQL endpoints functionality
+
+## Dependencies
+- Required plugins are managed via TGM Plugin Activation
+- Keep dependency versions updated in plugin header
+- Test compatibility when updating dependencies
+
+## File Structure
+- `/app` - Core plugin classes
+- `/assets` - CSS/JS assets
+- `/blocks` - Gutenberg blocks (has own package.json)
+- `/lib` - Helper functions and utilities
+- `/views` - Admin interface templates
+- `/vendor` - Composer dependencies
+
+## Automation
+- Version bumping is automated via npm scripts
+- GitHub releases are created automatically on version tags
+- Plugin ZIP is generated for distribution
+- Changelog is updated automatically from commits
