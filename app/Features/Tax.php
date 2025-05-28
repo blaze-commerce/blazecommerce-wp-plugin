@@ -27,8 +27,11 @@ class Tax {
 	public function add_price_with_tax_meta_data_fields( $fields ) {
 		$fields[] = [ 'name' => 'metaData.pricesByLocation', 'type' => 'object', 'optional' => true ];
 		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax', 'type' => 'object', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax.regularPrice', 'type' => 'float', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax.salePrice', 'type' => 'float', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax.regularPrice', 'type' => 'int64', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax.salePrice', 'type' => 'int64', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.pricesByLocation.without_tax', 'type' => 'object', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.pricesByLocation.without_tax.regularPrice', 'type' => 'int64', 'optional' => true ];
+		$fields[] = [ 'name' => 'metaData.pricesByLocation.without_tax.salePrice', 'type' => 'int64', 'optional' => true ];
 
 		return $fields;
 	}
@@ -71,15 +74,15 @@ class Tax {
 				$final_sale_price    = \wc_get_price_including_tax( $product, array( 'price' => $sale_price ) );
 
 				$prices_by_location['with_tax']['locations'][]  = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['with_tax']['regularPrice'] = Woocommerce::format_price( $final_regular_price );
-				$prices_by_location['with_tax']['salePrice']    = Woocommerce::format_price( $final_sale_price );
+				$prices_by_location['with_tax']['regularPrice'] = (int) round( Woocommerce::format_price( $final_regular_price ) * 100 );
+				$prices_by_location['with_tax']['salePrice']    = (int) round( Woocommerce::format_price( $final_sale_price ) * 100 );
 			} else {
 				$final_regular_price = \wc_get_price_excluding_tax( $product, array( 'price' => $regular_price ) );
 				$final_sale_price    = \wc_get_price_excluding_tax( $product, array( 'price' => $sale_price ) );
 
 				$prices_by_location['without_tax']['locations'][]  = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['without_tax']['regularPrice'] = Woocommerce::format_price( $final_regular_price );
-				$prices_by_location['without_tax']['salePrice']    = Woocommerce::format_price( $final_sale_price );
+				$prices_by_location['without_tax']['regularPrice'] = (int) round( Woocommerce::format_price( $final_regular_price ) * 100 );
+				$prices_by_location['without_tax']['salePrice']    = (int) round( Woocommerce::format_price( $final_sale_price ) * 100 );
 			}
 		}
 
