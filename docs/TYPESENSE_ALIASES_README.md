@@ -15,10 +15,10 @@ The new aliasing system replaces the current single-collection approach with a b
 
 ### 1. Blue-Green Deployment Pattern
 
-- **Alias Format**: `{type}_{site_url}` (e.g., `product_mystore_com`)
-- **Collection Format**: `{type}_{site_url}_a` and `{type}_{site_url}_b` (e.g., `product_mystore_com_a`, `product_mystore_com_b`)
+- **Alias Format**: `{type}-{site_url}` (e.g., `product-mystore-com`)
+- **Collection Format**: `{type}-{site_url}-a` and `{type}-{site_url}-b` (e.g., `product-mystore-com-a`, `product-mystore-com-b`)
 - **Environment Separation**: Automatic separation by site URL (dev/staging/production)
-- **Rotation Logic**: Alternates between `_a` and `_b` collections for each sync
+- **Rotation Logic**: Alternates between `-a` and `-b` collections for each sync
 
 ### 2. Stateless Implementation
 
@@ -28,7 +28,7 @@ The new aliasing system replaces the current single-collection approach with a b
 
 ### 3. Blue-Green Collection Management
 
-- Maintains exactly two collections: `_a` and `_b`
+- Maintains exactly two collections: `-a` and `-b`
 - Active collection serves search traffic via alias
 - Inactive collection is used for syncing new data
 - Atomic alias switching ensures zero downtime
@@ -42,7 +42,7 @@ The new aliasing system replaces the current single-collection approach with a b
 Main class handling all alias operations:
 
 - `get_alias_name($type)` - Generate alias name
-- `get_collection_name($type, $suffix)` - Generate collection name with `_a` or `_b` suffix
+- `get_collection_name($type, $suffix)` - Generate collection name with `-a` or `-b` suffix
 - `get_current_collection($type)` - Get current live collection
 - `get_inactive_collection($type)` - Get inactive collection for syncing
 - `get_next_collection_suffix($type)` - Determine which suffix to use for next sync
@@ -116,6 +116,87 @@ add_filter('blazecommerce/use_collection_aliases', '__return_false');
 - Gradual migration supported
 - No breaking changes to existing functionality
 
+## API Key Generation
+
+The aliasing system requires specific API keys that have access to both the `_a` and `_b` collections as well as the aliases. You need to generate two types of API keys:
+
+### 1. Private Key (Admin Operations)
+
+The private key is used for administrative operations including creating, updating, and deleting collections and aliases. It requires full access to all collection variants.
+
+**Example JSON for Private Key Generation:**
+
+```json
+{
+  "description": "cart.mystore-com-private key",
+  "actions": ["*"],
+  "collections": [
+    "site_info-cart.mystore-com-a",
+    "menu-cart.mystore-com-a",
+    "page-cart.mystore-com-a",
+    "post-cart.mystore-com-a",
+    "product-cart.mystore-com-a",
+    "taxonomy-cart.mystore-com-a",
+    "category-cart.mystore-com-a",
+    "brand-cart.mystore-com-a",
+    "tag-cart.mystore-com-a",
+    "product-addon-option-cart.mystore-com-a",
+    "navigation-cart.mystore-com-a",
+    "site_info-cart.mystore-com-b",
+    "menu-cart.mystore-com-b",
+    "page-cart.mystore-com-b",
+    "post-cart.mystore-com-b",
+    "product-cart.mystore-com-b",
+    "taxonomy-cart.mystore-com-b",
+    "category-cart.mystore-com-b",
+    "brand-cart.mystore-com-b",
+    "tag-cart.mystore-com-b",
+    "product-addon-option-cart.mystore-com-b",
+    "navigation-cart.mystore-com-b"
+  ]
+}
+```
+
+### 2. Public Key (Search Operations)
+
+The public key is used for frontend search operations and only needs read access to the aliases (not the individual `_a` and `_b` collections).
+
+**Example JSON for Public Key Generation:**
+
+```json
+{
+  "description": "cart.mystore-com-public key",
+  "actions": ["documents:search"],
+  "collections": [
+    "site_info-cart.mystore-com",
+    "menu-cart.mystore-com",
+    "page-cart.mystore-com",
+    "post-cart.mystore-com",
+    "product-cart.mystore-com",
+    "taxonomy-cart.mystore-com",
+    "category-cart.mystore-com",
+    "brand-cart.mystore-com",
+    "tag-cart.mystore-com",
+    "product-addon-option-cart.mystore-com",
+    "navigation-cart.mystore-com"
+  ]
+}
+```
+
+### Key Generation Steps
+
+1. **Replace the site URL**: Change `cart.mystore-com` to your actual normalized site URL (dots replaced with hyphens)
+2. **Generate Private Key**: Use the private key JSON via Typesense API or dashboard
+3. **Generate Public Key**: Use the public key JSON via Typesense API or dashboard
+4. **Configure Plugin**: Add both keys to your WordPress configuration
+
+### Important Notes
+
+- **Site URL Format**: Use the same normalized format as your collections (e.g., `cart.mystore-com` for `cart.mystore.com`)
+- **Collection Coverage**: Ensure all collection types your site uses are included in both keys
+- **Security**: Keep the private key secure and only use it for admin operations
+- **Frontend Usage**: Only use the public key for frontend search operations
+
 ## Sync Operation Flow (Blue-Green Deployment)
 
 ### 1. Initialize Sync
@@ -124,7 +205,7 @@ add_filter('blazecommerce/use_collection_aliases', '__return_false');
 1. Check if aliases are enabled
 2. Determine inactive collection (opposite of current active)
 3. Delete inactive collection if it exists (cleanup)
-4. Create new collection with inactive suffix (_a or _b)
+4. Create new collection with inactive suffix (-a or -b)
 5. Store collection name for later use
 ```
 
@@ -196,7 +277,7 @@ Monitor collections and aliases directly in Typesense dashboard:
 
 - Collection sizes and document counts
 - Alias mappings
-- Blue-green collection pairs (`_a` and `_b`)
+- Blue-green collection pairs (`-a` and `-b`)
 
 ## Troubleshooting
 
@@ -222,7 +303,7 @@ wp bc-sync alias --force-alias=product
 
 #### 3. Both Collections Missing
 
-**Symptoms**: Neither `_a` nor `_b` collection exists
+**Symptoms**: Neither `-a` nor `-b` collection exists
 **Solution**: Run new sync to create the blue-green collection pair
 
 #### 4. Legacy Collections
@@ -266,7 +347,7 @@ add_filter('blazecommerce/use_collection_aliases', '__return_false');
 
 ### Resource Usage
 
-- **Permanent storage**: 2x collection size (maintains both `_a` and `_b`)
+- **Permanent storage**: 2x collection size (maintains both `-a` and `-b`)
 - **API key compatibility**: Works with scoped API keys
 - **Network overhead**: Minimal alias operations
 - **Sync efficiency**: No cleanup operations needed
