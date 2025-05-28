@@ -7,6 +7,7 @@ use BlazeWooless\Woocommerce;
 class Product extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'product';
+	public $current_sync_collection = null;
 
 	const BATCH_SIZE = 5;
 
@@ -174,22 +175,48 @@ class Product extends BaseCollection {
 		$logger  = wc_get_logger();
 		$context = array( 'source' => 'wooless-product-collection-initialize' );
 
-		$this->drop_collection();
+		// Check if we should use the new alias system
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
 
-		try {
-			$logger->debug( 'TS Product collection: ' . $this->collection_name(), $context );
-			$this->create_collection(
-				array(
-					'name' => $this->collection_name(),
+		if ( $use_aliases ) {
+			try {
+				$schema = array(
 					'fields' => $this->get_fields(),
 					'default_sorting_field' => 'updatedAt',
 					'enable_nested_fields' => true
-				)
-			);
-		} catch (\Exception $e) {
-			$logger->debug( 'TS Product collection intialize Exception: ' . $e->getMessage(), $context );
+				);
+
+				$new_collection_name = $this->initialize_with_alias( $schema );
+				$logger->debug( 'TS Product collection (alias): ' . $new_collection_name, $context );
+
+				// Store the new collection name for later use in complete_sync
+				$this->current_sync_collection = $new_collection_name;
+
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Product collection alias initialize Exception: ' . $e->getMessage(), $context );
+				throw $e;
+			}
+		} else {
+			// Legacy behavior
+			$this->drop_collection();
+
+			try {
+				$logger->debug( 'TS Product collection: ' . $this->collection_name(), $context );
+				$this->create_collection(
+					array(
+						'name' => $this->collection_name(),
+						'fields' => $this->get_fields(),
+						'default_sorting_field' => 'updatedAt',
+						'enable_nested_fields' => true
+					)
+				);
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Product collection intialize Exception: ' . $e->getMessage(), $context );
+			}
 		}
 	}
+
+
 
 	public function get_product_query_args( $page = 1, $batch_size = 5 ) {
 		return apply_filters( 'wooless_product_query_args', array(
@@ -314,7 +341,7 @@ class Product extends BaseCollection {
 		$product_tabs = apply_filters( 'woocommerce_product_tabs', array() );
 		if ( ! empty( $product_tabs ) ) {
 			if ( isset( $product_tabs['description'] ) ) {
-				// We are removing desription because this is processed by the frontend separately 
+				// We are removing desription because this is processed by the frontend separately
 				unset( $product_tabs['description'] );
 			}
 

@@ -40,7 +40,7 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		$icons = array(
+		$icons                 = array(
 			'select' => 'Select',
 			'CiDeliveryTruck' => 'CiDeliveryTruck',
 			'CiViewList' => 'CiViewList',
@@ -264,29 +264,102 @@ class ProductPageSettings extends BaseSettings {
 	}
 
 	public function register_hooks() {
-		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'sync_additional_data' ), 10 );
+		add_filter( 'blazecommerce/settings', array( $this, 'add_product_page_settings_to_documents' ), 10, 1 );
 	}
 
-	public function sync_additional_data() {
+	public function add_product_page_settings_to_documents( $documents ) {
 		$options = $this->get_option();
-		$this->update_fields( $options );
 
-		if ( isset( $_POST['free_shipping_threshold'] ) ) {
-			update_option( 'free_shipping_threshold', $_POST['free_shipping_threshold'] );
-			TypesenseClient::get_instance()->site_info()->upsert( [ 
-				'id' => '1000482',
-				'name' => 'free_shipping_threshold',
-				'value' => json_encode( $_POST['free_shipping_threshold'] ),
+		if ( ! empty( $options ) ) {
+			// Add product page information 1
+			$documents[] = array(
+				'id' => '10089551',
+				'name' => 'product_page_information_1',
+				'value' => json_encode( array(
+					'title' => isset( $options['information_1_title'] ) ? $options['information_1_title'] : '',
+					'icon' => isset( $options['information_1_icon'] ) ? $options['information_1_icon'] : '',
+					'content' => isset( $options['information_1_content'] ) ? $options['information_1_content'] : '',
+					'link' => isset( $options['information_1_link'] ) ? $options['information_1_link'] : '',
+				) ),
 				'updated_at' => time(),
-			] );
+			);
+
+			// Add product page information 2
+			$documents[] = array(
+				'id' => '10089552',
+				'name' => 'product_page_information_2',
+				'value' => json_encode( array(
+					'title' => isset( $options['information_2_title'] ) ? $options['information_2_title'] : '',
+					'icon' => isset( $options['information_2_icon'] ) ? $options['information_2_icon'] : '',
+					'content' => isset( $options['information_2_content'] ) ? $options['information_2_content'] : '',
+					'link' => isset( $options['information_2_link'] ) ? $options['information_2_link'] : '',
+				) ),
+				'updated_at' => time(),
+			);
+
+			// Add product page information 3
+			$documents[] = array(
+				'id' => '10089553',
+				'name' => 'product_page_information_3',
+				'value' => json_encode( array(
+					'title' => isset( $options['information_3_title'] ) ? $options['information_3_title'] : '',
+					'icon' => isset( $options['information_3_icon'] ) ? $options['information_3_icon'] : '',
+					'content' => isset( $options['information_3_content'] ) ? $options['information_3_content'] : '',
+					'link' => isset( $options['information_3_link'] ) ? $options['information_3_link'] : '',
+				) ),
+				'updated_at' => time(),
+			);
+
+			// Add description after content
+			$documents[] = array(
+				'id' => '10089554',
+				'name' => 'description_after_content',
+				'value' => isset( $options['description_after_content'] ) ? $options['description_after_content'] : '',
+				'updated_at' => time(),
+			);
+
+			// Add privacy policy content
+			$documents[] = array(
+				'id' => '1000001',
+				'name' => 'privacy_policy_content',
+				'value' => isset( $options['privacy_policy'] ) ? $options['privacy_policy'] : '',
+				'updated_at' => time(),
+			);
+
+			// Add free shipping threshold
+			$free_shipping_threshold = get_option( 'free_shipping_threshold', '' );
+			if ( ! empty( $free_shipping_threshold ) ) {
+				$documents[] = array(
+					'id' => '1000482',
+					'name' => 'free_shipping_threshold',
+					'value' => json_encode( $free_shipping_threshold ),
+					'updated_at' => time(),
+				);
+			}
+
+			// Add product page settings (hot sale)
+			$documents[] = array(
+				'id' => '1000909',
+				'name' => 'product_page_settings',
+				'value' => json_encode( array(
+					'hotSale' => isset( $options['set_hot_sale'] ) ? $options['set_hot_sale'] : 0,
+				) ),
+				'updated_at' => time(),
+			);
+
+			$documents = apply_filters( 'blazecommerce/settings/product_page', $documents, $options );
+
+			do_action( 'blaze_wooless_save_product_page_settings', $options );
 		}
+
+		return $documents;
 	}
 
 	public function footer_callback() {
 		if ( is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
 			$available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
 		} else {
-			$base_currency = get_woocommerce_currency();
+			$base_currency        = get_woocommerce_currency();
 			$available_currencies = [ 
 				$base_currency => ''
 			];

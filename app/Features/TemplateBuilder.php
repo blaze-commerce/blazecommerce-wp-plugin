@@ -17,10 +17,10 @@ class TemplateBuilder {
 	}
 
 	public function __construct() {
-		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'sync_templates' ), 10 );
+		add_filter( 'blazecommerce/settings', array( $this, 'add_templates_to_documents' ), 10, 1 );
 	}
 
-	public function sync_templates() {
+	public function add_templates_to_documents( $documents ) {
 		global $post;
 
 		$query = new \WP_Query( [ 
@@ -32,15 +32,12 @@ class TemplateBuilder {
 			while ( $query->have_posts() ) {
 				$query->the_post();
 
-
-				TypesenseClient::get_instance()
-					->site_info()
-					->upsert( array(
-						'id' => (string) get_the_ID(),
-						'name' => 'site-' . $post->post_name,
-						'value' => $post->post_content,
-						'updated_at' => time(),
-					) );
+				$documents[] = array(
+					'id' => (string) get_the_ID(),
+					'name' => 'site-' . $post->post_name,
+					'value' => $post->post_content,
+					'updated_at' => time(),
+				);
 			}
 		}
 
@@ -53,17 +50,18 @@ class TemplateBuilder {
 			while ( $query->have_posts() ) {
 				$query->the_post();
 
-
-				TypesenseClient::get_instance()
-					->site_info()
-					->upsert( array(
-						'id' => (string) get_the_ID(),
-						'name' => 'site-template-' . $post->post_name,
-						'value' => $post->post_content,
-						'updated_at' => time(),
-					) );
+				$documents[] = array(
+					'id' => (string) get_the_ID(),
+					'name' => 'site-template-' . $post->post_name,
+					'value' => $post->post_content,
+					'updated_at' => time(),
+				);
 			}
 		}
+
+		return $documents;
 	}
 
 }
+
+TemplateBuilder::get_instance();

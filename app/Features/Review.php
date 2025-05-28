@@ -18,7 +18,9 @@ class Review {
 	public function __construct() {
 		// add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
 		add_filter( 'blaze_wooless_product_page_settings', array( $this, 'register_settings' ) );
-		add_action( 'blaze_wooless_save_product_page_settings', array( $this, 'save_settings' ) );
+
+		add_filter( 'blazecommerce/settings/product_page', array( $this, 'add_settings' ), 10, 2 );
+
 	}
 
 	public function register_settings( $product_page_settings ) {
@@ -45,14 +47,15 @@ class Review {
 		return $product_page_settings;
 	}
 
-	public function save_settings( $options ) {
-		$site_info = TypesenseClient::get_instance()->site_info();
+	public function add_settings( $documents, $options ) {
 
-		$site_info->upsert( [ 
+		$documents[] = array(
 			'id' => '1002457',
 			'name' => 'hide_review_tab',
 			'value' => (bool) $options['hide_review_tab'],
 			'updated_at' => time(),
-		] );
+		);
+
+		return $documents;
 	}
 }
