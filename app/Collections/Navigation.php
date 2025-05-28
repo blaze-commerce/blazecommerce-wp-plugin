@@ -30,23 +30,54 @@ class Navigation extends BaseCollection {
 	}
 
 	public function initialize() {
-		try {
-			$this->drop_collection();
-		} catch (\Exception $e) {
-			// Don't error out if the collection was not found
-		}
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'wooless-navigation-collection-initialize' );
 
-		try {
-			$this->create_collection( [ 
-				'name' => $this->collection_name(),
-				'fields' => $this->get_fields(),
-				'default_sorting_field' => 'updatedAt',
-				'enable_nested_fields' => true
-			] );
-		} catch (\Exception $e) {
-			echo "Error: " . $e->getMessage() . "\n";
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases ) {
+			try {
+				$schema = array(
+					'fields' => $this->get_fields(),
+					'default_sorting_field' => 'updatedAt',
+					'enable_nested_fields' => true
+				);
+
+				$new_collection_name = $this->initialize_with_alias( $schema );
+				$logger->debug( 'TS Navigation collection (alias): ' . $new_collection_name, $context );
+
+				// Store the new collection name for later use in complete_sync
+				$this->current_sync_collection = $new_collection_name;
+
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Navigation collection alias initialize Exception: ' . $e->getMessage(), $context );
+				throw $e;
+			}
+		} else {
+			// Legacy behavior
+			try {
+				$this->drop_collection();
+			} catch (\Exception $e) {
+				// Don't error out if the collection was not found
+			}
+
+			$logger->debug( 'TS Navigation collection: ' . $this->collection_name(), $context );
+
+			try {
+				$this->create_collection( [ 
+					'name' => $this->collection_name(),
+					'fields' => $this->get_fields(),
+					'default_sorting_field' => 'updatedAt',
+					'enable_nested_fields' => true
+				] );
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Navigation collection initialize Exception: ' . $e->getMessage(), $context );
+				echo "Error: " . $e->getMessage() . "\n";
+			}
 		}
 	}
+
+
 
 	public function get_data( $navigation ) {
 		$navigation_id = $navigation->ID;
@@ -81,7 +112,7 @@ class Navigation extends BaseCollection {
 
 	public function get_total_pages( $batch_size = 20 ) {
 		global $wpdb;
-		$query = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'wp_navigation' AND post_status = 'publish'";
+		$query       = "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'wp_navigation' AND post_status = 'publish'";
 		$total_posts = $wpdb->get_var( $query );
 		$total_pages = ceil( $total_posts / $batch_size );
 		return $total_pages;
@@ -103,7 +134,7 @@ class Navigation extends BaseCollection {
 				unset( $document );
 			}
 		}
-		// Restore original post data. 
+		// Restore original post data.
 		wp_reset_postdata();
 		wp_reset_query();
 
@@ -111,7 +142,7 @@ class Navigation extends BaseCollection {
 	}
 
 	public function import_prepared_batch( $navigations_batch ) {
-		$import_response = $this->collection()->documents->import( $navigations_batch );
+		$import_response = $this->import( $navigations_batch );
 
 		$successful_imports = array_filter( $import_response, function ($batch_result) {
 			return isset( $batch_result['success'] ) && $batch_result['success'] == true;

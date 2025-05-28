@@ -19,33 +19,68 @@ class Menu extends BaseCollection {
 	}
 
 	public function initialize() {
-		try {
-			$this->drop_collection();
-		} catch (\Exception $e) {
-			// Don't error out if the collection was not found
-		}
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'wooless-menu-collection-initialize' );
 
-		try {
-			// Create the 'menu' collection with the required schema
-			$this->create_collection( [ 
-				'name' => $this->collection_name(),
-				'fields' => [ 
-					[ 'name' => 'name', 'type' => 'string' ],
-					[ 'name' => 'wp_menu_id', 'type' => 'int32' ],
-					[ 'name' => 'items', 'type' => 'string' ],
-					[ 'name' => 'updated_at', 'type' => 'int64' ],
-				],
-				'default_sorting_field' => 'wp_menu_id',
-			] );
-		} catch (\Exception $e) {
-			echo "Error: " . $e->getMessage() . "\n";
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases ) {
+			try {
+				$schema = array(
+					'fields' => array(
+						array( 'name' => 'name', 'type' => 'string' ),
+						array( 'name' => 'wp_menu_id', 'type' => 'int32' ),
+						array( 'name' => 'items', 'type' => 'string' ),
+						array( 'name' => 'updated_at', 'type' => 'int64' ),
+					),
+					'default_sorting_field' => 'wp_menu_id',
+				);
+
+				$new_collection_name = $this->initialize_with_alias( $schema );
+				$logger->debug( 'TS Menu collection (alias): ' . $new_collection_name, $context );
+
+				// Store the new collection name for later use in complete_sync
+				$this->current_sync_collection = $new_collection_name;
+
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Menu collection alias initialize Exception: ' . $e->getMessage(), $context );
+				throw $e;
+			}
+		} else {
+			// Legacy behavior
+			try {
+				$this->drop_collection();
+			} catch (\Exception $e) {
+				// Don't error out if the collection was not found
+			}
+
+			$logger->debug( 'TS Menu collection: ' . $this->collection_name(), $context );
+
+			try {
+				// Create the 'menu' collection with the required schema
+				$this->create_collection( [ 
+					'name' => $this->collection_name(),
+					'fields' => [ 
+						[ 'name' => 'name', 'type' => 'string' ],
+						[ 'name' => 'wp_menu_id', 'type' => 'int32' ],
+						[ 'name' => 'items', 'type' => 'string' ],
+						[ 'name' => 'updated_at', 'type' => 'int64' ],
+					],
+					'default_sorting_field' => 'wp_menu_id',
+				] );
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Menu collection initialize Exception: ' . $e->getMessage(), $context );
+				echo "Error: " . $e->getMessage() . "\n";
+			}
 		}
 	}
+
+
 
 	public function process_menu_items( $menu_items ) {
 		/**
 		 * for debuging purposes you can return the $menu_items right away so that you can check the data in the frontend or log the data here
-		 * 
+		 *
 		 * return array_values($menu_items);
 		 */
 		return array_values( array_map( function ($menu_item) {
@@ -151,7 +186,7 @@ class Menu extends BaseCollection {
 	}
 
 	public function import_prepared_batch( $menus ) {
-		$import_response = $this->collection()->documents->import( $menus );
+		$import_response = $this->import( $menus );
 
 		$successful_imports = array_filter( $import_response, function ($batch_result) {
 			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
