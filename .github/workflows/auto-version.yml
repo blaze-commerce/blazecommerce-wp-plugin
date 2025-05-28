@@ -1,0 +1,69 @@
+name: Auto Version Bump
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'package.json'
+      - 'blaze-wooless.php'
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore(release)')"
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+    - name: Determine version bump type
+      id: bump_type
+      run: |
+        # Get the commit message
+        COMMIT_MSG="${{ github.event.head_commit.message }}"
+        
+        # Determine bump type based on conventional commits
+        if [[ $COMMIT_MSG =~ ^feat(\(.+\))?!: ]] || [[ $COMMIT_MSG =~ BREAKING\ CHANGE ]]; then
+          echo "BUMP_TYPE=major" >> $GITHUB_OUTPUT
+        elif [[ $COMMIT_MSG =~ ^feat(\(.+\))?: ]]; then
+          echo "BUMP_TYPE=minor" >> $GITHUB_OUTPUT
+        elif [[ $COMMIT_MSG =~ ^fix(\(.+\))?: ]] || [[ $COMMIT_MSG =~ ^perf(\(.+\))?: ]]; then
+          echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
+        else
+          echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Bump version
+      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      run: |
+        npm run version:${{ steps.bump_type.outputs.BUMP_TYPE }}
+        
+    - name: Update changelog
+      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      run: npm run changelog
+      
+    - name: Commit version bump
+      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        git add .
+        git commit -m "chore(release): bump version to $VERSION [skip ci]"
+        git push

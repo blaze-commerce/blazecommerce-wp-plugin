@@ -1,0 +1,40 @@
+# Development files
+.git/
+.github/
+.gitignore
+.augment-guidelines
+node_modules/
+package.json
+package-lock.json
+scripts/
+*.log
+
+# Blocks development files
+blocks/node_modules/
+blocks/package.json
+blocks/package-lock.json
+blocks/yarn.lock
+blocks/src/
+
+# Composer development files
+composer.json
+composer.lock
+
+# Documentation
+README.md
+TODO
+TRADEMARK.md
+
+# Test files
+test.html
+*.test.php
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
