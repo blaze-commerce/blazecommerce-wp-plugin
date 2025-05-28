@@ -59,7 +59,6 @@ class BlazeWooless {
 			'\\BlazeWooless\\Settings\\ProductFilterSettings',
 			'\\BlazeWooless\\Settings\\ProductPageSettings',
 			'\\BlazeWooless\\Settings\\CategoryPageSettings',
-			'\\BlazeWooless\\Settings\\HomePageSettings',
 			'\\BlazeWooless\\Settings\\SynonymSettings',
 			'\\BlazeWooless\\Settings\\ExportImportSettings',
 		);
