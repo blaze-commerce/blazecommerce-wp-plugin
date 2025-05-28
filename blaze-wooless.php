@@ -10,9 +10,6 @@ Author URI: https://www.blazecommerce.io
 */
 
 use BlazeWooless\PostType;
-use BlazeWooless\Settings\FooterSettings;
-use BlazeWooless\Settings\HeaderSettings;
-use Http\Message\Authentication\Header;
 
 define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BLAZE_WOOLESS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -260,7 +257,5 @@ add_action( 'tgmpa_register', function () {
 function plugin_activate() {
 
 	PostType::initiliaze_default_home_page();
-	FooterSettings::get_instance()->maybe_save_settings();
-	HeaderSettings::get_instance()->maybe_save_settings();
 }
 register_activation_hook( __FILE__, 'plugin_activate' );

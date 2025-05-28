@@ -40,21 +40,52 @@ class Taxonomy extends BaseCollection {
 	}
 
 	public function initialize() {
-		$collection_taxonomy = $this->collection_name();
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'wooless-taxonomy-collection-initialize' );
 
-		try {
-			$this->drop_collection();
-		} catch (\Exception $e) {
-			// Don't error out if the collection was not found
+		// Check if we should use the new alias system
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		if ( $use_aliases ) {
+			try {
+				$schema = array(
+					'fields' => $this->get_fields(),
+					'default_sorting_field' => 'updatedAt',
+					'enable_nested_fields' => true
+				);
+
+				$new_collection_name = $this->initialize_with_alias( $schema );
+				$logger->debug( 'TS Taxonomy collection (alias): ' . $new_collection_name, $context );
+
+				// Store the new collection name for later use in complete_sync
+				$this->current_sync_collection = $new_collection_name;
+
+			} catch (\Exception $e) {
+				$logger->debug( 'TS Taxonomy collection alias initialize Exception: ' . $e->getMessage(), $context );
+				throw $e;
+			}
+		} else {
+			// Legacy behavior
+			$collection_taxonomy = $this->collection_name();
+
+			try {
+				$this->drop_collection();
+			} catch (\Exception $e) {
+				// Don't error out if the collection was not found
+			}
+
+			$logger->debug( 'TS Taxonomy collection: ' . $collection_taxonomy, $context );
+
+			$this->create_collection( [ 
+				'name' => $collection_taxonomy,
+				'fields' => $this->get_fields(),
+				'default_sorting_field' => 'updatedAt',
+				'enable_nested_fields' => true,
+			] );
 		}
-
-		$this->create_collection( [ 
-			'name' => $collection_taxonomy,
-			'fields' => $this->get_fields(),
-			'default_sorting_field' => 'updatedAt',
-			'enable_nested_fields' => true,
-		] );
 	}
+
+
 
 	public function generate_typesense_data( $term ) {
 		$taxonomy = $term->taxonomy;
@@ -70,7 +101,7 @@ class Taxonomy extends BaseCollection {
 		$parentTerm = get_term( $term->parent, $taxonomy );
 
 		/**
-		 * set gb product ingredient image to banneThumbnail. 
+		 * set gb product ingredient image to banneThumbnail.
 		 */
 		if ( $taxonomy == 'product_ingredients' && function_exists( 'z_taxonomy_image_url' ) ) {
 			$bannerThumbnail = \z_taxonomy_image_url( $term->term_id );
@@ -159,7 +190,7 @@ class Taxonomy extends BaseCollection {
 	}
 
 	public function import_prepared_batch( $documents ) {
-		$import_response = $this->collection()->documents->import( $documents );
+		$import_response = $this->import( $documents );
 
 		$successful_imports = array_filter( $import_response, function ($batch_result) {
 			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
@@ -265,7 +296,7 @@ class Taxonomy extends BaseCollection {
 			'separator' => '[blz-commerce]',
 		);
 
-		// Get Term Parent, Child, and Grand Child 
+		// Get Term Parent, Child, and Grand Child
 		$parents_list = get_term_parents_list( $term_id, $taxonomy, $args );
 
 		$parents_list_array = explode( '[blz-commerce]', $parents_list );
