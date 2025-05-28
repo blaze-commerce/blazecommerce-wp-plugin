@@ -657,6 +657,7 @@
             $(document.body).on('click', this.syncSiteInfoLink, this.importSiteInfo.bind(this));
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
             $(document.body).on('click', this.redeployButton, this.redeployStoreFront.bind(this));
+
         },
 
         checkDeployment: function () {
