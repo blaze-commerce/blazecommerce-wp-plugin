@@ -129,7 +129,20 @@ class AttributeSettings {
 		if ( $product->is_type( 'variation' ) ) {
 			$generated_attributes = array();
 			foreach ( $attributes as $key => $attribute ) {
-				$generated_attributes[ 'attribute_' . $key ] = $attribute;
+				// Extract the actual attribute value instead of storing the whole object
+				if ( is_object( $attribute ) && method_exists( $attribute, 'get_slug' ) ) {
+					// For WC_Product_Attribute objects, get the slug
+					$generated_attributes[ 'attribute_' . $key ] = $attribute->get_slug();
+				} elseif ( is_array( $attribute ) && isset( $attribute['slug'] ) ) {
+					// For array attributes, get the slug
+					$generated_attributes[ 'attribute_' . $key ] = $attribute['slug'];
+				} elseif ( is_array( $attribute ) && isset( $attribute['name'] ) ) {
+					// Fallback to name if slug not available
+					$generated_attributes[ 'attribute_' . $key ] = $attribute['name'];
+				} else {
+					// For simple string values, use as-is
+					$generated_attributes[ 'attribute_' . $key ] = $attribute;
+				}
 			}
 			$product_data['attributes'] = $generated_attributes;
 		}
