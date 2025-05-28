@@ -2,6 +2,8 @@
 
 namespace BlazeWooless\Extensions;
 
+use BlazeWooless\Woocommerce;
+
 class WoocommercePriceBasedOnCountry {
 	private static $instance = null;
 
@@ -24,13 +26,13 @@ class WoocommercePriceBasedOnCountry {
 		foreach ( \WCPBC_Pricing_Zones::get_zones() as $zone ) {
 			$currency = $zone->get_currency();
 			if ( isset( $product_data["price"] ) && ! isset( $product_data["price"][ $currency ] ) ) {
-				$product_data["price"][ $currency ] = floatval( $zone->get_exchange_rate_price_by_post( $product_id, '_price' ) );
+				$product_data["price"][ $currency ] = (int) round( Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_price' ) ) * 100 );
 			}
 			if ( isset( $product_data["regularPrice"] ) && ! isset( $product_data["regularPrice"][ $currency ] ) ) {
-				$product_data["regularPrice"][ $currency ] = floatval( $zone->get_exchange_rate_price_by_post( $product_id, '_regular_price' ) );
+				$product_data["regularPrice"][ $currency ] = (int) round( Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_regular_price' ) ) * 100 );
 			}
 			if ( isset( $product_data["salePrice"] ) && ! isset( $product_data["salePrice"][ $currency ] ) ) {
-				$product_data["salePrice"][ $currency ] = floatval( $zone->get_exchange_rate_price_by_post( $product_id, '_sale_price' ) );
+				$product_data["salePrice"][ $currency ] = (int) round( Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_sale_price' ) ) * 100 );
 			}
 		}
 		return $product_data;
