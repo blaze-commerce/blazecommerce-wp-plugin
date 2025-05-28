@@ -666,18 +666,38 @@
             var data = {
                 'action': 'check_deployment',
             };
-            $.post(ajaxurl, data).done(function (response) {
-                if (response.state === 'BUILDING') {
-                    _this.renderLoader('Store front is deploying..');
-                    setTimeout(function () {
-                        _this.checkDeployment();
-                    }, 120000);
-                } else if (response.state === 'READY') {
+            $.post(ajaxurl, data)
+                .done(function (response) {
+                    console.log('Check deployment response:', response);
+                    if (response.error) {
+                        _this.renderLoader('Error checking deployment: ' + response.message);
+                        $(_this.syncResultsContainer).append('<div style="color: red;">Deployment check failed: ' + response.message + '</div>');
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.syncInProgress = false;
+                    } else if (response.state === 'BUILDING') {
+                        _this.renderLoader('Store front is deploying..');
+                        setTimeout(function () {
+                            _this.checkDeployment();
+                        }, 120000);
+                    } else if (response.state === 'READY') {
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.hideLoader();
+                        _this.syncInProgress = false;
+                        $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
+                    } else {
+                        _this.renderLoader('Deployment status: ' + (response.state || 'Unknown'));
+                        $(_this.syncResultsContainer).append('<div>Deployment status: ' + (response.state || 'Unknown') + '</div>');
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.syncInProgress = false;
+                    }
+                })
+                .fail(function (xhr, status, error) {
+                    console.error('Check deployment request failed:', xhr, status, error);
+                    _this.renderLoader('Failed to check deployment status');
+                    $(_this.syncResultsContainer).append('<div style="color: red;">Failed to check deployment status. Please try again.</div>');
                     $(_this.redeployButton).prop("disabled", false);
-                    _this.hideLoader();
-                    $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
-                }
-            });
+                    _this.syncInProgress = false;
+                });
         },
         redeployStoreFront: function (e) {
             var _this = this;
@@ -688,10 +708,26 @@
             var data = {
                 'action': 'redeploy_store_front',
             };
-            $.post(ajaxurl, data).done(function (response) {
-                _this.renderLoader(response.message);
-                _this.checkDeployment();
-            });
+            $.post(ajaxurl, data)
+                .done(function (response) {
+                    console.log('Redeploy response:', response);
+                    if (response.error) {
+                        _this.renderLoader('Error: ' + response.message);
+                        $(_this.syncResultsContainer).append('<div style="color: red;">Deployment failed: ' + response.message + '</div>');
+                        $(this.redeployButton).prop("disabled", false);
+                        _this.syncInProgress = false;
+                    } else {
+                        _this.renderLoader(response.message || 'Deployment triggered successfully');
+                        _this.checkDeployment();
+                    }
+                })
+                .fail(function (xhr, status, error) {
+                    console.error('Redeploy request failed:', xhr, status, error);
+                    _this.renderLoader('Connection failed');
+                    $(_this.syncResultsContainer).append('<div style="color: red;">Failed to connect to deployment service. Please try again.</div>');
+                    $(_this.redeployButton).prop("disabled", false);
+                    _this.syncInProgress = false;
+                });
         },
 
         managePaginatedRequests: function ({
