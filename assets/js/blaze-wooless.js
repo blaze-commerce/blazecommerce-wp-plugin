@@ -649,6 +649,20 @@
             $(this.syncResultsContainer).html('');
         },
 
+        showDeploymentFailure: function (message) {
+            // Remove any existing failure message
+            $('#deployment-failure-message').remove();
+
+            // Create and show the failure message below the redeploy button with contact info
+            var fullMessage = message + '<br><br><strong>Need assistance?</strong> Contact us at <a href="mailto:hello@blazecommerce.io" style="color: #0073aa;">hello@blazecommerce.io</a>';
+            var failureMessage = $('<div id="deployment-failure-message" style="color: red; font-weight: bold; margin-top: 10px; padding: 10px; background-color: #ffeaea; border: 1px solid #ff6b6b; border-radius: 4px;">' + fullMessage + '</div>');
+            $(this.redeployButton).after(failureMessage);
+        },
+
+        hideDeploymentFailure: function () {
+            $('#deployment-failure-message').remove();
+        },
+
         registerEvents: function () {
             $(document.body).on('click', this.syncProductLink, this.importProducts.bind(this));
             $(document.body).on('click', this.syncTaxonomiesLink, this.importTaxonomies.bind(this));
@@ -658,6 +672,21 @@
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
             $(document.body).on('click', this.redeployButton, this.redeployStoreFront.bind(this));
 
+            // Add page leave warning when sync operations are in progress
+            this.setupPageLeaveWarning();
+        },
+
+        setupPageLeaveWarning: function () {
+            var _this = this;
+
+            // Add beforeunload event listener to warn users about leaving during sync
+            $(window).on('beforeunload', function (e) {
+                if (_this.syncInProgress) {
+                    var message = 'A sync operation is currently in progress. Leaving this page may interrupt the process. Are you sure you want to leave?';
+                    e.returnValue = message; // For older browsers
+                    return message; // For modern browsers
+                }
+            });
         },
 
         checkDeployment: function () {
@@ -673,6 +702,7 @@
                     if (response.error) {
                         _this.renderLoader('Error checking deployment: ' + response.message);
                         $(_this.syncResultsContainer).append('<div style="color: red;">Deployment check failed: ' + response.message + '</div>');
+                        _this.showDeploymentFailure('Deployment check failed: ' + response.message);
                         $(_this.redeployButton).prop("disabled", false);
                         _this.syncInProgress = false;
                     } else if (response.state === 'BUILDING') {
@@ -684,7 +714,14 @@
                         $(_this.redeployButton).prop("disabled", false);
                         _this.hideLoader();
                         _this.syncInProgress = false;
+                        _this.hideDeploymentFailure(); // Hide any previous failure messages
                         $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
+                    } else if (response.state === 'ERROR' || response.state === 'FAILED') {
+                        _this.renderLoader('Deployment failed');
+                        _this.showDeploymentFailure('Deployment failed with status: ' + response.state);
+                        $(_this.syncResultsContainer).append('<div style="color: red;">Deployment failed: ' + response.state + '</div>');
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.syncInProgress = false;
                     } else {
                         _this.renderLoader('Deployment status: ' + (response.state || 'Unknown'));
                         $(_this.syncResultsContainer).append('<div>Deployment status: ' + (response.state || 'Unknown') + '</div>');
@@ -714,10 +751,12 @@
                     console.log('Redeploy response:', response);
                     if (response.error) {
                         _this.renderLoader('Error: ' + response.message);
+                        _this.showDeploymentFailure('Deployment failed: ' + response.message);
                         $(_this.syncResultsContainer).append('<div style="color: red;">Deployment failed: ' + response.message + '</div>');
                         $(this.redeployButton).prop("disabled", false);
                         _this.syncInProgress = false;
                     } else {
+                        _this.hideDeploymentFailure(); // Hide any previous failure messages
                         _this.renderLoader(response.message || 'Deployment triggered successfully');
                         _this.checkDeployment();
                     }
