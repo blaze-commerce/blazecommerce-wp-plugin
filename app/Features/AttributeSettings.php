@@ -18,7 +18,8 @@ class AttributeSettings {
 	public function __construct() {
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_available_product_attribute' ), 10, 2 );
 		add_filter( 'blaze_wooless_product_page_settings', array( $this, 'register_settings' ) );
-		add_action( 'blaze_wooless_save_product_page_settings', array( $this, 'save_settings' ) );
+
+		add_filter( 'blazecommerce/settings/product_page', array( $this, 'add_settings' ), 10, 2 );
 	}
 
 	public static function get_all_attributes() {
@@ -91,7 +92,7 @@ class AttributeSettings {
 
 				if ( $attribute->is_taxonomy() ) {
 					$options = array_map( function ($term) {
-						return [
+						return [ 
 							'label' => $term->name,
 							'slug' => $term->slug,
 							'name' => $term->slug,
@@ -101,7 +102,7 @@ class AttributeSettings {
 					}, $attribute->get_terms() );
 				} else {
 					$options = array_map( function ($option) {
-						return [
+						return [ 
 							'label' => $option,
 							'slug' => $option,
 							'name' => $option,
@@ -176,18 +177,20 @@ class AttributeSettings {
 		}, AttributeSettings::get_all_attributes() );
 	}
 
-	public function save_settings( $options ) {
+	public function add_settings( $documents, $options ) {
 		if ( ! is_array( $options ) ) {
 			$options = array();
 		}
-		$attributes = array_filter( $options, function ($option, $key) {
+		$attributes  = array_filter( $options, function ($option, $key) {
 			return str_starts_with( $key, 'attribute_' );
 		}, ARRAY_FILTER_USE_BOTH );
-		TypesenseClient::get_instance()->site_info()->upsert( [
+		$documents[] = array(
 			'id' => '1000023',
 			'name' => 'attribute_display_type',
 			'value' => json_encode( $attributes ),
 			'updated_at' => time(),
-		] );
+		);
+
+		return $documents;
 	}
 }
