@@ -701,7 +701,6 @@
                     console.log('Check deployment response:', response);
                     if (response.error) {
                         _this.renderLoader('Error checking deployment: ' + response.message);
-                        $(_this.syncResultsContainer).append('<div style="color: red;">Deployment check failed: ' + response.message + '</div>');
                         _this.showDeploymentFailure('Deployment check failed: ' + response.message);
                         $(_this.redeployButton).prop("disabled", false);
                         _this.syncInProgress = false;
@@ -719,7 +718,6 @@
                     } else if (response.state === 'ERROR' || response.state === 'FAILED') {
                         _this.renderLoader('Deployment failed');
                         _this.showDeploymentFailure('Deployment failed with status: ' + response.state);
-                        $(_this.syncResultsContainer).append('<div style="color: red;">Deployment failed: ' + response.state + '</div>');
                         $(_this.redeployButton).prop("disabled", false);
                         _this.syncInProgress = false;
                     } else {
@@ -732,7 +730,7 @@
                 .fail(function (xhr, status, error) {
                     console.error('Check deployment request failed:', xhr, status, error);
                     _this.renderLoader('Failed to check deployment status');
-                    $(_this.syncResultsContainer).append('<div style="color: red;">Failed to check deployment status. Please try again.</div>');
+                    _this.showDeploymentFailure('Failed to check deployment status. Please try again.');
                     $(_this.redeployButton).prop("disabled", false);
                     _this.syncInProgress = false;
                 });
@@ -752,7 +750,6 @@
                     if (response.error) {
                         _this.renderLoader('Error: ' + response.message);
                         _this.showDeploymentFailure('Deployment failed: ' + response.message);
-                        $(_this.syncResultsContainer).append('<div style="color: red;">Deployment failed: ' + response.message + '</div>');
                         $(this.redeployButton).prop("disabled", false);
                         _this.syncInProgress = false;
                     } else {
@@ -764,7 +761,7 @@
                 .fail(function (xhr, status, error) {
                     console.error('Redeploy request failed:', xhr, status, error);
                     _this.renderLoader('Connection failed');
-                    $(_this.syncResultsContainer).append('<div style="color: red;">Failed to connect to deployment service. Please try again.</div>');
+                    _this.showDeploymentFailure('Failed to connect to deployment service. Please try again.');
                     $(_this.redeployButton).prop("disabled", false);
                     _this.syncInProgress = false;
                 });
