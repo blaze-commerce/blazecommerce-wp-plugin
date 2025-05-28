@@ -17,18 +17,16 @@ class Product {
 
 	public function __construct() {
 		add_action( 'save_post_gp_elements', array( $this, 'upsert_site_product' ) );
-		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'sync_product_to_typesense' ) );
+		add_filter( 'blazecommerce/settings', array( $this, 'add_site_product_to_settings' ), 10, 1 );
 	}
 
-	public function sync_product_to_typesense() {
-
+	public function add_site_product_to_settings( $documents ) {
 		$post_id = $this->get_site_product_id();
 		if ( ! empty( $post_id ) ) {
-
 			$site_product = $this->get_site_product( $post_id );
 
 			if ( ! empty( $site_product ) ) {
-				TypesenseClient::get_instance()->site_info()->upsert( $site_product );
+				$documents[] = $site_product;
 			}
 		} else {
 			do_action(
@@ -39,6 +37,8 @@ class Product {
 					)
 				) );
 		}
+
+		return $documents;
 	}
 
 	public function upsert_site_product( $post_id ) {
