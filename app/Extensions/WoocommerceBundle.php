@@ -237,7 +237,9 @@ class WoocommerceBundle {
 
 	public function reformat_prices( $prices, $currency ) {
 		$prices = apply_filters( 'blaze_wooless_convert_prices', $prices, $currency );
-		return array_map( [ Woocommerce::class, 'format_price' ], $prices );
+		return array_map( function( $price ) {
+			return (int) round( Woocommerce::format_price( $price ) * 100 );
+		}, $prices );
 	}
 
 	public function get_bundled_data( $product ) {
@@ -428,7 +430,7 @@ class WoocommerceBundle {
 				// Get the cart item from the source
 				$cart_item = $source;
 
-				// error_log( print_r( $variable, TRUE)); 
+				// error_log( print_r( $variable, TRUE));
 				// Get bundle total if this is a bundle
 				$bundle_total = $this->get_bundle_cart_item_total( $cart_item, 'total' );
 				if ( $bundle_total !== null ) {

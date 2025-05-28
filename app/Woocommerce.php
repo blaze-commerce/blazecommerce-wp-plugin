@@ -41,7 +41,7 @@ class Woocommerce {
 
 	/**
 	 * Delete typesense product when user permanently deletes a product
-	 * 
+	 *
 	 * @param mixed $post_id
 	 * @return void
 	 */
@@ -239,7 +239,8 @@ class Woocommerce {
 	}
 
 	/**
-	 * Use for making sure that we are setting a valid float type on prices so that typesense will accept it
+	 * Use for making sure that we are setting a valid float type on prices before converting to int64 for Typesense
+	 * This method formats the price as a float with 4 decimal places, which is then multiplied by 100 and converted to int64
 	 */
 	public static function format_price( $price ) {
 		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );

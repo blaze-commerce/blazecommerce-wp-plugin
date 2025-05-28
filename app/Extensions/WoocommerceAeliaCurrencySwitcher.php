@@ -76,10 +76,10 @@ class WoocommerceAeliaCurrencySwitcher {
 
 		$prices = array();
 		foreach ( $available_currencies as $currency ) {
-			$prices[ $currency ] = Woocommerce::format_price( $this->calculate_converted_price( $price, $currency ) );
+			$prices[ $currency ] = (int) round( Woocommerce::format_price( $this->calculate_converted_price( $price, $currency ) ) * 100 );
 		}
 
-		$prices[ $base_currency ] = floatval( $price );
+		$prices[ $base_currency ] = (int) round( Woocommerce::format_price( $price ) * 100 );
 
 		return $prices;
 	}
@@ -108,17 +108,17 @@ class WoocommerceAeliaCurrencySwitcher {
 				if ( ! isset( $product_data['regularPrice'][ $currency ] ) || ! isset( $product_data['salePrice'][ $currency ] ) ) {
 					$product = wc_get_product( $product_id );
 					$converted_prices = array(
-						'regular_price' => Woocommerce::format_price( $this->calculate_converted_price( $regular_prices[ $base_currency ], $currency ) ),
-						'sale_price' => Woocommerce::format_price( $this->calculate_converted_price( $sale_prices[ $base_currency ], $currency ) ),
+						'regular_price' => (int) round( Woocommerce::format_price( $this->calculate_converted_price( $regular_prices[ $base_currency ], $currency ) ) * 100 ),
+						'sale_price' => (int) round( Woocommerce::format_price( $this->calculate_converted_price( $sale_prices[ $base_currency ], $currency ) ) * 100 ),
 					);
 				}
 
 				if ( ! isset( $product_data['regularPrice'][ $currency ] ) ) {
-					$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $converted_prices['regular_price'] );
+					$product_data['regularPrice'][ $currency ] = (int) round( Woocommerce::format_price( $converted_prices['regular_price'] ) * 100 );
 				}
 
 				if ( ! isset( $product_data['salePrice'][ $currency ] ) ) {
-					$product_data['salePrice'][ $currency ] = Woocommerce::format_price( $converted_prices['sale_price'] );
+					$product_data['salePrice'][ $currency ] = (int) round( Woocommerce::format_price( $converted_prices['sale_price'] ) * 100 );
 				}
 
 				$_sale_price = $product_data['salePrice'][ $currency ];
@@ -127,11 +127,11 @@ class WoocommerceAeliaCurrencySwitcher {
 				if ( ! is_array( $product_data['price'] ) ) {
 					$product_data['price'] = [];
 				}
-				$product_data['price'][ $currency ] = Woocommerce::format_price( ! empty( $_sale_price ) ? $_sale_price : $_regular_price );
+				$product_data['price'][ $currency ] = (int) round( Woocommerce::format_price( ! empty( $_sale_price ) ? $_sale_price : $_regular_price ) * 100 );
 
-				$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $product_data['regularPrice'][ $currency ] );
-				$product_data['salePrice'][ $currency ] = Woocommerce::format_price( $product_data['salePrice'][ $currency ] );
-				$product_data['price'][ $currency ] = Woocommerce::format_price( $product_data['price'][ $currency ] );
+				$product_data['regularPrice'][ $currency ] = (int) round( Woocommerce::format_price( $product_data['regularPrice'][ $currency ] ) * 100 );
+				$product_data['salePrice'][ $currency ] = (int) round( Woocommerce::format_price( $product_data['salePrice'][ $currency ] ) * 100 );
+				$product_data['price'][ $currency ] = (int) round( Woocommerce::format_price( $product_data['price'][ $currency ] ) * 100 );
 
 				unset( $converted_prices, $product, $_sale_price, $_regular_price );
 			}
@@ -150,8 +150,8 @@ class WoocommerceAeliaCurrencySwitcher {
 			foreach ( $available_currencies as $currency ) {
 				if ( $base_currency === $currency ) {
 					continue;
-				} 
-				$prices[ $currency ] = Woocommerce::format_price( $this->calculate_converted_price( $base_price, $currency ) );
+				}
+				$prices[ $currency ] = (int) round( Woocommerce::format_price( $this->calculate_converted_price( $base_price, $currency ) ) * 100 );
 			}
 		}
 
@@ -173,7 +173,7 @@ class WoocommerceAeliaCurrencySwitcher {
 			}
 
 
-			$price[ $currency ] = Woocommerce::format_price( $price_value );
+			$price[ $currency ] = (int) round( Woocommerce::format_price( $price_value ) * 100 );
 		}
 
 		return $price;
@@ -191,7 +191,7 @@ class WoocommerceAeliaCurrencySwitcher {
 				$price_value = $sale_prices[ $currency ];
 			}
 
-			$price[ $currency ] = Woocommerce::format_price( $price_value );
+			$price[ $currency ] = (int) round( Woocommerce::format_price( $price_value ) * 100 );
 		}
 
 		return $price;
@@ -337,8 +337,8 @@ class WoocommerceAeliaCurrencySwitcher {
 	public function giftcard_multicurrency_prices( $product_data, $product_id, $available_currencies ) {
 		if ( ! empty( $available_currencies ) ) {
 			foreach ( $available_currencies as $currency => $value ) {
-				$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $product_data['variations'][0]['regularPrice'][ $currency ] );
-				$product_data['price'][ $currency ] = Woocommerce::format_price( $product_data['variations'][0]['price'][ $currency ] );
+				$product_data['regularPrice'][ $currency ] = (int) round( Woocommerce::format_price( $product_data['variations'][0]['regularPrice'][ $currency ] ) * 100 );
+				$product_data['price'][ $currency ] = (int) round( Woocommerce::format_price( $product_data['variations'][0]['price'][ $currency ] ) * 100 );
 			}
 		}
 
@@ -380,9 +380,9 @@ class WoocommerceAeliaCurrencySwitcher {
 					$variations_data['price'][ $currency ] = ! empty( $_variation_sale_price ) ? $_variation_sale_price : $_variation_regular_price;
 				}
 
-				$variations_data['regularPrice'][ $currency ] = Woocommerce::format_price( $variations_data['regularPrice'][ $currency ] );
-				$variations_data['salePrice'][ $currency ] = Woocommerce::format_price( $variations_data['salePrice'][ $currency ] );
-				$variations_data['price'][ $currency ] = Woocommerce::format_price( $variations_data['price'][ $currency ] );
+				$variations_data['regularPrice'][ $currency ] = (int) round( Woocommerce::format_price( $variations_data['regularPrice'][ $currency ] ) * 100 );
+				$variations_data['salePrice'][ $currency ] = (int) round( Woocommerce::format_price( $variations_data['salePrice'][ $currency ] ) * 100 );
+				$variations_data['price'][ $currency ] = (int) round( Woocommerce::format_price( $variations_data['price'][ $currency ] ) * 100 );
 
 				unset( $converted_variation_prices, $variation_obj, $converted_variation, $_variation_sale_price, $_variation_regular_price );
 			}
