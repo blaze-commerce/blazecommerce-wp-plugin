@@ -26,6 +26,7 @@ class Ajax {
 
 		add_action( 'wp_ajax_redeploy_store_front', array( $this, 'redeploy_store_front' ) );
 		add_action( 'wp_ajax_check_deployment', array( $this, 'check_deployment' ) );
+
 	}
 
 	public function check_product_sync_data() {
@@ -50,7 +51,7 @@ class Ajax {
 		$vercel_token = bw_get_general_settings( 'vercel_access_token' );
 		if ( empty( $vercel_token ) ) {
 			// Fallback to default token if not configured
-			$vercel_token = 'ARzPXSG1lSPJeBmAQ283VJpk';
+			$vercel_token = 'a3alWY2RDSCThmlGk7AzNhrY';
 		}
 		return array(
 			'Authorization: Bearer ' . $vercel_token,
@@ -69,12 +70,17 @@ class Ajax {
 
 	public function get_project_id() {
 		$project_id = bw_get_general_settings( 'vercel_project_id' );
-		if ( empty( $project_id ) ) {
-			error_log( 'BlazeCommerce: No Vercel project ID configured' );
-			return null;
+		if ( ! empty( $project_id ) ) {
+			return $project_id;
 		}
-		return $project_id;
+
+		error_log( 'BlazeCommerce: No Vercel project ID configured' );
+		return null;
 	}
+
+
+
+
 
 	public function get_latest_deployment() {
 		$project_id = $this->get_project_id();
@@ -302,6 +308,8 @@ class Ajax {
 			'deployment' => $decoded_response
 		) );
 	}
+
+
 
 	public function prepare_curl( $url_endpoint, $method ) {
 		$curl = curl_init();
