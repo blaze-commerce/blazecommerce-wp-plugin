@@ -1,0 +1,41 @@
+{
+  "name": "blazecommerce-wp-plugin",
+  "version": "1.5.2",
+  "description": "The official plugin that integrates your site with the Blaze Commerce service.",
+  "main": "blaze-wooless.php",
+  "scripts": {
+    "version:patch": "npm version patch --no-git-tag-version && npm run update-plugin-version",
+    "version:minor": "npm version minor --no-git-tag-version && npm run update-plugin-version",
+    "version:major": "npm version major --no-git-tag-version && npm run update-plugin-version",
+    "update-plugin-version": "node scripts/update-version.js",
+    "build": "cd blocks && npm run build",
+    "build:blocks": "cd blocks && npm run build",
+    "release": "npm run build && node scripts/create-release.js",
+    "changelog": "node scripts/update-changelog.js",
+    "prepare-release": "npm run changelog && npm run build && git add ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/blaze-commerce/blazecommerce-wp-plugin.git"
+  },
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "woocommerce",
+    "blazecommerce",
+    "ecommerce"
+  ],
+  "author": "Blaze Commerce",
+  "license": "GPL-2.0-or-later",
+  "bugs": {
+    "url": "https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues"
+  },
+  "homepage": "https://www.blazecommerce.io",
+  "devDependencies": {
+    "semver": "^7.5.4"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  }
+}
