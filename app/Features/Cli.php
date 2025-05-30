@@ -36,13 +36,12 @@ class Cli extends WP_CLI_Command {
 	 * Complete sync operation with standardized error handling and success messages
 	 *
 	 * @param object $collection Collection instance
-	 * @param string $sync_method Method name to call for completing sync (should be 'complete_collection_sync')
 	 * @param array $options Optional parameters to pass to the sync method
 	 * @return void
 	 */
-	private function complete_collection_sync( $collection, $sync_method, $options = array() ) {
+	private function complete_collection_sync( $collection, $options = array() ) {
 		try {
-			$sync_result = $collection->$sync_method( $options );
+			$sync_result = $collection->complete_collection_sync( $options );
 			if ( $sync_result ) {
 				WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
 				if ( ! empty( $sync_result['deleted_collections'] ) ) {
@@ -287,7 +286,7 @@ class Cli extends WP_CLI_Command {
 				}
 
 				// Complete the sync by updating alias if using new system
-				$this->complete_collection_sync( $product_collection, 'complete_collection_sync' );
+				$this->complete_collection_sync( $product_collection );
 
 				WP_CLI::success( "All non-variant products have been synced." );
 				WP_CLI::success( "Total non-variant products: " . count( $nonvariant_product_ids ) );
@@ -362,8 +361,7 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			$transient_key = 'page_sync_collection_' . $collection->typesense->store_id;
-			$this->complete_collection_sync( $collection, 'complete_collection_sync', array( 'clear_transient' => $transient_key ) );
+			$this->complete_collection_sync( $collection );
 
 			WP_CLI::success( "Completed! All page and post have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
@@ -410,7 +408,7 @@ class Cli extends WP_CLI_Command {
 			$total_imports += count( $object_batch ); // Increment the count of imported products
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $collection, 'complete_collection_sync' );
+			$this->complete_collection_sync( $collection );
 
 			WP_CLI::success( "Completed! All menus have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count );
@@ -457,7 +455,7 @@ class Cli extends WP_CLI_Command {
 			$total_imports += count( $object_batch ); // Increment the count of imported products
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $collection, 'complete_site_info_sync' );
+			$this->complete_collection_sync( $collection );
 
 			$collection->after_site_info_sync();
 
@@ -551,7 +549,7 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $collection, 'complete_collection_sync' );
+			$this->complete_collection_sync( $collection );
 
 			WP_CLI::success( "Completed! All taxonomies have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
@@ -621,7 +619,7 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $collection, 'complete_collection_sync' );
+			$this->complete_collection_sync( $collection );
 
 			WP_CLI::success( "Completed! All published wp_navigation posts have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
