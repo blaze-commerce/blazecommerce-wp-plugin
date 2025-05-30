@@ -1,17 +1,19 @@
-# Augment Guidelines for WordPress/WooCommerce Plugin Development
+# BlazeCommerce WordPress Plugin Development Guidelines
 
 ## Table of Contents
 
 1. [General Principles](#general-principles)
-2. [Code Structure & Organization](#code-structure--organization)
-3. [DRY Principle Implementation](#dry-principle-implementation)
-4. [Code Readability](#code-readability)
-5. [WordPress/WooCommerce Specific Guidelines](#wordpresswoocommerce-specific-guidelines)
-6. [Security Best Practices](#security-best-practices)
-7. [Performance Guidelines](#performance-guidelines)
-8. [Testing Standards](#testing-standards)
-9. [Documentation Requirements](#documentation-requirements)
-10. [Error Handling](#error-handling)
+2. [Version Management & Release Process](#version-management--release-process)
+3. [Code Structure & Organization](#code-structure--organization)
+4. [DRY Principle Implementation](#dry-principle-implementation)
+5. [Code Readability](#code-readability)
+6. [WordPress/WooCommerce Specific Guidelines](#wordpresswoocommerce-specific-guidelines)
+7. [Security Best Practices](#security-best-practices)
+8. [Performance Guidelines](#performance-guidelines)
+9. [Testing Standards](#testing-standards)
+10. [Documentation Requirements](#documentation-requirements)
+11. [Error Handling](#error-handling)
+12. [Build Process & Automation](#build-process--automation)
 
 ## General Principles
 
@@ -21,26 +23,61 @@
 - Follow WordPress naming conventions for functions, classes, and variables
 - Use proper indentation (tabs for indentation, spaces for alignment)
 - Maximum line length of 120 characters
+- Use proper PHP namespacing under `BlazeWooless`
+- Maintain backward compatibility
+- Document all public methods and classes
 
-### 2. Semantic Versioning
-
-- Use semantic versioning (MAJOR.MINOR.PATCH)
-- Document breaking changes clearly
-- Maintain backward compatibility when possible
-
-### 3. Plugin Architecture
+### 2. Plugin Architecture
 
 - Use object-oriented programming with proper class structure
 - Implement singleton pattern for main plugin class
 - Use dependency injection where appropriate
 - Follow MVC pattern for complex features
 
+### 3. Commit Guidelines
+
+- Follow conventional commit format: `type(scope): description`
+- Types: feat, fix, docs, style, refactor, test, chore
+- Include version bump in commit when releasing
+- Use `>commit` shortcut for automated commits
+
+## Version Management & Release Process
+
+### 1. Version Management
+
+- Plugin version is managed in two places:
+  - Plugin header in `blaze-wooless.php` (line 6)
+  - Version constant `BLAZE_WOOLESS_VERSION` (line 19)
+- Both must be updated together for consistency
+- Use semantic versioning (MAJOR.MINOR.PATCH)
+- Document breaking changes clearly
+- Maintain backward compatibility when possible
+
+### 2. Release Process
+
+1. Update version in both locations in `blaze-wooless.php`
+2. Update CHANGELOG.md with release notes
+3. Commit changes with conventional format
+4. Create GitHub release with tag matching version
+5. Automated workflow will build and package plugin
+
+### 3. Dependencies
+
+- Required plugins are managed via TGM Plugin Activation
+- Keep dependency versions updated in plugin header
+- Test compatibility when updating dependencies
+
 ## Code Structure & Organization
 
 ### 1. Directory Structure
 
 ```
-
+/app         - Core plugin classes
+/assets      - CSS/JS assets
+/blocks      - Gutenberg blocks (has own package.json)
+/lib         - Helper functions and utilities
+/views       - Admin interface templates
+/vendor      - Composer dependencies
 ```
 
 ### 2. File Naming Conventions
@@ -259,7 +296,14 @@ if ($product) {
 - Test API endpoints
 - Use WordPress testing framework
 
-### 3. Code Quality
+### 3. Plugin Compatibility Testing
+
+- Test plugin with latest WordPress version
+- Verify WooCommerce compatibility
+- Test all required plugin dependencies
+- Validate GraphQL endpoints functionality
+
+### 4. Code Quality
 
 - Use PHP_CodeSniffer with WordPress standards
 - Implement continuous integration
@@ -305,6 +349,21 @@ if ($product) {
 - Display user-friendly error messages
 - Maintain plugin functionality during partial failures
 
+## Build Process & Automation
+
+### 1. Build Process
+
+- Run `yarn build` in `/blocks` directory after making block changes
+- Ensure all assets are compiled before committing
+- Test plugin functionality after build
+
+### 2. Automation
+
+- Version bumping is automated via npm scripts
+- GitHub releases are created automatically on version tags
+- Plugin ZIP is generated for distribution
+- Changelog is updated automatically from commits
+
 ---
 
 ## Quick Reference Checklist
@@ -319,3 +378,6 @@ if ($product) {
 - [ ] Implement error handling and logging
 - [ ] Write tests for critical functionality
 - [ ] Optimize for performance and memory usage
+- [ ] Update version in both locations when releasing
+- [ ] Run build process after block changes
+- [ ] Test plugin compatibility before release
