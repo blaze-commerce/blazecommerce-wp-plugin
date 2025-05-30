@@ -54,7 +54,7 @@ class Tax {
 		}
 
 		$product_data['metaData']['priceWithTax'] = array(
-			$currency => (float) number_format( empty( $price_with_tax ) ? 0 : $price_with_tax, 4, '.', '' ),
+			$currency => (int) round( Woocommerce::format_price( $price_with_tax ) * 100 ),
 		);
 
 		$tax_rates          = $this->get_tax_rate_array( 'Standard' );
