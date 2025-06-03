@@ -153,15 +153,37 @@ class BaseCollection {
 	}
 
 	public function create( $args ) {
-		return $this->collection()->documents->create( $args );
+		return $this->get_target_collection()->documents->create( $args );
 	}
 
 	public function update( $id, $document_data ) {
-		return $this->collection()->documents[ $id ]->update( $document_data );
+		return $this->get_target_collection()->documents[ $id ]->update( $document_data );
 	}
 
 	public function upsert( $document_data ) {
-		return $this->collection()->documents->upsert( $document_data );
+		return $this->get_target_collection()->documents->upsert( $document_data );
+	}
+
+	/**
+	 * Get the appropriate collection object for operations
+	 * During sync operations, returns the sync collection directly
+	 * Otherwise, returns the alias-based collection
+	 */
+	private function get_target_collection() {
+		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+
+		// If using aliases and we're in a sync operation, use the sync collection directly
+		if ( $use_aliases && isset( $this->current_sync_collection ) ) {
+			// Debug logging to help identify collection names and API key issues
+			$logger  = wc_get_logger();
+			$context = array( 'source' => 'wooless-collection-target-debug' );
+			$logger->debug( 'Targeting sync collection: ' . $this->current_sync_collection . ' for type: ' . $this->collection_name, $context );
+
+			return $this->get_direct_collection( $this->current_sync_collection );
+		}
+
+		// Otherwise, use the normal alias-based collection access
+		return $this->collection();
 	}
 
 	/**
