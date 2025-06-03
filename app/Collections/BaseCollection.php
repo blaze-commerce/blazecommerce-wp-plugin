@@ -22,17 +22,7 @@ class BaseCollection {
 	}
 
 	public function collection() {
-		// Use class-level static cache instead of method-level static
-		$cache_key = $this->collection_name;
-
-		if ( ! isset( self::$collection_cache[ $cache_key ] ) ||
-			! isset( self::$collection_cache_times[ $cache_key ] ) ||
-			( time() - self::$collection_cache_times[ $cache_key ] ) > self::$collection_cache_ttl ) {
-			self::$collection_cache[ $cache_key ]       = $this->alias_manager->get_collection_access( $this->collection_name );
-			self::$collection_cache_times[ $cache_key ] = time();
-		}
-
-		return self::$collection_cache[ $cache_key ];
+		return $this->get_active_collection();
 	}
 
 	public function client() {
@@ -305,6 +295,7 @@ class BaseCollection {
 	public function upsert( $document_data ) {
 		return $this->get_active_collection()->documents->upsert( $document_data );
 	}
+
 
 	/**
 	 * Get the ACTIVE collection object for CRUD operations
