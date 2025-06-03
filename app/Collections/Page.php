@@ -61,11 +61,7 @@ class Page extends BaseCollection {
 				$new_collection_name = $this->initialize_with_alias( $schema );
 				$logger->debug( 'TS Page collection (alias): ' . $new_collection_name, $context );
 
-				// Store the new collection name for later use in complete_sync
-				$this->current_sync_collection = $new_collection_name;
-
-				// Store in transient for persistence across requests
-				set_transient( 'page_sync_collection_' . $this->typesense->store_id, $new_collection_name, HOUR_IN_SECONDS );
+				// Note: initialize_with_alias() now automatically stores the active sync collection
 
 			} catch (\Exception $e) {
 				$logger->debug( 'TS Page collection alias initialize Exception: ' . $e->getMessage(), $context );
@@ -286,30 +282,7 @@ class Page extends BaseCollection {
 		return $post_datas;
 	}
 
-	/**
-	 * Get the target collection name for operations
-	 * Override BaseCollection to check transient for persistent sync collection
-	 */
-	public function get_target_collection_name() {
-		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
 
-		if ( $use_aliases ) {
-			// Check if current_sync_collection is set in this instance
-			if ( isset( $this->current_sync_collection ) ) {
-				return $this->current_sync_collection;
-			}
-
-			// If not set, try to retrieve from transient (for persistence across requests)
-			$transient_key   = 'page_sync_collection_' . $this->typesense->store_id;
-			$sync_collection = get_transient( $transient_key );
-			if ( $sync_collection ) {
-				$this->current_sync_collection = $sync_collection;
-				return $sync_collection;
-			}
-		}
-
-		return $this->collection_name();
-	}
 
 	public function import_prepared_batch( $posts_batch ) {
 		$import_response = $this->import( $posts_batch );

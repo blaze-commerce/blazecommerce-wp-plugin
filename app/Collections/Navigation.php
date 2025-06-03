@@ -46,8 +46,7 @@ class Navigation extends BaseCollection {
 				$new_collection_name = $this->initialize_with_alias( $schema );
 				$logger->debug( 'TS Navigation collection (alias): ' . $new_collection_name, $context );
 
-				// Store the new collection name for later use in complete_sync
-				$this->current_sync_collection = $new_collection_name;
+				// Note: initialize_with_alias() now automatically stores the active sync collection
 
 			} catch (\Exception $e) {
 				$logger->debug( 'TS Navigation collection alias initialize Exception: ' . $e->getMessage(), $context );
