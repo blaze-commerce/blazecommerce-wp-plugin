@@ -290,6 +290,15 @@ class Product extends BaseCollection {
 				),
 				$context
 			);
+			// Complete the sync if using aliases and this is the final page
+			if ( ! $has_next_data ) {
+				$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+				if ( $use_aliases && isset( $this->active_sync_collection ) ) {
+					$sync_result = $this->complete_collection_sync();
+					$logger->debug( 'TS Product sync result: ' . json_encode( $sync_result ), $context );
+				}
+			}
+
 			echo json_encode( array(
 				'imported_products_count' => count( $successful_imports ),
 				'total_imports' => $total_imports,

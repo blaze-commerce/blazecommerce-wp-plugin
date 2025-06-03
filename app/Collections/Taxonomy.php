@@ -251,6 +251,15 @@ class Taxonomy extends BaseCollection {
 
 
 
+			// Complete the sync if using aliases and this is the final page
+			if ( ! $has_next_data ) {
+				$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+				if ( $use_aliases && isset( $this->active_sync_collection ) ) {
+					$sync_result = $this->complete_collection_sync();
+					$import_logger->debug( 'TS Taxonomy sync result: ' . json_encode( $sync_result ), $import_context );
+				}
+			}
+
 			wp_send_json( array(
 				'imported_count' => $imported_count,
 				'total_imports' => $total_imports,
