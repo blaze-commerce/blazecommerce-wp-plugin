@@ -73,16 +73,24 @@ class Tax {
 				$final_regular_price = \wc_get_price_including_tax( $product, array( 'price' => $regular_price ) );
 				$final_sale_price    = \wc_get_price_including_tax( $product, array( 'price' => $sale_price ) );
 
-				$prices_by_location['with_tax']['locations'][]  = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['with_tax']['regularPrice'] = (int) round( Woocommerce::format_price( $final_regular_price ) * 100 );
-				$prices_by_location['with_tax']['salePrice']    = (int) round( Woocommerce::format_price( $final_sale_price ) * 100 );
+				$prices_by_location['with_tax']['locations'][] = array( 'country' => $country, 'state' => $state );
+
+				// Only set prices if not already set, or if this is the first tax rate
+				if ( ! isset( $prices_by_location['with_tax']['regularPrice'] ) ) {
+					$prices_by_location['with_tax']['regularPrice'] = (int) round( Woocommerce::format_price( $final_regular_price ) * 100 );
+					$prices_by_location['with_tax']['salePrice']    = (int) round( Woocommerce::format_price( $final_sale_price ) * 100 );
+				}
 			} else {
 				$final_regular_price = \wc_get_price_excluding_tax( $product, array( 'price' => $regular_price ) );
 				$final_sale_price    = \wc_get_price_excluding_tax( $product, array( 'price' => $sale_price ) );
 
-				$prices_by_location['without_tax']['locations'][]  = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['without_tax']['regularPrice'] = (int) round( Woocommerce::format_price( $final_regular_price ) * 100 );
-				$prices_by_location['without_tax']['salePrice']    = (int) round( Woocommerce::format_price( $final_sale_price ) * 100 );
+				$prices_by_location['without_tax']['locations'][] = array( 'country' => $country, 'state' => $state );
+
+				// Only set prices if not already set, or if this is the first tax rate
+				if ( ! isset( $prices_by_location['without_tax']['regularPrice'] ) ) {
+					$prices_by_location['without_tax']['regularPrice'] = (int) round( Woocommerce::format_price( $final_regular_price ) * 100 );
+					$prices_by_location['without_tax']['salePrice']    = (int) round( Woocommerce::format_price( $final_sale_price ) * 100 );
+				}
 			}
 		}
 
