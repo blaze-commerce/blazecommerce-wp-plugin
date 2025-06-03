@@ -41,7 +41,7 @@ class Woocommerce {
 
 	/**
 	 * Delete typesense product when user permanently deletes a product
-	 * 
+	 *
 	 * @param mixed $post_id
 	 * @return void
 	 */
@@ -239,10 +239,13 @@ class Woocommerce {
 	}
 
 	/**
-	 * Use for making sure that we are setting a valid float type on prices so that typesense will accept it
+	 * Use for making sure that we are setting a valid int type on prices so that typesense will accept it
+	 * Converts prices to cents (multiplied by 100) and returns as integer
+	 * Example: 6.76 becomes 676, 80.00 becomes 8000
 	 */
 	public static function format_price( $price ) {
-		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
+		$formatted_price = (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
+		return (int) round( $formatted_price * 100 );
 	}
 
 	public static function get_currencies() {
