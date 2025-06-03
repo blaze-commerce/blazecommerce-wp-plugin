@@ -348,11 +348,14 @@ class Page extends BaseCollection {
 
 			}
 
-
-
-			// Clear the page sync transient
-			$transient_key = 'page_sync_collection_' . $this->typesense->store_id;
-			$this->complete_collection_sync( array( 'clear_transient' => $transient_key ) );
+			// Complete the sync if using aliases and this is the final page
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases && isset( $this->active_sync_collection ) ) {
+				$logger      = wc_get_logger();
+				$context     = array( 'source' => 'wooless-page-collection-complete' );
+				$sync_result = $this->complete_collection_sync();
+				$logger->debug( 'TS Page sync result: ' . json_encode( $sync_result ), $context );
+			}
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,
