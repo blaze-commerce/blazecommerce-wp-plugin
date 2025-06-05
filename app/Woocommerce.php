@@ -200,13 +200,21 @@ class Woocommerce {
 
 	public function variation_update( $variation_ids ) {
 		try {
-			$typsense_product = Product::get_instance();
-			$variations_data  = array();
+			$typsense_product   = Product::get_instance();
+			$variations_data    = array();
+			$parent_product_ids = array(); // Track parent product IDs for revalidation
+
 			foreach ( $variation_ids as $variation_id ) {
 				$wc_variation = wc_get_product( $variation_id );
 
 				if ( $wc_variation ) {
 					$variations_data[] = $typsense_product->generate_typesense_data( $wc_variation );
+
+					// Collect parent product ID for revalidation
+					$parent_id = $wc_variation->get_parent_id();
+					if ( $parent_id && ! in_array( $parent_id, $parent_product_ids ) ) {
+						$parent_product_ids[] = $parent_id;
+					}
 				}
 			}
 
@@ -217,6 +225,14 @@ class Woocommerce {
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-success-import' );
 			$logger->debug( print_r( $import, 1 ), $context );
+
+			// Schedule revalidation for parent products if not already scheduled
+			$revalidate = Revalidate::get_instance();
+			foreach ( $parent_product_ids as $parent_id ) {
+				$revalidate->revalidate_product_page( $parent_id );
+				$logger->debug( "Scheduled revalidation for parent product ID: {$parent_id}", $context );
+			}
+
 		} catch (\Exception $e) {
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-import' );
