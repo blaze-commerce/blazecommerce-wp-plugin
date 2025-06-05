@@ -143,35 +143,59 @@ class TypesenseClient {
 	}
 
 	/**
-	 * Get collection access object with alias support
-	 * Falls back to legacy naming if alias manager is not available
+	 * Get collection access object using active collection system
+	 * This method uses the active collection name from BaseCollection to ensure
+	 * CRUD operations target the correct live collection
 	 */
-	private function get_collection_access( $collection_type ) {
+	private function get_active_collection_access( $collection_type ) {
 		$alias_manager = $this->get_alias_manager();
+		$use_aliases   = apply_filters( 'blazecommerce/use_collection_aliases', true );
 
-		if ( $alias_manager !== null ) {
-			return $alias_manager->get_collection_access( $collection_type );
+		if ( $alias_manager !== null && $use_aliases ) {
+			// Create a temporary BaseCollection instance to get active collection name
+			$temp_collection                  = new \BlazeWooless\Collections\BaseCollection();
+			$temp_collection->collection_name = $collection_type;
+
+			$active_collection_name = $temp_collection->get_active_collection_name();
+			return $this->client->collections[ $active_collection_name ];
 		}
 
-		// Fallback to legacy naming
+		// Fallback to legacy naming when aliases are disabled
 		$legacy_name = $collection_type . '-' . $this->store_id;
 		return $this->client->collections[ $legacy_name ];
 	}
 
+	/**
+	 * Get collection access object with alias support (backward compatibility)
+	 * Falls back to legacy naming if alias manager is not available
+	 * @deprecated Use get_active_collection_access() for CRUD operations
+	 */
+	private function get_collection_access( $collection_type ) {
+		return $this->get_active_collection_access( $collection_type );
+	}
+
 	public function site_info() {
-		return $this->get_collection_access( 'site_info' )->documents;
+		return $this->get_active_collection_access( 'site_info' )->documents;
 	}
 
 	public function taxonomy() {
-		return $this->get_collection_access( 'taxonomy' )->documents;
+		return $this->get_active_collection_access( 'taxonomy' )->documents;
 	}
 
 	public function product() {
-		return $this->get_collection_access( 'product' )->documents;
+		return $this->get_active_collection_access( 'product' )->documents;
 	}
 
 	public function menu() {
-		return $this->get_collection_access( 'menu' )->documents;
+		return $this->get_active_collection_access( 'menu' )->documents;
+	}
+
+	public function navigation() {
+		return $this->get_active_collection_access( 'navigation' )->documents;
+	}
+
+	public function page() {
+		return $this->get_active_collection_access( 'page' )->documents;
 	}
 
 	public function test_connection( $api_key, $store_id, $environement ) {
@@ -194,7 +218,7 @@ class TypesenseClient {
 				throw new Exception( 'TypesenseClient is not initialized' );
 			}
 
-			$synonims = $this->get_collection_access( 'product' )->synonyms->retrieve();
+			$synonims = $this->get_active_collection_access( 'product' )->synonyms->retrieve();
 			if ( ! isset( $synonims['synonyms'] ) || count( $synonims['synonyms'] ) === 0 ) {
 				throw new Exception( 'No synonyms found' );
 			}
@@ -202,7 +226,7 @@ class TypesenseClient {
 			$delete_report = array();
 
 			foreach ( $synonims['synonyms'] as $synonym ) {
-				$delete_report = $this->get_collection_access( 'product' )->synonyms[ $synonym['id'] ]->delete();
+				$delete_report = $this->get_active_collection_access( 'product' )->synonyms[ $synonym['id'] ]->delete();
 			}
 
 			do_action(
@@ -250,7 +274,7 @@ class TypesenseClient {
 				);
 			}
 
-			$response = $this->get_collection_access( 'product' )->synonyms->upsert( $synonym_key, $synonym_data );
+			$response = $this->get_active_collection_access( 'product' )->synonyms->upsert( $synonym_key, $synonym_data );
 
 			do_action(
 				"inspect",

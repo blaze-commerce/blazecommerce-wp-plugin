@@ -39,8 +39,7 @@ class Menu extends BaseCollection {
 				$new_collection_name = $this->initialize_with_alias( $schema );
 				$logger->debug( 'TS Menu collection (alias): ' . $new_collection_name, $context );
 
-				// Store the new collection name for later use in complete_sync
-				$this->current_sync_collection = $new_collection_name;
+				// Note: initialize_with_alias() now automatically stores the active sync collection
 
 			} catch (\Exception $e) {
 				$logger->debug( 'TS Menu collection alias initialize Exception: ' . $e->getMessage(), $context );
@@ -197,7 +196,8 @@ class Menu extends BaseCollection {
 
 	// Indexes the navigation menus to Typesense
 	public function index_to_typesense() {
-
+		$logger  = wc_get_logger();
+		$context = array( 'source' => 'wooless-menu-collection-index' );
 
 		$this->initialize();
 		//Menu indexing
@@ -206,8 +206,16 @@ class Menu extends BaseCollection {
 			$menu_documents = $this->prepare_batch_data();
 			$imported_menus = $this->import_prepared_batch( $menu_documents );
 
+			// Complete the sync if using aliases
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases && isset( $this->active_sync_collection ) ) {
+				$sync_result = $this->complete_collection_sync();
+				$logger->debug( 'TS Menu sync result: ' . json_encode( $sync_result ), $context );
+			}
+
 			echo "Menu successfully added\n";
 		} catch (\Exception $e) {
+			$logger->debug( 'TS Menu index Exception: ' . $e->getMessage(), $context );
 			echo "Error: " . $e->getMessage() . "\n";
 		}
 	}

@@ -167,7 +167,7 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $product_collection, 'complete_collection_sync' );
+			$this->complete_collection_sync( $product_collection );
 
 			WP_CLI::success( "All products have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_products_count, $page );

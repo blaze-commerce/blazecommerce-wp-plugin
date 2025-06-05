@@ -7,7 +7,7 @@ use BlazeWooless\Woocommerce;
 class Product extends BaseCollection {
 	private static $instance = null;
 	public $collection_name = 'product';
-	public $current_sync_collection = null;
+
 
 	const BATCH_SIZE = 5;
 
@@ -189,8 +189,7 @@ class Product extends BaseCollection {
 				$new_collection_name = $this->initialize_with_alias( $schema );
 				$logger->debug( 'TS Product collection (alias): ' . $new_collection_name, $context );
 
-				// Store the new collection name for later use in complete_sync
-				$this->current_sync_collection = $new_collection_name;
+				// Note: initialize_with_alias() now automatically stores the active sync collection
 
 			} catch (\Exception $e) {
 				$logger->debug( 'TS Product collection alias initialize Exception: ' . $e->getMessage(), $context );
@@ -291,6 +290,15 @@ class Product extends BaseCollection {
 				),
 				$context
 			);
+			// Complete the sync if using aliases and this is the final page
+			if ( ! $has_next_data ) {
+				$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+				if ( $use_aliases && isset( $this->active_sync_collection ) ) {
+					$sync_result = $this->complete_collection_sync();
+					$logger->debug( 'TS Product sync result: ' . json_encode( $sync_result ), $context );
+				}
+			}
+
 			echo json_encode( array(
 				'imported_products_count' => count( $successful_imports ),
 				'total_imports' => $total_imports,

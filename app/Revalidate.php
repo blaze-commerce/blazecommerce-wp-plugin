@@ -63,7 +63,7 @@ class Revalidate {
 
 		// We do not revalidate variation as this doesn't have a url on its own
 		if ( $product->is_type( 'variation' ) ) {
-			return;
+			$product_id = $product->get_parent_id();
 		}
 
 		$this->revalidate_product_page( $product_id );

@@ -57,8 +57,7 @@ class Taxonomy extends BaseCollection {
 				$new_collection_name = $this->initialize_with_alias( $schema );
 				$logger->debug( 'TS Taxonomy collection (alias): ' . $new_collection_name, $context );
 
-				// Store the new collection name for later use in complete_sync
-				$this->current_sync_collection = $new_collection_name;
+				// Note: initialize_with_alias() now automatically stores the active sync collection
 
 			} catch (\Exception $e) {
 				$logger->debug( 'TS Taxonomy collection alias initialize Exception: ' . $e->getMessage(), $context );
@@ -251,6 +250,15 @@ class Taxonomy extends BaseCollection {
 			$has_next_data      = ! empty( $term_query->terms ) && ! is_wp_error( $term_query->terms );
 
 
+
+			// Complete the sync if using aliases and this is the final page
+			if ( ! $has_next_data ) {
+				$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+				if ( $use_aliases && isset( $this->active_sync_collection ) ) {
+					$sync_result = $this->complete_collection_sync();
+					$import_logger->debug( 'TS Taxonomy sync result: ' . json_encode( $sync_result ), $import_context );
+				}
+			}
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,
