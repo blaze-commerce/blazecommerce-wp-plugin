@@ -1,0 +1,49 @@
+.blaze-product-description-block {
+	margin: 1rem 0;
+}
+
+.blaze-product-description h3 {
+	margin-top: 0;
+	margin-bottom: 1rem;
+}
+
+.blaze-product-description p {
+	margin-bottom: 1rem;
+}
+
+.blaze-product-description p:last-child {
+	margin-bottom: 0;
+}
+
+.blaze-product-description ul,
+.blaze-product-description ol {
+	margin: 1rem 0;
+	padding-left: 2rem;
+}
+
+.blaze-product-description li {
+	margin-bottom: 0.5rem;
+}
+
+.blaze-product-description img {
+	max-width: 100%;
+	height: auto;
+}
+
+.blaze-product-description table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 1rem 0;
+}
+
+.blaze-product-description table th,
+.blaze-product-description table td {
+	padding: 0.5rem;
+	border: 1px solid #ddd;
+	text-align: left;
+}
+
+.blaze-product-description table th {
+	background-color: #f5f5f5;
+	font-weight: bold;
+}
