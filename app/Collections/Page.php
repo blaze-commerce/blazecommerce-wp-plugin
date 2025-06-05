@@ -330,37 +330,29 @@ class Page extends BaseCollection {
 					$imported_count += count( $successful_imports );
 				}
 
-
 				$total_imports += count( $post_datas );
-				$total_pages   = $this->get_total_pages( $batch_size );
-				$next_page     = $page + 1;
-				$has_next_data = $page < $total_pages;
-
-
-				wp_send_json( array(
-					'imported_count' => $imported_count,
-					'total_imports' => $total_imports,
-					'next_page' => $has_next_data ? $next_page : null,
-					'page' => $page,
-					'import_response' => $import_response,
-					'import_data_sent' => $post_datas,
-				) );
-
 			}
 
+			$total_pages   = $this->get_total_pages( $batch_size );
+			$next_page     = $page + 1;
+			$has_next_data = $page < $total_pages;
+
 			// Complete the sync if using aliases and this is the final page
-			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
-			if ( $use_aliases && isset( $this->active_sync_collection ) ) {
-				$logger      = wc_get_logger();
-				$context     = array( 'source' => 'wooless-page-collection-complete' );
-				$sync_result = $this->complete_collection_sync();
-				$logger->debug( 'TS Page sync result: ' . json_encode( $sync_result ), $context );
+			if ( ! $has_next_data ) {
+				$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+				if ( $use_aliases && isset( $this->active_sync_collection ) ) {
+					$logger      = wc_get_logger();
+					$context     = array( 'source' => 'wooless-page-collection-complete' );
+					$sync_result = $this->complete_collection_sync();
+					$logger->debug( 'TS Page sync result: ' . json_encode( $sync_result ), $context );
+				}
 			}
 
 			wp_send_json( array(
 				'imported_count' => $imported_count,
 				'total_imports' => $total_imports,
-				'next_page' => null,
+				'next_page' => $has_next_data ? $next_page : null,
+				'page' => $page,
 				'import_response' => $import_response,
 				'import_data_sent' => $post_datas,
 			) );
