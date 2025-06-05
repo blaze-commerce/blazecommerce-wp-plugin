@@ -82,6 +82,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\TemplateBuilder',
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',
+			'\\BlazeWooless\\Features\\PluginIntegrationUrlManager',
 		);
 
 		foreach ( $features as $feature ) {
