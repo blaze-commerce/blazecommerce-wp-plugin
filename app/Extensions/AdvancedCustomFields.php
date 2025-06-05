@@ -14,13 +14,20 @@ class AdvancedCustomFields {
 	}
 
 	public function __construct() {
-		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'advanced-custom-fields/acf.php' ) ) {
+		if ( function_exists( 'is_plugin_active' ) && (
+			is_plugin_active( 'advanced-custom-fields/acf.php' ) ||
+			is_plugin_active( 'advanced-custom-fields-pro/acf.php' ) ||
+			is_plugin_active( 'secure-custom-fields/secure-custom-fields.php' )
+		)
+		) {
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'set_fields' ), 10, 1 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'sync_product_data' ), 99, 3 );
 
 			add_filter( 'blazecommerce/collection/page/typesense_fields', array( $this, 'set_page_fields' ), 10, 1 );
 			add_filter( 'blazecommerce/collection/page/typesense_data', array( $this, 'set_page_data' ), 10, 2 );
 			add_action( 'admin_init', array( $this, 'test' ) );
+
+
 		}
 	}
 
