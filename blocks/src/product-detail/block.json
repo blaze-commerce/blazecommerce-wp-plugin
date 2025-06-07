@@ -1,0 +1,93 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "blaze-commerce/product-detail",
+	"version": "1.0.0",
+	"title": "Product Detail",
+	"category": "blaze-commerce",
+	"icon": "products",
+	"description": "Display WooCommerce product details with customizable options",
+	"supports": {
+		"html": false,
+		"align": ["left", "center", "right", "wide", "full"]
+	},
+	"attributes": {
+		"productId": {
+			"type": "number",
+			"default": 0
+		},
+		"showShortDescription": {
+			"type": "boolean",
+			"default": true
+		},
+		"showSku": {
+			"type": "boolean",
+			"default": true
+		},
+		"showPrice": {
+			"type": "boolean",
+			"default": true
+		},
+		"showStockStatus": {
+			"type": "boolean",
+			"default": true
+		},
+		"showStockQuantity": {
+			"type": "boolean",
+			"default": false
+		},
+		"showCategories": {
+			"type": "boolean",
+			"default": true
+		},
+		"showTags": {
+			"type": "boolean",
+			"default": false
+		},
+		"textColor": {
+			"type": "string",
+			"default": "#333333"
+		},
+		"fontSize": {
+			"type": "number",
+			"default": 16
+		},
+		"fontWeight": {
+			"type": "string",
+			"default": "normal"
+		},
+		"lineHeight": {
+			"type": "number",
+			"default": 1.5
+		},
+		"alignment": {
+			"type": "string",
+			"default": "left"
+		},
+		"shortDescriptionColor": {
+			"type": "string",
+			"default": "#666666"
+		},
+		"shortDescriptionFontSize": {
+			"type": "number",
+			"default": 14
+		},
+		"priceColor": {
+			"type": "string",
+			"default": "#e74c3c"
+		},
+		"priceFontSize": {
+			"type": "number",
+			"default": 18
+		},
+		"priceFontWeight": {
+			"type": "string",
+			"default": "bold"
+		}
+	},
+	"keywords": ["product", "detail", "woocommerce", "blaze", "short description"],
+	"textdomain": "blaze-commerce",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./editor.css",
+	"style": "file:./style.css"
+}

@@ -1,0 +1,383 @@
+# BlazeCommerce WordPress Plugin Development Guidelines
+
+## Table of Contents
+
+1. [General Principles](#general-principles)
+2. [Version Management & Release Process](#version-management--release-process)
+3. [Code Structure & Organization](#code-structure--organization)
+4. [DRY Principle Implementation](#dry-principle-implementation)
+5. [Code Readability](#code-readability)
+6. [WordPress/WooCommerce Specific Guidelines](#wordpresswoocommerce-specific-guidelines)
+7. [Security Best Practices](#security-best-practices)
+8. [Performance Guidelines](#performance-guidelines)
+9. [Testing Standards](#testing-standards)
+10. [Documentation Requirements](#documentation-requirements)
+11. [Error Handling](#error-handling)
+12. [Build Process & Automation](#build-process--automation)
+
+## General Principles
+
+### 1. Follow WordPress Coding Standards
+
+- Use WordPress PHP Coding Standards (WPCS)
+- Follow WordPress naming conventions for functions, classes, and variables
+- Use proper indentation (tabs for indentation, spaces for alignment)
+- Maximum line length of 120 characters
+- Use proper PHP namespacing under `BlazeWooless`
+- Maintain backward compatibility
+- Document all public methods and classes
+
+### 2. Plugin Architecture
+
+- Use object-oriented programming with proper class structure
+- Implement singleton pattern for main plugin class
+- Use dependency injection where appropriate
+- Follow MVC pattern for complex features
+
+### 3. Commit Guidelines
+
+- Follow conventional commit format: `type(scope): description`
+- Types: feat, fix, docs, style, refactor, test, chore
+- Include version bump in commit when releasing
+- Use `>commit` shortcut for automated commits
+
+## Version Management & Release Process
+
+### 1. Version Management
+
+- Plugin version is managed in two places:
+  - Plugin header in `blaze-wooless.php` (line 6)
+  - Version constant `BLAZE_WOOLESS_VERSION` (line 19)
+- Both must be updated together for consistency
+- Use semantic versioning (MAJOR.MINOR.PATCH)
+- Document breaking changes clearly
+- Maintain backward compatibility when possible
+
+### 2. Release Process
+
+1. Update version in both locations in `blaze-wooless.php`
+2. Update CHANGELOG.md with release notes
+3. Commit changes with conventional format
+4. Create GitHub release with tag matching version
+5. Automated workflow will build and package plugin
+
+### 3. Dependencies
+
+- Required plugins are managed via TGM Plugin Activation
+- Keep dependency versions updated in plugin header
+- Test compatibility when updating dependencies
+
+## Code Structure & Organization
+
+### 1. Directory Structure
+
+```
+/app         - Core plugin classes
+/assets      - CSS/JS assets
+/blocks      - Gutenberg blocks (has own package.json)
+/lib         - Helper functions and utilities
+/views       - Admin interface templates
+/vendor      - Composer dependencies
+```
+
+### 2. File Naming Conventions
+
+- Use descriptive names that reflect functionality
+- Group related files in appropriate subdirectories
+
+### 3. Class Organization
+
+- One class per file
+- Use proper namespacing
+- Follow PSR-4 autoloading standards
+- Place classes in logical directories based on functionality
+
+## DRY Principle Implementation
+
+### 1. Base Classes and Traits
+
+- Create base classes for common functionality
+- Use traits for shared methods across unrelated classes
+- Example: `BaseCollection` for common collection operations
+- Example: `SettingsTrait` for settings management
+
+### 2. Utility Classes
+
+- Create utility classes for frequently used operations
+- Examples: `StringHelper`, `ArrayHelper`, `ValidationHelper`
+- Keep utility methods static and stateless
+
+### 3. Configuration Management
+
+- Centralize configuration in dedicated classes
+- Use constants for values that don't change
+- Implement configuration inheritance for related settings
+
+### 4. Template System
+
+- Create reusable template components
+- Use template inheritance and includes
+- Avoid duplicating HTML structures
+
+### 5. Common Patterns
+
+```php
+// Good: Centralized method
+abstract class BaseCollection {
+    protected function complete_sync($collection_type) {
+        // Common sync completion logic
+    }
+}
+
+// Bad: Repeated in each collection
+class ProductCollection {
+    public function complete_product_sync() {
+        // Duplicated logic
+    }
+}
+```
+
+## Code Readability
+
+### 1. Naming Conventions
+
+- Use descriptive variable names: `$product_data` instead of `$data`
+- Use verb-noun pattern for functions: `get_product_data()`, `update_user_meta()`
+- Use meaningful class names that describe purpose
+- Avoid abbreviations unless they're widely understood
+
+### 2. Function Design
+
+- Keep functions small and focused (single responsibility)
+- Maximum 20-30 lines per function
+- Use early returns to reduce nesting
+- Limit function parameters (max 4-5, use arrays/objects for more)
+
+### 3. Code Comments
+
+```php
+/**
+ * Synchronizes product data with Typesense collection.
+ *
+ * @param array $product_data The product data to sync.
+ * @param bool  $force_update Whether to force update existing records.
+ * @return bool True on success, false on failure.
+ */
+public function sync_product_data($product_data, $force_update = false) {
+    // Implementation
+}
+```
+
+### 4. Code Formatting
+
+- Use consistent indentation (WordPress standard: tabs)
+- Add blank lines to separate logical blocks
+- Align array elements for better readability
+- Use meaningful variable names in loops
+
+### 5. Conditional Logic
+
+```php
+// Good: Clear and readable
+if ($this->is_product_valid($product) && $this->should_sync_product($product)) {
+    return $this->perform_sync($product);
+}
+
+// Bad: Complex nested conditions
+if ($product) {
+    if (isset($product['id']) && $product['id'] > 0) {
+        if ($this->sync_enabled) {
+            // nested logic
+        }
+    }
+}
+```
+
+## WordPress/WooCommerce Specific Guidelines
+
+### 1. Hook Usage
+
+- Use appropriate action and filter hooks
+- Create custom hooks for extensibility
+- Document hook parameters and usage
+- Use consistent hook naming: `{plugin_prefix}/{context}/{action}`
+
+### 2. Database Operations
+
+- Use WordPress database abstraction layer ($wpdb)
+- Sanitize all inputs before database operations
+- Use prepared statements for dynamic queries
+- Implement proper error handling for database operations
+
+### 3. Settings API
+
+- Use WordPress Settings API for admin options
+- Implement proper validation and sanitization
+- Use centralized settings management
+- Provide default values for all settings
+
+### 4. Transients and Caching
+
+- Use WordPress transients for temporary data
+- Implement proper cache invalidation
+- Use object caching when available
+- Set appropriate expiration times
+
+### 5. Internationalization
+
+- Make all user-facing strings translatable
+- Use proper text domains
+- Provide context for translators when needed
+- Follow WordPress i18n best practices
+
+## Security Best Practices
+
+### 1. Input Validation
+
+- Sanitize all user inputs
+- Validate data types and formats
+- Use WordPress sanitization functions
+- Implement proper nonce verification
+
+### 2. Output Escaping
+
+- Escape all output using appropriate WordPress functions
+- Use `esc_html()`, `esc_attr()`, `esc_url()` as needed
+- Never trust user input or external data
+
+### 3. Capability Checks
+
+- Verify user capabilities before sensitive operations
+- Use appropriate WordPress capability checks
+- Implement role-based access control
+
+### 4. SQL Injection Prevention
+
+- Always use prepared statements
+- Never concatenate user input into SQL queries
+- Use WordPress database methods when possible
+
+## Performance Guidelines
+
+### 1. Database Optimization
+
+- Minimize database queries
+- Use efficient query structures
+- Implement proper indexing
+- Use batch operations for bulk data
+
+### 2. Memory Management
+
+- Unset large variables when no longer needed
+- Use generators for large datasets
+- Implement pagination for large result sets
+- Monitor memory usage in long-running processes
+
+### 3. Caching Strategy
+
+- Cache expensive operations
+- Use appropriate cache expiration times
+- Implement cache warming strategies
+- Consider external caching solutions
+
+## Testing Standards
+
+### 1. Unit Testing
+
+- Write unit tests for all business logic
+- Use PHPUnit for testing framework
+- Aim for high code coverage (80%+)
+- Mock external dependencies
+
+### 2. Integration Testing
+
+- Test WordPress/WooCommerce integration points
+- Test database operations
+- Test API endpoints
+- Use WordPress testing framework
+
+### 3. Plugin Compatibility Testing
+
+- Test plugin with latest WordPress version
+- Verify WooCommerce compatibility
+- Test all required plugin dependencies
+- Validate GraphQL endpoints functionality
+
+### 4. Code Quality
+
+- Use PHP_CodeSniffer with WordPress standards
+- Implement continuous integration
+- Use static analysis tools (PHPStan, Psalm)
+- Regular code reviews
+
+## Documentation Requirements
+
+### 1. Code Documentation
+
+- Document all public methods and classes
+- Use PHPDoc format consistently
+- Include parameter types and return values
+- Document complex algorithms and business logic
+
+### 2. User Documentation
+
+- Provide clear installation instructions
+- Document all settings and configuration options
+- Include troubleshooting guides
+- Maintain changelog with version updates
+
+## Error Handling
+
+### 1. Exception Handling
+
+- Use try-catch blocks for risky operations
+- Create custom exception classes when needed
+- Log errors appropriately
+- Provide meaningful error messages
+
+### 2. Logging
+
+- Use WordPress logging functions
+- Implement different log levels
+- Include context in log messages
+- Rotate logs to prevent disk space issues
+
+### 3. Graceful Degradation
+
+- Handle missing dependencies gracefully
+- Provide fallback functionality when possible
+- Display user-friendly error messages
+- Maintain plugin functionality during partial failures
+
+## Build Process & Automation
+
+### 1. Build Process
+
+- Run `yarn build` in `/blocks` directory after making block changes
+- Ensure all assets are compiled before committing
+- Test plugin functionality after build
+
+### 2. Automation
+
+- Version bumping is automated via npm scripts
+- GitHub releases are created automatically on version tags
+- Plugin ZIP is generated for distribution
+- Changelog is updated automatically from commits
+
+---
+
+## Quick Reference Checklist
+
+- [ ] Follow WordPress coding standards
+- [ ] Use descriptive naming conventions
+- [ ] Implement DRY principle with base classes/traits
+- [ ] Keep functions small and focused
+- [ ] Add comprehensive documentation
+- [ ] Sanitize inputs and escape outputs
+- [ ] Use proper WordPress hooks and APIs
+- [ ] Implement error handling and logging
+- [ ] Write tests for critical functionality
+- [ ] Optimize for performance and memory usage
+- [ ] Update version in both locations when releasing
+- [ ] Run build process after block changes
+- [ ] Test plugin compatibility before release

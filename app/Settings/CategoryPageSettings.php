@@ -19,7 +19,7 @@ class CategoryPageSettings extends BaseSettings {
 	}
 
 	public function register_hooks() {
-		add_action( 'blaze_wooless_after_site_info_sync', array( $this, 'sync_additional_data' ), 10 );
+		add_filter( 'blazecommerce/settings', array( $this, 'add_category_page_settings_to_documents' ), 10, 1 );
 	}
 
 	public function settings_callback( $options ) {
@@ -132,9 +132,54 @@ class CategoryPageSettings extends BaseSettings {
 
 		do_action( 'blaze_wooless_save_category_page_settings', $options );
 	}
-	public function sync_additional_data() {
+	public function add_category_page_settings_to_documents( $documents ) {
 		$options = $this->get_option();
-		$this->update_fields( $options );
+
+		if ( ! empty( $options ) ) {
+			// Add category page default banner
+			$documents[] = array(
+				'id' => '10089554',
+				'name' => 'category_page_default_banner',
+				'value' => json_encode( array(
+					'url' => isset( $options['default_banner_link'] ) ? $options['default_banner_link'] : ''
+				) ),
+				'updated_at' => time(),
+			);
+
+			// Add category page default sort
+			$documents[] = array(
+				'id' => '10089555',
+				'name' => 'category_page_default_sort',
+				'value' => json_encode( array(
+					'sort_option' => isset( $options['default_product_sorting'] ) ? $options['default_product_sorting'] : ''
+				) ),
+				'updated_at' => time(),
+			);
+
+			// Add category page max width
+			$documents[] = array(
+				'id' => '10089556',
+				'name' => 'category_page_max_width',
+				'value' => json_encode( array(
+					'container_max_width' => isset( $options['container_max_width'] ) ? $options['container_max_width'] : ''
+				) ),
+				'updated_at' => time(),
+			);
+
+			// Add category page padding
+			$documents[] = array(
+				'id' => '10089557',
+				'name' => 'category_page_padding',
+				'value' => json_encode( array(
+					'container_padding' => isset( $options['container_padding'] ) ? $options['container_padding'] : ''
+				) ),
+				'updated_at' => time(),
+			);
+
+			do_action( 'blaze_wooless_save_category_page_settings', $options );
+		}
+
+		return $documents;
 	}
 }
 

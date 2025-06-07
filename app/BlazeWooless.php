@@ -59,10 +59,8 @@ class BlazeWooless {
 			'\\BlazeWooless\\Settings\\ProductFilterSettings',
 			'\\BlazeWooless\\Settings\\ProductPageSettings',
 			'\\BlazeWooless\\Settings\\CategoryPageSettings',
-			'\\BlazeWooless\\Settings\\HeaderSettings',
-			'\\BlazeWooless\\Settings\\FooterSettings',
-			'\\BlazeWooless\\Settings\\HomePageSettings',
 			'\\BlazeWooless\\Settings\\SynonymSettings',
+			'\\BlazeWooless\\Settings\\ExportImportSettings',
 		);
 
 		foreach ( $settings as $setting ) {
@@ -123,6 +121,8 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\WoocommerceAutoCatThumbnails',
 			'\\BlazeWooless\\Extensions\\WooDiscountRules',
 			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\Product',
+			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\ProductBlocks',
+			'\\BlazeWooless\\Extensions\\Gutenberg\\Blocks\\WooCommerceProductDetailsExtension',
 			'\\BlazeWooless\\Extensions\\OffloadMedia',
 			'\\BlazeWooless\\Extensions\\MegaMenu',
 			'\\BlazeWooless\\Extensions\\WoocommerceBundle',
@@ -132,6 +132,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\B2BWholesaleSuite',
 			'\\BlazeWooless\\Extensions\\Pinterest',
 			'\\BlazeWooless\\Extensions\\AdvancedCustomFields',
+			'\\BlazeWooless\\Extensions\\PageMetaFields',
 		);
 
 		foreach ( $extensions as $extension ) {

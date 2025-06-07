@@ -6,6 +6,8 @@ import { SubmenuConfig } from "./components/maxmegamenu/submenu-config";
 // Import blocks
 import "./service-features";
 import "./stock-status";
+import "./product-description";
+import "./product-detail";
 
 const { createHigherOrderComponent } = wp.compose;
 const { Fragment } = wp.element;

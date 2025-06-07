@@ -1,0 +1,86 @@
+name: Auto Version Bump
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'package.json'
+      - 'blaze-wooless.php'
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore(release)')"
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+    - name: Determine version bump type
+      id: bump_type
+      run: |
+        # Get all non-merge commits since last version tag or last 20 commits if no tags
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          COMMITS=$(git log --oneline --no-merges --format="%s" ${LAST_TAG}..HEAD)
+        else
+          COMMITS=$(git log --oneline --no-merges --format="%s" -20)
+        fi
+
+        echo "Analyzing commits:"
+        echo "$COMMITS"
+
+        # Check for breaking changes (major version)
+        if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
+          echo "BUMP_TYPE=major" >> $GITHUB_OUTPUT
+          echo "Found breaking changes - major version bump"
+        # Check for features (minor version)
+        elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+          echo "BUMP_TYPE=minor" >> $GITHUB_OUTPUT
+          echo "Found features - minor version bump"
+        # Check for fixes (patch version)
+        elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:|^perf(\(.+\))?:"; then
+          echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
+          echo "Found fixes - patch version bump"
+        else
+          echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+          echo "No conventional commits found - no version bump"
+        fi
+
+    - name: Bump version
+      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      run: |
+        npm run version:${{ steps.bump_type.outputs.BUMP_TYPE }}
+
+    - name: Update changelog
+      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      run: npm run changelog
+
+    - name: Commit version bump
+      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        git add .
+        git commit -m "chore(release): bump version to $VERSION [skip ci]"
+        git push
