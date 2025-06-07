@@ -1,49 +1,54 @@
 # WooCommerce Product Details Extension
 
-Extension untuk menambahkan checkbox control pada WooCommerce Product Details block yang sudah ada.
+Extension to add checkbox control to the existing WooCommerce Product Details block.
 
-## Fitur
+## Features
 
-- ✅ Menambahkan checkbox "Show Short Description" pada WooCommerce Product Details block
-- ✅ Kontrol tersedia di sidebar Inspector Controls
-- ✅ Berfungsi di editor dan frontend
-- ✅ Tidak mengganggu fungsionalitas block yang sudah ada
+- ✅ Adds "Show Short Description" checkbox to WooCommerce Product Details block
+- ✅ Control available in sidebar Inspector Controls
+- ✅ Works in both editor and frontend
+- ✅ Does not interfere with existing block functionality
 
-## Cara Penggunaan
+## How to Use
 
-1. Buka Gutenberg editor
-2. Tambahkan WooCommerce Product Details block (dari kategori WooCommerce Product Elements)
-3. Pilih block tersebut
-4. Di sidebar, buka panel "Display Options"
-5. Gunakan checkbox "Show Short Description" untuk menampilkan/menyembunyikan short description
+1. Open Gutenberg editor
+2. Add WooCommerce Product Details block (from WooCommerce Product Elements category)
+3. Select the block
+4. In the sidebar, open "Display Options" panel
+5. Use "Show Short Description" checkbox to show/hide short description
 
-## File yang Terlibat
+## Files Involved
 
 ### PHP Backend
+
 - `app/Extensions/Gutenberg/Blocks/WooCommerceProductDetailsExtension.php`
-  - Class utama untuk extension
-  - Menangani enqueue assets dan render block
+  - Main class for the extension
+  - Handles asset enqueuing and block rendering
 
 ### JavaScript
+
 - `assets/js/woocommerce-product-details-extension.js`
-  - Menambahkan attribute `showShortDescription` ke block
-  - Menambahkan ToggleControl di Inspector Controls
-  - Menambahkan CSS class untuk menyembunyikan short description
+  - Adds `showShortDescription` attribute to block
+  - Adds ToggleControl in Inspector Controls
+  - Adds CSS class to hide short description
 
 ### CSS
+
 - `assets/css/woocommerce-product-details-extension.css`
-  - Styling untuk menyembunyikan short description
-  - Berfungsi di editor dan frontend
+  - Styling to hide short description
+  - Works in both editor and frontend
 
-## Implementasi Teknis
+## Technical Implementation
 
-### WordPress Hooks yang Digunakan
-- `blocks.registerBlockType` - Menambahkan attribute baru
-- `editor.BlockEdit` - Menambahkan control di editor
-- `editor.BlockListBlock` - Menambahkan CSS class di editor
-- `render_block` - Memodifikasi output di frontend
+### WordPress Hooks Used
 
-### Attribute yang Ditambahkan
+- `blocks.registerBlockType` - Adds new attribute
+- `editor.BlockEdit` - Adds control in editor
+- `editor.BlockListBlock` - Adds CSS class in editor
+- `render_block` - Modifies output on frontend
+
+### Added Attributes
+
 ```javascript
 showShortDescription: {
     type: 'boolean',
@@ -52,28 +57,32 @@ showShortDescription: {
 ```
 
 ### CSS Classes
-- `.hide-short-description` - Class yang ditambahkan ketika short description disembunyikan
 
-## Kompatibilitas
+- `.hide-short-description` - Class added when short description is hidden
+
+## Compatibility
 
 - ✅ WordPress 5.0+
 - ✅ WooCommerce 5.0+
 - ✅ Gutenberg Block Editor
-- ✅ Frontend dan Backend
+- ✅ Frontend and Backend
 
 ## Troubleshooting
 
-### Short Description Masih Muncul
-1. Pastikan checkbox "Show Short Description" tidak dicentang
-2. Clear cache jika menggunakan caching plugin
-3. Periksa apakah ada CSS custom yang override styling
+### Short Description Still Appears
 
-### Control Tidak Muncul
-1. Pastikan menggunakan WooCommerce Product Details block yang asli
-2. Pastikan extension sudah diaktifkan
-3. Refresh halaman editor
+1. Make sure "Show Short Description" checkbox is unchecked
+2. Clear cache if using caching plugins
+3. Check if there are custom CSS that override styling
 
-### Styling Tidak Berfungsi
-1. Pastikan CSS file ter-enqueue dengan benar
-2. Periksa console browser untuk error
-3. Pastikan tidak ada conflict dengan theme CSS
+### Control Not Appearing
+
+1. Make sure you're using the original WooCommerce Product Details block
+2. Make sure the extension is activated
+3. Refresh the editor page
+
+### Styling Not Working
+
+1. Make sure CSS file is properly enqueued
+2. Check browser console for errors
+3. Make sure there are no conflicts with theme CSS

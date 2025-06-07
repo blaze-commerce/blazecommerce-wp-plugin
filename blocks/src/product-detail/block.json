@@ -85,7 +85,14 @@
 			"default": "bold"
 		}
 	},
-	"keywords": ["product", "detail", "woocommerce", "blaze", "short description"],
+	"keywords": [
+		"product",
+		"detail",
+		"woocommerce",
+		"blaze",
+		"short description"
+	],
+	"render": "file:./product-detail-block.php",
 	"textdomain": "blaze-commerce",
 	"editorScript": "file:./index.js",
 	"editorStyle": "file:./editor.css",

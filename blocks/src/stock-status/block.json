@@ -24,6 +24,7 @@
 			"type": "string"
 		}
 	},
+	"render": "file:./stock-status-block.php",
 	"textdomain": "blaze-commerce",
 	"editorScript": "file:./index.js",
 	"editorStyle": "file:./index.css",

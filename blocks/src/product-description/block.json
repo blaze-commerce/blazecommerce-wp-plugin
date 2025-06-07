@@ -18,6 +18,7 @@
 		}
 	},
 	"keywords": ["product", "description", "woocommerce", "blaze"],
+	"render": "file:./product-description-block.php",
 	"textdomain": "blaze-commerce",
 	"editorScript": "file:./index.js",
 	"editorStyle": "file:./editor.css",
