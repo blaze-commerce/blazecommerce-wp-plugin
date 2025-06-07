@@ -19,25 +19,13 @@
 			"type": "string",
 			"default": "horizontal"
 		},
-		"textColor": {
+		"containerClass": {
 			"type": "string",
-			"default": "#333333"
+			"default": ""
 		},
-		"textSize": {
-			"type": "number",
-			"default": 16
-		},
-		"textTransform": {
+		"itemClass": {
 			"type": "string",
-			"default": "none"
-		},
-		"textFontWeight": {
-			"type": "string",
-			"default": "normal"
-		},
-		"textLineHeight": {
-			"type": "number",
-			"default": 1.5
+			"default": ""
 		},
 		"showDivider": {
 			"type": "boolean",
@@ -46,22 +34,6 @@
 		"dividerColor": {
 			"type": "string",
 			"default": "#e0e0e0"
-		},
-		"triggerColor": {
-			"type": "string",
-			"default": "#0066cc"
-		},
-		"triggerSize": {
-			"type": "number",
-			"default": 14
-		},
-		"logoSize": {
-			"type": "number",
-			"default": 60
-		},
-		"spacing": {
-			"type": "number",
-			"default": 20
 		},
 		"items": {
 			"type": "array",
@@ -75,7 +47,6 @@
 					},
 					"text": "Service Feature",
 					"triggerType": "link",
-					"triggerText": "Learn More",
 					"triggerLink": "#",
 					"triggerTarget": "",
 					"triggerRichText": ""

@@ -18,7 +18,6 @@ import {
 	Placeholder,
 	__experimentalDivider as Divider,
 	ColorPicker,
-	RangeControl,
 } from "@wordpress/components";
 import { useState, useCallback, useMemo } from "@wordpress/element";
 
@@ -40,19 +39,12 @@ export default function Edit({ attributes, setAttributes }) {
 		items,
 		align,
 		itemsDirection,
-		textColor,
-		textSize,
-		textTransform,
-		textFontWeight,
-		textLineHeight,
-		triggerColor,
-		triggerSize,
-		logoSize,
-		spacing,
+		containerClass,
+		itemClass,
 		showDivider,
 		dividerColor,
 	} = attributes;
-	// Generate Tailwind classes based on attributes (same as save.js)
+	// Generate Tailwind classes based on attributes
 	const getAlignmentClass = () => {
 		switch (align) {
 			case "center":
@@ -72,110 +64,6 @@ export default function Edit({ attributes, setAttributes }) {
 
 	const getDirectionClass = () => {
 		return itemsDirection === "vertical" ? "flex-col" : "flex-row flex-wrap";
-	};
-
-	const getSpacingClass = () => {
-		const spacingMap = {
-			10: "gap-2.5",
-			15: "gap-4",
-			20: "gap-5",
-			25: "gap-6",
-			30: "gap-8",
-			35: "gap-9",
-			40: "gap-10",
-			45: "gap-11",
-			50: "gap-12",
-		};
-		return spacingMap[spacing] || "gap-5";
-	};
-
-	const getLogoSizeClass = () => {
-		const sizeMap = {
-			16: "w-4 h-4",
-			20: "w-5 h-5",
-			24: "w-6 h-6",
-			28: "w-7 h-7",
-			32: "w-8 h-8",
-			36: "w-9 h-9",
-			40: "w-10 h-10",
-			44: "w-11 h-11",
-			48: "w-12 h-12",
-			52: "w-13 h-13",
-			56: "w-14 h-14",
-			60: "w-15 h-15",
-			64: "w-16 h-16",
-			68: "w-17 h-17",
-			72: "w-18 h-18",
-			76: "w-19 h-19",
-			80: "w-20 h-20",
-			84: "w-21 h-21",
-			88: "w-22 h-22",
-			92: "w-23 h-23",
-			96: "w-24 h-24",
-		};
-		return sizeMap[logoSize] || "w-16 h-16";
-	};
-
-	const getTextSizeClass = () => {
-		const sizeMap = {
-			12: "text-xs",
-			14: "text-sm",
-			16: "text-base",
-			18: "text-lg",
-			20: "text-xl",
-			22: "text-xl",
-			24: "text-2xl",
-		};
-		return sizeMap[textSize] || "text-base";
-	};
-
-	const getTriggerSizeClass = () => {
-		const sizeMap = {
-			10: "text-xs",
-			12: "text-xs",
-			14: "text-sm",
-			16: "text-base",
-			18: "text-lg",
-			20: "text-xl",
-		};
-		return sizeMap[triggerSize] || "text-sm";
-	};
-
-	const getTextTransformClass = () => {
-		const transformMap = {
-			uppercase: "uppercase",
-			lowercase: "lowercase",
-			capitalize: "capitalize",
-			none: "normal-case",
-		};
-		return transformMap[textTransform] || "normal-case";
-	};
-
-	const getTextFontWeightClass = () => {
-		const weightMap = {
-			thin: "font-thin",
-			extralight: "font-extralight",
-			light: "font-light",
-			normal: "font-normal",
-			medium: "font-medium",
-			semibold: "font-semibold",
-			bold: "font-bold",
-			extrabold: "font-extrabold",
-			black: "font-black",
-		};
-		return weightMap[textFontWeight] || "font-normal";
-	};
-
-	const getTextLineHeightClass = () => {
-		const lineHeightMap = {
-			1: "leading-none",
-			1.25: "leading-tight",
-			1.375: "leading-snug",
-			1.5: "leading-normal",
-			1.625: "leading-relaxed",
-			2: "leading-loose",
-		};
-		return lineHeightMap[textLineHeight] || "leading-normal";
 	};
 
 	const blockProps = useBlockProps({
@@ -201,7 +89,6 @@ export default function Edit({ attributes, setAttributes }) {
 			},
 			text: "Service Feature",
 			triggerType: "link",
-			triggerText: "Learn More",
 			triggerLink: "#",
 			triggerTarget: "",
 			triggerRichText: "",
@@ -293,46 +180,6 @@ export default function Edit({ attributes, setAttributes }) {
 			{ label: __("Link", "blaze-commerce"), value: "link" },
 			{ label: __("Shipping", "blaze-commerce"), value: "shipping" },
 			{ label: __("Text", "blaze-commerce"), value: "text" },
-		],
-		[],
-	);
-
-	// Memoized text transform options
-	const textTransformOptions = useMemo(
-		() => [
-			{ label: __("Normal", "blaze-commerce"), value: "none" },
-			{ label: __("Uppercase", "blaze-commerce"), value: "uppercase" },
-			{ label: __("Lowercase", "blaze-commerce"), value: "lowercase" },
-			{ label: __("Capitalize", "blaze-commerce"), value: "capitalize" },
-		],
-		[],
-	);
-
-	// Memoized font weight options
-	const fontWeightOptions = useMemo(
-		() => [
-			{ label: __("Thin", "blaze-commerce"), value: "thin" },
-			{ label: __("Extra Light", "blaze-commerce"), value: "extralight" },
-			{ label: __("Light", "blaze-commerce"), value: "light" },
-			{ label: __("Normal", "blaze-commerce"), value: "normal" },
-			{ label: __("Medium", "blaze-commerce"), value: "medium" },
-			{ label: __("Semi Bold", "blaze-commerce"), value: "semibold" },
-			{ label: __("Bold", "blaze-commerce"), value: "bold" },
-			{ label: __("Extra Bold", "blaze-commerce"), value: "extrabold" },
-			{ label: __("Black", "blaze-commerce"), value: "black" },
-		],
-		[],
-	);
-
-	// Memoized line height options
-	const lineHeightOptions = useMemo(
-		() => [
-			{ label: __("None (1.0)", "blaze-commerce"), value: 1 },
-			{ label: __("Tight (1.25)", "blaze-commerce"), value: 1.25 },
-			{ label: __("Snug (1.375)", "blaze-commerce"), value: 1.375 },
-			{ label: __("Normal (1.5)", "blaze-commerce"), value: 1.5 },
-			{ label: __("Relaxed (1.625)", "blaze-commerce"), value: 1.625 },
-			{ label: __("Loose (2.0)", "blaze-commerce"), value: 2 },
 		],
 		[],
 	);
@@ -449,65 +296,26 @@ export default function Edit({ attributes, setAttributes }) {
 				</PanelBody>
 
 				<PanelBody title={__("Styling", "blaze-commerce")} initialOpen={false}>
-					<RangeControl
-						label={__("Logo Size (px)", "blaze-commerce")}
-						value={logoSize}
-						onChange={(value) => setAttributes({ logoSize: value })}
-						min={20}
-						max={120}
+					<TextControl
+						label={__("Container CSS Classes", "blaze-commerce")}
+						value={containerClass}
+						onChange={(value) => setAttributes({ containerClass: value })}
+						help={__(
+							"Add Tailwind CSS classes for the main container",
+							"blaze-commerce",
+						)}
+						placeholder="flex gap-4 p-4"
 					/>
 
-					<RangeControl
-						label={__("Spacing (px)", "blaze-commerce")}
-						value={spacing}
-						onChange={(value) => setAttributes({ spacing: value })}
-						min={10}
-						max={50}
-					/>
-
-					<Divider />
-
-					<p>{__("Text Color", "blaze-commerce")}</p>
-					<ColorPicker
-						color={textColor}
-						onChange={(value) => setAttributes({ textColor: value })}
-					/>
-
-					<RangeControl
-						label={__("Text Size (px)", "blaze-commerce")}
-						value={textSize}
-						onChange={(value) => setAttributes({ textSize: value })}
-						min={12}
-						max={24}
-					/>
-
-					<SelectControl
-						label={__("Text Transform", "blaze-commerce")}
-						value={textTransform}
-						options={textTransformOptions}
-						onChange={(value) => setAttributes({ textTransform: value })}
-					/>
-
-					<SelectControl
-						label={__("Font Weight", "blaze-commerce")}
-						value={textFontWeight}
-						options={fontWeightOptions}
-						onChange={(value) => setAttributes({ textFontWeight: value })}
-					/>
-
-					<SelectControl
-						label={__("Line Height", "blaze-commerce")}
-						value={textLineHeight}
-						options={lineHeightOptions}
-						onChange={(value) => setAttributes({ textLineHeight: value })}
-					/>
-
-					<Divider />
-
-					<p>{__("Trigger Color", "blaze-commerce")}</p>
-					<ColorPicker
-						color={triggerColor}
-						onChange={(value) => setAttributes({ triggerColor: value })}
+					<TextControl
+						label={__("Item CSS Classes", "blaze-commerce")}
+						value={itemClass}
+						onChange={(value) => setAttributes({ itemClass: value })}
+						help={__(
+							"Add Tailwind CSS classes for each item container",
+							"blaze-commerce",
+						)}
+						placeholder="bg-white rounded-lg shadow-md p-6"
 					/>
 
 					<Divider />
@@ -688,7 +496,7 @@ export default function Edit({ attributes, setAttributes }) {
 
 			<div {...blockProps}>
 				<div
-					className={`flex ${getDirectionClass()} ${getSpacingClass()} ${getAlignmentClass()}`}>
+					className={`flex ${getDirectionClass()} ${getAlignmentClass()} ${containerClass}`}>
 					{items.length === 0 ? (
 						<Placeholder
 							icon="admin-generic"
@@ -709,31 +517,17 @@ export default function Edit({ attributes, setAttributes }) {
 								<>
 									<div
 										key={item.id}
-										className={`flex flex-row items-center relative cursor-pointer ${
-											itemsDirection === "horizontal"
-												? "min-w-[200px]"
-												: "w-full"
-										} ${
-											itemsDirection === "horizontal"
-												? "gap-4"
-												: `gap-${spacing === 20 ? "4" : "3"}`
-										}`}
+										className={`flex flex-row items-center relative cursor-pointer ${itemClass}`}
 										onClick={handleItemClick}>
 										{item.logo.url && (
 											<img
 												src={item.logo.url}
 												alt={item.logo.alt}
-												className={`${getLogoSizeClass()} object-contain flex-shrink-0`}
+												className="object-contain flex-shrink-0"
 											/>
 										)}
 
-										{item.text && (
-											<div
-												className={`m-0 ${getTextSizeClass()} ${getTextTransformClass()} ${getTextFontWeightClass()} ${getTextLineHeightClass()} ${getTriggerSizeClass()} `}
-												style={{ color: textColor }}>
-												{item.text}
-											</div>
-										)}
+										{item.text && <div className="m-0">{item.text}</div>}
 
 										<div className="absolute top-1 right-1">
 											<span className="flex items-center justify-center w-6 h-6 bg-blue-500 text-white rounded-full text-xs font-bold">
