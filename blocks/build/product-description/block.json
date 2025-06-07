@@ -4,7 +4,7 @@
   "name": "blaze-commerce/product-description",
   "version": "1.0.0",
   "title": "Product Description",
-  "category": "blaze-commerce",
+  "category": "woocommerce-product-elements",
   "icon": "text",
   "description": "Display WooCommerce product description",
   "supports": {

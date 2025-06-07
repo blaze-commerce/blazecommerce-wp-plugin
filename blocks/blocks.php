@@ -34,19 +34,6 @@ function blaze_commerce_register_blocks() {
 }
 
 add_action( 'enqueue_block_editor_assets', 'extend_block_example_enqueue_block_editor_assets' );
-add_action( 'init', 'register_blaze_commerce_block_category' );
-
-function register_blaze_commerce_block_category() {
-	if ( function_exists( 'register_block_category_collection' ) ) {
-		register_block_category_collection(
-			'blaze-commerce',
-			array(
-				'title' => __( 'Blaze Commerce', 'blaze-commerce' ),
-				'icon' => 'store',
-			)
-		);
-	}
-}
 
 function extend_block_example_enqueue_block_editor_assets() {
 	// Enqueue our script

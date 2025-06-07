@@ -4,7 +4,7 @@
   "name": "blaze-commerce/service-features",
   "version": "0.1.0",
   "title": "Service Features",
-  "category": "widgets",
+  "category": "woocommerce-product-elements",
   "icon": "admin-generic",
   "description": "Display service features with logo, text, and trigger",
   "supports": {
