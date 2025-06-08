@@ -27,6 +27,10 @@
 			"type": "string",
 			"default": ""
 		},
+		"logoClass": {
+			"type": "string",
+			"default": ""
+		},
 		"showDivider": {
 			"type": "boolean",
 			"default": false

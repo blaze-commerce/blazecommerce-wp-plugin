@@ -41,6 +41,7 @@ export default function Edit({ attributes, setAttributes }) {
 		itemsDirection,
 		containerClass,
 		itemClass,
+		logoClass,
 		showDivider,
 		dividerColor,
 	} = attributes;
@@ -318,6 +319,17 @@ export default function Edit({ attributes, setAttributes }) {
 						placeholder="bg-white rounded-lg shadow-md p-6"
 					/>
 
+					<TextControl
+						label={__("Logo CSS Classes", "blaze-commerce")}
+						value={logoClass}
+						onChange={(value) => setAttributes({ logoClass: value })}
+						help={__(
+							"Add Tailwind CSS classes for each logo",
+							"blaze-commerce",
+						)}
+						placeholder="bg-white rounded-lg shadow-md p-6"
+					/>
+
 					<Divider />
 
 					<ToggleControl
@@ -523,7 +535,7 @@ export default function Edit({ attributes, setAttributes }) {
 											<img
 												src={item.logo.url}
 												alt={item.logo.alt}
-												className="object-contain flex-shrink-0"
+												className={`${logoClass} object-contain flex-shrink-0`}
 											/>
 										)}
 
