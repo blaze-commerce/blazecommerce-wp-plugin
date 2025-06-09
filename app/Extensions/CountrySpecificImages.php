@@ -15,10 +15,10 @@ class CountrySpecificImages {
 
 	public function __construct() {
 		// Add settings filter to register our setting
-		add_filter( 'blaze_wooless_general_settings', array( $this, 'add_country_images_setting' ), 10, 1 );
+		add_filter( 'blazecommerce/settings/general/fields', array( $this, 'add_country_images_setting' ), 10, 1 );
 
 		// Add additional site info filter
-		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'add_country_images_site_info' ), 10, 1 );
+		add_filter( 'blazecommerce/settings', array( $this, 'add_country_images_site_info' ), 10, 1 );
 
 		// Only initialize if Aelia Currency Switcher is active and feature is enabled
 		if ( $this->is_feature_enabled() ) {

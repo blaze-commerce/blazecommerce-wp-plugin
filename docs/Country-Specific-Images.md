@@ -350,7 +350,10 @@ class CountrySpecificImages {
 
 ```php
 // Settings registration
-add_filter('blaze_wooless_general_settings', array($this, 'add_country_images_setting'), 10, 1);
+add_filter('blazecommerce/settings/general/fields', array($this, 'add_country_images_setting'), 10, 1);
+
+// Site info registration
+add_filter('blazecommerce/settings', array($this, 'add_country_images_site_info'), 10, 1);
 
 // Frontend image filtering
 add_filter('wooless_product_thumbnail', array($this, 'get_country_specific_thumbnail'), 10, 2);
@@ -509,13 +512,36 @@ docs/Country-Specific-Images.md             # This documentation
 
 ### Filter Hooks
 
-#### `blaze_wooless_general_settings`
-Adds the country-specific images setting to general settings.
+#### `blazecommerce/settings/general/fields`
+Adds the country-specific images setting to general settings fields.
 
 ```php
-add_filter('blaze_wooless_general_settings', function($fields) {
-    // Modify $fields array
+add_filter('blazecommerce/settings/general/fields', function($fields) {
+    // Add country-specific images setting to general settings
+    $fields['wooless_general_settings_section']['options'][] = array(
+        'id' => 'enable_country_specific_images',
+        'label' => 'Enable Country-Specific Product Images',
+        'type' => 'checkbox',
+        'args' => array(
+            'description' => 'Allow different product images for different countries using Aelia Currency Switcher regions.'
+        ),
+    );
     return $fields;
+});
+```
+
+#### `blazecommerce/settings`
+Adds the country-specific images setting to site info.
+
+```php
+add_filter('blazecommerce/settings', function($site_info) {
+    // Add country-specific images setting
+    $site_info['enable_country_specific_images'] = array(
+        'label' => 'Enable Country-Specific Product Images',
+        'description' => 'Allow different product images for different countries',
+        'value' => false // or true based on current setting
+    );
+    return $site_info;
 });
 ```
 

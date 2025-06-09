@@ -37,8 +37,8 @@ function test_country_specific_images_extension() {
     // Test 3: Check if setting is registered via filter
     echo "<h3>3. Settings Filter Test</h3>\n";
     $test_fields = array( 'wooless_general_settings_section' => array( 'options' => array() ) );
-    $filtered_fields = apply_filters( 'blaze_wooless_general_settings', $test_fields );
-    
+    $filtered_fields = apply_filters( 'blazecommerce/settings/general/fields', $test_fields );
+
     $setting_found = false;
     if ( isset( $filtered_fields['wooless_general_settings_section']['options'] ) ) {
         foreach ( $filtered_fields['wooless_general_settings_section']['options'] as $option ) {
@@ -48,11 +48,11 @@ function test_country_specific_images_extension() {
             }
         }
     }
-    
+
     if ( $setting_found ) {
-        echo "✅ Country-specific images setting is registered via filter\n";
+        echo "✅ Country-specific images setting is registered via blazecommerce/settings/general/fields filter\n";
     } else {
-        echo "❌ Country-specific images setting not found in filter\n";
+        echo "❌ Country-specific images setting not found in blazecommerce/settings/general/fields filter\n";
     }
     
     // Test 4: Check if feature is enabled in settings
