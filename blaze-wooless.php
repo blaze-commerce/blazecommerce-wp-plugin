@@ -23,6 +23,11 @@ require_once plugin_dir_path( __FILE__ ) . 'lib/blaze-wooless-functions.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/blaze-wooless-shortcodes.php';
 require_once plugin_dir_path( __FILE__ ) . 'blocks/blocks.php';
 
+// Include test file for development/debugging
+if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+	require_once plugin_dir_path( __FILE__ ) . 'test/test-country-specific-images.php';
+}
+
 
 // Initialize plugin
 function BlazeCommerce() {
