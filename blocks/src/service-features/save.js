@@ -19,6 +19,9 @@ export default function save({ attributes }) {
 		containerClass,
 		itemClass,
 		showDivider,
+		iconWidth,
+		iconHeight,
+		logoClass,
 		dividerColor,
 	} = attributes;
 	// Generate Tailwind classes based on attributes
@@ -62,7 +65,11 @@ export default function save({ attributes }) {
 									<img
 										src={item.logo.url}
 										alt={item.logo.alt}
-										className="object-contain"
+										style={{
+											width: `${iconWidth}px`,
+											height: `${iconHeight}px`,
+										}}
+										className={`${logoClass} object-contain`}
 									/>
 								</div>
 							)}
@@ -72,12 +79,6 @@ export default function save({ attributes }) {
 									<div>
 										<p className="m-0">{item.text}</p>
 									</div>
-								)}
-
-								{item.triggerType === "text" && item.triggerRichText && (
-									<div
-										dangerouslySetInnerHTML={{ __html: item.triggerRichText }}
-									/>
 								)}
 							</div>
 						</div>

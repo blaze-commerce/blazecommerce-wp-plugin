@@ -44,6 +44,8 @@ export default function Edit({ attributes, setAttributes }) {
 		logoClass,
 		showDivider,
 		dividerColor,
+		iconWidth,
+		iconHeight,
 	} = attributes;
 	// Generate Tailwind classes based on attributes
 	const getAlignmentClass = () => {
@@ -330,6 +332,22 @@ export default function Edit({ attributes, setAttributes }) {
 						placeholder="bg-white rounded-lg shadow-md p-6"
 					/>
 
+					<RangeControl
+						label={__("Icon Width (px)", "blaze-commerce")}
+						value={iconWidth}
+						onChange={(value) => setAttributes({ iconWidth: value })}
+						min={16}
+						max={128}
+					/>
+
+					<RangeControl
+						label={__("Icon Height (px)", "blaze-commerce")}
+						value={iconHeight}
+						onChange={(value) => setAttributes({ iconHeight: value })}
+						min={16}
+						max={128}
+					/>
+
 					<Divider />
 
 					<ToggleControl
@@ -536,6 +554,10 @@ export default function Edit({ attributes, setAttributes }) {
 												src={item.logo.url}
 												alt={item.logo.alt}
 												className={`${logoClass} object-contain flex-shrink-0`}
+												style={{
+													width: `${iconWidth}px`,
+													height: `${iconHeight}px`,
+												}}
 											/>
 										)}
 
