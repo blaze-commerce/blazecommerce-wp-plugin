@@ -80,8 +80,8 @@ function test_country_specific_images_extension() {
     
     // Test 6: Check if assets exist
     echo "<h3>6. Assets Test</h3>\n";
-    $js_file = BLAZE_WOOLESS_PLUGIN_DIR . 'assets/js/country-images-admin.js';
-    $css_file = BLAZE_WOOLESS_PLUGIN_DIR . 'assets/css/country-images-admin.css';
+    $js_file = BLAZE_COMMERCE_PLUGIN_DIR . 'assets/js/country-images-admin.js';
+    $css_file = BLAZE_COMMERCE_PLUGIN_DIR . 'assets/css/country-images-admin.css';
     
     if ( file_exists( $js_file ) ) {
         echo "✅ JavaScript file exists\n";

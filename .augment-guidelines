@@ -47,7 +47,7 @@
 
 - Plugin version is managed in two places:
   - Plugin header in `blaze-wooless.php` (line 6)
-  - Version constant `BLAZE_WOOLESS_VERSION` (line 19)
+  - Version constant `BLAZE_COMMERCE_VERSION` (line 19)
 - Both must be updated together for consistency
 - Use semantic versioning (MAJOR.MINOR.PATCH)
 - Document breaking changes clearly

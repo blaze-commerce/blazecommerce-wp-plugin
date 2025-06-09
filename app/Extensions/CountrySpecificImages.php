@@ -35,7 +35,7 @@ class CountrySpecificImages {
 			add_filter( 'wooless_product_thumbnail', array( $this, 'get_country_specific_thumbnail' ), 10, 2 );
 
 			// Add country-specific images to Typesense product data
-			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_country_images_to_typesense' ), 10, 3 );
+			add_filter( 'blazecommerce/collection/product/typesense_data', array( $this, 'add_country_images_to_typesense' ), 10, 3 );
 		}
 	}
 
@@ -233,18 +233,18 @@ class CountrySpecificImages {
 		// Enqueue our custom script
 		wp_enqueue_script(
 			'blaze-country-images-admin',
-			BLAZE_WOOLESS_PLUGIN_URL . 'assets/js/country-images-admin.js',
+			BLAZE_COMMERCE_PLUGIN_URL . 'assets/js/country-images-admin.js',
 			array( 'jquery' ),
-			BLAZE_WOOLESS_VERSION,
+			BLAZE_COMMERCE_VERSION,
 			true
 		);
 
 		// Enqueue custom CSS
 		wp_enqueue_style(
 			'blaze-country-images-admin',
-			BLAZE_WOOLESS_PLUGIN_URL . 'assets/css/country-images-admin.css',
+			BLAZE_COMMERCE_PLUGIN_URL . 'assets/css/country-images-admin.css',
 			array(),
-			BLAZE_WOOLESS_VERSION
+			BLAZE_COMMERCE_VERSION
 		);
 	}
 
