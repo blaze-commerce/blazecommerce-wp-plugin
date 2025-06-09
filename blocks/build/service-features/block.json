@@ -39,6 +39,14 @@
       "type": "string",
       "default": "#e0e0e0"
     },
+    "iconWidth": {
+      "type": "number",
+      "default": 32
+    },
+    "iconHeight": {
+      "type": "number",
+      "default": 32
+    },
     "items": {
       "type": "array",
       "default": [
