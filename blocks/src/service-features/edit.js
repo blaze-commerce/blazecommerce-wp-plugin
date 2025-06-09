@@ -547,7 +547,7 @@ export default function Edit({ attributes, setAttributes }) {
 								<>
 									<div
 										key={item.id}
-										className={`flex flex-row items-center relative cursor-pointer ${itemClass}`}
+										className={`flex flex-row items-center relative cursor-pointer pb-8 ${itemClass}`}
 										onClick={handleItemClick}>
 										{item.logo.url && (
 											<img
