@@ -1,0 +1,355 @@
+# AugmentCode ignore file
+# =====================================================================
+
+# WORDPRESS SPECIFIC IGNORES
+# ---------------------------------------------------------------------
+# Uploads and media directories
+**/wp-content/uploads/**
+
+# Cache and temporary files
+**/wp-content/cache/**
+**/wp-content/advanced-cache.php
+**/wp-content/wp-cache-config.php
+
+# Backup directories
+**/wp-content/backup*/**
+**/wp-content/backups/**
+**/wp-content/wio_backup/**
+
+# Image optimization directories
+**/wp-content/wrio/**
+**/wp-content/wrio-webp-uploads/**
+
+# Other WordPress directories
+**/wp-content/upgrade/**
+**/wp-content/languages/**
+**/wp-content/lang/**
+**/wp-content/langs/**
+
+# WordPress core files and directories
+**/wp-admin/**
+**/wp-includes/**
+**/wp-content/plugins/**
+
+# WordPress core files
+**/wp-*.php
+**/index.php
+**/xmlrpc.php
+**/license.txt
+**/readme.html
+
+# LOCAL WP SPECIFIC IGNORES
+# ---------------------------------------------------------------------
+**/app/public/wp-admin/**
+**/app/public/wp-includes/**
+**/app/public/wp-content/plugins/**
+**/app/public/wp-content/uploads/**
+**/conf/**
+**/logs/**
+
+# NEXT.JS AND FRONTEND IGNORES
+# ---------------------------------------------------------------------
+# Media files in public directories (but keep structure)
+**/public/fonts/**/*.woff
+**/public/fonts/**/*.woff2
+**/public/fonts/**/*.ttf
+**/public/fonts/**/*.eot
+**/public/images/banner/**
+**/public/images/blog/**
+**/public/images/homepage/**
+**/public/images/product/**
+**/public/img/**/*.jpg
+**/public/img/**/*.jpeg
+**/public/img/**/*.png
+**/public/img/**/*.gif
+**/public/img/**/*.webp
+**/public/media/**
+**/.next/
+**/.vercel/
+
+# GIT REPOSITORY INTERNALS
+# ---------------------------------------------------------------------
+# Git objects and pack files (these can contain large deleted files)
+**/.git/objects/**
+**/.git/packed-refs
+**/.git/hooks/**
+**/.git/index
+**/.git/logs/**
+**/.git/FETCH_HEAD
+**/.git/ORIG_HEAD
+**/.git/refs/remotes/**
+**/.git/refs/tags/**
+**/.git/refs/stash
+**/.git/info/exclude
+**/.git/lfs/**
+**/.git/annex/**
+**/.git/modules/**
+
+# BUILD AND DEPENDENCY DIRECTORIES
+# ---------------------------------------------------------------------
+# Package managers and dependencies
+node_modules/
+vendor/
+**/vendor/bundle/
+**/vendor/*/
+**/go/pkg/
+**/.bundle/
+**/.cargo/
+**/deps/
+
+# Build outputs
+dist/
+build/
+target/
+out/
+.next/
+.vercel/
+storybook-static/
+coverage/
+.cache/
+.sass-cache/
+**/.webpack/
+**/.serverless/
+**/.nuxt/
+**/.angular/cache/
+**/.vite/
+**/.svelte-kit/
+**/target/debug/
+**/target/release/
+**/target/classes/
+**/target/generated-sources/
+**/_build/
+**/DerivedData/
+**/generated/
+**/public/assets/
+**/public/packs/
+
+# Framework-specific directories
+**/bootstrap/cache/
+**/tmp/cache/
+**/staticfiles/
+
+# Build tool specific directories
+**/.gradle/
+**/gradle/wrapper/
+**/.mvn/
+**/maven/wrapper/
+
+# Temporary and cache directories
+**/.tmp/
+**/tmp/
+**/__pycache__/
+**/.pytest_cache/
+**/.eslintcache
+**/.stylelintcache
+
+# Container and virtualization files
+**/.vagrant/
+**/docker-compose.override.yml
+
+# Generated API clients and sources
+**/generated-sources/
+**/api-client/
+
+# Test artifacts
+**/test-results/
+**/test-reports/
+**/cypress/screenshots/
+**/cypress/videos/
+**/jest-coverage/
+**/mochawesome-report/
+
+# Generated documentation
+**/docs/api/
+**/docs/generated/
+**/jsdoc/
+**/apidoc/
+
+# IDE specific files
+**/*.xcodeproj/xcuserdata/
+**/*.xcworkspace/xcuserdata/
+
+# SYSTEM AND IDE FILES
+# ---------------------------------------------------------------------
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE directories
+.idea/
+.vscode/
+
+# Temporary editor files
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# MEDIA AND LARGE FILES
+# ---------------------------------------------------------------------
+# Archives
+*.zip
+*.tar.gz
+*.tar
+*.rar
+*.7z
+*.sql.gz
+*.dump
+
+# Media files
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.flv
+*.tiff
+*.psd
+*.ai
+*.iso
+*.dmg
+*.sketch
+*.fig
+*.xd
+*.glb
+*.gltf
+
+# Data files
+*.parquet
+*.avro
+*.hdf5
+*.h5
+*.npy
+*.npz
+*.sqlite
+*.sqlite3
+*.db
+*.mdb
+*.accdb
+
+# Compiled binaries
+*.exe
+*.dll
+*.jar
+*.war
+*.app
+*.class
+*.py[cod]
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+
+# Documents
+*.pdf
+
+# Logs and backup files
+*.log
+*.log.*
+*.bak.*
+*~
+*.swp
+*.orig
+*.rej
+
+# COMPILED AND MINIFIED ASSETS
+# ---------------------------------------------------------------------
+*.min.css
+*.min.js
+*-rtl.css
+*-rtl.min.css
+
+# CONFIGURATION FILES
+# ---------------------------------------------------------------------
+# Environment files (with exceptions)
+.env*
+*.local
+wp-config.php
+
+# Sensitive configuration files
+**/.htpasswd
+**/.htaccess
+**/secrets.yml
+**/credentials.yml
+**/config/master.key
+**/config/credentials.yml.enc
+**/config/secrets.yml
+**/config/database.yml
+
+# Dependency lock files (uncomment if not needed for analysis)
+# yarn.lock
+# package-lock.json
+# composer.lock
+# pnpm-lock.yaml
+
+# WHITELISTED FILES (ALWAYS INCLUDE)
+# ---------------------------------------------------------------------
+# Environment files to include
+!.env.example
+!.env.local
+
+# Next.js public folder (whitelist important files while ignoring large media)
+!**/public/
+!**/public/**/*.json
+!**/public/**/*.js
+!**/public/**/*.css
+!**/public/**/*.svg
+!**/public/**/*.xml
+!**/public/**/*.txt
+!**/public/**/*.ico
+!**/public/**/*.webmanifest
+!**/public/locales/
+!**/public/locales/**/*
+!**/public/assets/icons/
+!**/public/assets/icons/**/*.svg
+!**/public/routes/
+!**/public/permalinks/
+!**/public/page/
+!**/public/post/
+!**/public/site.json
+!**/public/region.json
+!**/public/categorypaths.json
+!**/public/pageslugs.json
+!**/public/menu.json
+!**/public/header.json
+!**/public/footer.json
+
+# Still ignore large media files in public regardless of location
+**/public/**/*.jpg
+**/public/**/*.jpeg
+**/public/**/*.png
+**/public/**/*.gif
+**/public/**/*.webp
+**/public/**/*.mp4
+**/public/**/*.webm
+**/public/**/*.mov
+**/public/**/*.mp3
+**/public/**/*.wav
+
+# Database files
+*.sql
+
+# Project configuration files
+!.augmentignore
+!.gitignore
+!.prettierrc
+!.eslintrc
+!.babelrc
+!.editorconfig
+!package.json
+!composer.json
+!tsconfig.json
+!webpack.config.js
+!rollup.config.js
+!vite.config.js
+!next.config.js
+!tailwind.config.js
+!postcss.config.js
+!jest.config.js
+!*.code-workspace
+
+# Augment Files directory (always include)
+!**/Augment\ Files/
+!**/Augment\ Files/**/*
