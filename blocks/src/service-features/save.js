@@ -22,7 +22,7 @@ export default function save({ attributes }) {
 		iconWidth,
 		iconHeight,
 		logoClass,
-		dividerColor,
+		dividerClass,
 	} = attributes;
 	// Generate Tailwind classes based on attributes
 	const getAlignmentClass = () => {
@@ -90,8 +90,7 @@ export default function save({ attributes }) {
 									itemsDirection === "vertical"
 										? "w-full h-px my-4"
 										: "w-px h-full mx-4"
-								}`}
-								style={{ backgroundColor: dividerColor }}
+								} ${dividerClass}`}
 							/>
 						)}
 					</div>

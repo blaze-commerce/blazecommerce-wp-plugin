@@ -15,6 +15,7 @@ import {
 	TextControl,
 	SelectControl,
 	ToggleControl,
+	RangeControl,
 	Placeholder,
 	__experimentalDivider as Divider,
 	ColorPicker,
@@ -43,7 +44,7 @@ export default function Edit({ attributes, setAttributes }) {
 		itemClass,
 		logoClass,
 		showDivider,
-		dividerColor,
+		dividerClass,
 		iconWidth,
 		iconHeight,
 	} = attributes;
@@ -362,11 +363,15 @@ export default function Edit({ attributes, setAttributes }) {
 
 					{showDivider && (
 						<>
-							<p>{__("Divider Color", "blaze-commerce")}</p>
-							<ColorPicker
-								color={dividerColor}
-								onChange={(value) => setAttributes({ dividerColor: value })}
-								disableAlpha={false}
+							<TextControl
+								label={__("Divider CSS Classes", "blaze-commerce")}
+								value={dividerClass}
+								onChange={(value) => setAttributes({ dividerClass: value })}
+								help={__(
+									"Add Tailwind CSS classes for divider",
+									"blaze-commerce",
+								)}
+								placeholder="h-px bg-gray-300"
 							/>
 						</>
 					)}
@@ -577,8 +582,7 @@ export default function Edit({ attributes, setAttributes }) {
 												itemsDirection === "vertical"
 													? "w-full h-px my-4"
 													: "w-px h-[30px] mx-4"
-											}`}
-											style={{ backgroundColor: dividerColor }}
+											} ${dividerClass}`}
 										/>
 									)}
 								</>

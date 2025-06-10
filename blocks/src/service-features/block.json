@@ -35,9 +35,9 @@
 			"type": "boolean",
 			"default": false
 		},
-		"dividerColor": {
+		"dividerClass": {
 			"type": "string",
-			"default": "#e0e0e0"
+			"default": ""
 		},
 		"iconWidth": {
 			"type": "number",
