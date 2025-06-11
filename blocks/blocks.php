@@ -33,16 +33,14 @@ function blaze_commerce_register_blocks() {
 	register_block_type( __DIR__ . '/src/product-detail' );
 }
 
-add_action( 'enqueue_block_editor_assets', 'extend_block_example_enqueue_block_editor_assets' );
-
-function extend_block_example_enqueue_block_editor_assets() {
+add_action( 'enqueue_block_editor_assets', function () {
 	// Enqueue our script
 	wp_enqueue_script(
 		'blaze-commerce-blocks-script',
 		esc_url( plugins_url( '/build/index.js', __FILE__ ) ),
 		array( 'wp-blocks', 'wp-i18n', 'wp-element', 'wp-editor' ),
 		'1.0.0',
-		true // Enqueue the script in the footer.
+		false // Enqueue the script in the footer.
 	);
 
 	wp_localize_script( 'wp-api-fetch', 'wpApiSettings', array(
@@ -57,4 +55,4 @@ function extend_block_example_enqueue_block_editor_assets() {
 	);
 
 	wp_localize_script( 'blaze-commerce-blocks-script', 'blaze_commerce_block_config', $config );
-}
+} );

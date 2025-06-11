@@ -67,7 +67,7 @@
     }
   },
   "textdomain": "blaze-commerce",
-  "editorScript": "file:./index.js",
-  "editorStyle": "file:./index.css",
-  "style": "file:./style-index.css"
+  "editorScript": "file:./edit.js",
+  "editorStyle": "file:./editor.scss",
+  "style": "file:./style.css"
 }

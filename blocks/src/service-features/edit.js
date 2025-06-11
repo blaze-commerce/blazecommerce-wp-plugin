@@ -18,7 +18,6 @@ import {
 	RangeControl,
 	Placeholder,
 	__experimentalDivider as Divider,
-	ColorPicker,
 } from "@wordpress/components";
 import { useState, useCallback, useMemo } from "@wordpress/element";
 
