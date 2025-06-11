@@ -131,6 +131,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\Pinterest',
 			'\\BlazeWooless\\Extensions\\AdvancedCustomFields',
 			'\\BlazeWooless\\Extensions\\PageMetaFields',
+			'\\BlazeWooless\\Extensions\\CountrySpecificImages',
 		);
 
 		foreach ( $extensions as $extension ) {

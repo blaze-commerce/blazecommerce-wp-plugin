@@ -1,0 +1,162 @@
+/* Country-Specific Images Admin Styles */
+
+#blaze-country-images-container {
+    padding: 10px 0;
+}
+
+.blaze-country-image-row {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f9f9f9;
+}
+
+.blaze-country-image-row:last-child {
+    margin-bottom: 0;
+}
+
+.blaze-country-image-row label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #333;
+}
+
+.blaze-image-selector {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.blaze-image-preview {
+    width: 80px;
+    height: 80px;
+    border: 2px dashed #ccc;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.blaze-image-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 2px;
+    transition: opacity 0.2s ease;
+}
+
+.blaze-image-preview:empty::before {
+    content: "No image";
+    color: #999;
+    font-size: 12px;
+    text-align: center;
+}
+
+.blaze-image-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.blaze-image-actions .button {
+    min-width: 100px;
+    text-align: center;
+}
+
+.blaze-select-image {
+    background: #0073aa;
+    color: white;
+    border-color: #0073aa;
+}
+
+.blaze-select-image:hover {
+    background: #005a87;
+    border-color: #005a87;
+    color: white;
+}
+
+.blaze-remove-image {
+    background: #dc3232;
+    color: white;
+    border-color: #dc3232;
+}
+
+.blaze-remove-image:hover {
+    background: #a00;
+    border-color: #a00;
+    color: white;
+}
+
+/* Meta box styling */
+#blaze-country-images .inside {
+    margin: 0;
+    padding: 0;
+}
+
+#blaze-country-images h2 {
+    padding: 8px 12px;
+    margin: 0;
+    border-bottom: 1px solid #eee;
+    background: #f1f1f1;
+    font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 782px) {
+    .blaze-image-selector {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .blaze-image-preview {
+        width: 100%;
+        height: 120px;
+    }
+    
+    .blaze-image-actions {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .blaze-image-actions .button {
+        flex: 1;
+        margin: 0 5px;
+    }
+    
+    .blaze-image-actions .button:first-child {
+        margin-left: 0;
+    }
+    
+    .blaze-image-actions .button:last-child {
+        margin-right: 0;
+    }
+}
+
+/* Loading state */
+.blaze-country-image-row.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.blaze-country-image-row.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

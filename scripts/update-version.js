@@ -21,8 +21,8 @@ pluginContent = pluginContent.replace(
 
 // Update the version constant
 pluginContent = pluginContent.replace(
-  /define\(\s*'BLAZE_WOOLESS_VERSION',\s*'[\d.]+'\s*\);/,
-  `define( 'BLAZE_WOOLESS_VERSION', '${newVersion}' );`
+  /define\(\s*'BLAZE_COMMERCE_VERSION',\s*'[\d.]+'\s*\);/,
+  `define( 'BLAZE_COMMERCE_VERSION', '${newVersion}' );`
 );
 
 fs.writeFileSync(pluginFile, pluginContent);
