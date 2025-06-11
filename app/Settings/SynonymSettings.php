@@ -62,7 +62,7 @@ class SynonymSettings extends BaseSettings {
 	}
 
 	public function footer_callback() {
-		require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/synonym-management.php';
+		require_once BLAZE_COMMERCE_PLUGIN_DIR . 'views/synonym-management.php';
 	}
 
 	public static function get_selected_synonyms() {

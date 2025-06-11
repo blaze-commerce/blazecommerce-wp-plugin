@@ -51,7 +51,7 @@ class ProductFilterSettings extends BaseSettings {
 	}
 
 	public function footer_callback() {
-		require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/draggable-content-product-filters.php';
+		require_once BLAZE_COMMERCE_PLUGIN_DIR . 'views/draggable-content-product-filters.php';
 	}
 
 	public function default_draggable_data() {
