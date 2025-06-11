@@ -53,9 +53,9 @@ class Product extends BaseCollection {
 
 		$currencies = Woocommerce::get_currencies();
 		foreach ( $currencies as $currency ) {
-			$price[] = array( 'name' => 'price.' . $currency, 'type' => 'float', 'optional' => true, 'facet' => true );
-			$price[] = array( 'name' => 'regularPrice.' . $currency, 'type' => 'float', 'optional' => true );
-			$price[] = array( 'name' => 'salePrice.' . $currency, 'type' => 'float', 'optional' => true );
+			$price[] = array( 'name' => 'price.' . $currency, 'type' => 'int64', 'optional' => true, 'facet' => true );
+			$price[] = array( 'name' => 'regularPrice.' . $currency, 'type' => 'int64', 'optional' => true );
+			$price[] = array( 'name' => 'salePrice.' . $currency, 'type' => 'int64', 'optional' => true );
 		}
 
 		return $price;
@@ -118,12 +118,12 @@ class Product extends BaseCollection {
 			array( 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ),
 			array( 'name' => 'metaData', 'type' => 'object', 'optional' => true ),
 			array( 'name' => 'metaData.priceWithTax', 'type' => 'object', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.AUD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.NZD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.USD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.GBP', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.CAD', 'type' => 'float', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.EUR', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.AUD', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.NZD', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.USD', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.GBP', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.CAD', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.EUR', 'type' => 'int64', 'optional' => true ),
 			array( 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ),
 		);
 
@@ -361,7 +361,7 @@ class Product extends BaseCollection {
 					$content = ob_get_clean();
 				}
 
-				$tab_item = [ 
+				$tab_item = [
 					'title' => wp_kses_post( apply_filters( 'woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key ) ),
 					'content' => do_shortcode( $content ),
 					'isOpen' => 0,
@@ -797,7 +797,7 @@ class Product extends BaseCollection {
 							$thumbnail_alt_text = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
 							$thumbnail_src = wp_get_attachment_url( $attachment_id );
 
-							return [ 
+							return [
 								'id' => $attachment_id,
 								'title' => $attachment->post_title,
 								'altText' => strval( $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title ),
@@ -828,24 +828,24 @@ class Product extends BaseCollection {
 								$variant_thumbnail_alt_text = get_post_meta( $variant_thumbnail_id, '_wp_attachment_image_alt', true );
 								$variant_thumbnail_src      = get_the_post_thumbnail_url( $variation['variation_id'] );
 
-								$variations_items = [ 
+								$variations_items = [
 									'variationId' => $variation['variation_id'],
 									'attributes' => $variation['attributes'],
 									'price' => array(
-										$currency => floatval( $variation_obj->get_price() ),
+										$currency => Woocommerce::format_price( $variation_obj->get_price() ),
 									),
 									'regularPrice' => array(
-										$currency => floatval( $variation_obj->get_regular_price() ),
+										$currency => Woocommerce::format_price( $variation_obj->get_regular_price() ),
 									),
 									'salePrice' => array(
-										$currency => floatval( $variation_obj->get_sale_price() ),
+										$currency => Woocommerce::format_price( $variation_obj->get_sale_price() ),
 									),
 									'stockQuantity' => empty( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
 									'stockStatus' => $variation_obj->get_stock_status(),
 									'backorder' => $variation_obj->get_backorders(),
 									'onSale' => $variation_obj->is_on_sale(),
 									'sku' => $variation_obj->get_sku(),
-									'image' => [ 
+									'image' => [
 										'id' => $variant_thumbnail_id,
 										'title' => $variant_attachment->post_title,
 										'altText' => strval( $variant_thumbnail_id ? $variant_thumbnail_id : $attachment->post_title ),
@@ -861,7 +861,7 @@ class Product extends BaseCollection {
 							unset( $variations );
 						}
 
-						$thumbnail = [ 
+						$thumbnail = [
 							'id' => $thumbnail_id,
 							'title' => $attachment->post_title,
 							'altText' => strval( $thumbnail_alt_text ? $thumbnail_alt_text : $attachment->post_title ),
@@ -870,14 +870,14 @@ class Product extends BaseCollection {
 
 						$currency = get_option( 'woocommerce_currency' );
 
-						$default_price         = [ 
-							$currency => floatval( $product->get_price() )
+						$default_price         = [
+							$currency => Woocommerce::format_price( $product->get_price() )
 						];
-						$default_regular_price = [ 
-							$currency => floatval( $product->get_regular_price() )
+						$default_regular_price = [
+							$currency => Woocommerce::format_price( $product->get_regular_price() )
 						];
-						$default_sale_price    = [ 
-							$currency => floatval( $product->get_sale_price() )
+						$default_sale_price    = [
+							$currency => Woocommerce::format_price( $product->get_sale_price() )
 						];
 
 						$stockQuantity = $product->get_stock_quantity();
@@ -890,9 +890,9 @@ class Product extends BaseCollection {
 							'permalink' => wp_make_link_relative( get_permalink( $product->get_id() ) ),
 							'slug' => $product->get_slug(),
 							'thumbnail' => $thumbnail,
-							'price' => floatval( apply_filters( 'wooless_product_price', $default_price, $product_id ) ),
-							'regularPrice' => floatval( apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ) ),
-							'salePrice' => floatval( apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ) ),
+							'price' => apply_filters( 'wooless_product_price', $default_price, $product_id ),
+							'regularPrice' => apply_filters( 'wooless_product_regular_price', $default_regular_price, $product_id ),
+							'salePrice' => apply_filters( 'wooless_product_sale_price', $default_sale_price, $product_id ),
 							'onSale' => $product->is_on_sale(),
 							'stockStatus' => $product->get_stock_status(),
 							'backorder' => $product->get_backorders(),
