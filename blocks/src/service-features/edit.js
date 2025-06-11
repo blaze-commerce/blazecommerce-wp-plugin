@@ -16,8 +16,8 @@ import {
 	SelectControl,
 	ToggleControl,
 	Placeholder,
+	RangeControl,
 	__experimentalDivider as Divider,
-	ColorPicker,
 } from "@wordpress/components";
 import { useState, useCallback, useMemo } from "@wordpress/element";
 
@@ -41,6 +41,9 @@ export default function Edit({ attributes, setAttributes }) {
 		itemsDirection,
 		containerClass,
 		itemClass,
+		logoClass,
+		logoWidth,
+		logoHeight,
 		showDivider,
 		dividerColor,
 	} = attributes;
@@ -318,6 +321,37 @@ export default function Edit({ attributes, setAttributes }) {
 						placeholder="bg-white rounded-lg shadow-md p-6"
 					/>
 
+					<TextControl
+						label={__("Logo CSS Classes", "blaze-commerce")}
+						value={logoClass}
+						onChange={(value) => setAttributes({ logoClass: value })}
+						help={__(
+							"Add Tailwind CSS classes for each logo",
+							"blaze-commerce",
+						)}
+						placeholder="w-16 h-16"
+					/>
+
+					<RangeControl
+						label={__("Logo Width", "blaze-commerce")}
+						value={logoWidth}
+						onChange={(value) => setAttributes({ logoWidth: value })}
+						min={16}
+						max={128}
+						step={1}
+						help={__("Set the width of the logo in pixels", "blaze-commerce")}
+					/>
+
+					<RangeControl
+						label={__("Logo Height", "blaze-commerce")}
+						value={logoHeight}
+						onChange={(value) => setAttributes({ logoHeight: value })}
+						min={16}
+						max={128}
+						step={1}
+						help={__("Set the height of the logo in pixels", "blaze-commerce")}
+					/>
+
 					<Divider />
 
 					<ToggleControl
@@ -331,14 +365,16 @@ export default function Edit({ attributes, setAttributes }) {
 					/>
 
 					{showDivider && (
-						<>
-							<p>{__("Divider Color", "blaze-commerce")}</p>
-							<ColorPicker
-								color={dividerColor}
-								onChange={(value) => setAttributes({ dividerColor: value })}
-								disableAlpha={false}
-							/>
-						</>
+						<TextControl
+							label={__("Divider CSS Classes", "blaze-commerce")}
+							value={dividerClass}
+							onChange={(value) => setAttributes({ dividerClass: value })}
+							help={__(
+								"Add Tailwind CSS classes for the divider",
+								"blaze-commerce",
+							)}
+							placeholder="border-gray-300"
+						/>
 					)}
 				</PanelBody>
 
@@ -517,13 +553,17 @@ export default function Edit({ attributes, setAttributes }) {
 								<>
 									<div
 										key={item.id}
-										className={`flex flex-row items-center relative cursor-pointer ${itemClass}`}
+										className={`flex flex-row items-center relative cursor-pointer pr-8 ${itemClass}`}
 										onClick={handleItemClick}>
 										{item.logo.url && (
 											<img
 												src={item.logo.url}
 												alt={item.logo.alt}
-												className="object-contain flex-shrink-0"
+												className={`${logoClass} object-contain flex-shrink-0`}
+												style={{
+													width: `${logoWidth}px`,
+													height: `${logoHeight}px`,
+												}}
 											/>
 										)}
 
@@ -543,8 +583,7 @@ export default function Edit({ attributes, setAttributes }) {
 												itemsDirection === "vertical"
 													? "w-full h-px my-4"
 													: "w-px h-[30px] mx-4"
-											}`}
-											style={{ backgroundColor: dividerColor }}
+											} ${dividerClass}`}
 										/>
 									)}
 								</>

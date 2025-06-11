@@ -27,13 +27,25 @@
       "type": "string",
       "default": ""
     },
+    "logoClass": {
+      "type": "string",
+      "default": ""
+    },
+    "logoWidth": {
+      "type": "number",
+      "default": 32
+    },
+    "logoHeight": {
+      "type": "number",
+      "default": 32
+    },
     "showDivider": {
       "type": "boolean",
       "default": false
     },
-    "dividerColor": {
+    "dividerClass": {
       "type": "string",
-      "default": "#e0e0e0"
+      "default": ""
     },
     "items": {
       "type": "array",

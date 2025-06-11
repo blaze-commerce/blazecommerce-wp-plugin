@@ -18,8 +18,11 @@ export default function save({ attributes }) {
 		itemsDirection,
 		containerClass,
 		itemClass,
+		logoClass,
+		logoWidth,
+		logoHeight,
 		showDivider,
-		dividerColor,
+		dividerClass,
 	} = attributes;
 	// Generate Tailwind classes based on attributes
 	const getAlignmentClass = () => {
@@ -62,7 +65,11 @@ export default function save({ attributes }) {
 									<img
 										src={item.logo.url}
 										alt={item.logo.alt}
-										className="object-contain"
+										className={`object-contain ${logoClass}`}
+										style={{
+											width: `${logoWidth}px`,
+											height: `${logoHeight}px`,
+										}}
 									/>
 								</div>
 							)}
@@ -89,8 +96,7 @@ export default function save({ attributes }) {
 									itemsDirection === "vertical"
 										? "w-full h-px my-4"
 										: "w-px h-full mx-4"
-								}`}
-								style={{ backgroundColor: dividerColor }}
+								} ${dividerClass}`}
 							/>
 						)}
 					</div>
