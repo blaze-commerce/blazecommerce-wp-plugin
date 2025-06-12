@@ -17,7 +17,7 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function initialize() {
-		$logger  = wc_get_logger();
+		$logger = wc_get_logger();
 		$context = array( 'source' => 'wooless-site-info-collection-initialize' );
 
 		// Check if we should use the new alias system
@@ -77,11 +77,11 @@ class SiteInfo extends BaseCollection {
 	public function prepare_batch_data() {
 		$documents = array();
 
-		$update_at      = time();
-		$shop_page      = get_option( 'woocommerce_shop_page_id' );
-		$blog_page      = get_option( 'page_for_posts' );
-		$cart_page_id   = wc_get_page_id( 'cart' );
-		$home_page_id   = get_option( 'page_on_front' );
+		$update_at = time();
+		$shop_page = get_option( 'woocommerce_shop_page_id' );
+		$blog_page = get_option( 'page_for_posts' );
+		$cart_page_id = wc_get_page_id( 'cart' );
+		$home_page_id = get_option( 'page_on_front' );
 		$home_page_slug = $home_page_id ? get_post_field( 'post_name', $home_page_id ) : '';
 
 		$datas = array(
@@ -230,16 +230,16 @@ class SiteInfo extends BaseCollection {
 			}
 
 			$data['value'] = apply_filters( 'blazecommerce/settings/' . $data['name'], $data['value'] );
-			$documents[]   = $data;
+			$documents[] = $data;
 		}
 
 		unset( $datas );
 
 		$initial_additional_data = array();
 
-		$site_currency                         = get_woocommerce_currency();
-		$base_currency                         = WC()->countries->get_base_country();
-		$currencies                            = array(
+		$site_currency = get_woocommerce_currency();
+		$base_currency = WC()->countries->get_base_country();
+		$currencies = array(
 			'countries' => [ $base_currency ],
 			'baseCountry' => $base_currency,
 			'currency' => $site_currency,
@@ -251,7 +251,7 @@ class SiteInfo extends BaseCollection {
 			'default' => true,
 		);
 		$initial_additional_data['currencies'] = array( $currencies );
-		$initial_additional_data['regions']    = RegionalSettings::get_selected_regions();
+		$initial_additional_data['regions'] = RegionalSettings::get_selected_regions();
 
 		$additional_data = apply_filters( 'blaze_wooless_additional_site_info', $initial_additional_data );
 		foreach ( $additional_data as $key => $value ) {
@@ -378,12 +378,12 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function import_prepared_batch( $documents ) {
-		$logger  = wc_get_logger();
+		$logger = wc_get_logger();
 		$context = array( 'source' => 'blazecommerce-site-info-import' );
 
 		// Import site info to Typesense using the correct collection (alias-aware)
 		try {
-			$result             = $this->import( $documents );
+			$result = $this->import( $documents );
 			$successful_imports = array_filter( $result, function ($batch_result) {
 				return isset( $batch_result['success'] ) && $batch_result['success'] == true;
 			} );
@@ -404,7 +404,7 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function index_to_typesense() {
-		$logger  = wc_get_logger();
+		$logger = wc_get_logger();
 		$context = array( 'source' => 'wooless-site-info-collection-index' );
 
 		//Indexing Site Info
@@ -458,15 +458,15 @@ class SiteInfo extends BaseCollection {
 
 	public function get_permalink_structure() {
 		$permalink_structure = get_option( 'woocommerce_permalinks' );
-		$product_base        = $permalink_structure['product_base'] ?: '';
+		$product_base = $permalink_structure['product_base'] ?: '';
 
 		// If the product base does not start with a slash, add one
 		if ( $product_base && $product_base[0] !== '/' ) {
 			$product_base = '/' . $product_base;
 		}
 
-		$category_base            = get_option( 'category_base', 'category' );
-		$tag_base                 = get_option( 'tag_base', 'tag' );
+		$category_base = get_option( 'category_base', 'category' );
+		$tag_base = get_option( 'tag_base', 'tag' );
 		$base_permalink_structure = get_option( 'permalink_structure' );
 
 		return array(
@@ -484,7 +484,7 @@ class SiteInfo extends BaseCollection {
 
 		// Fetch the 'active_plugins' option from the WordPress options table
 		$active_plugins_serialized = $wpdb->get_var( "SELECT option_value FROM " . $wpdb->options . " WHERE option_name = 'active_plugins'" );
-		$active_plugins            = unserialize( $active_plugins_serialized );
+		$active_plugins = unserialize( $active_plugins_serialized );
 
 		// List of known review plugin slugs
 		$review_plugin_slugs = array(
@@ -540,9 +540,9 @@ class SiteInfo extends BaseCollection {
 	}
 
 	public function site_logo_settings() {
-		$logo_id         = get_theme_mod( 'custom_logo' );
-		$logo_image      = wp_get_attachment_image_src( $logo_id, 'full' );
-		$logo_metadata   = wp_get_attachment_metadata( $logo_id );
+		$logo_id = get_theme_mod( 'custom_logo' );
+		$logo_image = wp_get_attachment_image_src( $logo_id, 'full' );
+		$logo_metadata = wp_get_attachment_metadata( $logo_id );
 		$logo_updated_at = isset( $logo_metadata['file'] ) ? strtotime( date( "Y-m-d H:i:s", filemtime( get_attached_file( $logo_id ) ) ) ) : null;
 
 		return array(
@@ -555,7 +555,7 @@ class SiteInfo extends BaseCollection {
 	public function store_notice_settings() {
 		global $wpdb;
 
-		$store_notice            = get_option( 'woocommerce_demo_store_notice' );
+		$store_notice = get_option( 'woocommerce_demo_store_notice' );
 		$store_notice_updated_at = $wpdb->get_var( "SELECT UNIX_TIMESTAMP(option_value) FROM {$wpdb->options} WHERE option_name = '_transient_timeout_woocommerce_demo_store_notice'" ) ?: time();
 
 		return array(
@@ -567,7 +567,7 @@ class SiteInfo extends BaseCollection {
 
 	public function favicon_settings() {
 		$site_icon_id = get_option( 'site_icon' );
-		$favicon_url  = $site_icon_id ? wp_get_attachment_image_url( $site_icon_id, 'full' ) : '';
+		$favicon_url = $site_icon_id ? wp_get_attachment_image_url( $site_icon_id, 'full' ) : '';
 
 		if ( $site_icon_id ) {
 			$favicon_updated_at = strtotime( get_the_modified_date( 'Y-m-d H:i:s', $site_icon_id ) );
