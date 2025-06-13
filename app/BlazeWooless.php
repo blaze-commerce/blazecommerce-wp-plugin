@@ -100,6 +100,7 @@ class BlazeWooless {
 		$extensions = array(
 			'\\BlazeWooless\\Extensions\\ACFProductTabs',
 			'\\BlazeWooless\\Extensions\\BusinessReviewsBundle',
+			'\\BlazeWooless\\Extensions\\CustomerReviewsWoocommerce',
 			'\\BlazeWooless\\Extensions\\CustomProductTabsManager',
 			'\\BlazeWooless\\Extensions\\CustomProductTabsForWoocommerce',
 			'\\BlazeWooless\\Extensions\\JudgeMe',
