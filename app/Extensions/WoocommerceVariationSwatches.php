@@ -117,8 +117,15 @@ class WoocommerceVariationSwatches {
 				if ( $swatch_frontend && method_exists( $swatch_frontend, 'get_attribute_taxonomy_by_id' ) ) {
 					$swatch_attribute = $swatch_frontend->get_attribute_taxonomy_by_id( $taxonomy_id );
 					if ( $swatch_attribute && isset( $swatch_attribute->attribute_type ) && ! empty( $swatch_attribute->attribute_type ) ) {
-						// Set type depending on what is selected for the woocommerce attribute in wp admin
-						$attribute_to_register['type'] = $swatch_attribute->attribute_type;
+						// CRITICAL FIX: Only allow 'color' type for actual color taxonomies
+						// This prevents size attributes from being incorrectly set as 'color' type
+						if ( $swatch_attribute->attribute_type === 'color' && ! $this->is_color_attribute( $attribute_name ) ) {
+							// Override the plugin's setting - this is not a color attribute
+							$attribute_to_register['type'] = 'select';
+						} else {
+							// Set type depending on what is selected for the woocommerce attribute in wp admin
+							$attribute_to_register['type'] = $swatch_attribute->attribute_type;
+						}
 						$attribute_to_register = $this->get_options_value( $attribute_to_register, $attribute );
 					}
 				}
@@ -1189,8 +1196,14 @@ class WoocommerceVariationSwatches {
 
 	/**
 	 * Check if a taxonomy is a color-related taxonomy
+	 * This prevents non-color taxonomies (like size) from being processed as colors
 	 */
 	public function is_color_taxonomy( $taxonomy ) {
+		if ( empty( $taxonomy ) ) {
+			return false;
+		}
+
+		// List of color-related taxonomies
 		$color_taxonomies = array(
 			'pa_color',
 			'pa_colour',
@@ -1199,11 +1212,9 @@ class WoocommerceVariationSwatches {
 		);
 
 		// Apply filters to allow customization
-		if ( function_exists( 'apply_filters' ) ) {
-			$color_taxonomies = apply_filters( 'blaze_commerce_color_taxonomies', $color_taxonomies );
-		}
+		$color_taxonomies = apply_filters( 'blaze_commerce_color_taxonomies', $color_taxonomies );
 
-		return in_array( strtolower( $taxonomy ), array_map( 'strtolower', $color_taxonomies ) );
+		return in_array( $taxonomy, $color_taxonomies );
 	}
 
 	/**
@@ -1217,42 +1228,30 @@ class WoocommerceVariationSwatches {
 
 		$color_name = trim( $color_name );
 
-		// Debug logging
-		$logger = wc_get_logger();
-		$context = array( 'source' => 'blazecommerce-color-validation' );
-		$logger->debug( 'Validating color name: "' . $color_name . '"', $context );
-
 		// Filter out random hash strings (32 character hex strings)
 		if ( preg_match( '/^[a-f0-9]{32}$/i', $color_name ) ) {
-			$logger->debug( 'Rejected: 32-char hex hash', $context );
 			return false;
 		}
 
 		// Filter out other hash-like patterns (MD5, SHA1, etc.)
 		if ( preg_match( '/^[a-f0-9]{40}$/i', $color_name ) ) { // SHA1
-			$logger->debug( 'Rejected: 40-char hex hash', $context );
 			return false;
 		}
 
 		// Filter out very long strings that look like hashes
 		if ( strlen( $color_name ) > 20 && preg_match( '/^[a-f0-9]+$/i', $color_name ) ) {
-			$logger->debug( 'Rejected: Long hex string', $context );
 			return false;
 		}
 
 		// Must contain at least one letter or space (real color names have these)
 		if ( ! preg_match( '/[a-zA-Z\s]/', $color_name ) ) {
-			$logger->debug( 'Rejected: No letters or spaces', $context );
 			return false;
 		}
 
 		// Must be reasonable length for a color name
 		if ( strlen( $color_name ) > 50 ) {
-			$logger->debug( 'Rejected: Too long', $context );
 			return false;
 		}
-
-		$logger->debug( 'Accepted: Valid color name', $context );
 		return true;
 	}
 
@@ -1362,6 +1361,96 @@ class WoocommerceVariationSwatches {
 			return intval( $_POST['product_id'] );
 		}
 
+		return null;
+	}
+
+	/**
+	 * Get the configured swatch type (color/image) for a specific term
+	 * This is the CRITICAL method that determines what type of value to return
+	 */
+	public function get_configured_swatch_type_for_term( $term_id ) {
+		// Default to color for now - this can be enhanced later
+		return 'color';
+	}
+
+	/**
+	 * Get color from product-level swatch configuration
+	 */
+	public function get_color_from_product_swatch_config( $term_id ) {
+		// Placeholder for enhanced functionality
+		return '';
+	}
+
+	/**
+	 * Get image from product-level swatch configuration
+	 */
+	public function get_image_from_product_swatch_config( $term_id ) {
+		// Placeholder for enhanced functionality
+		return '';
+	}
+
+	/**
+	 * Get image from wp_termmeta table using various meta keys
+	 */
+	public function get_image_from_termmeta( $term_id ) {
+		// Placeholder for enhanced functionality
+		return '';
+	}
+
+	/**
+	 * Get color from name generation when no color found
+	 */
+	public function get_color_from_name_generation( $term_id ) {
+		// Check if required functions exist
+		if ( ! function_exists( 'get_term' ) || ! function_exists( 'is_wp_error' ) ) {
+			return '';
+		}
+
+		$term = get_term( $term_id );
+		if ( ! $term || ( function_exists( 'is_wp_error' ) && is_wp_error( $term ) ) ) {
+			return '';
+		}
+
+		$color_name = strtolower( trim( $term->name ) );
+
+		// Common color name to hex mappings
+		$color_mappings = array(
+			'black' => '#000000',
+			'white' => '#FFFFFF',
+			'red' => '#FF0000',
+			'blue' => '#0000FF',
+			'green' => '#008000',
+			'yellow' => '#FFFF00',
+			'orange' => '#FFA500',
+			'purple' => '#800080',
+			'pink' => '#FFC0CB',
+			'brown' => '#A52A2A',
+			'grey' => '#808080',
+			'gray' => '#808080',
+			'navy' => '#000080',
+			'maroon' => '#800000',
+		);
+
+		// Direct match
+		if ( isset( $color_mappings[ $color_name ] ) ) {
+			return $color_mappings[ $color_name ];
+		}
+
+		// Partial match
+		foreach ( $color_mappings as $name => $color ) {
+			if ( strpos( $color_name, $name ) !== false ) {
+				return $color;
+			}
+		}
+
+		return ''; // No match found
+	}
+
+	/**
+	 * Get product-specific swatch configurations
+	 */
+	public function get_product_specific_swatches( $attribute_to_register, $attribute ) {
+		// Placeholder for enhanced functionality
 		return null;
 	}
 
@@ -1863,6 +1952,29 @@ class WoocommerceVariationSwatches {
 		$logger->debug( 'Final attributes count: ' . count( $product_data['attributes'] ), $context );
 
 		return $product_data;
+	}
+
+	/**
+	 * Log image retrieval for debugging purposes
+	 */
+	public function log_image_retrieval( $term_id, $method, $image_value ) {
+		// Only log if WP_DEBUG is enabled and error_log function exists
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG || ! function_exists( 'error_log' ) || ! function_exists( 'get_term' ) ) {
+			return;
+		}
+
+		$term = get_term( $term_id );
+		$term_name = $term ? $term->name : 'Unknown';
+
+		$log_message = sprintf(
+			'[BlazeCommerce Image Swatch] Term ID: %d (%s) | Method: %s | Image: %s',
+			$term_id,
+			$term_name,
+			$method,
+			$image_value ?: 'Not found'
+		);
+
+		error_log( $log_message );
 	}
 }
 
