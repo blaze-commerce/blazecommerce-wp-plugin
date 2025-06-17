@@ -17,8 +17,8 @@ class Woocommerce {
 
 	public function __construct() {
 		add_action( 'woocommerce_order_status_changed', array( $this, 'on_order_status_changed' ), 10, 4 );
-		add_action( 'woocommerce_new_product', array( $this, 'on_product_save' ), 10, 2 );
-		add_action( 'woocommerce_update_product', array( $this, 'on_product_save' ), 10, 2 );
+		add_action( 'woocommerce_new_product', array( $this, 'after_product_is_saved' ), 10, 1 );
+		add_action( 'woocommerce_update_product', array( $this, 'after_product_is_saved' ), 10, 1 );
 
 		add_action( 'woocommerce_trash_product', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
 		add_action( 'trashed_post', array( $this, 'on_product_trash_or_untrash' ), 10, 1 );
@@ -41,7 +41,7 @@ class Woocommerce {
 
 	/**
 	 * Delete typesense product when user permanently deletes a product
-	 * 
+	 *
 	 * @param mixed $post_id
 	 * @return void
 	 */
@@ -54,7 +54,7 @@ class Woocommerce {
 					Product::get_instance()->collection()->documents[ $post_id ]->delete();
 					do_action( 'ts_product_update', $product->get_id(), $product );
 				} catch (\Exception $e) {
-					$logger = wc_get_logger();
+					$logger  = wc_get_logger();
 					$context = array( 'source' => 'wooless-product-delete' );
 					$logger->debug( 'TS Product Delete Exception: ' . $e->getMessage(), $context );
 				}
@@ -80,7 +80,7 @@ class Woocommerce {
 		 * We modify and merge global post request to our graphql request so that we mimic how a normal add to cart request is done in woocommerce.
 		 * Normally add to cart request is a post request and this is the reason why we had to set the priority to 1 when we hook in woocommerce_add_cart_item_data
 		 */
-		$_POST = array_merge( $_POST, $post_data );
+		$_POST    = array_merge( $_POST, $post_data );
 		$_REQUEST = array_merge( $_REQUEST, $post_data );
 		return $cart_item_data;
 	}
@@ -110,7 +110,7 @@ class Woocommerce {
 				'action' => 'update'
 			) );
 
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-menu-ordering' );
 			$logger->debug( 'TS Product import response : ' . print_r( $response, 1 ), $context );
 		}
@@ -147,6 +147,17 @@ class Woocommerce {
 
 	}
 
+	public function after_product_is_saved( $product_id ) {
+		// Get fresh data from DB
+		$product = wc_get_product( $product_id );
+		if ( ! $product ) {
+			return; // safety check
+		}
+
+		// Now it's safe to use up-to-date values
+		$this->on_product_save( $product_id, $product );
+	}
+
 	// Function to update the product in Typesense when its metadata is updated in WooCommerce
 	public function on_product_save( $product_id, $wc_product ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
@@ -161,7 +172,7 @@ class Woocommerce {
 			Product::get_instance()->upsert( $document_data );
 			do_action( 'ts_product_update', $product_id, $wc_product, $document_data );
 		} catch (\Exception $e) {
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-update' );
 
 			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
@@ -173,7 +184,7 @@ class Woocommerce {
 
 		if ( $wc_product && $wc_product->is_type( 'variable' ) ) {
 			$variation_ids = $wc_product->get_children();
-			$event_time = WC()->call_function( 'time' ) + 1;
+			$event_time    = WC()->call_function( 'time' ) + 1;
 			as_schedule_single_action( $event_time, 'wooless_variation_update', array( $variation_ids ), 'blaze-wooless', true, 1 );
 
 		}
@@ -189,13 +200,21 @@ class Woocommerce {
 
 	public function variation_update( $variation_ids ) {
 		try {
-			$typsense_product = Product::get_instance();
-			$variations_data = array();
+			$typsense_product   = Product::get_instance();
+			$variations_data    = array();
+			$parent_product_ids = array(); // Track parent product IDs for revalidation
+
 			foreach ( $variation_ids as $variation_id ) {
 				$wc_variation = wc_get_product( $variation_id );
 
 				if ( $wc_variation ) {
 					$variations_data[] = $typsense_product->generate_typesense_data( $wc_variation );
+
+					// Collect parent product ID for revalidation
+					$parent_id = $wc_variation->get_parent_id();
+					if ( $parent_id && ! in_array( $parent_id, $parent_product_ids ) ) {
+						$parent_product_ids[] = $parent_id;
+					}
 				}
 			}
 
@@ -203,11 +222,19 @@ class Woocommerce {
 				'action' => 'upsert'
 			) );
 
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-success-import' );
 			$logger->debug( print_r( $import, 1 ), $context );
+
+			// Schedule revalidation for parent products if not already scheduled
+			$revalidate = Revalidate::get_instance();
+			foreach ( $parent_product_ids as $parent_id ) {
+				$revalidate->revalidate_product_page( $parent_id );
+				$logger->debug( "Scheduled revalidation for parent product ID: {$parent_id}", $context );
+			}
+
 		} catch (\Exception $e) {
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-import' );
 			$logger->debug( 'TS Variations Import Exception: ' . $e->getMessage(), $context );
 		}
@@ -239,10 +266,13 @@ class Woocommerce {
 	}
 
 	/**
-	 * Use for making sure that we are setting a valid float type on prices so that typesense will accept it
+	 * Use for making sure that we are setting a valid int type on prices so that typesense will accept it
+	 * Converts prices to cents (multiplied by 100) and returns as integer
+	 * Example: 6.76 becomes 676, 80.00 becomes 8000
 	 */
 	public static function format_price( $price ) {
-		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
+		$formatted_price = (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
+		return (int) round( $formatted_price * 100 );
 	}
 
 	public static function get_currencies() {
@@ -276,23 +306,23 @@ class Woocommerce {
 				// find the lowest price among the variations
 				$prices = $variations['price'];
 				if ( ! empty( $prices ) ) {
-					$min_price = min( $prices );
+					$min_price         = min( $prices );
 					$lowest_product_id = array_search( $min_price, $prices );
 
 					if ( $lowest_product_id ) {
 						$lowest_product = wc_get_product( $lowest_product_id );
 						$variation_data = Product::get_instance()->generate_typesense_data( $lowest_product );
 
-						$variation_data = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
-						$product_data['price'] = $variation_data['price'];
+						$variation_data               = apply_filters( 'blaze_wooless_get_variation_prices', $variation_data, $lowest_product_id, $lowest_product );
+						$product_data['price']        = $variation_data['price'];
 						$product_data['regularPrice'] = $variation_data['regularPrice'];
-						$product_data['salePrice'] = $variation_data['salePrice'];
+						$product_data['salePrice']    = $variation_data['salePrice'];
 					} else {
 						throw new \Exception( 'No variations found for product ' . $product_id );
 					}
 				}
 			} catch (\Exception $e) {
-				$logger = wc_get_logger();
+				$logger  = wc_get_logger();
 				$context = array( 'source' => 'wooless-variable-product-price' );
 				$logger->debug( 'TS Variable Product Price Exception: ' . $e->getMessage(), $context );
 			}
