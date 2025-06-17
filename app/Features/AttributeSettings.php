@@ -72,9 +72,11 @@ class AttributeSettings {
 	}
 
 	public function add_available_product_attribute( $product_data, $product_id ) {
-		$product                    = wc_get_product( $product_id );
-		$attributes                 = $product->get_attributes();
+		$product = wc_get_product( $product_id );
+		$attributes = $product->get_attributes();
 		$product_data['attributes'] = $attributes;
+
+
 
 		if ( $product->is_type( 'variable' ) ) {
 
@@ -90,7 +92,16 @@ class AttributeSettings {
 					'options' => $attribute->get_options(),
 				);
 
+				// Get available option IDs/values from the current attribute
+				$available_options = $attribute->get_options();
+
 				if ( $attribute->is_taxonomy() ) {
+					// For taxonomy attributes, filter terms based on available option IDs
+					$all_terms = $attribute->get_terms();
+					$filtered_terms = array_filter( $all_terms, function ($term) use ($available_options) {
+						return in_array( $term->term_id, $available_options );
+					} );
+
 					$options = array_map( function ($term) {
 						return [ 
 							'label' => $term->name,
@@ -99,8 +110,9 @@ class AttributeSettings {
 							'term_id' => $term->term_id,
 							'value' => $term->name,
 						];
-					}, $attribute->get_terms() );
+					}, $filtered_terms );
 				} else {
+					// For non-taxonomy attributes, use available options directly
 					$options = array_map( function ($option) {
 						return [ 
 							'label' => $option,
@@ -109,7 +121,7 @@ class AttributeSettings {
 							'term_id' => 0,
 							'value' => $option
 						];
-					}, $attribute->get_options() );
+					}, $available_options );
 				}
 
 				$attribute_to_register['options'] = $options;
@@ -123,7 +135,7 @@ class AttributeSettings {
 				$generated_attributes[] = apply_filters( 'blaze_wooless_product_attribute_for_typesense', $attribute_to_register, $attribute );
 			}
 			$product_data['defaultAttributes'] = $product->get_default_attributes();
-			$product_data['attributes']        = $generated_attributes;
+			$product_data['attributes'] = $generated_attributes;
 		}
 
 		if ( $product->is_type( 'variation' ) ) {
@@ -181,7 +193,7 @@ class AttributeSettings {
 		if ( ! is_array( $options ) ) {
 			$options = array();
 		}
-		$attributes  = array_filter( $options, function ($option, $key) {
+		$attributes = array_filter( $options, function ($option, $key) {
 			return str_starts_with( $key, 'attribute_' );
 		}, ARRAY_FILTER_USE_BOTH );
 		$documents[] = array(
