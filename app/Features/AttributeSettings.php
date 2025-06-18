@@ -17,6 +17,7 @@ class AttributeSettings {
 
 	public function __construct() {
 		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'add_available_product_attribute' ), 10, 2 );
+		add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'clear_product_attributes' ), 99999999, 3 );
 		add_filter( 'blaze_wooless_product_page_settings', array( $this, 'register_settings' ) );
 
 		add_filter( 'blazecommerce/settings/product_page', array( $this, 'add_settings' ), 10, 2 );
@@ -204,5 +205,47 @@ class AttributeSettings {
 		);
 
 		return $documents;
+	}
+
+	/**
+	 * Clear product attributes that are not available for the default variation
+	 * @param array $product_data
+	 * @param int $product_id
+	 * @param WC_Product $product
+	 * @return array
+	 */
+	public function clear_product_attributes( $product_data, $product_id, $product ) {
+		if ( $product->is_type( 'variable' ) ) :
+
+			$attributes = $product->get_attributes();
+
+			$default_attributes = array_map( function ($attr) {
+				return $attr->get_options();
+			}, $attributes );
+
+			$attributes = $product_data["attributes"];
+
+			// Filter options based on default_attributes
+			foreach ( $attributes as &$attribute ) {
+				if ( isset( $default_attributes[ $attribute['slug'] ] ) ) {
+					$valid_term_ids = $default_attributes[ $attribute['slug'] ];
+					// Create a new array to store the filtered options
+					$filtered_options = [];
+					foreach ( $attribute['options'] as $option ) {
+						if ( in_array( $option['term_id'], $valid_term_ids ) ) {
+							$filtered_options[] = $option;
+						}
+					}
+					// Replace the options array with the filtered one
+					$attribute['options'] = $filtered_options;
+				}
+			}
+
+			$product_data["attributes"] = $attributes;
+
+
+		endif;
+
+		return $product_data;
 	}
 }
