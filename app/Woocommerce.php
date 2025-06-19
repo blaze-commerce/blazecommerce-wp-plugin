@@ -274,6 +274,18 @@ class Woocommerce {
 		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
 	}
 
+	/**
+	 * Convert price to int64 format (cents) for Typesense storage
+	 * Formats price as float then multiplies by 100 and converts to integer
+	 * Example: 6.76 becomes 676, 19.99 becomes 1999, 80.00 becomes 8000
+	 *
+	 * @param float|string $price The price to convert
+	 * @return int The price as int64 (cents)
+	 */
+	public static function format_price_to_int64( $price ) {
+		return (int) round( self::format_price( $price ) * 100 );
+	}
+
 	public static function get_currencies() {
 		$base_currency = get_woocommerce_currency();
 		return apply_filters( 'blaze_wooless_currencies', array(
