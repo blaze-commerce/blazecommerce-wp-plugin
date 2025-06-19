@@ -53,9 +53,9 @@ class Product extends BaseCollection {
 
 		$currencies = Woocommerce::get_currencies();
 		foreach ( $currencies as $currency ) {
-			$price[] = array( 'name' => 'price.' . $currency, 'type' => 'int64', 'optional' => true, 'facet' => true );
-			$price[] = array( 'name' => 'regularPrice.' . $currency, 'type' => 'int64', 'optional' => true );
-			$price[] = array( 'name' => 'salePrice.' . $currency, 'type' => 'int64', 'optional' => true );
+			$price[] = array( 'name' => 'price.' . $currency, 'type' => 'float', 'optional' => true, 'facet' => true );
+			$price[] = array( 'name' => 'regularPrice.' . $currency, 'type' => 'float', 'optional' => true );
+			$price[] = array( 'name' => 'salePrice.' . $currency, 'type' => 'float', 'optional' => true );
 		}
 
 		return $price;
@@ -118,12 +118,12 @@ class Product extends BaseCollection {
 			array( 'name' => 'thumbnail.title', 'type' => 'string', 'optional' => true ),
 			array( 'name' => 'metaData', 'type' => 'object', 'optional' => true ),
 			array( 'name' => 'metaData.priceWithTax', 'type' => 'object', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.AUD', 'type' => 'int64', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.NZD', 'type' => 'int64', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.USD', 'type' => 'int64', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.GBP', 'type' => 'int64', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.CAD', 'type' => 'int64', 'optional' => true ),
-			array( 'name' => 'metaData.priceWithTax.EUR', 'type' => 'int64', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.AUD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.NZD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.USD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.GBP', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.CAD', 'type' => 'float', 'optional' => true ),
+			array( 'name' => 'metaData.priceWithTax.EUR', 'type' => 'float', 'optional' => true ),
 			array( 'name' => 'metaData.productLabel', 'type' => 'string', 'optional' => true ),
 		);
 
