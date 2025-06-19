@@ -429,7 +429,7 @@ class Product extends BaseCollection {
 		}
 
 		$default_price = array(
-			$currency => Woocommerce::format_price( $product->get_price() )
+			$currency => (int) round( Woocommerce::format_price( $product->get_price() ) * 100 )
 		);
 
 		return apply_filters( 'wooless_product_price', $default_price, $product->get_id(), $product );
@@ -441,7 +441,7 @@ class Product extends BaseCollection {
 		}
 
 		$default_regular_price = array(
-			$currency => Woocommerce::format_price( $product->get_regular_price() )
+			$currency => (int) round( Woocommerce::format_price( $product->get_regular_price() ) * 100 )
 		);
 
 		return apply_filters( 'wooless_product_regular_price', $default_regular_price, $product->get_id(), $product );
@@ -453,7 +453,7 @@ class Product extends BaseCollection {
 		}
 
 		$default_sale_price = array(
-			$currency => Woocommerce::format_price( $product->get_sale_price() )
+			$currency => (int) round( Woocommerce::format_price( $product->get_sale_price() ) * 100 )
 		);
 
 		return apply_filters( 'wooless_product_sale_price', $default_sale_price, $product->get_id(), $product );
@@ -832,13 +832,13 @@ class Product extends BaseCollection {
 									'variationId' => $variation['variation_id'],
 									'attributes' => $variation['attributes'],
 									'price' => array(
-										$currency => Woocommerce::format_price( $variation_obj->get_price() ),
+										$currency => (int) round( Woocommerce::format_price( $variation_obj->get_price() ) * 100 ),
 									),
 									'regularPrice' => array(
-										$currency => Woocommerce::format_price( $variation_obj->get_regular_price() ),
+										$currency => (int) round( Woocommerce::format_price( $variation_obj->get_regular_price() ) * 100 ),
 									),
 									'salePrice' => array(
-										$currency => Woocommerce::format_price( $variation_obj->get_sale_price() ),
+										$currency => (int) round( Woocommerce::format_price( $variation_obj->get_sale_price() ) * 100 ),
 									),
 									'stockQuantity' => empty( $variation_obj->get_stock_quantity() ) ? 0 : $variation_obj->get_stock_quantity(),
 									'stockStatus' => $variation_obj->get_stock_status(),
@@ -871,13 +871,13 @@ class Product extends BaseCollection {
 						$currency = get_option( 'woocommerce_currency' );
 
 						$default_price         = [
-							$currency => Woocommerce::format_price( $product->get_price() )
+							$currency => (int) round( Woocommerce::format_price( $product->get_price() ) * 100 )
 						];
 						$default_regular_price = [
-							$currency => Woocommerce::format_price( $product->get_regular_price() )
+							$currency => (int) round( Woocommerce::format_price( $product->get_regular_price() ) * 100 )
 						];
 						$default_sale_price    = [
-							$currency => Woocommerce::format_price( $product->get_sale_price() )
+							$currency => (int) round( Woocommerce::format_price( $product->get_sale_price() ) * 100 )
 						];
 
 						$stockQuantity = $product->get_stock_quantity();
