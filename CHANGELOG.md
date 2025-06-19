@@ -1,3 +1,15 @@
+## [Unreleased]
+
+### Documentation
+
+- docs: add comprehensive Typesense Collection Aliasing documentation
+  - Complete guide to the blue-green deployment system
+  - Step-by-step configuration and CLI command instructions
+  - API key configuration requirements and examples
+  - Troubleshooting guide for common issues
+  - Best practices for development workflow and performance
+  - Migration guide from legacy to aliasing system
+
 ## [1.5.2] - 2025-05-27
 
 - feat: add automated version management and release system (857f384)
@@ -86,8 +98,8 @@
 - refactor: change required plugin (079c943)
 - Revert "feat: replace url key image links" (cc6a94d)
 - feat: replace url key image links (af9e8ce)
-- Revert "feat:  added url key for replacing image domain and fix for missing version paths and malformed URLs" (9428ba3)
-- feat:  added url key for replacing image domain and fix for missing version paths and malformed URLs (adbd5fb)
+- Revert "feat: added url key for replacing image domain and fix for missing version paths and malformed URLs" (9428ba3)
+- feat: added url key for replacing image domain and fix for missing version paths and malformed URLs (adbd5fb)
 - Merge pull request #237 from blaze-commerce/WOOLESS-6368_All-of-the-items-in-the-BlanketsTubesWraps-section-have-a-Best-Seller-tag-on-them-How-do-we-update-this_Ridwan-Arifandi (e659fee)
 - feat: add an extra option to override the best seller function (1704f3e)
 - Merge pull request #236 from blaze-commerce/WOOLESS-6249_Fix-Images-are-not-displaying_Lan (e2d7e1d)
@@ -407,7 +419,6 @@
 - fix: thumbnail not using parent when variant is empty (a1b81dc)
 - feat: add the select option and a filter for font family in general settings (1823932)
 - feat: use wp site icon url instead of using admin portal favicon (34bd4d7)
-
 
 # Changelog
 
