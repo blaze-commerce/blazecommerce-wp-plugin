@@ -71,7 +71,8 @@ class WoocommerceVariationSwatches {
 	public function modify_product_taxonomy_item( $term_data, $term ) {
 		$term_data = $this->add_taxonomy_fields_data( $term_data, $term );
 
-		if ( ! empty( $term_data['filters'] ) && ! empty( $term_data['componentType'] ) ) {
+		if ( isset( $term_data['filters'] ) && ! empty( $term_data['filters'] ) &&
+			 isset( $term_data['componentType'] ) && ! empty( $term_data['componentType'] ) ) {
 			$term_data['filters'] = $term_data['filters'] . '|' . $term_data['componentType'] . '|' . $term_data['componentValue'];
 		}
 
@@ -135,10 +136,23 @@ class WoocommerceVariationSwatches {
 	}
 
 	public function get_options_value( $attribute_to_register, $attribute ) {
+		// Add isset() check before accessing 'type' key
+		if ( ! isset( $attribute_to_register['type'] ) ) {
+			return $attribute_to_register; // Return unchanged if type is not set
+		}
 		$type = $attribute_to_register['type'];
 		$new_options = array();
 
+		// Add isset() check before accessing 'options' key
+		if ( ! isset( $attribute_to_register['options'] ) || ! is_array( $attribute_to_register['options'] ) ) {
+			return $attribute_to_register; // Return unchanged if options is not set or not an array
+		}
+
 		foreach ( $attribute_to_register['options'] as $key => $option ) {
+			// Add isset() check before accessing 'term_id' key
+			if ( ! isset( $option['term_id'] ) ) {
+				continue; // Skip this option if term_id is not set
+			}
 			$term_id = $option['term_id'];
 
 			// FILTER OUT RANDOM HASH COLOR NAMES - only include valid color names
