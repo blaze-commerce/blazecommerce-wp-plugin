@@ -266,13 +266,24 @@ class Woocommerce {
 	}
 
 	/**
-	 * Use for making sure that we are setting a valid int type on prices so that typesense will accept it
-	 * Converts prices to cents (multiplied by 100) and returns as integer
-	 * Example: 6.76 becomes 676, 80.00 becomes 8000
+	 * Use for making sure that we are setting a valid float type on prices so that typesense will accept it
+	 * Formats prices as float values with 4 decimal places
+	 * Example: 6.76 becomes 6.7600, 80.00 becomes 80.0000
 	 */
 	public static function format_price( $price ) {
-		$formatted_price = (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
-		return (int) round( $formatted_price * 100 );
+		return (float) number_format( empty( $price ) ? 0 : $price, 4, '.', '' );
+	}
+
+	/**
+	 * Convert price to int64 format (cents) for Typesense storage
+	 * Formats price as float then multiplies by 100 and converts to integer
+	 * Example: 6.76 becomes 676, 19.99 becomes 1999, 80.00 becomes 8000
+	 *
+	 * @param float|string $price The price to convert
+	 * @return int The price as int64 (cents)
+	 */
+	public static function format_price_to_int64( $price ) {
+		return (int) round( self::format_price( $price ) * 100 );
 	}
 
 	public static function get_currencies() {
