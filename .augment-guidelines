@@ -366,29 +366,155 @@ if ($product) {
 
 ## Testing Standards
 
-### 1. Unit Testing
+### 🚨 MANDATORY Testing Requirements
+
+**BREAKING CHANGE**: All PRs now require comprehensive test files and test cases. No exceptions.
+
+### 1. Test File Requirements
+
+**MANDATORY**: All PRs MUST include test files in the `/tests` directory:
+
+```
+/tests/
+├── unit/                    # Unit tests for individual functions/classes
+├── integration/             # Integration tests for WordPress/WooCommerce
+├── cli/                     # CLI command tests
+├── api/                     # GraphQL API endpoint tests
+├── fixtures/                # Test data and mock objects
+├── helpers/                 # Test helper functions
+└── bootstrap.php            # Test environment setup
+```
+
+### 2. Test Coverage Requirements
+
+**MANDATORY COVERAGE**:
+- [ ] **Unit Tests**: All new functions and methods (80%+ coverage)
+- [ ] **Integration Tests**: WordPress/WooCommerce integration points
+- [ ] **CLI Tests**: All WP-CLI commands and flags
+- [ ] **API Tests**: All GraphQL endpoints and resolvers
+- [ ] **Error Handling Tests**: Exception scenarios and edge cases
+- [ ] **Performance Tests**: Memory usage and execution time
+- [ ] **Compatibility Tests**: Plugin dependencies and versions
+
+### 3. Test File Naming Conventions
+
+**MANDATORY PATTERNS**:
+- Unit tests: `test-{class-name}.php` or `test-{function-name}.php`
+- Integration tests: `test-integration-{feature}.php`
+- CLI tests: `test-cli-{command}.php`
+- API tests: `test-api-{endpoint}.php`
+
+### 4. Test Documentation Requirements
+
+**MANDATORY**: Each test file MUST include:
+- [ ] **Test purpose and scope** in file header
+- [ ] **Setup and teardown procedures**
+- [ ] **Test data requirements and fixtures**
+- [ ] **Expected outcomes and assertions**
+- [ ] **Edge cases and error scenarios**
+- [ ] **Performance benchmarks where applicable**
+
+### 5. Test Case Structure
+
+**MANDATORY TEMPLATE**:
+```php
+<?php
+/**
+ * Test: {Feature Name}
+ *
+ * Purpose: {What this test validates}
+ * Scope: {Unit/Integration/CLI/API}
+ * Dependencies: {Required plugins/data}
+ *
+ * @package BlazeWooless
+ * @subpackage Tests
+ */
+
+class Test_{FeatureName} extends WP_UnitTestCase {
+
+    /**
+     * Setup test environment
+     */
+    public function setUp(): void {
+        parent::setUp();
+        // Test setup code
+    }
+
+    /**
+     * Test: {Specific functionality}
+     *
+     * @covers {ClassName::methodName}
+     */
+    public function test_{specific_functionality}() {
+        // Arrange
+        $expected = 'expected_value';
+
+        // Act
+        $result = $this->call_method_under_test();
+
+        // Assert
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Cleanup test environment
+     */
+    public function tearDown(): void {
+        // Test cleanup code
+        parent::tearDown();
+    }
+}
+```
+
+### 6. CLI Command Testing
+
+**MANDATORY**: All CLI commands MUST have test files:
+- [ ] **Success scenarios**: Normal operation with valid inputs
+- [ ] **Error scenarios**: Invalid inputs and edge cases
+- [ ] **Flag combinations**: All flag combinations tested
+- [ ] **Output validation**: Command output matches expectations
+- [ ] **Side effects**: Database changes, file operations verified
+
+### 7. API Endpoint Testing
+
+**MANDATORY**: All GraphQL endpoints MUST have test files:
+- [ ] **Query validation**: Valid and invalid query structures
+- [ ] **Response format**: Correct data structure and types
+- [ ] **Authentication**: Proper access control testing
+- [ ] **Error handling**: Graceful error responses
+- [ ] **Performance**: Response time benchmarks
+
+### 8. Test Data and Fixtures
+
+**MANDATORY**: Create reusable test data:
+- [ ] **Product fixtures**: Sample products for testing
+- [ ] **User fixtures**: Test users with different roles
+- [ ] **Settings fixtures**: Configuration presets
+- [ ] **Mock objects**: External service mocks
+- [ ] **Database fixtures**: Test database states
+
+### 9. Automated Testing Integration
+
+**MANDATORY**: Tests MUST be integrated into CI/CD:
+- [ ] **GitHub Actions**: Automated test execution on PR
+- [ ] **Test reports**: Coverage and performance reports
+- [ ] **Failure notifications**: Clear error messages
+- [ ] **Blocking merges**: Failed tests prevent merge
+
+### 10. Legacy Testing Standards
 
 - Write unit tests for all business logic
 - Use PHPUnit for testing framework
 - Aim for high code coverage (80%+)
 - Mock external dependencies
-
-### 2. Integration Testing
-
 - Test WordPress/WooCommerce integration points
 - Test database operations
 - Test API endpoints
 - Use WordPress testing framework
-
-### 3. Plugin Compatibility Testing
-
 - Test plugin with latest WordPress version
 - Verify WooCommerce compatibility
 - Test all required plugin dependencies
 - Validate GraphQL endpoints functionality
-
-### 4. Code Quality
-
 - Use PHP_CodeSniffer with WordPress standards
 - Implement continuous integration
 - Use static analysis tools (PHPStan, Psalm)
@@ -509,10 +635,24 @@ if ($product) {
 - [ ] **REQUIRED**: Check spelling and grammar in all docs
 - [ ] **REQUIRED**: Follow consistent Markdown formatting
 
+### 🚨 MANDATORY Testing Checklist
+- [ ] **REQUIRED**: Create test files for all new functionality
+- [ ] **REQUIRED**: Unit tests for all new functions/methods
+- [ ] **REQUIRED**: Integration tests for WordPress/WooCommerce features
+- [ ] **REQUIRED**: CLI tests for all command changes
+- [ ] **REQUIRED**: API tests for GraphQL endpoint changes
+- [ ] **REQUIRED**: Error handling and edge case tests
+- [ ] **REQUIRED**: Test fixtures and mock data created
+- [ ] **REQUIRED**: All tests pass locally before commit
+- [ ] **REQUIRED**: Test coverage meets 80%+ requirement
+- [ ] **REQUIRED**: Performance benchmarks for critical features
+
 ### Pre-Commit Requirements
 - [ ] All relevant documentation files created/updated
 - [ ] Documentation review checklist completed
 - [ ] Code examples tested and verified working
 - [ ] GraphQL examples tested with actual queries
 - [ ] Screenshots captured for visual changes
-- [ ] No merge allowed without complete documentation
+- [ ] **REQUIRED**: All test files created and passing
+- [ ] **REQUIRED**: Test coverage requirements met
+- [ ] No merge allowed without complete documentation AND tests
