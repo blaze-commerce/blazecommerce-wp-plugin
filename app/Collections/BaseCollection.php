@@ -471,6 +471,29 @@ class BaseCollection {
 	}
 
 	/**
+	 * Get the current sync collection for direct operations
+	 * This is used when we need to sync additional data (like variations) to the same collection
+	 * that's currently being synced to
+	 *
+	 * @return object|null The collection object or null if unavailable
+	 */
+	public function get_sync_collection() {
+		try {
+			if ( isset( $this->active_sync_collection ) && ! empty( $this->active_sync_collection ) ) {
+				return $this->get_direct_collection( $this->active_sync_collection );
+			}
+
+			// Fallback to regular collection if no sync collection is active
+			return $this->collection();
+		} catch ( \Exception $e ) {
+			$logger = wc_get_logger();
+			$context = array( 'source' => 'wooless-get-sync-collection-error' );
+			$logger->debug( 'Failed to get sync collection: ' . $e->getMessage(), $context );
+			return null;
+		}
+	}
+
+	/**
 	 * Clear collection cache (useful when aliases change)
 	 */
 	public static function clear_collection_cache() {
