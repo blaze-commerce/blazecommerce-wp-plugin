@@ -59,7 +59,7 @@ add_filter('blazecommerce/use_collection_aliases', '__return_true');
 add_filter('blazecommerce/use_collection_aliases', '__return_false');
 ```
 
-For detailed information about the aliasing system, see: [Typesense Aliases Documentation](docs/TYPESENSE_ALIASES_README.md)
+For detailed information about the aliasing system, see: [Typesense Collection Aliasing Documentation](docs/TYPESENSE_COLLECTION_ALIASING.md)
 
 ## CLI Commands
 
