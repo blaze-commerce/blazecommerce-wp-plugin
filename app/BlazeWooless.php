@@ -133,6 +133,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Extensions\\AdvancedCustomFields',
 			'\\BlazeWooless\\Extensions\\PageMetaFields',
 			'\\BlazeWooless\\Extensions\\CountrySpecificImages',
+			'\\BlazeWooless\\Extensions\\NextendFacebookLogin',
 		);
 
 		foreach ( $extensions as $extension ) {
