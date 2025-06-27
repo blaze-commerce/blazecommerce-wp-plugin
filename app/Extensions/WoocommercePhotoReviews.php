@@ -14,7 +14,7 @@ class WoocommercePhotoReviews {
 	}
 
 	public function __construct() {
-		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-photo-reviews/woocommerce-photo-reviews.php' ) && is_plugin_active( 'woo-photo-reviews/woo-photo-reviews.php' ) ) {
+		if ( function_exists( 'is_plugin_active' ) && ( is_plugin_active( 'woocommerce-photo-reviews/woocommerce-photo-reviews.php' ) || is_plugin_active( 'woo-photo-reviews/woo-photo-reviews.php' ) ) ) {
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'reviews_summary' ), 10, 2 );
 			add_filter( 'blaze_wooless_product_data_for_typesense', array( $this, 'product_reviews' ), 10, 2 );
 			add_filter( 'blaze_wooless_product_for_typesense_fields', array( $this, 'additional_meta_fields' ), 10, 1 );

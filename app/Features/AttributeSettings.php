@@ -77,8 +77,6 @@ class AttributeSettings {
 		$attributes = $product->get_attributes();
 		$product_data['attributes'] = $attributes;
 
-
-
 		if ( $product->is_type( 'variable' ) ) {
 
 			$generated_attributes = array();

@@ -45,7 +45,7 @@ class PageMetaFields {
 			'type' => 'string',
 			'default' => '',
 			'sanitize_callback' => array( $this, 'sanitize_page_region' ),
-			'auth_callback' => function() {
+			'auth_callback' => function () {
 				return current_user_can( 'edit_posts' );
 			}
 		) );
@@ -57,7 +57,7 @@ class PageMetaFields {
 			'type' => 'integer',
 			'default' => 0,
 			'sanitize_callback' => 'absint',
-			'auth_callback' => function() {
+			'auth_callback' => function () {
 				return current_user_can( 'edit_posts' );
 			}
 		) );
@@ -85,9 +85,9 @@ class PageMetaFields {
 		// Enqueue our custom script
 		wp_enqueue_script(
 			'blaze-page-meta-select2',
-			BLAZE_COMMERCE_PLUGIN_URL . 'assets/js/page-meta-select2.js',
+			BLAZE_WOOLESS_PLUGIN_DIR . 'assets/js/page-meta-select2.js',
 			array( 'jquery', 'select2' ),
-			BLAZE_COMMERCE_VERSION,
+			BLAZE_WOOLESS_VERSION,
 			true
 		);
 
@@ -101,9 +101,9 @@ class PageMetaFields {
 		// Enqueue custom CSS for Select2 styling
 		wp_enqueue_style(
 			'blaze-page-meta-select2-css',
-			BLAZE_COMMERCE_PLUGIN_URL . 'assets/css/page-meta-select2.css',
+			BLAZE_WOOLESS_PLUGIN_DIR . 'assets/css/page-meta-select2.css',
 			array( 'select2' ),
-			BLAZE_COMMERCE_VERSION
+			BLAZE_WOOLESS_VERSION
 		);
 	}
 
@@ -149,7 +149,8 @@ class PageMetaFields {
 			<tr>
 				<td>
 					<label for="blaze_page_region"><strong>Page Region</strong></label>
-					<select id="blaze_page_region" name="blaze_page_region" class="blaze-select2" style="width: 100%;" data-placeholder="Select a region...">
+					<select id="blaze_page_region" name="blaze_page_region" class="blaze-select2" style="width: 100%;"
+						data-placeholder="Select a region...">
 						<option value="">Select a region...</option>
 						<?php foreach ( $available_regions as $region_code => $region_data ) : ?>
 							<option value="<?php echo esc_attr( $region_code ); ?>" <?php selected( $page_region, $region_code ); ?>>
@@ -157,13 +158,15 @@ class PageMetaFields {
 							</option>
 						<?php endforeach; ?>
 					</select>
-					<p class="description">Select the region this page should be displayed in. Regions are mapped from Aelia Currency Switcher settings.</p>
+					<p class="description">Select the region this page should be displayed in. Regions are mapped from Aelia
+						Currency Switcher settings.</p>
 				</td>
 			</tr>
 			<tr>
 				<td>
 					<label for="blaze_related_page"><strong>Related Page</strong></label>
-					<select id="blaze_related_page" name="blaze_related_page" class="blaze-select2-ajax" style="width: 100%;" data-placeholder="Search for a page...">
+					<select id="blaze_related_page" name="blaze_related_page" class="blaze-select2-ajax" style="width: 100%;"
+						data-placeholder="Search for a page...">
 						<option value="">Search for a page...</option>
 						<?php if ( $related_page && $selected_page_title ) : ?>
 							<option value="<?php echo esc_attr( $related_page ); ?>" selected="selected">
@@ -273,7 +276,7 @@ class PageMetaFields {
 		if ( $page_query->have_posts() ) {
 			while ( $page_query->have_posts() ) {
 				$page_query->the_post();
-				$pages[ get_the_ID() ] = get_the_title();
+				$pages[get_the_ID()] = get_the_title();
 			}
 			wp_reset_postdata();
 		}
