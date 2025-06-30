@@ -142,11 +142,16 @@ class BlazeWooless {
 
 	public function cors_allow_origin() {
 		$shop_domain = bw_get_general_settings( 'shop_domain' );
+
+		if ( empty( $shop_domain ) ) {
+			return;
+		}
+
 		// Allow only your specific domain
 		$allowed_origin = 'https://' . $shop_domain;
 
 		// Check if the current request is from the allowed origin
-		if ( isset( $_SERVER['HTTP_ORIGIN'] ) && $_SERVER['HTTP_ORIGIN'] === $allowed_origin ) {
+		if ( isset( $_SERVER['HTTP_ORIGIN'] ) && sanitize_url( $_SERVER['HTTP_ORIGIN'] ) === $allowed_origin ) {
 			header( "Access-Control-Allow-Origin: $allowed_origin" );
 			header( 'Access-Control-Allow-Credentials: true' );
 		}

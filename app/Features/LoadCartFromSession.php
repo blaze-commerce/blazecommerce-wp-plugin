@@ -19,7 +19,74 @@ class LoadCartFromSession {
 		add_action( 'init', array( $this, 'load_user_from_session' ) );
 		add_action( 'wp_footer', array( $this, 'remove_session_id_from_url_script' ) );
 		add_action( 'woocommerce_before_thankyou', array( $this, 'clear_cart_data' ) );
+	}
 
+	/**
+	 * Check if current environment is staging
+	 * Used to determine environment-specific behavior for session handling
+	 *
+	 * @return bool True if staging environment, false otherwise
+	 */
+	private function is_staging_environment() {
+		return isset( $_SERVER['HTTP_HOST'] ) && strpos( $_SERVER['HTTP_HOST'], '.blz.onl' ) !== false;
+	}
+
+	/**
+	 * Log environment-specific messages for debugging
+	 *
+	 * @param string $message The message to log
+	 * @param string $context Additional context information
+	 */
+	private function log_environment_message( $message, $context = '' ) {
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+			return;
+		}
+
+		$environment = $this->is_staging_environment() ? 'STAGING' : 'PRODUCTION';
+		$log_message = "BlazeCommerce [{$environment}]: {$message}";
+
+		if ( ! empty( $context ) ) {
+			$log_message .= " | Context: {$context}";
+		}
+
+		error_log( $log_message );
+	}
+
+	/**
+	 * Get session ID from request parameters
+	 * Sanitizes and validates the session ID from GET parameters
+	 *
+	 * @return string|null The sanitized session ID or null if not available
+	 */
+	private function get_session_id_from_request() {
+		if ( ! isset( $_GET['session_id'] ) ) {
+			return null;
+		}
+
+		return sanitize_text_field( $_GET['session_id'] );
+	}
+
+	/**
+	 * Validate session ID format based on environment
+	 * Environment-specific validation rules for security
+	 *
+	 * @param string $session_id The session ID to validate
+	 * @return bool True if valid, false otherwise
+	 */
+	private function validate_session_id( $session_id ) {
+		if ( empty( $session_id ) ) {
+			return false;
+		}
+
+		if ( $this->is_staging_environment() ) {
+			// In staging, allow more flexible session ID formats for testing
+			// Basic validation to prevent obvious security issues
+			return strlen( $session_id ) > 0 && strlen( $session_id ) <= 255;
+		}
+
+		// In production, apply stricter validation
+		// Only allow alphanumeric characters, underscores, and hyphens
+		return preg_match( '/^[a-zA-Z0-9_-]+$/', $session_id ) && strlen( $session_id ) <= 128;
 	}
 
 
@@ -30,7 +97,7 @@ class LoadCartFromSession {
 			return;
 		}
 
-		if ( $_SERVER['REQUEST_URI'] === '/graphql' ) {
+		if ( isset( $_SERVER['REQUEST_URI'] ) && $_SERVER['REQUEST_URI'] === '/graphql' ) {
 			return;
 		}
 		$data_to_store = [ 'cart', 'applied_coupons', 'coupon_discount_totals', 'coupon_discount_tax_totals' ];
@@ -41,16 +108,34 @@ class LoadCartFromSession {
 			foreach ( $data_to_store as $key ) {
 				$cookie_name = 'guest_session_' . $key;
 				if ( isset( $_COOKIE[ $cookie_name ] ) ) {
-					$unserialized_data = unserialize( urldecode( $_COOKIE[ $cookie_name ] ) );
-					if ( 'cart' === $key ) {
-						$account_cart_data = WC()->cart->get_cart();
-						$merged_cart_data  = array_merge( $account_cart_data, $unserialized_data );
+					$cookie_data = urldecode( $_COOKIE[ $cookie_name ] );
 
-						$current_session->set( $key, $merged_cart_data );
+					// Environment-specific unserialize handling
+					// Maintains backward compatibility while adding validation
+					$unserialized_data = unserialize( $cookie_data );
+
+					// Validate unserialization was successful
+					if ( $unserialized_data !== false ) {
+						if ( 'cart' === $key ) {
+							// Preserve existing cart merging behavior for backward compatibility
+							$account_cart_data = WC()->cart->get_cart();
+							$merged_cart_data  = array_merge( $account_cart_data, $unserialized_data );
+
+							$current_session->set( $key, $merged_cart_data );
+
+							// Environment-specific logging
+							if ( $this->is_staging_environment() ) {
+								$this->log_environment_message( 'Cart data merged from guest session', 'items: ' . count( $merged_cart_data ) );
+							}
+						} else {
+							$current_session->set( $key, $unserialized_data );
+						}
 					} else {
-						$current_session->set( $key, $unserialized_data );
+						// Log failed unserialization but continue processing (graceful degradation)
+						$this->log_environment_message( 'Failed to unserialize cookie data', 'cookie: ' . $cookie_name );
 					}
 
+					// Always clear the guest session cookie (maintains existing behavior)
 					wc_setcookie( $cookie_name, '', time() - YEAR_IN_SECONDS );
 				}
 			}
@@ -59,9 +144,23 @@ class LoadCartFromSession {
 			return;
 		}
 
+		// Handle missing session ID with environment-specific validation
 		if ( ! isset( $_COOKIE['woocommerce_customer_session_id'] ) ) {
-			if ( isset( $_GET['session_id'] ) ) {
-				$_COOKIE['woocommerce_customer_session_id'] = $_GET['session_id'];
+			$session_id_from_get = $this->get_session_id_from_request();
+
+			if ( ! $session_id_from_get ) {
+				// No session ID available, bail early (maintains backward compatibility)
+				$this->log_environment_message( 'No session ID available, returning early' );
+				return;
+			}
+
+			// Validate and set session ID based on environment
+			if ( $this->validate_session_id( $session_id_from_get ) ) {
+				$_COOKIE['woocommerce_customer_session_id'] = $session_id_from_get;
+				$this->log_environment_message( 'Session ID set from GET parameter', 'session_id: ' . substr( $session_id_from_get, 0, 8 ) . '...' );
+			} else {
+				$this->log_environment_message( 'Invalid session ID format rejected', 'session_id format validation failed' );
+				return;
 			}
 		}
 
@@ -84,17 +183,37 @@ class LoadCartFromSession {
 			// Go get the session instance (WC_Session) from the Main WC Class
 			$session = WC()->session;
 
-			$is_guest = unserialize( $session_data['customer'] )['id'] == 0;
+			// Check if customer data exists and determine if user is guest
+			$is_guest = false;
+			if ( isset( $session_data['customer'] ) ) {
+				$customer_data = unserialize( $session_data['customer'] );
+				$is_guest = isset( $customer_data['id'] ) && $customer_data['id'] == 0;
+			}
 
 			// Set the session variable
 			foreach ( $session_data as $key => $value ) {
 				$session_value = unserialize( $value );
-				$session->set( $key, $session_value );
-				if ( $is_guest && in_array( $key, $data_to_store ) ) {
-					wc_setcookie( 'guest_session_' . $key, urlencode( $value ) );
+
+				// Validate unserialization was successful
+				if ( $session_value !== false ) {
+					$session->set( $key, $session_value );
+					if ( $is_guest && in_array( $key, $data_to_store, true ) ) {
+						wc_setcookie( 'guest_session_' . $key, urlencode( $value ) );
+					}
 				}
 			}
 		} catch (\Exception $exception) {
+			// Environment-specific exception handling
+			// Maintains backward compatibility by not throwing exceptions
+			if ( $this->is_staging_environment() ) {
+				// In staging, log detailed exception information for debugging
+				$this->log_environment_message( 'Session loading exception: ' . $exception->getMessage(), 'trace: ' . $exception->getTraceAsString() );
+			} else {
+				// In production, log minimal information for security
+				$this->log_environment_message( 'Session loading failed', 'exception occurred' );
+			}
+
+			// Maintain backward compatibility - don't re-throw exception
 			// ErrorHandling::capture( $exception );
 		}
 	}
@@ -107,7 +226,7 @@ class LoadCartFromSession {
 			return;
 		}
 
-		if ( $_SERVER['REQUEST_URI'] === '/graphql' ) {
+		if ( isset( $_SERVER['REQUEST_URI'] ) && $_SERVER['REQUEST_URI'] === '/graphql' ) {
 			return;
 		}
 
@@ -127,16 +246,32 @@ class LoadCartFromSession {
 				throw new \Exception( 'Could not locate WooCommerce session on checkout' );
 			}
 
-			if ( $customer = $session_data['customer'] ) {
+			if ( isset( $session_data['customer'] ) ) {
+				$customer = $session_data['customer'];
 				$customer_data = unserialize( $customer );
-				$customer_id   = $customer_data['id'];
 
-				if ( $customer_id ) {
-					// Authenticate the user and set the authentication cookies
-					wp_set_auth_cookie( $customer_id );
+				// Validate unserialization was successful and customer data exists
+				if ( $customer_data !== false && isset( $customer_data['id'] ) ) {
+					$customer_id = $customer_data['id'];
+
+					if ( $customer_id ) {
+						// Authenticate the user and set the authentication cookies
+						wp_set_auth_cookie( $customer_id );
+					}
 				}
 			}
 		} catch (\Exception $exception) {
+			// Environment-specific exception handling for user authentication
+			// Maintains backward compatibility by not throwing exceptions
+			if ( $this->is_staging_environment() ) {
+				// In staging, log detailed exception information for debugging
+				$this->log_environment_message( 'User authentication exception: ' . $exception->getMessage(), 'method: load_user_from_session' );
+			} else {
+				// In production, log minimal information for security
+				$this->log_environment_message( 'User authentication failed', 'exception occurred' );
+			}
+
+			// Maintain backward compatibility - don't re-throw exception
 			// ErrorHandling::capture( $exception );
 		}
 	}
@@ -184,7 +319,7 @@ class LoadCartFromSession {
 	}
 
 
-	function clear_cart_data( $order_id ) {
+	public function clear_cart_data( $order_id ) {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
 		if ( ! $enable_system ) {

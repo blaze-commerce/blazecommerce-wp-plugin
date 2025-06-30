@@ -76,7 +76,7 @@ class GeneralSettings extends BaseSettings {
 	 */
 	public function redirect_non_admin_user() {
 
-		$is_local = strpos( $_SERVER['HTTP_X_FORWARDED_HOST'], 'localhost' ) !== false;
+		$is_local = isset( $_SERVER['HTTP_X_FORWARDED_HOST'] ) && strpos( $_SERVER['HTTP_X_FORWARDED_HOST'], 'localhost' ) !== false;
 		if ( isset( $_REQUEST['no-redirect'] ) || $is_local ) {
 			return;
 		}
@@ -102,19 +102,20 @@ class GeneralSettings extends BaseSettings {
 			exit;
 		}
 
-		$is_my_account_page = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
+		$is_my_account_page = isset( $_SERVER['REQUEST_URI'] ) && strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
 		$exclude_page_redirect_to_frontend = apply_filters( 'blaze_wooless_exclude_page_redirect_to_frontend', is_checkout() );
 		if ( $exclude_page_redirect_to_frontend || $is_my_account_page ) {
 			//Since the page is excluded from redirecting to frontend then we just end the function here
 			return;
 		}
 
-		$has_cart_in_url = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
+		$has_cart_in_url = isset( $_SERVER['SERVER_NAME'] ) && strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
 		$from_vercel_proxy_request = isset( $_SERVER['HTTP_X_VERCEL_PROXY_SIGNATURE'] ) ? true : false;
 
 		// if the url has cart. on it and the request is not from vercel then we redirect it to frontend page without cart in the url
 		if ( $has_cart_in_url && ! $from_vercel_proxy_request ) {
-			wp_redirect( $this->remove_cart_from_url( home_url( $_SERVER['REQUEST_URI'] ) ) );
+			$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+			wp_redirect( $this->remove_cart_from_url( home_url( $request_uri ) ) );
 			exit;
 		}
 
