@@ -64,10 +64,16 @@ function is_klaviyo_connected() {
 }
 
 function is_string_in_current_url( $string ) {
-	$current_url = "https://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-	if ( strpos($current_url, $string) !== false ) {
-		return true;
+	// Validate required $_SERVER variables exist
+	if ( ! isset( $_SERVER['HTTP_HOST'] ) || ! isset( $_SERVER['REQUEST_URI'] ) ) {
+		return false;
 	}
-	
-	return false;
+
+	// Sanitize and construct URL
+	$host = sanitize_text_field( $_SERVER['HTTP_HOST'] );
+	$request_uri = sanitize_text_field( $_SERVER['REQUEST_URI'] );
+	$current_url = "https://" . $host . $request_uri;
+
+	// Check if string exists in URL
+	return strpos( $current_url, $string ) !== false;
 }

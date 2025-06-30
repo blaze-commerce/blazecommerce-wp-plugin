@@ -105,42 +105,27 @@ class WoocommerceProductAddons {
 		if ( is_array( $product_addons ) && ! empty( $product_addons ) ) {
 			include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/abstract-wc-product-addons-field.php';
 			foreach ( $product_addons as $addon ) {
-				if ( $addon['type'] === 'heading' )
+				// Skip heading type addons as they don't contain data
+				if ( $addon['type'] === 'heading' ) {
 					continue;
+				}
 
-				$value = isset( $post_data[ 'addon-' . $addon['field_name'] ] ) ? $post_data[ 'addon-' . $addon['field_name'] ] : '';
+				// Get and sanitize addon value
+				$field_name = 'addon-' . $addon['field_name'];
+				$value = isset( $post_data[ $field_name ] ) ? $post_data[ $field_name ] : '';
+
 				if ( is_array( $value ) ) {
 					$value = array_map( 'stripslashes', $value );
 				} else {
 					$value = stripslashes( $value );
 				}
 
-				switch ( $addon['type'] ) {
-					case 'checkbox':
-					case 'radiobutton':
-						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-list.php';
-						$field = new \WC_Product_Addons_Field_List( $addon, $value );
-						break;
-					case 'custom':
-					case 'custom_text':
-					case 'custom_textarea':
-					case 'custom_price':
-					case 'input_multiplier':
-						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-custom.php';
-						$field = new \WC_Product_Addons_Field_Custom( $addon, $value );
-						break;
-					case 'select':
-					case 'multiple_choice':
-						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-select.php';
-						$field = new \WC_Product_Addons_Field_Select( $addon, $value );
-						break;
-					case 'file_upload':
-						include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-file-upload.php';
-						$field = new \WC_Product_Addons_Field_File_Upload( $addon, $value, $test );
-						break;
-					default:
-						//skip the field if it is not supported to prevent errors
-						continue;
+				// Create appropriate field object based on addon type
+				$field = $this->create_addon_field( $addon, $value, $product_id );
+
+				// Skip if field creation failed
+				if ( ! $field ) {
+					continue;
 				}
 
 				$data = $field->get_cart_item_data();
@@ -151,7 +136,7 @@ class WoocommerceProductAddons {
 						$this->add_error( $data->get_error_message() );
 					} else {
 						// Throw exception for add_to_cart to pickup
-						throw new Exception( $data->get_error_message() );
+						throw new \Exception( $data->get_error_message() );
 					}
 				} elseif ( $data ) {
 					$cart_item_data['addons'] = array_merge( $cart_item_data['addons'], apply_filters( 'woocommerce_product_addon_cart_item_data', $data, $addon, $product_id, $post_data ) );
@@ -160,5 +145,101 @@ class WoocommerceProductAddons {
 		}
 
 		return $cart_item_data;
+	}
+
+	/**
+	 * Check if current environment is staging
+	 *
+	 * @return bool True if staging environment, false otherwise
+	 */
+	private function is_staging_environment() {
+		return isset( $_SERVER['HTTP_HOST'] ) && strpos( $_SERVER['HTTP_HOST'], '.blz.onl' ) !== false;
+	}
+
+	/**
+	 * Get appropriate form context for file upload addons
+	 * Environment-specific handling for security and testing requirements
+	 *
+	 * @param int $product_id The product ID
+	 * @return object|null The form context object or null
+	 */
+	private function get_file_upload_context( $product_id ) {
+		if ( $this->is_staging_environment() ) {
+			// In staging, use more permissive file upload context for testing
+			// This allows for easier testing of file upload functionality
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'BlazeCommerce: File upload addon in staging environment - using permissive context' );
+			}
+			return null;
+		}
+
+		// Production: Use proper product context for security
+		// This ensures file uploads are properly validated against the product
+		$product = wc_get_product( $product_id );
+		if ( ! $product ) {
+			error_log( 'BlazeCommerce: Invalid product ID for file upload addon: ' . $product_id );
+			return null;
+		}
+
+		return $product;
+	}
+
+	/**
+	 * Create appropriate addon field object based on type
+	 * Maintains backward compatibility while adding proper error handling
+	 *
+	 * @param array $addon The addon configuration
+	 * @param mixed $value The addon value
+	 * @param int $product_id The product ID
+	 * @return object|null The field object or null if creation failed
+	 */
+	private function create_addon_field( $addon, $value, $product_id ) {
+		try {
+			switch ( $addon['type'] ) {
+				case 'checkbox':
+				case 'radiobutton':
+					include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-list.php';
+					return new \WC_Product_Addons_Field_List( $addon, $value );
+
+				case 'custom':
+				case 'custom_text':
+				case 'custom_textarea':
+				case 'custom_price':
+				case 'input_multiplier':
+					include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-custom.php';
+					return new \WC_Product_Addons_Field_Custom( $addon, $value );
+
+				case 'select':
+				case 'multiple_choice':
+					include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-select.php';
+					return new \WC_Product_Addons_Field_Select( $addon, $value );
+
+				case 'file_upload':
+					include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/class-wc-product-addons-field-file-upload.php';
+
+					// Get form context based on environment and security requirements
+					$form_context = $this->get_file_upload_context( $product_id );
+
+					return new \WC_Product_Addons_Field_File_Upload( $addon, $value, $form_context );
+
+				default:
+					// Unsupported field type
+					return null;
+			}
+		} catch ( \Exception $e ) {
+			// Environment-specific error handling
+			$error_message = 'BlazeCommerce: Failed to create addon field: ' . $e->getMessage();
+
+			if ( $this->is_staging_environment() ) {
+				// In staging, log more detailed information for debugging
+				error_log( $error_message . ' | Addon Type: ' . ( $addon['type'] ?? 'unknown' ) . ' | Product ID: ' . $product_id );
+			} else {
+				// In production, log minimal information for security
+				error_log( $error_message );
+			}
+
+			// Maintain backward compatibility by returning null (graceful degradation)
+			return null;
+		}
 	}
 }

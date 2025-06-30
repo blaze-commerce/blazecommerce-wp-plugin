@@ -29,8 +29,9 @@ class Ajax {
 	}
 
 	public function check_product_sync_data() {
-		if ( ! empty( $_REQUEST['product_id'] ) ) {
-			$product = wc_get_product( $_REQUEST['product_id'] );
+		if ( isset( $_REQUEST['product_id'] ) && ! empty( $_REQUEST['product_id'] ) ) {
+			$product_id = absint( $_REQUEST['product_id'] );
+			$product = wc_get_product( $product_id );
 			if ( $product ) {
 				$product_document = Product::get_instance()->generate_typesense_data( $product );
 				wp_send_json( $product_document );
