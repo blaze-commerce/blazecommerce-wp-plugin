@@ -11,6 +11,8 @@ namespace BlazeWooless\Features;
  */
 class PluginIntegrationUrlManager {
 	private static $instance = null;
+	private static $backtrace_cache = null;
+	private static $request_cache = array();
 
 	/**
 	 * List of plugin contexts where site_url should be used instead of home_url
@@ -79,7 +81,7 @@ class PluginIntegrationUrlManager {
 	 */
 	public function register_hooks() {
 		// Only activate if we're in a headless setup with different site and home URLs
-		if ( ! $this->is_headless_setup() ) {
+		if ( ! $this->is_headless_setup() || ! $this->is_plugin_url_override_enabled() ) {
 			return;
 		}
 
@@ -140,14 +142,15 @@ class PluginIntegrationUrlManager {
 		}
 
 		// Check backtrace for plugin contexts
-		$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 10 );
+		$backtrace = $this->get_cached_backtrace();
 		foreach ( $backtrace as $trace ) {
 			if ( isset( $trace['file'] ) ) {
 				$file_path = strtolower( $trace['file'] );
 				
 				// Check if call is from a plugin directory
 				if ( strpos( $file_path, '/plugins/' ) !== false ) {
-					foreach ( $this->plugin_contexts as $context ) {
+					$all_contexts = array_merge( $this->plugin_contexts, $this->get_custom_plugin_contexts() );
+					foreach ( $all_contexts as $context ) {
 						if ( strpos( $file_path, $context ) !== false ) {
 							return true;
 						}
@@ -157,7 +160,8 @@ class PluginIntegrationUrlManager {
 			
 			if ( isset( $trace['function'] ) ) {
 				$function_name = strtolower( $trace['function'] );
-				foreach ( $this->plugin_contexts as $context ) {
+				$all_contexts = array_merge( $this->plugin_contexts, $this->get_custom_plugin_contexts() );
+				foreach ( $all_contexts as $context ) {
 					if ( strpos( $function_name, $context ) !== false ) {
 						return true;
 					}
@@ -212,16 +216,7 @@ class PluginIntegrationUrlManager {
 	 * Use site_url for WooCommerce API URLs
 	 */
 	public function use_site_url_for_wc_api( $url, $request, $ssl ) {
-		$site_url = get_option( 'siteurl' );
-		$parsed_site_url = parse_url( $site_url );
-		$parsed_url = parse_url( $url );
-		
-		// Replace the host with site_url host
-		if ( isset( $parsed_site_url['host'] ) && isset( $parsed_url['host'] ) ) {
-			$url = str_replace( $parsed_url['host'], $parsed_site_url['host'], $url );
-		}
-		
-		return $url;
+		return $this->safely_replace_url_host( $url );
 	}
 
 	/**
@@ -275,7 +270,14 @@ class PluginIntegrationUrlManager {
 			return array();
 		}
 		
-		return array_filter( array_map( 'trim', explode( "\n", $custom_contexts ) ) );
+		return array_filter( 
+			array_map( 
+				function( $context ) { 
+					return sanitize_text_field( trim( $context ) ); 
+				}, 
+				explode( "\n", $custom_contexts ) 
+			) 
+		);
 	}
 
 	/**
@@ -283,5 +285,61 @@ class PluginIntegrationUrlManager {
 	 */
 	private function is_plugin_url_override_enabled() {
 		return bw_get_general_settings( 'enable_plugin_url_override' ) == '1';
+	}
+
+	/**
+	 * Get cached backtrace to avoid expensive repeated calls
+	 */
+	private function get_cached_backtrace() {
+		if ( self::$backtrace_cache === null ) {
+			self::$backtrace_cache = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 10 );
+		}
+		return self::$backtrace_cache;
+	}
+
+	/**
+	 * Safely replace URL host with site_url host
+	 * 
+	 * @param string $url The URL to modify
+	 * @return string The URL with replaced host
+	 */
+	private function safely_replace_url_host( $url ) {
+		$site_url = get_option( 'siteurl' );
+		$parsed_site_url = parse_url( $site_url );
+		$parsed_url = parse_url( $url );
+		
+		// Validate both URLs are properly parsed
+		if ( ! $parsed_site_url || ! $parsed_url ) {
+			return $url;
+		}
+		
+		// Only proceed if both have valid hosts
+		if ( ! isset( $parsed_site_url['host'] ) || ! isset( $parsed_url['host'] ) ) {
+			return $url;
+		}
+		
+		// Validate hosts are different to avoid unnecessary replacement
+		if ( $parsed_site_url['host'] === $parsed_url['host'] ) {
+			return $url;
+		}
+		
+		// Build new URL with site_url components
+		$new_url = $parsed_site_url['scheme'] . '://' . $parsed_site_url['host'];
+		
+		if ( isset( $parsed_site_url['port'] ) ) {
+			$new_url .= ':' . $parsed_site_url['port'];
+		}
+		
+		$new_url .= $parsed_url['path'] ?? '';
+		
+		if ( isset( $parsed_url['query'] ) ) {
+			$new_url .= '?' . $parsed_url['query'];
+		}
+		
+		if ( isset( $parsed_url['fragment'] ) ) {
+			$new_url .= '#' . $parsed_url['fragment'];
+		}
+		
+		return $new_url;
 	}
 }
