@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    bootstrap="tests/bootstrap.php"
+    backupGlobals="false"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    processIsolation="false"
+    stopOnFailure="false"
+    verbose="true"
+>
+    <testsuites>
+        <testsuite name="BlazeCommerce Unit Tests">
+            <directory>./tests/unit/</directory>
+        </testsuite>
+        <testsuite name="BlazeCommerce Integration Tests">
+            <directory>./tests/integration/</directory>
+        </testsuite>
+        <testsuite name="BlazeCommerce CLI Tests">
+            <directory>./tests/cli/</directory>
+        </testsuite>
+        <testsuite name="BlazeCommerce All Tests">
+            <directory>./tests/</directory>
+        </testsuite>
+    </testsuites>
+    
+    <filter>
+        <whitelist processUncoveredFilesFromWhitelist="true">
+            <directory suffix=".php">./app/</directory>
+            <exclude>
+                <directory>./tests/</directory>
+                <directory>./vendor/</directory>
+                <file>./blaze-wooless.php</file>
+            </exclude>
+        </whitelist>
+    </filter>
+    
+    <logging>
+        <log type="coverage-html" target="./tests/coverage/html"/>
+        <log type="coverage-clover" target="./tests/coverage/clover.xml"/>
+        <log type="coverage-text" target="php://stdout" showUncoveredFiles="false"/>
+    </logging>
+    
+    <php>
+        <const name="WP_TESTS_DOMAIN" value="example.org" />
+        <const name="WP_TESTS_EMAIL" value="admin@example.org" />
+        <const name="WP_TESTS_TITLE" value="Test Blog" />
+        <const name="WP_PHP_BINARY" value="php" />
+        <const name="WP_TESTS_FORCE_KNOWN_BUGS" value="true" />
+        
+        <!-- Test Database Configuration -->
+        <const name="DB_NAME" value="wordpress_test" />
+        <const name="DB_USER" value="root" />
+        <const name="DB_PASSWORD" value="" />
+        <const name="DB_HOST" value="localhost" />
+        <const name="DB_CHARSET" value="utf8" />
+        <const name="DB_COLLATE" value="" />
+        
+        <!-- WordPress Test Configuration -->
+        <const name="WP_DEBUG" value="true" />
+        <const name="WP_DEBUG_LOG" value="true" />
+        <const name="WP_DEBUG_DISPLAY" value="false" />
+        
+        <!-- BlazeCommerce Test Configuration -->
+        <const name="BLAZE_COMMERCE_TESTING" value="true" />
+        <const name="TYPESENSE_TESTING_MODE" value="true" />
+    </php>
+</phpunit>

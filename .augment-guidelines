@@ -3,17 +3,79 @@
 ## Table of Contents
 
 1. [General Principles](#general-principles)
-2. [Version Management & Release Process](#version-management--release-process)
-3. [Code Structure & Organization](#code-structure--organization)
-4. [DRY Principle Implementation](#dry-principle-implementation)
-5. [Code Readability](#code-readability)
-6. [WordPress/WooCommerce Specific Guidelines](#wordpresswoocommerce-specific-guidelines)
-7. [Security Best Practices](#security-best-practices)
-8. [Performance Guidelines](#performance-guidelines)
-9. [Testing Standards](#testing-standards)
-10. [Documentation Requirements](#documentation-requirements)
+2. [🚨 MANDATORY Documentation Requirements](#-mandatory-documentation-requirements)
+3. [Version Management & Release Process](#version-management--release-process)
+4. [Code Structure & Organization](#code-structure--organization)
+5. [DRY Principle Implementation](#dry-principle-implementation)
+6. [Code Readability](#code-readability)
+7. [WordPress/WooCommerce Specific Guidelines](#wordpresswoocommerce-specific-guidelines)
+8. [Security Best Practices](#security-best-practices)
+9. [Performance Guidelines](#performance-guidelines)
+10. [Testing Standards](#testing-standards)
 11. [Error Handling](#error-handling)
 12. [Build Process & Automation](#build-process--automation)
+
+## 🚨 MANDATORY Documentation Requirements
+
+**BREAKING CHANGE**: All code changes now require mandatory comprehensive documentation updates. No exceptions.
+
+### 1. Documentation-First Development Workflow
+
+**MANDATORY PROCESS**:
+- **Every code change** MUST include corresponding documentation updates
+- **New features** MUST have complete documentation before merge
+- **Bug fixes** MUST update relevant documentation sections
+- **PRs without complete documentation** will be rejected
+
+### 2. Required Documentation Structure
+
+**MANDATORY**: All changes MUST include comprehensive .md documentation files in the `/docs` directory:
+
+```
+/docs/
+├── README.md                    # Main documentation index
+├── CHANGELOG.md                 # Version history and changes
+├── SETUP.md                     # Installation and setup guide
+├── API.md                       # GraphQL API and endpoints reference
+├── FUNCTIONS.md                 # Custom functions documentation
+├── SECURITY.md                  # Security guidelines and practices
+├── PERFORMANCE.md               # Performance optimization guide
+├── TESTING.md                   # Testing procedures and standards
+├── TROUBLESHOOTING.md           # Common issues and solutions
+├── CONTRIBUTING.md              # Development contribution guide
+└── DEPLOYMENT.md                # Deployment and release procedures
+```
+
+### 3. Documentation Standards
+
+**MANDATORY REQUIREMENTS**:
+- **Every code change** MUST include corresponding documentation updates
+- **New features** MUST have complete docs before merge
+- **Bug fixes** MUST update relevant documentation sections
+- **All documentation** MUST be written in clear, concise Markdown
+- **Code examples** MUST be included for all functions and features
+- **API endpoints** MUST include request/response examples
+- **Screenshots** MUST be included for UI changes
+
+### 4. Feature Documentation Requirements
+
+**For every new feature, MUST create/update**:
+- `/docs/FUNCTIONS.md` - Document all new functions with examples
+- `/docs/API.md` - Document new GraphQL endpoints with queries
+- `/docs/CHANGELOG.md` - Add detailed change log entry
+- `/docs/README.md` - Update if feature affects overview
+- `/docs/TESTING.md` - Add testing procedures for new features
+
+### 5. Documentation Review Process
+
+**MANDATORY CHECKS**:
+- [ ] All relevant .md files updated
+- [ ] Code examples tested and working
+- [ ] API examples include request/response
+- [ ] Screenshots updated for UI changes
+- [ ] Links and references verified
+- [ ] Spelling and grammar checked
+- [ ] Documentation follows consistent formatting
 
 ## General Principles
 
@@ -40,6 +102,28 @@
 - Types: feat, fix, docs, style, refactor, test, chore
 - Include version bump in commit when releasing
 - Use `>commit` shortcut for automated commits
+- **MANDATORY**: All commits MUST include documentation updates
+
+### 4. Documentation-First Development Workflow
+**MANDATORY PROCESS**:
+1. **Before coding**: Create/update relevant documentation files in `/docs/`
+2. **During development**: Keep documentation updated with code changes
+3. **Before commit**: Verify all documentation is complete and accurate
+4. **No exceptions**: PRs without complete documentation will be rejected
+
+**Documentation Commit Pattern**:
+```
+feat(api): add new GraphQL endpoint for product search
+
+- Add product search resolver with filtering capabilities
+- Include pagination and sorting options
+- Add error handling for invalid queries
+
+docs: document product search GraphQL endpoint
+- Add endpoint to /docs/API.md with usage examples
+- Include query parameters and response format
+- Update /docs/CHANGELOG.md with new feature
+```
 
 ## Version Management & Release Process
 
@@ -47,7 +131,7 @@
 
 - Plugin version is managed in two places:
   - Plugin header in `blaze-wooless.php` (line 6)
-  - Version constant `BLAZE_WOOLESS_VERSION` (line 19)
+  - Version constant `BLAZE_COMMERCE_VERSION` (line 19)
 - Both must be updated together for consistency
 - Use semantic versioning (MAJOR.MINOR.PATCH)
 - Document breaking changes clearly
@@ -282,49 +366,205 @@ if ($product) {
 
 ## Testing Standards
 
-### 1. Unit Testing
+### 🚨 MANDATORY Testing Requirements
+
+**BREAKING CHANGE**: All PRs now require comprehensive test files and test cases. No exceptions.
+
+### 1. Test File Requirements
+
+**MANDATORY**: All PRs MUST include test files in the `/tests` directory:
+
+```
+/tests/
+├── unit/                    # Unit tests for individual functions/classes
+├── integration/             # Integration tests for WordPress/WooCommerce
+├── cli/                     # CLI command tests
+├── api/                     # GraphQL API endpoint tests
+├── fixtures/                # Test data and mock objects
+├── helpers/                 # Test helper functions
+└── bootstrap.php            # Test environment setup
+```
+
+### 2. Test Coverage Requirements
+
+**MANDATORY COVERAGE**:
+- [ ] **Unit Tests**: All new functions and methods (80%+ coverage)
+- [ ] **Integration Tests**: WordPress/WooCommerce integration points
+- [ ] **CLI Tests**: All WP-CLI commands and flags
+- [ ] **API Tests**: All GraphQL endpoints and resolvers
+- [ ] **Error Handling Tests**: Exception scenarios and edge cases
+- [ ] **Performance Tests**: Memory usage and execution time
+- [ ] **Compatibility Tests**: Plugin dependencies and versions
+
+### 3. Test File Naming Conventions
+
+**MANDATORY PATTERNS**:
+- Unit tests: `test-{class-name}.php` or `test-{function-name}.php`
+- Integration tests: `test-integration-{feature}.php`
+- CLI tests: `test-cli-{command}.php`
+- API tests: `test-api-{endpoint}.php`
+
+### 4. Test Documentation Requirements
+
+**MANDATORY**: Each test file MUST include:
+- [ ] **Test purpose and scope** in file header
+- [ ] **Setup and teardown procedures**
+- [ ] **Test data requirements and fixtures**
+- [ ] **Expected outcomes and assertions**
+- [ ] **Edge cases and error scenarios**
+- [ ] **Performance benchmarks where applicable**
+
+### 5. Test Case Structure
+
+**MANDATORY TEMPLATE**:
+```php
+<?php
+/**
+ * Test: {Feature Name}
+ *
+ * Purpose: {What this test validates}
+ * Scope: {Unit/Integration/CLI/API}
+ * Dependencies: {Required plugins/data}
+ *
+ * @package BlazeWooless
+ * @subpackage Tests
+ */
+
+class Test_{FeatureName} extends WP_UnitTestCase {
+
+    /**
+     * Setup test environment
+     */
+    public function setUp(): void {
+        parent::setUp();
+        // Test setup code
+    }
+
+    /**
+     * Test: {Specific functionality}
+     *
+     * @covers {ClassName::methodName}
+     */
+    public function test_{specific_functionality}() {
+        // Arrange
+        $expected = 'expected_value';
+
+        // Act
+        $result = $this->call_method_under_test();
+
+        // Assert
+        $this->assertEquals($expected, $result);
+    }
+
+    /**
+     * Cleanup test environment
+     */
+    public function tearDown(): void {
+        // Test cleanup code
+        parent::tearDown();
+    }
+}
+```
+
+### 6. CLI Command Testing
+
+**MANDATORY**: All CLI commands MUST have test files:
+- [ ] **Success scenarios**: Normal operation with valid inputs
+- [ ] **Error scenarios**: Invalid inputs and edge cases
+- [ ] **Flag combinations**: All flag combinations tested
+- [ ] **Output validation**: Command output matches expectations
+- [ ] **Side effects**: Database changes, file operations verified
+
+### 7. API Endpoint Testing
+
+**MANDATORY**: All GraphQL endpoints MUST have test files:
+- [ ] **Query validation**: Valid and invalid query structures
+- [ ] **Response format**: Correct data structure and types
+- [ ] **Authentication**: Proper access control testing
+- [ ] **Error handling**: Graceful error responses
+- [ ] **Performance**: Response time benchmarks
+
+### 8. Test Data and Fixtures
+
+**MANDATORY**: Create reusable test data:
+- [ ] **Product fixtures**: Sample products for testing
+- [ ] **User fixtures**: Test users with different roles
+- [ ] **Settings fixtures**: Configuration presets
+- [ ] **Mock objects**: External service mocks
+- [ ] **Database fixtures**: Test database states
+
+### 9. Automated Testing Integration
+
+**MANDATORY**: Tests MUST be integrated into CI/CD:
+- [ ] **GitHub Actions**: Automated test execution on PR
+- [ ] **Test reports**: Coverage and performance reports
+- [ ] **Failure notifications**: Clear error messages
+- [ ] **Blocking merges**: Failed tests prevent merge
+
+### 10. Legacy Testing Standards
 
 - Write unit tests for all business logic
 - Use PHPUnit for testing framework
 - Aim for high code coverage (80%+)
 - Mock external dependencies
-
-### 2. Integration Testing
-
 - Test WordPress/WooCommerce integration points
 - Test database operations
 - Test API endpoints
 - Use WordPress testing framework
-
-### 3. Plugin Compatibility Testing
-
 - Test plugin with latest WordPress version
 - Verify WooCommerce compatibility
 - Test all required plugin dependencies
 - Validate GraphQL endpoints functionality
-
-### 4. Code Quality
-
 - Use PHP_CodeSniffer with WordPress standards
 - Implement continuous integration
 - Use static analysis tools (PHPStan, Psalm)
 - Regular code reviews
 
-## Documentation Requirements
+## Documentation Requirements (Legacy - See Mandatory Section Above)
 
-### 1. Code Documentation
+### 1. Mandatory Documentation Structure
+**MANDATORY**: All changes MUST include comprehensive .md documentation files in the `/docs` directory as outlined in the [Mandatory Documentation Requirements](#-mandatory-documentation-requirements) section above.
 
-- Document all public methods and classes
-- Use PHPDoc format consistently
-- Include parameter types and return values
-- Document complex algorithms and business logic
+### 2. Documentation Standards
+**MANDATORY REQUIREMENTS**:
+- **Every code change** MUST include corresponding documentation updates
+- **New features** MUST have complete documentation before merge
+- **Bug fixes** MUST update relevant documentation sections
+- **All documentation** MUST be written in clear, concise Markdown
+- **Code examples** MUST be included for all functions and features
+- **API endpoints** MUST include request/response examples with GraphQL queries
+- **Screenshots** MUST be included for UI changes and new features
 
-### 2. User Documentation
+### 3. Code Documentation
+- Document all public methods and classes with PHPDoc format
+- Include inline comments for complex logic and algorithms
+- Maintain comprehensive API documentation in `/docs/API.md`
+- Document all GraphQL resolvers, queries, and mutations
+- Document all WordPress hooks and filters used
 
-- Provide clear installation instructions
+### 4. Feature Documentation Requirements
+**For every new feature, MUST create/update**:
+- `/docs/FUNCTIONS.md` - Document all new functions with examples
+- `/docs/API.md` - Document new GraphQL endpoints with usage examples
+- `/docs/CHANGELOG.md` - Add detailed change log entry
+- `/docs/TESTING.md` - Add testing procedures for new features
+- `/docs/README.md` - Update if feature affects overview
+
+### 5. User Documentation
+- Maintain clear installation instructions in `/docs/SETUP.md`
 - Document all settings and configuration options
-- Include troubleshooting guides
-- Maintain changelog with version updates
+- Keep troubleshooting guides updated in `/docs/TROUBLESHOOTING.md`
+- Maintain plugin compatibility notes in `/docs/README.md`
+
+### 6. Documentation Review Process
+**MANDATORY CHECKS**:
+- [ ] All relevant .md files updated
+- [ ] Code examples tested and working
+- [ ] GraphQL examples include queries and responses
+- [ ] Screenshots updated for visual changes
+- [ ] Links and references verified
+- [ ] Spelling and grammar checked
+- [ ] Documentation follows consistent formatting
 
 ## Error Handling
 
@@ -368,11 +608,11 @@ if ($product) {
 
 ## Quick Reference Checklist
 
+### Code Standards
 - [ ] Follow WordPress coding standards
 - [ ] Use descriptive naming conventions
 - [ ] Implement DRY principle with base classes/traits
 - [ ] Keep functions small and focused
-- [ ] Add comprehensive documentation
 - [ ] Sanitize inputs and escape outputs
 - [ ] Use proper WordPress hooks and APIs
 - [ ] Implement error handling and logging
@@ -381,3 +621,38 @@ if ($product) {
 - [ ] Update version in both locations when releasing
 - [ ] Run build process after block changes
 - [ ] Test plugin compatibility before release
+
+### 🚨 MANDATORY Documentation Checklist
+- [ ] **REQUIRED**: Update `/docs/CHANGELOG.md` with detailed changes
+- [ ] **REQUIRED**: Update `/docs/FUNCTIONS.md` for any new functions
+- [ ] **REQUIRED**: Update `/docs/API.md` for new GraphQL endpoints
+- [ ] **REQUIRED**: Update `/docs/TESTING.md` for new test procedures
+- [ ] **REQUIRED**: Include code examples in all documentation
+- [ ] **REQUIRED**: Add GraphQL query/response examples for API changes
+- [ ] **REQUIRED**: Add screenshots for UI/visual changes
+- [ ] **REQUIRED**: Test all documented code examples
+- [ ] **REQUIRED**: Verify all documentation links work
+- [ ] **REQUIRED**: Check spelling and grammar in all docs
+- [ ] **REQUIRED**: Follow consistent Markdown formatting
+
+### 🚨 MANDATORY Testing Checklist
+- [ ] **REQUIRED**: Create test files for all new functionality
+- [ ] **REQUIRED**: Unit tests for all new functions/methods
+- [ ] **REQUIRED**: Integration tests for WordPress/WooCommerce features
+- [ ] **REQUIRED**: CLI tests for all command changes
+- [ ] **REQUIRED**: API tests for GraphQL endpoint changes
+- [ ] **REQUIRED**: Error handling and edge case tests
+- [ ] **REQUIRED**: Test fixtures and mock data created
+- [ ] **REQUIRED**: All tests pass locally before commit
+- [ ] **REQUIRED**: Test coverage meets 80%+ requirement
+- [ ] **REQUIRED**: Performance benchmarks for critical features
+
+### Pre-Commit Requirements
+- [ ] All relevant documentation files created/updated
+- [ ] Documentation review checklist completed
+- [ ] Code examples tested and verified working
+- [ ] GraphQL examples tested with actual queries
+- [ ] Screenshots captured for visual changes
+- [ ] **REQUIRED**: All test files created and passing
+- [ ] **REQUIRED**: Test coverage requirements met
+- [ ] No merge allowed without complete documentation AND tests

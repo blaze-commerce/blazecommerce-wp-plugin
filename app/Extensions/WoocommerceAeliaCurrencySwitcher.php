@@ -31,9 +31,9 @@ class WoocommerceAeliaCurrencySwitcher {
 			add_filter( 'blaze_wooless_calculated_converted_single_price', array( $this, 'get_converted_single_price' ), 10 );
 			add_filter( 'woocommerce_prices_include_tax', array( $this, 'include_tax_if_has_rates' ), 10, 1 );
 
-			add_filter( 'blaze_wooless_convert_prices', array( $this, 'convert_prices' ), 10, 2 );
 			add_filter( 'graphql_resolve_field', array( $this, 'graphql_resolve_field' ), 20, 9 );
-
+			
+			add_filter( 'blaze_wooless_convert_prices', array( $this, 'convert_prices' ), 10, 2 );
 			add_filter( 'blazecommerce/product/metaData/price_by_location/with_tax/regular_price', array( $this, 'convert_prices' ), 10, 2 );
 			add_filter( 'blazecommerce/product/metaData/price_by_location/with_tax/sale_price', array( $this, 'convert_prices' ), 10, 2 );
 			add_filter( 'blazecommerce/product/metaData/price_by_location/without_tax/regular_price', array( $this, 'convert_prices' ), 10, 2 );
@@ -76,10 +76,10 @@ class WoocommerceAeliaCurrencySwitcher {
 
 		$prices = array();
 		foreach ( $available_currencies as $currency ) {
-			$prices[ $currency ] = Woocommerce::format_price( $this->calculate_converted_price( $price, $currency ) );
+			$prices[ $currency ] = $this->calculate_converted_price( $price, $currency );
 		}
 
-		$prices[ $base_currency ] = floatval( $price );
+		$prices[ $base_currency ] = $price;
 
 		return $prices;
 	}
@@ -108,17 +108,17 @@ class WoocommerceAeliaCurrencySwitcher {
 				if ( ! isset( $product_data['regularPrice'][ $currency ] ) || ! isset( $product_data['salePrice'][ $currency ] ) ) {
 					$product = wc_get_product( $product_id );
 					$converted_prices = array(
-						'regular_price' => Woocommerce::format_price( $this->calculate_converted_price( $regular_prices[ $base_currency ], $currency ) ),
-						'sale_price' => Woocommerce::format_price( $this->calculate_converted_price( $sale_prices[ $base_currency ], $currency ) ),
+						'regular_price' => $this->calculate_converted_price( $regular_prices[ $base_currency ], $currency ),
+						'sale_price' => $this->calculate_converted_price( $sale_prices[ $base_currency ], $currency ),
 					);
 				}
 
 				if ( ! isset( $product_data['regularPrice'][ $currency ] ) ) {
-					$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $converted_prices['regular_price'] );
+					$product_data['regularPrice'][ $currency ] = $converted_prices['regular_price'];
 				}
 
 				if ( ! isset( $product_data['salePrice'][ $currency ] ) ) {
-					$product_data['salePrice'][ $currency ] = Woocommerce::format_price( $converted_prices['sale_price'] );
+					$product_data['salePrice'][ $currency ] = $converted_prices['sale_price'];
 				}
 
 				$_sale_price = $product_data['salePrice'][ $currency ];
@@ -127,7 +127,7 @@ class WoocommerceAeliaCurrencySwitcher {
 				if ( ! is_array( $product_data['price'] ) ) {
 					$product_data['price'] = [];
 				}
-				$product_data['price'][ $currency ] = Woocommerce::format_price( ! empty( $_sale_price ) ? $_sale_price : $_regular_price );
+				$product_data['price'][ $currency ] = ! empty( $_sale_price ) ? $_sale_price : $_regular_price;
 
 				$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $product_data['regularPrice'][ $currency ] );
 				$product_data['salePrice'][ $currency ] = Woocommerce::format_price( $product_data['salePrice'][ $currency ] );
@@ -140,6 +140,13 @@ class WoocommerceAeliaCurrencySwitcher {
 		return $product_data;
 	}
 
+	/**
+	 * Converts the prices based on currency setup
+	 *
+	 * @param int $prices The values of the price should be in cents.
+	 * @param string $base_currency
+	 * @return void
+	 */
 	public function convert_prices( $prices, $base_currency ) {
 		$available_currencies = $this->available_currencies();
 
@@ -149,8 +156,11 @@ class WoocommerceAeliaCurrencySwitcher {
 
 			foreach ( $available_currencies as $currency ) {
 				if ( $base_currency === $currency ) {
+					$prices[ $currency ] = Woocommerce::format_price( $base_price );
 					continue;
-				} 
+				}
+
+				// No need to use Woocommerce::format_price here since the base price is already in cents.
 				$prices[ $currency ] = Woocommerce::format_price( $this->calculate_converted_price( $base_price, $currency ) );
 			}
 		}

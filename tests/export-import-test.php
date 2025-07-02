@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Include the ExportImportSettings class
-require_once BLAZE_WOOLESS_PLUGIN_DIR . 'app/Settings/ExportImportSettings.php';
+require_once BLAZE_COMMERCE_PLUGIN_DIR . 'app/Settings/ExportImportSettings.php';
 
 use BlazeWooless\Settings\ExportImportSettings;
 

@@ -85,9 +85,9 @@ class PageMetaFields {
 		// Enqueue our custom script
 		wp_enqueue_script(
 			'blaze-page-meta-select2',
-			BLAZE_WOOLESS_PLUGIN_URL . 'assets/js/page-meta-select2.js',
+			BLAZE_COMMERCE_PLUGIN_URL . 'assets/js/page-meta-select2.js',
 			array( 'jquery', 'select2' ),
-			BLAZE_WOOLESS_VERSION,
+			BLAZE_COMMERCE_VERSION,
 			true
 		);
 
@@ -101,9 +101,9 @@ class PageMetaFields {
 		// Enqueue custom CSS for Select2 styling
 		wp_enqueue_style(
 			'blaze-page-meta-select2-css',
-			BLAZE_WOOLESS_PLUGIN_URL . 'assets/css/page-meta-select2.css',
+			BLAZE_COMMERCE_PLUGIN_URL . 'assets/css/page-meta-select2.css',
 			array( 'select2' ),
-			BLAZE_WOOLESS_VERSION
+			BLAZE_COMMERCE_VERSION
 		);
 	}
 
@@ -231,15 +231,21 @@ class PageMetaFields {
 		}
 
 		$currency_mappings = $aelia_options['currency_countries_mappings'];
+		$all_countries = \WC()->countries->get_countries();
 
-		// Build regions array - use currency as key for consistency
+		// Build regions array - use country codes as keys like CountrySpecificImages
 		foreach ( $currency_mappings as $currency => $mapping ) {
-			if ( isset( $mapping['countries'] ) && ! empty( $mapping['countries'] ) ) {
-				$regions[ $currency ] = array(
-					'label' => $currency . ' (' . implode( ', ', $mapping['countries'] ) . ')',
-					'currency' => $currency,
-					'countries' => $mapping['countries']
-				);
+			if ( isset( $mapping['countries'] ) && is_array( $mapping['countries'] ) ) {
+				foreach ( $mapping['countries'] as $country_code ) {
+					if ( isset( $all_countries[ $country_code ] ) ) {
+						$regions[ $country_code ] = array(
+							'label' => $all_countries[ $country_code ] . ' (' . $currency . ')',
+							'currency' => $currency,
+							'country_code' => $country_code,
+							'country_name' => $all_countries[ $country_code ]
+						);
+					}
+				}
 			}
 		}
 

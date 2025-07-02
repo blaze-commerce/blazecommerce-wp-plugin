@@ -36,13 +36,12 @@ class Cli extends WP_CLI_Command {
 	 * Complete sync operation with standardized error handling and success messages
 	 *
 	 * @param object $collection Collection instance
-	 * @param string $sync_method Method name to call for completing sync (should be 'complete_collection_sync')
 	 * @param array $options Optional parameters to pass to the sync method
 	 * @return void
 	 */
-	private function complete_collection_sync( $collection, $sync_method, $options = array() ) {
+	private function complete_collection_sync( $collection, $options = array() ) {
 		try {
-			$sync_result = $collection->$sync_method( $options );
+			$sync_result = $collection->complete_collection_sync( $options );
 			if ( $sync_result ) {
 				WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
 				if ( ! empty( $sync_result['deleted_collections'] ) ) {
@@ -85,10 +84,10 @@ class Cli extends WP_CLI_Command {
 	 * ## OPTIONS
 	 *
 	 * [--all]
-	 * : Sync all products.
+	 * : Sync all products including their variations to the same collection.
 	 *
 	 * [--variants]
-	 * : Sync all products variants.
+	 * : Sync all products variants only.
 	 *
 	 * [--nonvariants]
 	 * : Sync only non-variant products (simple, bundle, etc.).
@@ -167,10 +166,18 @@ class Cli extends WP_CLI_Command {
 
 			} while ( true );
 
-			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $product_collection, 'complete_collection_sync' );
+			// After syncing all products, sync their variations to the same collection
+			WP_CLI::line( "Syncing product variations to the same collection..." );
+			try {
+				$this->sync_variations_to_current_collection( $product_collection );
+			} catch ( \Exception $e ) {
+				WP_CLI::warning( 'Variation sync encountered an error but product sync will continue: ' . $e->getMessage() );
+			}
 
-			WP_CLI::success( "All products have been synced." );
+			// Complete the sync by updating alias if using new system
+			$this->complete_collection_sync( $product_collection );
+
+			WP_CLI::success( "All products and variations have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_products_count, $page );
 
 			WP_CLI::halt( 0 );
@@ -287,7 +294,7 @@ class Cli extends WP_CLI_Command {
 				}
 
 				// Complete the sync by updating alias if using new system
-				$this->complete_collection_sync( $product_collection, 'complete_collection_sync' );
+				$this->complete_collection_sync( $product_collection );
 
 				WP_CLI::success( "All non-variant products have been synced." );
 				WP_CLI::success( "Total non-variant products: " . count( $nonvariant_product_ids ) );
@@ -362,8 +369,7 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			$transient_key = 'page_sync_collection_' . $collection->typesense->store_id;
-			$this->complete_collection_sync( $collection, 'complete_collection_sync', array( 'clear_transient' => $transient_key ) );
+			$this->complete_collection_sync( $collection );
 
 			WP_CLI::success( "Completed! All page and post have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
@@ -410,7 +416,7 @@ class Cli extends WP_CLI_Command {
 			$total_imports += count( $object_batch ); // Increment the count of imported products
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $collection, 'complete_collection_sync' );
+			$this->complete_collection_sync( $collection );
 
 			WP_CLI::success( "Completed! All menus have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count );
@@ -457,7 +463,7 @@ class Cli extends WP_CLI_Command {
 			$total_imports += count( $object_batch ); // Increment the count of imported products
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $collection, 'complete_site_info_sync' );
+			$this->complete_collection_sync( $collection );
 
 			$collection->after_site_info_sync();
 
@@ -551,7 +557,7 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $collection, 'complete_collection_sync' );
+			$this->complete_collection_sync( $collection );
 
 			WP_CLI::success( "Completed! All taxonomies have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
@@ -621,7 +627,7 @@ class Cli extends WP_CLI_Command {
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
-			$this->complete_collection_sync( $collection, 'complete_collection_sync' );
+			$this->complete_collection_sync( $collection );
 
 			WP_CLI::success( "Completed! All published wp_navigation posts have been synced." );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
@@ -837,6 +843,216 @@ class Cli extends WP_CLI_Command {
 			WP_CLI::success( "Total cache entries: " . $total_cache_entries );
 		} else {
 			WP_CLI::line( "No cache entries found." );
+		}
+	}
+
+	/**
+	 * Sync product variations to the current active sync collection
+	 * This ensures variations are synced to the same collection as their parent products
+	 *
+	 * @param \BlazeWooless\Collections\Product $product_collection The product collection instance
+	 */
+	private function sync_variations_to_current_collection( $product_collection ) {
+		// Validate input
+		if ( ! $product_collection || ! is_object( $product_collection ) ) {
+			WP_CLI::warning( 'Invalid product collection instance provided for variation sync.' );
+			return;
+		}
+
+		// Check if WooCommerce is available
+		if ( ! function_exists( 'wc_get_product' ) ) {
+			WP_CLI::warning( 'WooCommerce is not available. Skipping variation sync.' );
+			return;
+		}
+
+		$start_time = microtime( true );
+		$page = 1;
+
+		try {
+			// Query for all variable products
+			$args = array(
+				'post_type' => 'product',
+				'post_status' => 'publish',
+				'posts_per_page' => -1,
+				'tax_query' => array(
+					array(
+						'taxonomy' => 'product_type',
+						'field' => 'slug',
+						'terms' => 'variable',
+					),
+				),
+			);
+
+			$query = new \WP_Query( $args );
+			$variation_ids = array();
+
+			// Check for WP_Query errors
+			if ( is_wp_error( $query ) ) {
+				WP_CLI::warning( 'Failed to query variable products: ' . $query->get_error_message() );
+				return;
+			}
+
+			if ( $query->have_posts() ) {
+				while ( $query->have_posts() ) {
+					$query->the_post();
+					$product_id = get_the_ID();
+
+					// Validate product ID
+					if ( ! $product_id ) {
+						continue;
+					}
+
+					$product = wc_get_product( $product_id );
+
+					if ( $product && $product->is_type( 'variable' ) ) {
+						$children = $product->get_children();
+						if ( is_array( $children ) && ! empty( $children ) ) {
+							$variation_ids = array_merge( $variation_ids, $children );
+						}
+					}
+				}
+
+				if ( ! empty( $variation_ids ) ) {
+					WP_CLI::line( "Found " . count( $variation_ids ) . " variations to sync..." );
+
+					// Process variations in chunks, but sync to the current collection
+					$chunks = array_chunk( $variation_ids, 50 );
+
+					foreach ( $chunks as $chunk ) {
+						if ( ! empty( $chunk ) ) {
+							// Use the same collection instance to ensure variations go to the same collection
+							$this->sync_variations_to_collection( $chunk, $product_collection );
+
+							WP_CLI::success( "Completed variation batch {$page}..." );
+							$page++;
+						}
+					}
+
+					WP_CLI::success( "All " . count( $variation_ids ) . " product variations synced to the same collection." );
+
+					// Display timing
+					$end_time = microtime( true );
+					$execution_time = $end_time - $start_time;
+					$formatted_time = gmdate( "H:i:s", (int) $execution_time );
+					WP_CLI::line( "Variation sync time: " . $formatted_time . " (hh:mm:ss)" );
+				} else {
+					WP_CLI::line( "No product variations found to sync." );
+				}
+			} else {
+				WP_CLI::line( "No variable products found." );
+			}
+
+		} catch ( \Exception $e ) {
+			WP_CLI::warning( 'Error during variation sync: ' . $e->getMessage() );
+		} finally {
+			// Always reset post data
+			wp_reset_postdata();
+		}
+	}
+
+	/**
+	 * Sync variation IDs to a specific collection instance
+	 * This is a modified version of the variation_update method that uses a specific collection
+	 *
+	 * @param array $variation_ids Array of variation IDs to sync
+	 * @param \BlazeWooless\Collections\Product $product_collection The product collection instance to sync to
+	 */
+	private function sync_variations_to_collection( $variation_ids, $product_collection ) {
+		// Validate inputs
+		if ( ! is_array( $variation_ids ) || empty( $variation_ids ) ) {
+			WP_CLI::warning( 'No variation IDs provided for sync.' );
+			return;
+		}
+
+		if ( ! $product_collection || ! is_object( $product_collection ) ) {
+			WP_CLI::warning( 'Invalid product collection instance provided.' );
+			return;
+		}
+
+		$logger = null;
+		$context = array( 'source' => 'wooless-variations-sync-to-collection' );
+
+		try {
+			$logger = wc_get_logger();
+			$variations_data = array();
+			$parent_product_ids = array();
+
+			foreach ( $variation_ids as $variation_id ) {
+				// Validate variation ID
+				if ( ! is_numeric( $variation_id ) || $variation_id <= 0 ) {
+					continue;
+				}
+
+				$wc_variation = wc_get_product( $variation_id );
+
+				if ( $wc_variation && $wc_variation->is_type( 'variation' ) ) {
+					try {
+						$variation_data = $product_collection->generate_typesense_data( $wc_variation );
+						if ( ! empty( $variation_data ) ) {
+							$variations_data[] = $variation_data;
+
+							// Collect parent product ID for revalidation
+							$parent_id = $wc_variation->get_parent_id();
+							if ( $parent_id && ! in_array( $parent_id, $parent_product_ids ) ) {
+								$parent_product_ids[] = $parent_id;
+							}
+						}
+					} catch ( \Exception $e ) {
+						if ( $logger ) {
+							$logger->debug( 'Failed to generate data for variation ' . $variation_id . ': ' . $e->getMessage(), $context );
+						}
+						WP_CLI::warning( 'Failed to process variation ' . $variation_id . ': ' . $e->getMessage() );
+					}
+				}
+			}
+
+			if ( ! empty( $variations_data ) ) {
+				// Get sync collection and validate it exists
+				$sync_collection = $product_collection->get_sync_collection();
+				if ( ! $sync_collection ) {
+					throw new \Exception( 'Unable to get sync collection for variations.' );
+				}
+
+				// Import to the current sync collection (same as parent products)
+				$import = $sync_collection->documents->import( $variations_data, array(
+					'action' => 'upsert'
+				) );
+
+				if ( $logger ) {
+					$logger->debug( 'Synced ' . count( $variations_data ) . ' variations to collection: ' . print_r( $import, 1 ), $context );
+				}
+
+				// Schedule revalidation for parent products if class exists
+				if ( class_exists( '\BlazeWooless\Revalidate' ) && ! empty( $parent_product_ids ) ) {
+					try {
+						$revalidate = \BlazeWooless\Revalidate::get_instance();
+						foreach ( $parent_product_ids as $parent_id ) {
+							if ( is_numeric( $parent_id ) && $parent_id > 0 ) {
+								$revalidate->revalidate_product_page( $parent_id );
+								if ( $logger ) {
+									$logger->debug( "Scheduled revalidation for parent product ID: {$parent_id}", $context );
+								}
+							}
+						}
+					} catch ( \Exception $e ) {
+						if ( $logger ) {
+							$logger->debug( 'Failed to schedule revalidation: ' . $e->getMessage(), $context );
+						}
+						// Don't fail the entire sync for revalidation issues
+						WP_CLI::warning( 'Failed to schedule revalidation for some parent products.' );
+					}
+				}
+			} else {
+				WP_CLI::line( 'No valid variation data to sync.' );
+			}
+
+		} catch ( \Exception $e ) {
+			if ( ! $logger ) {
+				$logger = wc_get_logger();
+			}
+			$error_context = array( 'source' => 'wooless-variations-sync-to-collection-error' );
+			$logger->debug( 'Variation sync to collection failed: ' . $e->getMessage(), $error_context );
+			WP_CLI::warning( 'Failed to sync some variations: ' . $e->getMessage() );
 		}
 	}
 }
