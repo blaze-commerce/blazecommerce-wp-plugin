@@ -234,14 +234,30 @@ class GeneralSettings extends BaseSettings {
 						),
 					),
 					array(
+						'id' => 'vercel_access_token',
+						'label' => 'Vercel Access Token',
+						'type' => 'password',
+						'args' => array(
+							'description' => 'Vercel access token for API authentication. Generate from your Vercel dashboard.',
+							'placeholder' => 'vercel_token_...'
+						),
+					),
+					array(
+						'id' => 'vercel_team_id',
+						'label' => 'Vercel Team ID',
+						'type' => 'text',
+						'args' => array(
+							'description' => 'Vercel team ID for team-scoped operations.',
+							'placeholder' => 'team_abc123...'
+						),
+					),
+					array(
 						'id' => 'vercel_project_id',
 						'label' => 'Vercel Project ID',
 						'type' => 'text',
 						'args' => array(
-							'description' => 'Vercel project ID for deployment. Must start with "prj_" followed by alphanumeric characters.',
-							'placeholder' => 'prj_abc123...',
-							'pattern' => '^prj_[a-zA-Z0-9]+$',
-							'title' => 'Must be in format: prj_abc123...'
+							'description' => 'Vercel project ID for deployment.',
+							'placeholder' => 'prj_abc123...'
 						),
 					),
 				)
