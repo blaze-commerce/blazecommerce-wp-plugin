@@ -94,7 +94,7 @@ function blaze_commerce_my_account_scripts() {
 	<?php
 }
 
-function blaze_woolese_array_camel_case_keys( $array ) {
+function blaze_wooless_array_camel_case_keys( $array ) {
 	$newArray = array();
 	foreach ( $array as $key => $value ) {
 		$camelCaseKey = lcfirst( str_replace( ' ', '', ucwords( str_replace( '_', ' ', $key ) ) ) );
