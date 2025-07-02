@@ -50,8 +50,8 @@ class Ajax {
 	public function get_vercel_headers() {
 		$vercel_token = bw_get_general_settings( 'vercel_access_token' );
 		if ( empty( $vercel_token ) ) {
-			// Fallback to default token if not configured
-			$vercel_token = 'a3alWY2RDSCThmlGk7AzNhrY';
+			// No fallback - force users to configure their own credentials
+			throw new \Exception( 'Vercel access token not configured. Please configure your Vercel credentials in BlazeCommerce settings.' );
 		}
 		return array(
 			'Authorization: Bearer ' . $vercel_token,
@@ -62,8 +62,8 @@ class Ajax {
 	public function get_vercel_team_id() {
 		$team_id = bw_get_general_settings( 'vercel_team_id' );
 		if ( empty( $team_id ) ) {
-			// Fallback to default team ID
-			$team_id = 'team_zL2lRpvMuf07cC4lm4uHtkQy';
+			// No fallback - force users to configure their own credentials
+			throw new \Exception( 'Vercel team ID not configured. Please configure your Vercel credentials in BlazeCommerce settings.' );
 		}
 		return $team_id;
 	}
@@ -83,12 +83,19 @@ class Ajax {
 
 
 	public function get_latest_deployment() {
-		$project_id = $this->get_project_id();
-		if ( empty( $project_id ) ) {
+		try {
+			$project_id = $this->get_project_id();
+			if ( empty( $project_id ) ) {
+				return null;
+			}
+
+			$team_id = $this->get_vercel_team_id();
+			$headers = $this->get_vercel_headers();
+		} catch ( \Exception $e ) {
+			error_log( 'BlazeCommerce: Configuration error in get_latest_deployment - ' . $e->getMessage() );
 			return null;
 		}
 
-		$team_id = $this->get_vercel_team_id();
 		$url = 'https://api.vercel.com/v6/deployments?teamId=' . $team_id . '&projectId=' . $project_id . '&state=BUILDING,READY&target=production';
 
 		$curl = curl_init();
@@ -102,7 +109,7 @@ class Ajax {
 			CURLOPT_FOLLOWLOCATION => true,
 			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
 			CURLOPT_CUSTOMREQUEST => 'GET',
-			CURLOPT_HTTPHEADER => $this->get_vercel_headers(),
+			CURLOPT_HTTPHEADER => $headers,
 		) );
 
 		$response = curl_exec( $curl );
@@ -125,15 +132,24 @@ class Ajax {
 	}
 
 	public function check_deployment() {
-		$project_id = $this->get_project_id();
-		if ( empty( $project_id ) ) {
+		try {
+			$project_id = $this->get_project_id();
+			if ( empty( $project_id ) ) {
+				wp_send_json( array(
+					'error' => 'Configuration error',
+					'message' => 'Vercel project ID not configured. Please configure your Vercel credentials in BlazeCommerce settings.'
+				) );
+			}
+
+			$team_id = $this->get_vercel_team_id();
+			$headers = $this->get_vercel_headers();
+		} catch ( \Exception $e ) {
 			wp_send_json( array(
 				'error' => 'Configuration error',
-				'message' => 'Vercel project ID not configured'
+				'message' => $e->getMessage()
 			) );
 		}
 
-		$team_id = $this->get_vercel_team_id();
 		$url = 'https://api.vercel.com/v6/deployments?teamId=' . $team_id . '&projectId=' . $project_id . '&state=BUILDING,READY&target=production';
 
 		$curl = curl_init();
@@ -147,7 +163,7 @@ class Ajax {
 			CURLOPT_FOLLOWLOCATION => true,
 			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
 			CURLOPT_CUSTOMREQUEST => 'GET',
-			CURLOPT_HTTPHEADER => $this->get_vercel_headers(),
+			CURLOPT_HTTPHEADER => $headers,
 		) );
 
 		$response = curl_exec( $curl );
@@ -203,33 +219,42 @@ class Ajax {
 	}
 
 	public function redeploy_store_front() {
-		$project_id = $this->get_project_id();
-		if ( empty( $project_id ) ) {
+		try {
+			$project_id = $this->get_project_id();
+			if ( empty( $project_id ) ) {
+				wp_send_json( array(
+					'error' => 'Configuration error',
+					'message' => 'Vercel project ID not configured. Please configure your Vercel credentials in BlazeCommerce settings.'
+				) );
+			}
+
+			// First, get the latest deployment to use as a base for the new deployment
+			$latest_deployment = $this->get_latest_deployment();
+			if ( ! $latest_deployment ) {
+				wp_send_json( array(
+					'error' => 'No deployments found',
+					'message' => 'No existing deployments found for this project'
+				) );
+			}
+
+			// Check if deployment is already in progress
+			if ( $latest_deployment['state'] === 'BUILDING' ) {
+				wp_send_json( array(
+					'error' => 'Deployment in progress',
+					'message' => 'Redeploy is in progress. Wait at least 10 minutes before trying again.'
+				) );
+			}
+
+			// Trigger new deployment
+			$team_id = $this->get_vercel_team_id();
+			$headers = $this->get_vercel_headers();
+		} catch ( \Exception $e ) {
 			wp_send_json( array(
 				'error' => 'Configuration error',
-				'message' => 'Vercel project ID not configured'
+				'message' => $e->getMessage()
 			) );
 		}
 
-		// First, get the latest deployment to use as a base for the new deployment
-		$latest_deployment = $this->get_latest_deployment();
-		if ( ! $latest_deployment ) {
-			wp_send_json( array(
-				'error' => 'No deployments found',
-				'message' => 'No existing deployments found for this project'
-			) );
-		}
-
-		// Check if deployment is already in progress
-		if ( $latest_deployment['state'] === 'BUILDING' ) {
-			wp_send_json( array(
-				'error' => 'Deployment in progress',
-				'message' => 'Redeploy is in progress. Wait at least 10 minutes before trying again.'
-			) );
-		}
-
-		// Trigger new deployment
-		$team_id = $this->get_vercel_team_id();
 		$url = 'https://api.vercel.com/v13/deployments?forceNew=1&skipAutoDetectionConfirmation=1&teamId=' . $team_id;
 
 		$deployment_data = array(
@@ -253,7 +278,7 @@ class Ajax {
 			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
 			CURLOPT_CUSTOMREQUEST => 'POST',
 			CURLOPT_POSTFIELDS => json_encode( $deployment_data ),
-			CURLOPT_HTTPHEADER => $this->get_vercel_headers(),
+			CURLOPT_HTTPHEADER => $headers,
 		) );
 
 		$response = curl_exec( $curl );
