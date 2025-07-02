@@ -35,7 +35,7 @@ class ExportImportSettings extends BaseSettings {
 	}
 
 	public function footer_callback() {
-		require_once BLAZE_WOOLESS_PLUGIN_DIR . 'views/export-import-settings.php';
+		require_once BLAZE_COMMERCE_PLUGIN_DIR . 'views/export-import-settings.php';
 	}
 
 	/**
@@ -89,7 +89,7 @@ class ExportImportSettings extends BaseSettings {
 
 		// Add metadata
 		$export_data['_export_metadata'] = array(
-			'plugin_version' => BLAZE_WOOLESS_VERSION,
+			'plugin_version' => BLAZE_COMMERCE_VERSION,
 			'export_date' => current_time( 'mysql' ),
 			'site_url' => site_url(),
 			'wp_version' => get_bloginfo( 'version' ),

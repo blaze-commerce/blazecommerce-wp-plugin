@@ -46,8 +46,7 @@ class Navigation extends BaseCollection {
 				$new_collection_name = $this->initialize_with_alias( $schema );
 				$logger->debug( 'TS Navigation collection (alias): ' . $new_collection_name, $context );
 
-				// Store the new collection name for later use in complete_sync
-				$this->current_sync_collection = $new_collection_name;
+				// Note: initialize_with_alias() now automatically stores the active sync collection
 
 			} catch (\Exception $e) {
 				$logger->debug( 'TS Navigation collection alias initialize Exception: ' . $e->getMessage(), $context );
@@ -200,6 +199,15 @@ class Navigation extends BaseCollection {
 					'import_response' => $import_response,
 					'import_data_sent' => $navigation_datas,
 				) );
+			}
+
+			// Complete the sync if using aliases and this is the final page
+			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
+			if ( $use_aliases && isset( $this->active_sync_collection ) ) {
+				$logger      = wc_get_logger();
+				$context     = array( 'source' => 'wooless-navigation-collection-complete' );
+				$sync_result = $this->complete_collection_sync();
+				$logger->debug( 'TS Navigation sync result: ' . json_encode( $sync_result ), $context );
 			}
 
 			wp_send_json( array(

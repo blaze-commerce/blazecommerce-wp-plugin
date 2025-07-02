@@ -2,6 +2,8 @@
 
 namespace BlazeWooless\Extensions;
 
+use BlazeWooless\Woocommerce;
+
 class WoocommerceGiftCards {
 	private static $instance = null;
 
@@ -104,8 +106,8 @@ class WoocommerceGiftCards {
 
 			// fallback if the aelia currency switcher is disabled
 			if ( ! is_array( $price ) || ! array_key_exists( $currency, $price ) ) {
-				$price = [ 
-					$currency => (float) $price
+				$price = [
+					$currency => Woocommerce::format_price( $price )
 				];
 			}
 
@@ -134,25 +136,25 @@ class WoocommerceGiftCards {
 			$allowed_custom_amounts = boolval( get_post_meta( $product_id, '_pwgc_custom_amount_allowed', true ) );
 
 			if ( $allowed_custom_amounts ) {
-				$min_price = floatval( get_post_meta( $product_id, '_pwgc_custom_amount_min', true ) );
-				$max_price = floatval( get_post_meta( $product_id, '_pwgc_custom_amount_max', true ) );
+				$min_price = Woocommerce::format_price( get_post_meta( $product_id, '_pwgc_custom_amount_min', true ) );
+				$max_price = Woocommerce::format_price( get_post_meta( $product_id, '_pwgc_custom_amount_max', true ) );
 			} else {
 				$variation_prices = array_filter( $product->get_variation_prices(), function ($price) {
 					return $price > 0;
 				} );
 
-				$min_price = floatval( min( $variation_prices['price'] ) );
-				$max_price = floatval( max( $variation_prices['price'] ) );
+				$min_price = Woocommerce::format_price( min( $variation_prices['price'] ) );
+				$max_price = Woocommerce::format_price( max( $variation_prices['price'] ) );
 			}
 
 			// later we need to check if include tax is enabled or multicurrency is enabled
 
-			$product_data['metaData']['giftCard'] = [ 
+			$product_data['metaData']['giftCard'] = [
 				'allowCustomAmount' => $allowed_custom_amounts,
-				'min' => [ 
+				'min' => [
 					$currency => $min_price
 				],
-				'max' => [ 
+				'max' => [
 					$currency => $max_price
 				],
 			];
