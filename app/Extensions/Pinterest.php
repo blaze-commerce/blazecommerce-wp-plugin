@@ -13,7 +13,7 @@ class Pinterest {
 	}
 
 	public function __construct() {
-		add_filter( 'blaze_wooless_general_settings', array( $this, 'register_settings' ), 999, 1 );
+		add_filter( 'blazecommerce/settings/general/fields', array( $this, 'register_settings' ), 999, 1 );
 		add_filter( 'blaze_wooless_additional_site_info', array( $this, 'register_additional_site_info' ), 10, 1 );
 	}
 

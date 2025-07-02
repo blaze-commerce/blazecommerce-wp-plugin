@@ -11,9 +11,9 @@ Author URI: https://www.blazecommerce.io
 
 use BlazeWooless\PostType;
 
-define( 'BLAZE_WOOLESS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'BLAZE_WOOLESS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'BLAZE_WOOLESS_VERSION', '1.5.2' );
+define( 'BLAZE_COMMERCE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'BLAZE_COMMERCE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'BLAZE_COMMERCE_VERSION', '1.5.2' );
 
 require 'vendor/autoload.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/class-tgm-plugin-activation.php';
@@ -22,6 +22,11 @@ require_once plugin_dir_path( __FILE__ ) . 'lib/setting-helper.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/blaze-wooless-functions.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/blaze-wooless-shortcodes.php';
 require_once plugin_dir_path( __FILE__ ) . 'blocks/blocks.php';
+
+// Include test file for development/debugging
+if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+	require_once plugin_dir_path( __FILE__ ) . 'test/test-country-specific-images.php';
+}
 
 
 // Initialize plugin
