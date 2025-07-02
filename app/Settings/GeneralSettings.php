@@ -238,8 +238,10 @@ class GeneralSettings extends BaseSettings {
 						'label' => 'Vercel Project ID',
 						'type' => 'text',
 						'args' => array(
-							'description' => 'Vercel project ID for deployment.',
-							'placeholder' => 'prj_abc123...'
+							'description' => 'Vercel project ID for deployment. Must start with "prj_" followed by alphanumeric characters.',
+							'placeholder' => 'prj_abc123...',
+							'pattern' => '^prj_[a-zA-Z0-9]+$',
+							'title' => 'Must be in format: prj_abc123...'
 						),
 					),
 				)

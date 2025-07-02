@@ -71,6 +71,11 @@ class Ajax {
 	public function get_project_id() {
 		$project_id = bw_get_general_settings( 'vercel_project_id' );
 		if ( ! empty( $project_id ) ) {
+			// Validate project ID format (should match prj_*)
+			if ( ! $this->validate_project_id( $project_id ) ) {
+				error_log( 'BlazeCommerce: Invalid Vercel project ID format: ' . $project_id );
+				return null;
+			}
 			return $project_id;
 		}
 
@@ -78,19 +83,101 @@ class Ajax {
 		return null;
 	}
 
+	private function validate_project_id( $project_id ) {
+		return preg_match( '/^prj_[a-zA-Z0-9]+$/', $project_id );
+	}
+
+	private function make_vercel_api_request( $url, $method = 'GET', $data = null, $timeout = 30 ) {
+		try {
+			$headers = $this->get_vercel_headers();
+		} catch ( \Exception $e ) {
+			error_log( 'BlazeCommerce: Configuration error in API request - ' . $e->getMessage() );
+			return array(
+				'success' => false,
+				'error' => 'Configuration error',
+				'message' => $e->getMessage()
+			);
+		}
+
+		$curl = curl_init();
+		$options = array(
+			CURLOPT_URL => $url,
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_ENCODING => '',
+			CURLOPT_MAXREDIRS => 10,
+			CURLOPT_TIMEOUT => $timeout,
+			CURLOPT_CONNECTTIMEOUT => 10,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+			CURLOPT_CUSTOMREQUEST => $method,
+			CURLOPT_HTTPHEADER => $headers,
+		);
+
+		if ( $data && $method === 'POST' ) {
+			$options[CURLOPT_POSTFIELDS] = json_encode( $data );
+		}
+
+		curl_setopt_array( $curl, $options );
+
+		$response = curl_exec( $curl );
+		$http_code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+		$curl_error = curl_error( $curl );
+		curl_close( $curl );
+
+		// Log for debugging
+		error_log( 'BlazeCommerce API Request - URL: ' . $url );
+		error_log( 'BlazeCommerce API Request - HTTP Code: ' . $http_code );
+		error_log( 'BlazeCommerce API Request - Response: ' . $response );
+		if ( $curl_error ) {
+			error_log( 'BlazeCommerce API Request - cURL Error: ' . $curl_error );
+		}
+
+		if ( $curl_error ) {
+			return array(
+				'success' => false,
+				'error' => 'Connection error',
+				'message' => 'Failed to connect to Vercel API: ' . $curl_error
+			);
+		}
+
+		if ( $http_code !== 200 && $http_code !== 201 ) {
+			return array(
+				'success' => false,
+				'error' => 'HTTP error',
+				'message' => 'Vercel API returned HTTP ' . $http_code,
+				'response' => $response
+			);
+		}
+
+		$decoded_response = json_decode( $response, true );
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			return array(
+				'success' => false,
+				'error' => 'Invalid response',
+				'message' => 'Invalid JSON response from Vercel API',
+				'raw_response' => $response
+			);
+		}
+
+		return array(
+			'success' => true,
+			'data' => $decoded_response,
+			'http_code' => $http_code
+		);
+	}
+
 
 
 
 
 	public function get_latest_deployment() {
-		try {
-			$project_id = $this->get_project_id();
-			if ( empty( $project_id ) ) {
-				return null;
-			}
+		$project_id = $this->get_project_id();
+		if ( empty( $project_id ) ) {
+			return null;
+		}
 
+		try {
 			$team_id = $this->get_vercel_team_id();
-			$headers = $this->get_vercel_headers();
 		} catch ( \Exception $e ) {
 			error_log( 'BlazeCommerce: Configuration error in get_latest_deployment - ' . $e->getMessage() );
 			return null;
@@ -98,33 +185,16 @@ class Ajax {
 
 		$url = 'https://api.vercel.com/v6/deployments?teamId=' . $team_id . '&projectId=' . $project_id . '&state=BUILDING,READY&target=production';
 
-		$curl = curl_init();
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => $url,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 30,
-			CURLOPT_CONNECTTIMEOUT => 10,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'GET',
-			CURLOPT_HTTPHEADER => $headers,
-		) );
+		$result = $this->make_vercel_api_request( $url, 'GET', null, 30 );
 
-		$response = curl_exec( $curl );
-		$http_code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-		$curl_error = curl_error( $curl );
-		curl_close( $curl );
-
-		if ( $curl_error || $http_code !== 200 ) {
-			error_log( 'BlazeCommerce: Failed to get latest deployment - HTTP: ' . $http_code . ', Error: ' . $curl_error );
+		if ( ! $result['success'] ) {
+			error_log( 'BlazeCommerce: Failed to get latest deployment - ' . $result['message'] );
 			return null;
 		}
 
-		$decoded_response = json_decode( $response, true );
-		if ( json_last_error() !== JSON_ERROR_NONE || ! isset( $decoded_response['deployments'] ) || count( $decoded_response['deployments'] ) === 0 ) {
-			error_log( 'BlazeCommerce: No deployments found or invalid response' );
+		$decoded_response = $result['data'];
+		if ( ! isset( $decoded_response['deployments'] ) || count( $decoded_response['deployments'] ) === 0 ) {
+			error_log( 'BlazeCommerce: No deployments found' );
 			return null;
 		}
 
@@ -132,17 +202,16 @@ class Ajax {
 	}
 
 	public function check_deployment() {
-		try {
-			$project_id = $this->get_project_id();
-			if ( empty( $project_id ) ) {
-				wp_send_json( array(
-					'error' => 'Configuration error',
-					'message' => 'Vercel project ID not configured. Please configure your Vercel credentials in BlazeCommerce settings.'
-				) );
-			}
+		$project_id = $this->get_project_id();
+		if ( empty( $project_id ) ) {
+			wp_send_json( array(
+				'error' => 'Configuration error',
+				'message' => 'Vercel project ID not configured. Please configure your Vercel credentials in BlazeCommerce settings.'
+			) );
+		}
 
+		try {
 			$team_id = $this->get_vercel_team_id();
-			$headers = $this->get_vercel_headers();
 		} catch ( \Exception $e ) {
 			wp_send_json( array(
 				'error' => 'Configuration error',
@@ -152,56 +221,17 @@ class Ajax {
 
 		$url = 'https://api.vercel.com/v6/deployments?teamId=' . $team_id . '&projectId=' . $project_id . '&state=BUILDING,READY&target=production';
 
-		$curl = curl_init();
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => $url,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 30, // Set 30 second timeout
-			CURLOPT_CONNECTTIMEOUT => 10, // Set 10 second connection timeout
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'GET',
-			CURLOPT_HTTPHEADER => $headers,
-		) );
+		$result = $this->make_vercel_api_request( $url, 'GET', null, 30 );
 
-		$response = curl_exec( $curl );
-		$http_code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-		$curl_error = curl_error( $curl );
-		curl_close( $curl );
-
-		// Log for debugging
-		error_log( 'BlazeCommerce Check Deployment - URL: ' . $url );
-		error_log( 'BlazeCommerce Check Deployment - HTTP Code: ' . $http_code );
-		error_log( 'BlazeCommerce Check Deployment - Response: ' . $response );
-		if ( $curl_error ) {
-			error_log( 'BlazeCommerce Check Deployment - cURL Error: ' . $curl_error );
-		}
-
-		if ( $curl_error ) {
+		if ( ! $result['success'] ) {
 			wp_send_json( array(
-				'error' => 'Connection error',
-				'message' => 'Failed to connect to Vercel API: ' . $curl_error
+				'error' => $result['error'],
+				'message' => $result['message'],
+				'response' => isset( $result['response'] ) ? $result['response'] : null
 			) );
 		}
 
-		if ( $http_code !== 200 ) {
-			wp_send_json( array(
-				'error' => 'HTTP error',
-				'message' => 'Vercel API returned HTTP ' . $http_code,
-				'response' => $response
-			) );
-		}
-
-		$decoded_response = json_decode( $response, true );
-		if ( json_last_error() !== JSON_ERROR_NONE ) {
-			wp_send_json( array(
-				'error' => 'Invalid response',
-				'message' => 'Invalid JSON response from Vercel API',
-				'raw_response' => $response
-			) );
-		}
+		$decoded_response = $result['data'];
 
 		// Get the latest deployment state
 		if ( isset( $decoded_response['deployments'] ) && count( $decoded_response['deployments'] ) > 0 ) {
@@ -219,35 +249,33 @@ class Ajax {
 	}
 
 	public function redeploy_store_front() {
+		$project_id = $this->get_project_id();
+		if ( empty( $project_id ) ) {
+			wp_send_json( array(
+				'error' => 'Configuration error',
+				'message' => 'Vercel project ID not configured. Please configure your Vercel credentials in BlazeCommerce settings.'
+			) );
+		}
+
+		// First, get the latest deployment to use as a base for the new deployment
+		$latest_deployment = $this->get_latest_deployment();
+		if ( ! $latest_deployment ) {
+			wp_send_json( array(
+				'error' => 'No deployments found',
+				'message' => 'No existing deployments found for this project'
+			) );
+		}
+
+		// Check if deployment is already in progress
+		if ( $latest_deployment['state'] === 'BUILDING' ) {
+			wp_send_json( array(
+				'error' => 'Deployment in progress',
+				'message' => 'Redeploy is in progress. Wait at least 10 minutes before trying again.'
+			) );
+		}
+
 		try {
-			$project_id = $this->get_project_id();
-			if ( empty( $project_id ) ) {
-				wp_send_json( array(
-					'error' => 'Configuration error',
-					'message' => 'Vercel project ID not configured. Please configure your Vercel credentials in BlazeCommerce settings.'
-				) );
-			}
-
-			// First, get the latest deployment to use as a base for the new deployment
-			$latest_deployment = $this->get_latest_deployment();
-			if ( ! $latest_deployment ) {
-				wp_send_json( array(
-					'error' => 'No deployments found',
-					'message' => 'No existing deployments found for this project'
-				) );
-			}
-
-			// Check if deployment is already in progress
-			if ( $latest_deployment['state'] === 'BUILDING' ) {
-				wp_send_json( array(
-					'error' => 'Deployment in progress',
-					'message' => 'Redeploy is in progress. Wait at least 10 minutes before trying again.'
-				) );
-			}
-
-			// Trigger new deployment
 			$team_id = $this->get_vercel_team_id();
-			$headers = $this->get_vercel_headers();
 		} catch ( \Exception $e ) {
 			wp_send_json( array(
 				'error' => 'Configuration error',
@@ -266,58 +294,19 @@ class Ajax {
 			'target' => 'production'
 		);
 
-		$curl = curl_init();
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => $url,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 60, // Set 60 second timeout for deployment trigger
-			CURLOPT_CONNECTTIMEOUT => 10, // Set 10 second connection timeout
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_POSTFIELDS => json_encode( $deployment_data ),
-			CURLOPT_HTTPHEADER => $headers,
-		) );
-
-		$response = curl_exec( $curl );
-		$http_code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-		$curl_error = curl_error( $curl );
-		curl_close( $curl );
-
-		// Log for debugging
-		error_log( 'BlazeCommerce Redeploy Store Front - URL: ' . $url );
 		error_log( 'BlazeCommerce Redeploy Store Front - Payload: ' . json_encode( $deployment_data ) );
-		error_log( 'BlazeCommerce Redeploy Store Front - HTTP Code: ' . $http_code );
-		error_log( 'BlazeCommerce Redeploy Store Front - Response: ' . $response );
-		if ( $curl_error ) {
-			error_log( 'BlazeCommerce Redeploy Store Front - cURL Error: ' . $curl_error );
-		}
 
-		if ( $curl_error ) {
+		$result = $this->make_vercel_api_request( $url, 'POST', $deployment_data, 60 );
+
+		if ( ! $result['success'] ) {
 			wp_send_json( array(
-				'error' => 'Connection error',
-				'message' => 'Failed to connect to Vercel API: ' . $curl_error
+				'error' => $result['error'],
+				'message' => $result['message'],
+				'response' => isset( $result['response'] ) ? $result['response'] : null
 			) );
 		}
 
-		if ( $http_code !== 200 && $http_code !== 201 ) {
-			wp_send_json( array(
-				'error' => 'HTTP error',
-				'message' => 'Vercel API returned HTTP ' . $http_code,
-				'response' => $response
-			) );
-		}
-
-		$decoded_response = json_decode( $response, true );
-		if ( json_last_error() !== JSON_ERROR_NONE ) {
-			wp_send_json( array(
-				'error' => 'Invalid response',
-				'message' => 'Invalid JSON response from Vercel API',
-				'raw_response' => $response
-			) );
-		}
+		$decoded_response = $result['data'];
 
 		if ( isset( $decoded_response['error'] ) ) {
 			wp_send_json( array(

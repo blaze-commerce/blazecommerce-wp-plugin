@@ -729,8 +729,19 @@
                 })
                 .fail(function (xhr, status, error) {
                     console.error('Check deployment request failed:', xhr, status, error);
-                    _this.renderLoader('Failed to check deployment status');
-                    _this.showDeploymentFailure('Failed to check deployment status. Please try again.');
+                    var errorMessage = 'Failed to check deployment status';
+                    
+                    // Provide more specific error messages based on status
+                    if (xhr.status === 0) {
+                        errorMessage = 'Network connection failed. Please check your internet connection.';
+                    } else if (xhr.status >= 500) {
+                        errorMessage = 'Server error occurred. Please try again later.';
+                    } else if (xhr.status === 401 || xhr.status === 403) {
+                        errorMessage = 'Authentication failed. Please check your Vercel credentials.';
+                    }
+                    
+                    _this.renderLoader(errorMessage);
+                    _this.showDeploymentFailure(errorMessage + ' Please try again.');
                     $(_this.redeployButton).prop("disabled", false);
                     _this.syncInProgress = false;
                 });
@@ -750,7 +761,7 @@
                     if (response.error) {
                         _this.renderLoader('Error: ' + response.message);
                         _this.showDeploymentFailure('Deployment failed: ' + response.message);
-                        $(this.redeployButton).prop("disabled", false);
+                        $(_this.redeployButton).prop("disabled", false);
                         _this.syncInProgress = false;
                     } else {
                         _this.hideDeploymentFailure(); // Hide any previous failure messages
@@ -760,8 +771,21 @@
                 })
                 .fail(function (xhr, status, error) {
                     console.error('Redeploy request failed:', xhr, status, error);
-                    _this.renderLoader('Connection failed');
-                    _this.showDeploymentFailure('Failed to connect to deployment service. Please try again.');
+                    var errorMessage = 'Connection failed';
+                    
+                    // Provide more specific error messages based on status
+                    if (xhr.status === 0) {
+                        errorMessage = 'Network connection failed. Please check your internet connection.';
+                    } else if (xhr.status >= 500) {
+                        errorMessage = 'Server error occurred. Please try again later.';
+                    } else if (xhr.status === 401 || xhr.status === 403) {
+                        errorMessage = 'Authentication failed. Please check your Vercel credentials.';
+                    } else if (xhr.status === 400) {
+                        errorMessage = 'Invalid request. Please check your configuration.';
+                    }
+                    
+                    _this.renderLoader(errorMessage);
+                    _this.showDeploymentFailure(errorMessage + ' Please try again.');
                     $(_this.redeployButton).prop("disabled", false);
                     _this.syncInProgress = false;
                 });
