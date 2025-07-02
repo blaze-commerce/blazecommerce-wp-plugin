@@ -68,7 +68,7 @@ The plugin provides comprehensive WP-CLI commands for data synchronization:
 ### Product Sync
 
 ```bash
-wp bc-sync product --all          # Sync all products
+wp bc-sync product --all          # Sync all products including variations
 wp bc-sync product --variants     # Sync product variants only
 wp bc-sync product --nonvariants  # Sync non-variant products only
 ```
