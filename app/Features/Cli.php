@@ -696,7 +696,7 @@ class Cli extends WP_CLI_Command {
 	 * @return array Collections configuration with class, display name, and sync type
 	 */
 	private function get_collections_configuration() {
-		return array(
+		$config = array(
 			'site_info' => array(
 				'class' => SiteInfo::class,
 				'name' => 'Site Info',
@@ -736,6 +736,69 @@ class Cli extends WP_CLI_Command {
 				'filter_key' => 'blazecommerce/settings/sync/navigation'
 			)
 		);
+		
+		// Validate configuration before returning
+		$this->validate_collections_configuration( $config );
+		
+		return $config;
+	}
+	
+	/**
+	 * Validate collections configuration to ensure all required components exist
+	 *
+	 * @param array $collections_to_sync Collections configuration array
+	 * @throws \Exception If configuration is invalid
+	 */
+	private function validate_collections_configuration( $collections_to_sync ) {
+		if ( empty( $collections_to_sync ) ) {
+			throw new \Exception( 'Collections configuration is empty' );
+		}
+		
+		foreach ( $collections_to_sync as $type => $info ) {
+			// Validate required keys
+			if ( ! isset( $info['class'] ) || ! isset( $info['name'] ) || ! isset( $info['sync_type'] ) ) {
+				throw new \Exception( "Collection configuration for '{$type}' is missing required keys (class, name, sync_type)" );
+			}
+			
+			// Validate class existence
+			if ( ! class_exists( $info['class'] ) ) {
+				throw new \Exception( "Collection class '{$info['class']}' does not exist for type '{$type}'" );
+			}
+			
+			// Validate sync type
+			$valid_sync_types = array( 'single_batch', 'batch_with_ids', 'batch_with_query', 'batch_with_variations' );
+			if ( ! in_array( $info['sync_type'], $valid_sync_types, true ) ) {
+				throw new \Exception( "Invalid sync_type '{$info['sync_type']}' for collection '{$type}'. Valid types: " . implode( ', ', $valid_sync_types ) );
+			}
+			
+			// Validate type-specific requirements
+			if ( in_array( $info['sync_type'], array( 'batch_with_ids', 'batch_with_variations' ), true ) ) {
+				if ( ! isset( $info['id_method'] ) ) {
+					throw new \Exception( "Collection '{$type}' with sync_type '{$info['sync_type']}' requires 'id_method' parameter" );
+				}
+				
+				// Validate method existence
+				if ( ! method_exists( $info['class'], $info['id_method'] ) ) {
+					throw new \Exception( "Method '{$info['id_method']}' does not exist in class '{$info['class']}' for collection '{$type}'" );
+				}
+			}
+			
+			if ( $info['sync_type'] === 'batch_with_query' ) {
+				if ( ! isset( $info['query_method'] ) ) {
+					throw new \Exception( "Collection '{$type}' with sync_type 'batch_with_query' requires 'query_method' parameter" );
+				}
+				
+				// Validate method existence
+				if ( ! method_exists( $info['class'], $info['query_method'] ) ) {
+					throw new \Exception( "Method '{$info['query_method']}' does not exist in class '{$info['class']}' for collection '{$type}'" );
+				}
+			}
+			
+			// Validate callback methods if specified
+			if ( isset( $info['post_sync_callback'] ) && ! method_exists( $info['class'], $info['post_sync_callback'] ) ) {
+				throw new \Exception( "Post sync callback method '{$info['post_sync_callback']}' does not exist in class '{$info['class']}' for collection '{$type}'" );
+			}
+		}
 	}
 
 	/**
@@ -796,18 +859,36 @@ class Cli extends WP_CLI_Command {
 		WP_CLI::line( "ALL COLLECTIONS SYNC SUMMARY" );
 		WP_CLI::line( str_repeat( "=", 60 ) );
 
+		$success_count = 0;
+		$error_count = 0;
+		$skipped_count = 0;
+		
 		foreach ( $collection_results as $result ) {
 			if ( isset( $result['error'] ) ) {
 				WP_CLI::line( "❌ {$result['collection']}: FAILED - {$result['error']}" );
+				$error_count++;
+			} elseif ( isset( $result['skipped'] ) && $result['skipped'] ) {
+				WP_CLI::line( "⏭️ {$result['collection']}: SKIPPED - {$result['reason']}" );
+				$skipped_count++;
 			} else {
 				WP_CLI::line( "✅ {$result['collection']}: {$result['successful_imports']}/{$result['total_imports']} items" );
+				$success_count++;
 			}
 		}
 
 		WP_CLI::line( "\nOverall Statistics:" );
+		WP_CLI::line( "Collections processed: " . count( $collection_results ) );
+		WP_CLI::line( "Successful: {$success_count}" );
+		WP_CLI::line( "Failed: {$error_count}" );
+		WP_CLI::line( "Skipped: {$skipped_count}" );
+		
 		$this->display_sync_stats( $total_start_time, $total_imports, $total_successful_imports, null, 'collections' );
 
-		WP_CLI::success( "All collections sync process completed!" );
+		if ( $error_count > 0 ) {
+			WP_CLI::warning( "Collections sync completed with {$error_count} errors. Review the logs above for details." );
+		} else {
+			WP_CLI::success( "All collections sync process completed successfully!" );
+		}
 	}
 
 	/**
@@ -821,17 +902,27 @@ class Cli extends WP_CLI_Command {
 	private function execute_collection_sync( $collection_type, $collection_info ) {
 		$collection_class = $collection_info['class'];
 		$collection = $collection_class::get_instance();
+		
+		// Validate collection instance
+		if ( ! $collection ) {
+			throw new \Exception( "Failed to get instance of collection class '{$collection_class}' for type '{$collection_type}'" );
+		}
+		
 		$this->display_target_collection( $collection );
 
 		// Check if sync is enabled via filter
 		if ( isset( $collection_info['filter_key'] ) ) {
 			$should_sync = apply_filters( $collection_info['filter_key'], true );
 			if ( ! $should_sync ) {
-				WP_CLI::line( "{$collection_info['name']} sync is disabled by filter." );
+				// Enhanced logging for disabled filters
+				WP_CLI::warning( "{$collection_info['name']} sync is disabled by filter '{$collection_info['filter_key']}'." );
+				WP_CLI::line( "To enable {$collection_info['name']} sync, ensure the filter '{$collection_info['filter_key']}' returns true." );
 				return array(
 					'collection' => $collection_info['name'],
 					'total_imports' => 0,
-					'successful_imports' => 0
+					'successful_imports' => 0,
+					'skipped' => true,
+					'reason' => 'disabled_by_filter'
 				);
 			}
 		}
@@ -843,15 +934,15 @@ class Cli extends WP_CLI_Command {
 				break;
 
 			case 'batch_with_ids':
-				$sync_stats = $this->execute_batch_sync_with_ids( $collection, $collection_info );
+				$sync_stats = $this->execute_batch_sync_with_ids( $collection, $collection_info, $collection_type );
 				break;
 
 			case 'batch_with_query':
-				$sync_stats = $this->execute_batch_sync_with_query( $collection, $collection_info );
+				$sync_stats = $this->execute_batch_sync_with_query( $collection, $collection_info, $collection_type );
 				break;
 
 			case 'batch_with_variations':
-				$sync_stats = $this->execute_products_sync_with_variations( $collection );
+				$sync_stats = $this->execute_products_sync_with_variations( $collection, $collection_type );
 				break;
 
 			default:
@@ -863,6 +954,63 @@ class Cli extends WP_CLI_Command {
 			'total_imports' => $sync_stats['total_imports'],
 			'successful_imports' => $sync_stats['imported_count']
 		);
+	}
+	
+	/**
+	 * Get adaptive safety limit based on collection type
+	 *
+	 * @param string $collection_type The type of collection
+	 * @return int Safety limit for iterations
+	 */
+	private function get_safety_limit( $collection_type ) {
+		$limits = array(
+			'products' => 2000,    // Higher limit for products (large catalogs)
+			'taxonomy' => 800,     // Higher limit for taxonomy terms
+			'page_and_post' => 1500, // Higher limit for pages and posts
+			'navigation' => 200,   // Lower limit for navigation
+			'menu' => 100,         // Lower limit for menus
+			'site_info' => 50,     // Lowest limit for site info
+			'default' => 1000      // Default fallback
+		);
+		
+		return isset( $limits[$collection_type] ) ? $limits[$collection_type] : $limits['default'];
+	}
+	
+	/**
+	 * Calculate progress percentage for long operations
+	 *
+	 * @param int $current_iteration Current iteration number
+	 * @param int $estimated_total Estimated total iterations
+	 * @return float Progress percentage (0-100)
+	 */
+	private function calculate_progress_percentage( $current_iteration, $estimated_total ) {
+		if ( $estimated_total <= 0 ) {
+			return 0;
+		}
+		
+		return min( 100, ( $current_iteration / $estimated_total ) * 100 );
+	}
+	
+	/**
+	 * Check if memory-based garbage collection is needed
+	 *
+	 * @return bool True if garbage collection should be triggered
+	 */
+	private function should_trigger_gc() {
+		$current_memory = memory_get_usage( true );
+		$memory_limit = wp_convert_hr_to_bytes( ini_get( 'memory_limit' ) );
+		
+		// Trigger GC if we're using more than 70% of memory limit
+		if ( $memory_limit > 0 && $current_memory > ( $memory_limit * 0.7 ) ) {
+			return true;
+		}
+		
+		// Also trigger if we're using more than 512MB regardless of limit
+		if ( $current_memory > ( 512 * 1024 * 1024 ) ) {
+			return true;
+		}
+		
+		return false;
 	}
 
 	/**
@@ -897,9 +1045,10 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * @param object $collection Collection instance
 	 * @param array $collection_info Collection configuration
+	 * @param string $collection_type Collection type for adaptive limits
 	 * @return array Sync statistics
 	 */
-	private function execute_batch_sync_with_ids( $collection, $collection_info ) {
+	private function execute_batch_sync_with_ids( $collection, $collection_info, $collection_type ) {
 		$collection->initialize();
 		$batch_size_constant = $collection_info['class'] . '::BATCH_SIZE';
 		$batch_size = defined( $batch_size_constant ) ? constant( $batch_size_constant ) : 50;
@@ -907,7 +1056,7 @@ class Cli extends WP_CLI_Command {
 
 		return $this->execute_batch_processing_loop( $collection, $batch_size, function( $page, $batch_size ) use ( $collection, $id_method ) {
 			return $collection->$id_method( $page, $batch_size );
-		} );
+		}, $collection_type );
 	}
 
 	/**
@@ -915,9 +1064,10 @@ class Cli extends WP_CLI_Command {
 	 *
 	 * @param object $collection Collection instance
 	 * @param array $collection_info Collection configuration
+	 * @param string $collection_type Collection type for adaptive limits
 	 * @return array Sync statistics
 	 */
-	private function execute_batch_sync_with_query( $collection, $collection_info ) {
+	private function execute_batch_sync_with_query( $collection, $collection_info, $collection_type ) {
 		$collection->initialize();
 		$batch_size_constant = $collection_info['class'] . '::BATCH_SIZE';
 		$batch_size = defined( $batch_size_constant ) ? constant( $batch_size_constant ) : 50;
@@ -932,22 +1082,23 @@ class Cli extends WP_CLI_Command {
 			}
 
 			return $term_query->terms;
-		} );
+		}, $collection_type );
 	}
 
 	/**
 	 * Execute products sync with variations (reuses existing product pattern)
 	 *
 	 * @param object $collection Product collection instance
+	 * @param string $collection_type Collection type for adaptive limits
 	 * @return array Sync statistics
 	 */
-	private function execute_products_sync_with_variations( $collection ) {
+	private function execute_products_sync_with_variations( $collection, $collection_type ) {
 		$collection->initialize();
 		$batch_size = Product::BATCH_SIZE;
 
 		$sync_stats = $this->execute_batch_processing_loop( $collection, $batch_size, function( $page, $batch_size ) use ( $collection ) {
 			return $collection->get_product_ids( $page, $batch_size );
-		} );
+		}, $collection_type );
 
 		// Sync variations using existing method
 		WP_CLI::line( "Syncing product variations to the same collection..." );
@@ -967,21 +1118,25 @@ class Cli extends WP_CLI_Command {
 	 * @param object $collection Collection instance
 	 * @param int $batch_size Batch size for processing
 	 * @param callable $data_retriever Function to retrieve data for each batch
+	 * @param string $collection_type Collection type for adaptive limits (optional)
 	 * @return array Sync statistics
 	 */
-	private function execute_batch_processing_loop( $collection, $batch_size, $data_retriever ) {
+	private function execute_batch_processing_loop( $collection, $batch_size, $data_retriever, $collection_type = 'default' ) {
 		$page = 1;
 		$imported_count = 0;
 		$total_imports = 0;
 
-		// Add safety counter to prevent infinite loops (reuses existing pattern)
-		$max_iterations = 1000; // Reasonable limit for large datasets
+		// Use adaptive safety counter based on collection type
+		$max_iterations = $this->get_safety_limit( $collection_type );
 		$iteration_count = 0;
+		
+		// Estimate total iterations for progress calculation
+		$estimated_total = $this->estimate_total_iterations( $collection_type );
 
 		do {
 			$iteration_count++;
 			if ( $iteration_count > $max_iterations ) {
-				WP_CLI::warning( "Reached maximum iteration limit ({$max_iterations}). Stopping to prevent infinite loop." );
+				WP_CLI::warning( "Reached maximum iteration limit ({$max_iterations}) for {$collection_type} collection. Stopping to prevent infinite loop." );
 				break;
 			}
 
@@ -991,12 +1146,19 @@ class Cli extends WP_CLI_Command {
 				break;
 			}
 
-			// Memory optimization: Force garbage collection every 10 iterations (reuses existing pattern)
-			if ( $iteration_count % 10 === 0 ) {
+			// Enhanced memory optimization with threshold-based garbage collection
+			if ( $iteration_count % 10 === 0 || $this->should_trigger_gc() ) {
 				if ( function_exists( 'gc_collect_cycles' ) ) {
 					gc_collect_cycles();
 				}
-				WP_CLI::line( "Memory usage: " . size_format( memory_get_usage( true ) ) );
+				
+				// Enhanced progress reporting with percentage
+				if ( $estimated_total > 0 ) {
+					$progress_pct = $this->calculate_progress_percentage( $iteration_count, $estimated_total );
+					WP_CLI::line( "Progress: {$progress_pct}% - Memory: " . size_format( memory_get_usage( true ) ) );
+				} else {
+					WP_CLI::line( "Batch {$iteration_count} - Memory: " . size_format( memory_get_usage( true ) ) );
+				}
 			}
 
 			$object_batch = $collection->prepare_batch_data( $data );
@@ -1017,6 +1179,28 @@ class Cli extends WP_CLI_Command {
 			'imported_count' => $imported_count,
 			'total_imports' => $total_imports
 		);
+	}
+	
+	/**
+	 * Estimate total iterations for progress calculation
+	 *
+	 * @param string $collection_type Collection type
+	 * @return int Estimated total iterations (0 if unknown)
+	 */
+	private function estimate_total_iterations( $collection_type ) {
+		// This is a rough estimation based on collection type
+		// In a real implementation, you might query the actual counts
+		$estimates = array(
+			'products' => 200,     // Estimate based on typical product catalogs
+			'taxonomy' => 50,      // Estimate based on typical taxonomy terms
+			'page_and_post' => 100, // Estimate based on typical page/post counts
+			'navigation' => 10,    // Usually fewer navigation items
+			'menu' => 5,           // Usually fewer menu items
+			'site_info' => 1,      // Single batch operation
+			'default' => 0         // Unknown, disable progress percentage
+		);
+		
+		return isset( $estimates[$collection_type] ) ? $estimates[$collection_type] : $estimates['default'];
 	}
 
 
