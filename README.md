@@ -65,7 +65,17 @@ For detailed information about the aliasing system, see: [Typesense Aliases Docu
 
 The plugin provides comprehensive WP-CLI commands for data synchronization:
 
-### Product Sync
+### All Collections Sync
+
+```bash
+wp bc-sync collections --all      # Sync all collections in order: site_info, products, taxonomy, menu, page_and_post, navigation
+```
+
+This command syncs all Typesense collections in the specified order with comprehensive timing and summary statistics.
+
+### Individual Collection Sync
+
+#### Product Sync
 
 ```bash
 wp bc-sync product --all          # Sync all products including variations
@@ -73,37 +83,39 @@ wp bc-sync product --variants     # Sync product variants only
 wp bc-sync product --nonvariants  # Sync non-variant products only
 ```
 
-### Taxonomy Sync
+#### Taxonomy Sync
 
 ```bash
 wp bc-sync taxonomy --all         # Sync all taxonomies
 ```
 
-### Page and Post Sync
+#### Page and Post Sync
 
 ```bash
 wp bc-sync page_and_post --all    # Sync all pages and posts
 ```
 
-### Menu Sync
+#### Menu Sync
 
 ```bash
 wp bc-sync menu --all             # Sync all menus
 ```
 
-### Navigation Sync
+#### Navigation Sync
 
 ```bash
 wp bc-sync navigation --all       # Sync wp_navigation posts
 ```
 
-### Site Info Sync
+#### Site Info Sync
 
 ```bash
 wp bc-sync site_info --all        # Sync site information
 ```
 
-### Alias Management
+### Management Commands
+
+#### Alias Management
 
 ```bash
 wp bc-sync alias --list                    # List all aliases
@@ -112,7 +124,7 @@ wp bc-sync alias --cleanup=product         # Clean up old collections
 wp bc-sync alias --force-alias=product     # Force create alias
 ```
 
-### Cache Management
+#### Cache Management
 
 ```bash
 wp bc-sync cache                   # Show cache statistics
