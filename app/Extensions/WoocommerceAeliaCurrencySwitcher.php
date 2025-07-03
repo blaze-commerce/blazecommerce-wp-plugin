@@ -129,9 +129,9 @@ class WoocommerceAeliaCurrencySwitcher {
 				}
 				$product_data['price'][ $currency ] = ! empty( $_sale_price ) ? $_sale_price : $_regular_price;
 
-				$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $product_data['regularPrice'][ $currency ] );
-				$product_data['salePrice'][ $currency ] = Woocommerce::format_price( $product_data['salePrice'][ $currency ] );
-				$product_data['price'][ $currency ] = Woocommerce::format_price( $product_data['price'][ $currency ] );
+				$product_data['regularPrice'][ $currency ] = Woocommerce::format_price_to_int64( $product_data['regularPrice'][ $currency ] );
+				$product_data['salePrice'][ $currency ] = Woocommerce::format_price_to_int64( $product_data['salePrice'][ $currency ] );
+				$product_data['price'][ $currency ] = Woocommerce::format_price_to_int64( $product_data['price'][ $currency ] );
 
 				unset( $converted_prices, $product, $_sale_price, $_regular_price );
 			}
@@ -156,12 +156,12 @@ class WoocommerceAeliaCurrencySwitcher {
 
 			foreach ( $available_currencies as $currency ) {
 				if ( $base_currency === $currency ) {
-					$prices[ $currency ] = Woocommerce::format_price( $base_price );
+					$prices[ $currency ] = Woocommerce::format_price_to_int64( $base_price );
 					continue;
 				}
 
 				// No need to use Woocommerce::format_price here since the base price is already in cents.
-				$prices[ $currency ] = Woocommerce::format_price( $this->calculate_converted_price( $base_price, $currency ) );
+				$prices[ $currency ] = Woocommerce::format_price_to_int64( $this->calculate_converted_price( $base_price, $currency ) );
 			}
 		}
 
