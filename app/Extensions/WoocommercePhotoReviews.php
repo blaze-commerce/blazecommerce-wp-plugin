@@ -22,15 +22,27 @@ class WoocommercePhotoReviews {
 	}
 
 	public function additional_meta_fields( $fields ) {
+		$fields[] = array( 'name' => 'metaData.wooProductReviews', 'type' => 'object', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews', 'type' => 'object[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.comment_ID', 'type' => 'int64[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.author', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.content', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.date', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.rating', 'type' => 'int32[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.vote_up_count', 'type' => 'int32[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.vote_down_count', 'type' => 'int32[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.verified', 'type' => 'bool[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.images', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.replies', 'type' => 'string[]', 'optional' => true );
+
 		$fields[] = array( 'name' => 'metaData.wooProductReviews.stats.average_rating', 'type' => 'float' );
+
 		return $fields;
 	}
 
 
 	protected function get_total_comment_with_images( $product_id ) {
 		global $wpdb;
-
-
 
 		$sql = "SELECT COUNT(comment_ID) as total
                 FROM $wpdb->comments
@@ -110,6 +122,8 @@ class WoocommercePhotoReviews {
 			$comments = get_comments( $args );
 			$comments_array = array();
 
+			$replies = array();
+
 			foreach ( $comments as $comment ) {
 				if ( ! empty( $comment ) ) {
 					$images = array();
@@ -123,20 +137,56 @@ class WoocommercePhotoReviews {
 						}, $review_images );
 					}
 
+					if ( $comment->comment_parent > 0 ) {
+						$replies[] = array(
+							'comment_ID' => intval( $comment->comment_ID ),
+							'author' => strval( $comment->comment_author ),
+							'content' => strval( $comment->comment_content ),
+							'date' => strval( $comment->comment_date ),
+							'rating' => intval( $rating ),
+							'vote_up_count' => intval( $vote_up_count ),
+							'vote_down_count' => intval( $vote_down_count ),
+							'verified' => boolval( get_comment_meta( $comment->comment_ID, 'verified', true ) ),
+							'images' => $images,
+							'comment_parent' => intval( $comment->comment_parent )
+						);
+					} else {
 
-					$comments_array[] = array(
-						'comment_ID' => intval( $comment->comment_ID ),
-						'author' => strval( $comment->comment_author ),
-						'content' => strval( $comment->comment_content ),
-						'date' => strval( $comment->comment_date ),
-						'rating' => intval( $rating ),
-						'vote_up_count' => intval( $vote_up_count ),
-						'vote_down_count' => intval( $vote_down_count ),
-						'verified' => boolval( get_comment_meta( $comment->comment_ID, 'verified', true ) ),
-						'images' => $images,
-					);
+
+						$comments_array[] = array(
+							'comment_ID' => intval( $comment->comment_ID ),
+							'author' => strval( $comment->comment_author ),
+							'content' => strval( $comment->comment_content ),
+							'date' => strval( $comment->comment_date ),
+							'rating' => intval( $rating ),
+							'vote_up_count' => intval( $vote_up_count ),
+							'vote_down_count' => intval( $vote_down_count ),
+							'verified' => boolval( get_comment_meta( $comment->comment_ID, 'verified', true ) ),
+							'images' => $images,
+							'replies' => ''
+						);
+
+					}
 
 					unset( $comment, $rating, $vote_up_count, $vote_down_count );
+				}
+			}
+
+			// Group replies by parent comment
+			$grouped_replies = array();
+			foreach ( $replies as $reply ) {
+				$parent_id = $reply['comment_parent'];
+				unset( $reply['comment_parent'] );
+				if ( ! isset( $grouped_replies[ $parent_id ] ) ) {
+					$grouped_replies[ $parent_id ] = array();
+				}
+				$grouped_replies[ $parent_id ][] = $reply;
+			}
+
+			// Assign replies to comments as JSON strings
+			foreach ( $comments_array as $key => $comment ) {
+				if ( isset( $grouped_replies[ $comment['comment_ID'] ] ) ) {
+					$comments_array[ $key ]['replies'] = wp_json_encode( $grouped_replies[ $comment['comment_ID'] ] );
 				}
 			}
 
