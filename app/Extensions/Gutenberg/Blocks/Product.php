@@ -30,12 +30,14 @@ class Product {
 			}
 		} else {
 			do_action(
-				"inspect", array(
-					"typesense_site_product",
+				'inspect',
+				array(
+					'typesense_site_product',
 					array(
-						'site_product' => "No site product found",
-					)
-				) );
+						'site_product' => 'No site product found',
+					),
+				)
+			);
 		}
 
 		return $documents;
@@ -90,9 +92,9 @@ class Product {
 
 		if ( $post_id ) {
 			return array(
-				'id' => (string) $post_id,
-				'name' => 'site-product',
-				'value' => get_post_field( 'post_content', $post_id ),
+				'id'         => (string) $post_id,
+				'name'       => 'site-product',
+				'value'      => get_post_field( 'post_content', $post_id ),
 				'updated_at' => time(),
 			);
 		}

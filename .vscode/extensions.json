@@ -1,0 +1,9 @@
+{
+	"recommendations": [
+		"ikappas.phpcs",
+		"persodic.vscode-phpcbf",
+		"devsense.phptools-vscode",
+		"bmewburn.vscode-intelephense-client",
+		"ms-vscode.vscode-json"
+	]
+}

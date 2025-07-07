@@ -45,28 +45,28 @@ if ( ! function_exists( 'blaze_commerce_render_product_detail_block' ) ) {
 
 		// Extract attributes with defaults
 		$show_short_description = isset( $attributes['showShortDescription'] ) ? $attributes['showShortDescription'] : true;
-		$show_sku = isset( $attributes['showSku'] ) ? $attributes['showSku'] : true;
-		$show_price = isset( $attributes['showPrice'] ) ? $attributes['showPrice'] : true;
-		$show_stock_status = isset( $attributes['showStockStatus'] ) ? $attributes['showStockStatus'] : true;
-		$show_stock_quantity = isset( $attributes['showStockQuantity'] ) ? $attributes['showStockQuantity'] : false;
-		$show_categories = isset( $attributes['showCategories'] ) ? $attributes['showCategories'] : true;
-		$show_tags = isset( $attributes['showTags'] ) ? $attributes['showTags'] : false;
+		$show_sku               = isset( $attributes['showSku'] ) ? $attributes['showSku'] : true;
+		$show_price             = isset( $attributes['showPrice'] ) ? $attributes['showPrice'] : true;
+		$show_stock_status      = isset( $attributes['showStockStatus'] ) ? $attributes['showStockStatus'] : true;
+		$show_stock_quantity    = isset( $attributes['showStockQuantity'] ) ? $attributes['showStockQuantity'] : false;
+		$show_categories        = isset( $attributes['showCategories'] ) ? $attributes['showCategories'] : true;
+		$show_tags              = isset( $attributes['showTags'] ) ? $attributes['showTags'] : false;
 
 		// Style attributes
-		$text_color = isset( $attributes['textColor'] ) ? $attributes['textColor'] : '#333333';
-		$font_size = isset( $attributes['fontSize'] ) ? intval( $attributes['fontSize'] ) : 16;
+		$text_color  = isset( $attributes['textColor'] ) ? $attributes['textColor'] : '#333333';
+		$font_size   = isset( $attributes['fontSize'] ) ? intval( $attributes['fontSize'] ) : 16;
 		$font_weight = isset( $attributes['fontWeight'] ) ? $attributes['fontWeight'] : 'normal';
 		$line_height = isset( $attributes['lineHeight'] ) ? floatval( $attributes['lineHeight'] ) : 1.5;
-		$alignment = isset( $attributes['alignment'] ) ? $attributes['alignment'] : 'left';
+		$alignment   = isset( $attributes['alignment'] ) ? $attributes['alignment'] : 'left';
 
-		$short_description_color = isset( $attributes['shortDescriptionColor'] ) ? $attributes['shortDescriptionColor'] : '#666666';
+		$short_description_color     = isset( $attributes['shortDescriptionColor'] ) ? $attributes['shortDescriptionColor'] : '#666666';
 		$short_description_font_size = isset( $attributes['shortDescriptionFontSize'] ) ? intval( $attributes['shortDescriptionFontSize'] ) : 14;
 
-		$price_color = isset( $attributes['priceColor'] ) ? $attributes['priceColor'] : '#e74c3c';
-		$price_font_size = isset( $attributes['priceFontSize'] ) ? intval( $attributes['priceFontSize'] ) : 18;
+		$price_color       = isset( $attributes['priceColor'] ) ? $attributes['priceColor'] : '#e74c3c';
+		$price_font_size   = isset( $attributes['priceFontSize'] ) ? intval( $attributes['priceFontSize'] ) : 18;
 		$price_font_weight = isset( $attributes['priceFontWeight'] ) ? $attributes['priceFontWeight'] : 'bold';
 
-		$output = '<div class="blaze-product-detail-block" style="text-align: ' . esc_attr( $alignment ) . ';">';
+		$output  = '<div class="blaze-product-detail-block" style="text-align: ' . esc_attr( $alignment ) . ';">';
 		$output .= '<div class="blaze-product-detail">';
 
 		// Product title
@@ -75,7 +75,7 @@ if ( ! function_exists( 'blaze_commerce_render_product_detail_block' ) ) {
 			esc_attr( $text_color ),
 			$font_size + 4
 		);
-		$output .= '<h3 style="' . $title_style . '">' . esc_html( $product->get_name() ) . '</h3>';
+		$output     .= '<h3 style="' . $title_style . '">' . esc_html( $product->get_name() ) . '</h3>';
 
 		// Short description
 		if ( $show_short_description && $product->get_short_description() ) {
@@ -85,9 +85,9 @@ if ( ! function_exists( 'blaze_commerce_render_product_detail_block' ) ) {
 				$short_description_font_size,
 				$line_height
 			);
-			$output .= '<div class="product-short-description" style="' . $short_desc_style . '">';
-			$output .= wpautop( $product->get_short_description() );
-			$output .= '</div>';
+			$output          .= '<div class="product-short-description" style="' . $short_desc_style . '">';
+			$output          .= wpautop( $product->get_short_description() );
+			$output          .= '</div>';
 		}
 
 		$base_style = sprintf(
@@ -113,16 +113,16 @@ if ( ! function_exists( 'blaze_commerce_render_product_detail_block' ) ) {
 				$price_font_size,
 				esc_attr( $price_font_weight )
 			);
-			$output .= '<p class="product-price" style="' . $price_style . '">';
-			$output .= $product->get_price_html();
-			$output .= '</p>';
+			$output     .= '<p class="product-price" style="' . $price_style . '">';
+			$output     .= $product->get_price_html();
+			$output     .= '</p>';
 		}
 
 		// Stock status
 		if ( $show_stock_status ) {
 			$stock_data = blaze_commerce_get_product_stock_data( $product );
-			$output .= '<p style="' . $base_style . '">';
-			$output .= '<strong>' . __( 'Stock Status:', 'blaze-commerce' ) . '</strong> ' . esc_html( $stock_data['text'] );
+			$output    .= '<p style="' . $base_style . '">';
+			$output    .= '<strong>' . __( 'Stock Status:', 'blaze-commerce' ) . '</strong> ' . esc_html( $stock_data['text'] );
 
 			// Show stock quantity if enabled and in stock
 			if ( $show_stock_quantity && $stock_data['status'] === 'instock' && $stock_data['quantity'] ) {
@@ -166,7 +166,7 @@ if ( ! function_exists( 'blaze_commerce_render_product_detail_block' ) ) {
  */
 if ( ! function_exists( 'blaze_commerce_get_product_stock_data' ) ) {
 	function blaze_commerce_get_product_stock_data( $product ) {
-		$stock_status = $product->get_stock_status();
+		$stock_status   = $product->get_stock_status();
 		$stock_quantity = $product->get_stock_quantity();
 
 		$stock_text = '';
@@ -185,8 +185,8 @@ if ( ! function_exists( 'blaze_commerce_get_product_stock_data' ) ) {
 		}
 
 		return array(
-			'status' => $stock_status,
-			'text' => $stock_text,
+			'status'   => $stock_status,
+			'text'     => $stock_text,
 			'quantity' => $stock_quantity,
 		);
 	}
@@ -202,9 +202,12 @@ if ( ! function_exists( 'blaze_commerce_get_product_categories' ) ) {
 	function blaze_commerce_get_product_categories( $product_id ) {
 		$categories = get_the_terms( $product_id, 'product_cat' );
 		if ( $categories && ! is_wp_error( $categories ) ) {
-			return array_map( function ($cat) {
-				return $cat->name;
-			}, $categories );
+			return array_map(
+				function ( $cat ) {
+					return $cat->name;
+				},
+				$categories
+			);
 		}
 		return array();
 	}
@@ -220,9 +223,12 @@ if ( ! function_exists( 'blaze_commerce_get_product_tags' ) ) {
 	function blaze_commerce_get_product_tags( $product_id ) {
 		$tags = get_the_terms( $product_id, 'product_tag' );
 		if ( $tags && ! is_wp_error( $tags ) ) {
-			return array_map( function ($tag) {
-				return $tag->name;
-			}, $tags );
+			return array_map(
+				function ( $tag ) {
+					return $tag->name;
+				},
+				$tags
+			);
 		}
 		return array();
 	}

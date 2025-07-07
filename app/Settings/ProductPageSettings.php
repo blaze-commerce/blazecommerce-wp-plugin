@@ -7,8 +7,8 @@ use BlazeWooless\TypesenseClient;
 
 class ProductPageSettings extends BaseSettings {
 	private static $instance = null;
-	public $tab_key = 'product';
-	public $page_label = 'Product Page';
+	public $tab_key          = 'product';
+	public $page_label       = 'Product Page';
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -22,7 +22,7 @@ class ProductPageSettings extends BaseSettings {
 
 		try {
 			$this->update_fields( $options );
-		} catch (\Throwable $th) {
+		} catch ( \Throwable $th ) {
 
 		}
 
@@ -41,131 +41,131 @@ class ProductPageSettings extends BaseSettings {
 
 	public function settings() {
 		$icons                 = array(
-			'select' => 'Select',
-			'CiDeliveryTruck' => 'CiDeliveryTruck',
-			'CiViewList' => 'CiViewList',
-			'FiTruck' => 'FiTruck',
-			'FiLock' => 'FiLock',
-			'FiPackage' => 'FiPackage',
-			'CiCircleInfo' => 'CiCircleInfo',
-			'GoShieldCheck' => 'GoShieldCheck',
+			'select'               => 'Select',
+			'CiDeliveryTruck'      => 'CiDeliveryTruck',
+			'CiViewList'           => 'CiViewList',
+			'FiTruck'              => 'FiTruck',
+			'FiLock'               => 'FiLock',
+			'FiPackage'            => 'FiPackage',
+			'CiCircleInfo'         => 'CiCircleInfo',
+			'GoShieldCheck'        => 'GoShieldCheck',
 			'BsExclamationOctagon' => 'BsExclamationOctagon',
 		);
-		$product_page_settings = [ 
+		$product_page_settings = array(
 			'wooless_settings_product_page_section' => array(
-				'label' => 'Product Page',
+				'label'   => 'Product Page',
 				'options' => array(
 					// Information 1
 					array(
-						'id' => 'information_1_title',
+						'id'    => 'information_1_title',
 						'label' => 'Information 1 Title',
-						'type' => 'text',
-						'args' => array( 'description' => 'Set the title for information 1.', ),
+						'type'  => 'text',
+						'args'  => array( 'description' => 'Set the title for information 1.' ),
 					),
 					array(
-						'id' => 'information_1_content',
+						'id'    => 'information_1_content',
 						'label' => 'Information 1 Content',
-						'type' => 'html',
-						'args' => array(
+						'type'  => 'html',
+						'args'  => array(
 							'description' => 'Set the content for information 1.',
 						),
 					),
 					array(
-						'id' => 'information_1_link',
+						'id'    => 'information_1_link',
 						'label' => 'Information 1 Link',
-						'type' => 'html',
-						'args' => array(
+						'type'  => 'html',
+						'args'  => array(
 							'description' => 'Set the link for information 1. Keep empty to use the dialog sidebar',
 						),
 					),
 					array(
-						'id' => 'information_1_icon',
+						'id'    => 'information_1_icon',
 						'label' => 'Information 1 Icon',
-						'type' => 'select',
-						'args' => array(
-							'options' => $icons,
+						'type'  => 'select',
+						'args'  => array(
+							'options'     => $icons,
 							'description' => 'Set the icon for information 1',
 						),
 					),
 
 					// Information 2
 					array(
-						'id' => 'information_2_title',
+						'id'    => 'information_2_title',
 						'label' => 'Information 2 Title',
-						'type' => 'text',
-						'args' => array( 'description' => 'Set the title for information 2.', ),
+						'type'  => 'text',
+						'args'  => array( 'description' => 'Set the title for information 2.' ),
 					),
 					array(
-						'id' => 'information_2_content',
+						'id'    => 'information_2_content',
 						'label' => 'Information 2 Content',
-						'type' => 'html',
-						'args' => array( 'description' => 'Set the returns policy content.' ),
+						'type'  => 'html',
+						'args'  => array( 'description' => 'Set the returns policy content.' ),
 					),
 					array(
-						'id' => 'information_2_link',
+						'id'    => 'information_2_link',
 						'label' => 'Information 2 Link',
-						'type' => 'html',
-						'args' => array(
+						'type'  => 'html',
+						'args'  => array(
 							'description' => 'Set the link for information 2. Keep empty to use the dialog sidebar',
 						),
 					),
 					array(
-						'id' => 'information_2_icon',
+						'id'    => 'information_2_icon',
 						'label' => 'Information 2 Icon',
-						'type' => 'select',
-						'args' => array(
-							'options' => $icons,
+						'type'  => 'select',
+						'args'  => array(
+							'options'     => $icons,
 							'description' => 'Set the icon for information 2',
 						),
 					),
 
 					// Information 3
 					array(
-						'id' => 'information_3_title',
+						'id'    => 'information_3_title',
 						'label' => 'Information 3 Title',
-						'type' => 'text',
-						'args' => array( 'description' => 'Set the title for information 3.', ),
+						'type'  => 'text',
+						'args'  => array( 'description' => 'Set the title for information 3.' ),
 					),
 					array(
-						'id' => 'information_3_content',
+						'id'    => 'information_3_content',
 						'label' => 'Information 3 Content',
-						'type' => 'html',
-						'args' => array( 'description' => 'Set the returns policy content.' ),
+						'type'  => 'html',
+						'args'  => array( 'description' => 'Set the returns policy content.' ),
 					),
 					array(
-						'id' => 'information_3_link',
+						'id'    => 'information_3_link',
 						'label' => 'Information 3 Link',
-						'type' => 'html',
-						'args' => array(
+						'type'  => 'html',
+						'args'  => array(
 							'description' => 'Set the link for information 3. Keep empty to use the dialog sidebar',
 						),
 					),
 					array(
-						'id' => 'information_3_icon',
+						'id'    => 'information_3_icon',
 						'label' => 'Information 3 Icon',
-						'type' => 'select',
-						'args' => array(
-							'options' => $icons,
+						'type'  => 'select',
+						'args'  => array(
+							'options'     => $icons,
 							'description' => 'Set the icon for information 3',
 						),
 					),
 					array(
-						'id' => 'description_after_content',
+						'id'    => 'description_after_content',
 						'label' => 'Description After Content',
-						'type' => 'html',
-						'args' => array( 'description' => 'This will be displayed after the description on all products.' ),
+						'type'  => 'html',
+						'args'  => array( 'description' => 'This will be displayed after the description on all products.' ),
 					),
 
 					array(
-						'id' => 'set_hot_sale',
-						'label' => 'Set Hot Sale Metrix',
-						'type' => 'number',
+						'id'      => 'set_hot_sale',
+						'label'   => 'Set Hot Sale Metrix',
+						'type'    => 'number',
 						'default' => 0,
-						'args' => array( 'description' => 'Set the number of sales for a product to be considered a hot sale. Leave 0 if we dont need to use the bad' ),
-					)
-				)
+						'args'    => array( 'description' => 'Set the number of sales for a product to be considered a hot sale. Leave 0 if we dont need to use the bad' ),
+					),
+				),
 			),
-		];
+		);
 
 		return apply_filters( 'blaze_wooless_product_page_settings', $product_page_settings );
 	}
@@ -179,60 +179,67 @@ class ProductPageSettings extends BaseSettings {
 
 		$site_info->upsert(
 			array(
-				'id' => '10089551',
-				'name' => 'product_page_information_1',
-				'value' => json_encode( array(
-					'title' => isset( $options['information_1_title'] ) ? $options['information_1_title'] : '',
-					'icon' => isset( $options['information_1_icon'] ) ? $options['information_1_icon'] : '',
-					'content' => isset( $options['information_1_content'] ) ? $options['information_1_content'] : '',
-					'link' => isset( $options['information_1_link'] ) ? $options['information_1_link'] : '',
-				) ),
+				'id'         => '10089551',
+				'name'       => 'product_page_information_1',
+				'value'      => json_encode(
+					array(
+						'title'   => isset( $options['information_1_title'] ) ? $options['information_1_title'] : '',
+						'icon'    => isset( $options['information_1_icon'] ) ? $options['information_1_icon'] : '',
+						'content' => isset( $options['information_1_content'] ) ? $options['information_1_content'] : '',
+						'link'    => isset( $options['information_1_link'] ) ? $options['information_1_link'] : '',
+					)
+				),
 				'updated_at' => time(),
 			)
 		);
 
 		$site_info->upsert(
 			array(
-				'id' => '10089552',
-				'name' => 'product_page_information_2',
-				'value' => json_encode( array(
-					'title' => isset( $options['information_2_title'] ) ? $options['information_2_title'] : '',
-					'icon' => isset( $options['information_2_icon'] ) ? $options['information_2_icon'] : '',
-					'content' => isset( $options['information_2_content'] ) ? $options['information_2_content'] : '',
-					'link' => isset( $options['information_2_link'] ) ? $options['information_2_link'] : '',
-				) ),
+				'id'         => '10089552',
+				'name'       => 'product_page_information_2',
+				'value'      => json_encode(
+					array(
+						'title'   => isset( $options['information_2_title'] ) ? $options['information_2_title'] : '',
+						'icon'    => isset( $options['information_2_icon'] ) ? $options['information_2_icon'] : '',
+						'content' => isset( $options['information_2_content'] ) ? $options['information_2_content'] : '',
+						'link'    => isset( $options['information_2_link'] ) ? $options['information_2_link'] : '',
+					)
+				),
 				'updated_at' => time(),
 			)
 		);
 
 		$site_info->upsert(
 			array(
-				'id' => '10089553',
-				'name' => 'product_page_information_3',
-				'value' => json_encode( array(
-					'title' => isset( $options['information_3_title'] ) ? $options['information_3_title'] : '',
-					'icon' => isset( $options['information_3_icon'] ) ? $options['information_3_icon'] : '',
-					'content' => isset( $options['information_3_content'] ) ? $options['information_3_content'] : '',
-					'link' => isset( $options['information_3_link'] ) ? $options['information_3_link'] : '',
-				) ),
+				'id'         => '10089553',
+				'name'       => 'product_page_information_3',
+				'value'      => json_encode(
+					array(
+						'title'   => isset( $options['information_3_title'] ) ? $options['information_3_title'] : '',
+						'icon'    => isset( $options['information_3_icon'] ) ? $options['information_3_icon'] : '',
+						'content' => isset( $options['information_3_content'] ) ? $options['information_3_content'] : '',
+						'link'    => isset( $options['information_3_link'] ) ? $options['information_3_link'] : '',
+					)
+				),
 				'updated_at' => time(),
 			)
 		);
 
 		$site_info->upsert(
 			array(
-				'id' => '10089554',
-				'name' => 'description_after_content',
-				'value' => isset( $options['description_after_content'] ) ? $options['description_after_content'] : '', $options['description_after_content'],
+				'id'         => '10089554',
+				'name'       => 'description_after_content',
+				'value'      => isset( $options['description_after_content'] ) ? $options['description_after_content'] : '',
+				$options['description_after_content'],
 				'updated_at' => time(),
 			)
 		);
 
 		$site_info->upsert(
 			array(
-				'id' => '1000001',
-				'name' => 'privacy_policy_content',
-				'value' => isset( $options['privacy_policy'] ) ? $options['privacy_policy'] : '',
+				'id'         => '1000001',
+				'name'       => 'privacy_policy_content',
+				'value'      => isset( $options['privacy_policy'] ) ? $options['privacy_policy'] : '',
 				'updated_at' => time(),
 			)
 		);
@@ -241,9 +248,9 @@ class ProductPageSettings extends BaseSettings {
 		if ( ! empty( $free_shipping_threshold ) ) {
 			$site_info->upsert(
 				array(
-					'id' => '1000482',
-					'name' => 'free_shipping_threshold',
-					'value' => json_encode( $free_shipping_threshold ),
+					'id'         => '1000482',
+					'name'       => 'free_shipping_threshold',
+					'value'      => json_encode( $free_shipping_threshold ),
 					'updated_at' => time(),
 				)
 			);
@@ -251,11 +258,13 @@ class ProductPageSettings extends BaseSettings {
 
 		$site_info->upsert(
 			array(
-				'id' => '1000909',
-				'name' => 'product_page_settings',
-				'value' => json_encode( array(
-					'hotSale' => isset( $options['set_hot_sale'] ) ? $options['set_hot_sale'] : 0,
-				) ),
+				'id'         => '1000909',
+				'name'       => 'product_page_settings',
+				'value'      => json_encode(
+					array(
+						'hotSale' => isset( $options['set_hot_sale'] ) ? $options['set_hot_sale'] : 0,
+					)
+				),
 				'updated_at' => time(),
 			)
 		);
@@ -273,56 +282,62 @@ class ProductPageSettings extends BaseSettings {
 		if ( ! empty( $options ) ) {
 			// Add product page information 1
 			$documents[] = array(
-				'id' => '10089551',
-				'name' => 'product_page_information_1',
-				'value' => json_encode( array(
-					'title' => isset( $options['information_1_title'] ) ? $options['information_1_title'] : '',
-					'icon' => isset( $options['information_1_icon'] ) ? $options['information_1_icon'] : '',
-					'content' => isset( $options['information_1_content'] ) ? $options['information_1_content'] : '',
-					'link' => isset( $options['information_1_link'] ) ? $options['information_1_link'] : '',
-				) ),
+				'id'         => '10089551',
+				'name'       => 'product_page_information_1',
+				'value'      => json_encode(
+					array(
+						'title'   => isset( $options['information_1_title'] ) ? $options['information_1_title'] : '',
+						'icon'    => isset( $options['information_1_icon'] ) ? $options['information_1_icon'] : '',
+						'content' => isset( $options['information_1_content'] ) ? $options['information_1_content'] : '',
+						'link'    => isset( $options['information_1_link'] ) ? $options['information_1_link'] : '',
+					)
+				),
 				'updated_at' => time(),
 			);
 
 			// Add product page information 2
 			$documents[] = array(
-				'id' => '10089552',
-				'name' => 'product_page_information_2',
-				'value' => json_encode( array(
-					'title' => isset( $options['information_2_title'] ) ? $options['information_2_title'] : '',
-					'icon' => isset( $options['information_2_icon'] ) ? $options['information_2_icon'] : '',
-					'content' => isset( $options['information_2_content'] ) ? $options['information_2_content'] : '',
-					'link' => isset( $options['information_2_link'] ) ? $options['information_2_link'] : '',
-				) ),
+				'id'         => '10089552',
+				'name'       => 'product_page_information_2',
+				'value'      => json_encode(
+					array(
+						'title'   => isset( $options['information_2_title'] ) ? $options['information_2_title'] : '',
+						'icon'    => isset( $options['information_2_icon'] ) ? $options['information_2_icon'] : '',
+						'content' => isset( $options['information_2_content'] ) ? $options['information_2_content'] : '',
+						'link'    => isset( $options['information_2_link'] ) ? $options['information_2_link'] : '',
+					)
+				),
 				'updated_at' => time(),
 			);
 
 			// Add product page information 3
 			$documents[] = array(
-				'id' => '10089553',
-				'name' => 'product_page_information_3',
-				'value' => json_encode( array(
-					'title' => isset( $options['information_3_title'] ) ? $options['information_3_title'] : '',
-					'icon' => isset( $options['information_3_icon'] ) ? $options['information_3_icon'] : '',
-					'content' => isset( $options['information_3_content'] ) ? $options['information_3_content'] : '',
-					'link' => isset( $options['information_3_link'] ) ? $options['information_3_link'] : '',
-				) ),
+				'id'         => '10089553',
+				'name'       => 'product_page_information_3',
+				'value'      => json_encode(
+					array(
+						'title'   => isset( $options['information_3_title'] ) ? $options['information_3_title'] : '',
+						'icon'    => isset( $options['information_3_icon'] ) ? $options['information_3_icon'] : '',
+						'content' => isset( $options['information_3_content'] ) ? $options['information_3_content'] : '',
+						'link'    => isset( $options['information_3_link'] ) ? $options['information_3_link'] : '',
+					)
+				),
 				'updated_at' => time(),
 			);
 
 			// Add description after content
 			$documents[] = array(
-				'id' => '10089554',
-				'name' => 'description_after_content',
-				'value' => isset( $options['description_after_content'] ) ? $options['description_after_content'] : '',
+				'id'         => '10089554',
+				'name'       => 'description_after_content',
+				'value'      => isset( $options['description_after_content'] ) ? $options['description_after_content'] : '',
 				'updated_at' => time(),
 			);
 
 			// Add privacy policy content
 			$documents[] = array(
-				'id' => '1000001',
-				'name' => 'privacy_policy_content',
-				'value' => isset( $options['privacy_policy'] ) ? $options['privacy_policy'] : '',
+				'id'         => '1000001',
+				'name'       => 'privacy_policy_content',
+				'value'      => isset( $options['privacy_policy'] ) ? $options['privacy_policy'] : '',
 				'updated_at' => time(),
 			);
 
@@ -330,20 +345,22 @@ class ProductPageSettings extends BaseSettings {
 			$free_shipping_threshold = get_option( 'free_shipping_threshold', '' );
 			if ( ! empty( $free_shipping_threshold ) ) {
 				$documents[] = array(
-					'id' => '1000482',
-					'name' => 'free_shipping_threshold',
-					'value' => json_encode( $free_shipping_threshold ),
+					'id'         => '1000482',
+					'name'       => 'free_shipping_threshold',
+					'value'      => json_encode( $free_shipping_threshold ),
 					'updated_at' => time(),
 				);
 			}
 
 			// Add product page settings (hot sale)
 			$documents[] = array(
-				'id' => '1000909',
-				'name' => 'product_page_settings',
-				'value' => json_encode( array(
-					'hotSale' => isset( $options['set_hot_sale'] ) ? $options['set_hot_sale'] : 0,
-				) ),
+				'id'         => '1000909',
+				'name'       => 'product_page_settings',
+				'value'      => json_encode(
+					array(
+						'hotSale' => isset( $options['set_hot_sale'] ) ? $options['set_hot_sale'] : 0,
+					)
+				),
 				'updated_at' => time(),
 			);
 
@@ -360,12 +377,12 @@ class ProductPageSettings extends BaseSettings {
 			$available_currencies = \Aelia\WC\CurrencySwitcher\WC_Aelia_Reporting_Manager::get_currencies_from_sales();
 		} else {
 			$base_currency        = get_woocommerce_currency();
-			$available_currencies = [ 
-				$base_currency => ''
-			];
+			$available_currencies = array(
+				$base_currency => '',
+			);
 		}
 
-		$free_shipping_threshold = get_option( 'free_shipping_threshold', [] );
+		$free_shipping_threshold = get_option( 'free_shipping_threshold', array() );
 		?>
 		<h2>Free Shipping Threshold</h2>
 		<table class="form-table" role="presentation">
@@ -373,11 +390,11 @@ class ProductPageSettings extends BaseSettings {
 				<?php foreach ( $available_currencies as $currency => $value ) : ?>
 					<tr>
 						<th>
-							<?php echo $currency ?>
+							<?php echo $currency; ?>
 						</th>
 						<td>
-							<input type="text" id="free_shipping_threshold_<?php echo $currency ?>"
-								name="free_shipping_threshold[<?php echo $currency ?>]"
+							<input type="text" id="free_shipping_threshold_<?php echo $currency; ?>"
+								name="free_shipping_threshold[<?php echo $currency; ?>]"
 								value="<?php echo $free_shipping_threshold[ $currency ] ?? ''; ?>">
 						</td>
 					</tr>

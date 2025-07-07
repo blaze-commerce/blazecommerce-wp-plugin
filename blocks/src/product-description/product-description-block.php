@@ -48,7 +48,7 @@ if ( ! function_exists( 'blaze_commerce_render_product_description_block' ) ) {
 			return '<div class="blaze-product-description-block"><p>' . __( 'No description available for this product.', 'blaze-commerce' ) . '</p></div>';
 		}
 
-		$output = '<div class="blaze-product-description-block">';
+		$output  = '<div class="blaze-product-description-block">';
 		$output .= '<div class="blaze-product-description">';
 		$output .= do_shortcode( wpautop( $description ) );
 		$output .= '</div>';

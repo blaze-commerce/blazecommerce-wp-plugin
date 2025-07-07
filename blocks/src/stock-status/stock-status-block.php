@@ -37,7 +37,7 @@ if ( ! function_exists( 'blaze_commerce_render_stock_status_block' ) ) {
 		}
 
 		// Get stock status and quantity
-		$stock_status = $product->get_stock_status();
+		$stock_status   = $product->get_stock_status();
 		$stock_quantity = $product->get_stock_quantity();
 
 		// Get alignment class
@@ -53,7 +53,7 @@ if ( ! function_exists( 'blaze_commerce_render_stock_status_block' ) ) {
 		$status_data = blaze_commerce_get_stock_status_data( $stock_status );
 
 		// Build the HTML
-		$html = '<div class="stock-status ' . esc_attr( $align_class . $custom_class ) . '">';
+		$html  = '<div class="stock-status ' . esc_attr( $align_class . $custom_class ) . '">';
 		$html .= '<div class="stock-status-container">';
 		$html .= '<div class="stock-status-indicator ' . esc_attr( $status_data['class'] ) . '">';
 		$html .= '<span class="stock-status-text">' . esc_html( $status_data['label'] ) . '</span>';

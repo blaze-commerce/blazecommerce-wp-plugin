@@ -61,43 +61,52 @@ class MegaMenu {
 		$children = array();
 
 		if ( $megamenu_settings && 'grid' === $megamenu_settings['type'] ) {
-			$children = array_map( function ($grid) {
-				$grid['type'] = 'megamenu';
+			$children = array_map(
+				function ( $grid ) {
+					$grid['type'] = 'megamenu';
 
-				if ( count( $grid['columns'] ) > 0 ) {
-					$grid['columns'] = array_map( function ($column) {
-						if ( isset( $column['items'] ) && count( $column['items'] ) > 0 ) {
-							$column['items'] = array_map( function ($item) {
-								if ( 'item' === $item['type'] ) {
-									$menu_item_object = wp_setup_nav_menu_item( get_post( $item['id'] ) );
+					if ( count( $grid['columns'] ) > 0 ) {
+							$grid['columns'] = array_map(
+								function ( $column ) {
+									if ( isset( $column['items'] ) && count( $column['items'] ) > 0 ) {
+												$column['items'] = array_map(
+													function ( $item ) {
+														if ( 'item' === $item['type'] ) {
+															$menu_item_object = wp_setup_nav_menu_item( get_post( $item['id'] ) );
 
-									$item['title'] = $menu_item_object->title;
-									$item['url'] = $menu_item_object->url;
+															$item['title'] = $menu_item_object->title;
+															$item['url']   = $menu_item_object->url;
 
-									$thumbnail_id   = get_woocommerce_term_meta( $menu_item_object->object_id, 'thumbnail_id', true );
-									$image          = wp_get_attachment_url( $thumbnail_id );
-									$image_fallback = apply_filters( 'blaze_wooless_menu_item_data_fallback_image', false );
-									$item['image'] = $image ? $image : $image_fallback;
-									$item['id'] = $menu_item_object->ID;
-								} else if ( 'widget' === $item['type'] ) {
-									$item['content'] = $this->get_widget_content( $item['id'] );
-								}
+															$thumbnail_id   = get_woocommerce_term_meta( $menu_item_object->object_id, 'thumbnail_id', true );
+															$image          = wp_get_attachment_url( $thumbnail_id );
+															$image_fallback = apply_filters( 'blaze_wooless_menu_item_data_fallback_image', false );
+															$item['image']  = $image ? $image : $image_fallback;
+															$item['id']     = $menu_item_object->ID;
+														} elseif ( 'widget' === $item['type'] ) {
+															$item['content'] = $this->get_widget_content( $item['id'] );
+														}
 
-								return $item;
-							}, $column['items'] );
-						}
-						return $column;
-					}, $grid['columns'] );
-				}
+														return $item;
+													},
+													$column['items']
+												);
+									}
+									return $column;
+								},
+								$grid['columns']
+							);
+					}
 
-				return $grid;
-			}, $megamenu_settings['grid'] );
+					return $grid;
+				},
+				$megamenu_settings['grid']
+			);
 		}
 
 		$menu_item_data[ $item->ID ] = array(
-			'id' => $item->ID,
-			'title' => $item->title,
-			'url' => $item->url,
+			'id'       => $item->ID,
+			'title'    => $item->title,
+			'url'      => $item->url,
 			'children' => $children,
 		);
 
@@ -107,15 +116,15 @@ class MegaMenu {
 	public function modify_menu_item_data( $menu_item_data, $menu_item ) {
 
 		$menu_item_data['megamenuSettings'] = array(
-			'type' => $menu_item->megamenu_settings['type'],
-			'icon' => $menu_item->megamenu_settings['icon'],
+			'type'     => $menu_item->megamenu_settings['type'],
+			'icon'     => $menu_item->megamenu_settings['icon'],
 			'hideText' => $menu_item->megamenu_settings['hide_text'],
 		);
 
 		$custom_icon_media_id = $menu_item->megamenu_settings['custom_icon']['id'];
 		if ( ! empty( $menu_item->megamenu_settings['custom_icon']['id'] ) ) {
-			$menu_item_data['megamenuSettings']['customIcon']['id']  = $custom_icon_media_id;
-			$image_src                                               = wp_get_attachment_image_src( $custom_icon_media_id, 'full' );
+			$menu_item_data['megamenuSettings']['customIcon']['id'] = $custom_icon_media_id;
+			$image_src = wp_get_attachment_image_src( $custom_icon_media_id, 'full' );
 			$menu_item_data['megamenuSettings']['customIcon']['src'] = $image_src[0];
 		}
 

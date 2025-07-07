@@ -26,7 +26,7 @@ class WoocommerceProductLabel {
 			setup_postdata( $product_id );
 			wc_load_cart(); // Ensure the cart object is loaded before calling any method from product stock status condition because it is using wc cart which is not yet initialize
 			do_action( 'blaze_get_advance_custom_labels_html' );
-			$label_html = ob_get_clean();
+			$label_html                               = ob_get_clean();
 			$product_data['metaData']['productLabel'] = htmlspecialchars( $label_html, ENT_QUOTES, 'UTF-8' );
 		}
 

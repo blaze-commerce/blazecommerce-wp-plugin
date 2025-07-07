@@ -25,16 +25,20 @@ class WoocommerceProductAddons {
 	public function prepare_general_product_addons() {
 		$general_addons = get_transient( 'blaze_commerce_general_product_addons' );
 
-		if ( $general_addons )
+		if ( $general_addons ) {
 			return;
+		}
 
 		if ( class_exists( 'WC_Product_Addons_Groups' ) ) {
 			$general_addons = \WC_Product_Addons_Groups::get_all_global_groups();
 
 			// sort the addons by priority
-			usort( $general_addons, function ($a, $b) {
-				return absint( $a['priority'] ) - absint( $b['priority'] );
-			} );
+			usort(
+				$general_addons,
+				function ( $a, $b ) {
+					return absint( $a['priority'] ) - absint( $b['priority'] );
+				}
+			);
 
 			set_transient( 'blaze_commerce_general_product_addons', $general_addons, DAY_IN_SECONDS );
 		}
@@ -55,20 +59,20 @@ class WoocommerceProductAddons {
 
 		if ( class_exists( 'WC_Product_Addons_Product_Group' ) ) {
 
-			$product_post = get_post( $product_id );
+			$product_post   = get_post( $product_id );
 			$product_addons = blaze_woolese_array_camel_case_keys( \WC_Product_Addons_Product_Group::get_group( $product_post ) );
 
 			if ( $product_addons['excludeGlobalAddOns'] === false ) {
 				// get product category ids from $product_post
 				$product_categories = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
 
-				$available_global_addons = [];
+				$available_global_addons = array();
 
 				$general_addons = $this->get_product_addons();
 
 				foreach ( $general_addons as $addon ) {
 					$restrict_to_categories = $addon['restrict_to_categories'];
-					$restrict_keys = array_keys( $restrict_to_categories );
+					$restrict_keys          = array_keys( $restrict_to_categories );
 
 					if ( count( $restrict_to_categories ) === 0 || array_intersect( $product_categories, $restrict_keys ) ) {
 						$available_global_addons = array_merge( $available_global_addons, $addon['fields'] );
@@ -105,8 +109,9 @@ class WoocommerceProductAddons {
 		if ( is_array( $product_addons ) && ! empty( $product_addons ) ) {
 			include_once WP_PLUGIN_DIR . '/woocommerce-product-addons/includes/fields/abstract-wc-product-addons-field.php';
 			foreach ( $product_addons as $addon ) {
-				if ( $addon['type'] === 'heading' )
+				if ( $addon['type'] === 'heading' ) {
 					continue;
+				}
 
 				$value = isset( $post_data[ 'addon-' . $addon['field_name'] ] ) ? $post_data[ 'addon-' . $addon['field_name'] ] : '';
 				if ( is_array( $value ) ) {
@@ -139,7 +144,7 @@ class WoocommerceProductAddons {
 						$field = new \WC_Product_Addons_Field_File_Upload( $addon, $value, $test );
 						break;
 					default:
-						//skip the field if it is not supported to prevent errors
+						// skip the field if it is not supported to prevent errors
 						continue 2;
 				}
 

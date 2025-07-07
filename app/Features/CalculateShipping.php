@@ -23,7 +23,7 @@
  * "state": string required. The code of the state. Example: ACT, NSW, QLD.
  * "post_code": string optional. The postal code.
  * }
- * 
+ *
  * Response
  * This returns an object of shipping rates based on the product data and address passed to the request
  * {
@@ -59,16 +59,16 @@ class CalculateShipping {
 			'wooless-wc/v1',
 			'/available-shipping-methods',
 			array(
-				'methods' => 'POST',
+				'methods'  => 'POST',
 				'callback' => array( $this, 'get_available_shipping_methods_callback' ),
-				'args' => array(
-					'products' => array(
+				'args'     => array(
+					'products'  => array(
 						'required' => true,
 					),
-					'country' => array(
+					'country'   => array(
 						'required' => true,
 					),
-					'state' => array(
+					'state'     => array(
 						'required' => true,
 					),
 					'post_code' => array(
@@ -80,9 +80,9 @@ class CalculateShipping {
 	}
 
 	public function get_available_shipping_methods_callback( \WP_REST_Request $request ) {
-		$products = $request->get_param( 'products' );
-		$country = $request->get_param( 'country' );
-		$state = $request->get_param( 'state' );
+		$products  = $request->get_param( 'products' );
+		$country   = $request->get_param( 'country' );
+		$state     = $request->get_param( 'state' );
 		$post_code = $request->get_param( 'post_code' );
 
 		if ( ! class_exists( 'WooCommerce' ) ) {
@@ -100,20 +100,19 @@ class CalculateShipping {
 		require_once WC_ABSPATH . 'includes/class-wc-shipping.php';
 		require_once WC_ABSPATH . 'includes/class-wc-customer.php';
 
-
 		\WC()->session = new \WC_Session_Handler();
 		\WC()->session->init();
 		WC()->session->destroy_session();
 
-		$customer = new \WC_Customer();
+		$customer      = new \WC_Customer();
 		WC()->customer = $customer;
 
 		// Create a new cart object
-		$cart = new \WC_Cart();
+		$cart       = new \WC_Cart();
 		\WC()->cart = $cart;
 
 		foreach ( $products as $product ) {
-			$variation_id = 0;
+			$variation_id   = 0;
 			$variation_data = array();
 			if ( isset( $product['variation'] ) ) {
 				$variation_id = $product['variation']['id'];
@@ -127,26 +126,31 @@ class CalculateShipping {
 		WC()->customer->set_shipping_state( $state );
 		WC()->customer->set_shipping_postcode( $post_code );
 
-		$packages = WC()->cart->get_shipping_packages(); // Prepare the packages
+		$packages         = WC()->cart->get_shipping_packages(); // Prepare the packages
 		$shipping_methods = WC()->shipping()->calculate_shipping( $packages ); // Calculate shipping
 
 		$available_methods = $shipping_methods[0];
 
-		$rates = array_map( function (\WC_Shipping_Rate $rate) {
-			return array(
-				'id' => $rate->id,
-				'method_id' => $rate->method_id,
-				'instance_id' => $rate->instance_id,
-				'label' => $rate->label,
-				'cost' => $rate->cost,
-				'taxes' => $rate->taxes,
-			);
-		}, $available_methods['rates'] );
+		$rates = array_map(
+			function ( \WC_Shipping_Rate $rate ) {
+				return array(
+					'id'          => $rate->id,
+					'method_id'   => $rate->method_id,
+					'instance_id' => $rate->instance_id,
+					'label'       => $rate->label,
+					'cost'        => $rate->cost,
+					'taxes'       => $rate->taxes,
+				);
+			},
+			$available_methods['rates']
+		);
 
-		$response = new \WP_REST_Response( array(
-			'subtotal' => WC()->cart->subtotal,
-			'rates' => $rates,
-		) );
+		$response = new \WP_REST_Response(
+			array(
+				'subtotal' => WC()->cart->subtotal,
+				'rates'    => $rates,
+			)
+		);
 
 		// Add a custom status code
 		$response->set_status( 201 );

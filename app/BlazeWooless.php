@@ -90,9 +90,12 @@ class BlazeWooless {
 
 		// Register the CLI command
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
-			add_action( 'cli_init', function () {
-				\WP_CLI::add_command( 'bc-sync', '\BlazeWooless\Features\Cli' );
-			} );
+			add_action(
+				'cli_init',
+				function () {
+					\WP_CLI::add_command( 'bc-sync', '\BlazeWooless\Features\Cli' );
+				}
+			);
 		}
 	}
 

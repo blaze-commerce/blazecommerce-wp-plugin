@@ -62,17 +62,30 @@ class WoocommerceVariationSwatches {
 	}
 
 	public function add_taxonomy_fields( $fields ) {
-		return array_merge_recursive( $fields, array(
-			array( 'name' => 'componentType', 'type' => 'string', 'facet' => true, 'optional' => true ),
-			array( 'name' => 'componentValue', 'type' => 'string', 'facet' => true, 'optional' => true ),
-		) );
+		return array_merge_recursive(
+			$fields,
+			array(
+				array(
+					'name'     => 'componentType',
+					'type'     => 'string',
+					'facet'    => true,
+					'optional' => true,
+				),
+				array(
+					'name'     => 'componentValue',
+					'type'     => 'string',
+					'facet'    => true,
+					'optional' => true,
+				),
+			)
+		);
 	}
 
 	public function modify_product_taxonomy_item( $term_data, $term ) {
 		$term_data = $this->add_taxonomy_fields_data( $term_data, $term );
 
 		if ( isset( $term_data['filters'] ) && ! empty( $term_data['filters'] ) &&
-			 isset( $term_data['componentType'] ) && ! empty( $term_data['componentType'] ) ) {
+			isset( $term_data['componentType'] ) && ! empty( $term_data['componentType'] ) ) {
 			$term_data['filters'] = $term_data['filters'] . '|' . $term_data['componentType'] . '|' . $term_data['componentValue'];
 		}
 
@@ -103,7 +116,7 @@ class WoocommerceVariationSwatches {
 				return $attribute_to_register;
 			}
 
-			$taxonomy_id = $attribute->get_id();
+			$taxonomy_id    = $attribute->get_id();
 			$attribute_name = $attribute->get_name();
 
 			// PRIORITY 1: Try to get product-specific swatch configurations first
@@ -120,14 +133,14 @@ class WoocommerceVariationSwatches {
 					if ( $swatch_attribute && isset( $swatch_attribute->attribute_type ) && ! empty( $swatch_attribute->attribute_type ) ) {
 						// Set type depending on what is selected for the woocommerce attribute in wp admin
 						$attribute_to_register['type'] = $swatch_attribute->attribute_type;
-						$attribute_to_register = $this->get_options_value( $attribute_to_register, $attribute );
+						$attribute_to_register         = $this->get_options_value( $attribute_to_register, $attribute );
 					}
 				}
 			} else {
 				// PRIORITY 3: Fallback - detect color attributes by name when plugin is not active
 				if ( $this->is_color_attribute( $attribute_name ) ) {
 					$attribute_to_register['type'] = 'color';
-					$attribute_to_register = $this->get_options_value( $attribute_to_register, $attribute );
+					$attribute_to_register         = $this->get_options_value( $attribute_to_register, $attribute );
 				}
 			}
 		}
@@ -140,7 +153,7 @@ class WoocommerceVariationSwatches {
 		if ( ! isset( $attribute_to_register['type'] ) ) {
 			return $attribute_to_register; // Return unchanged if type is not set
 		}
-		$type = $attribute_to_register['type'];
+		$type        = $attribute_to_register['type'];
 		$new_options = array();
 
 		// Add isset() check before accessing 'options' key
@@ -161,9 +174,9 @@ class WoocommerceVariationSwatches {
 			}
 
 			// Use the standard get_option_value method which now prioritizes images over colors
-			$value = $this->get_option_value( $type, $term_id, $option );
+			$value           = $this->get_option_value( $type, $term_id, $option );
 			$option['value'] = $value;
-			$new_options[] = $option;
+			$new_options[]   = $option;
 		}
 
 		// Update options array
@@ -187,7 +200,7 @@ class WoocommerceVariationSwatches {
 
 		if ( ! empty( $term_id ) ) {
 			switch ( $type ) {
-				case "color":
+				case 'color':
 					// For color type, RESPECT the individual swatch type configuration for each term
 					$configured_swatch_type = $this->get_configured_swatch_type_for_term( $term_id );
 
@@ -209,7 +222,7 @@ class WoocommerceVariationSwatches {
 						}
 					}
 					break;
-				case "image":
+				case 'image':
 					// For image type, return image URLs as string
 					$image_value = $this->get_image_src( $term_id );
 					if ( ! empty( $image_value ) ) {
@@ -220,11 +233,11 @@ class WoocommerceVariationSwatches {
 						$value = $term_name;
 					}
 					break;
-				case "button":
+				case 'button':
 					// Return the term name for button type
 					$value = $term_name;
 					break;
-				case "radio":
+				case 'radio':
 					// Return the term name for radio type
 					$value = $term_name;
 					break;
@@ -425,12 +438,17 @@ class WoocommerceVariationSwatches {
 		}
 
 		// Get all products that have this term in their attributes
-		$products_with_term = $wpdb->get_results( $wpdb->prepare( "
+		$products_with_term = $wpdb->get_results(
+			$wpdb->prepare(
+				"
 			SELECT DISTINCT tr.object_id as post_id
 			FROM {$wpdb->term_relationships} tr
 			INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
 			WHERE tt.term_id = %d
-		", $term_id ) );
+		",
+				$term_id
+			)
+		);
 
 		if ( empty( $products_with_term ) ) {
 			return '';
@@ -473,12 +491,17 @@ class WoocommerceVariationSwatches {
 		}
 
 		// Get all products that have this term in their attributes
-		$products_with_term = $wpdb->get_results( $wpdb->prepare( "
+		$products_with_term = $wpdb->get_results(
+			$wpdb->prepare(
+				"
 			SELECT DISTINCT tr.object_id as post_id
 			FROM {$wpdb->term_relationships} tr
 			INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
 			WHERE tt.term_id = %d
-		", $term_id ) );
+		",
+				$term_id
+			)
+		);
 
 		if ( empty( $products_with_term ) ) {
 			return 'color'; // Default to color
@@ -542,7 +565,9 @@ class WoocommerceVariationSwatches {
 		// Get all terms for this product's color attribute
 		global $wpdb;
 
-		$color_terms = $wpdb->get_results( $wpdb->prepare( "
+		$color_terms = $wpdb->get_results(
+			$wpdb->prepare(
+				"
 			SELECT t.term_id, t.name, t.slug, tt.term_order
 			FROM {$wpdb->terms} t
 			INNER JOIN {$wpdb->term_taxonomy} tt ON t.term_id = tt.term_id
@@ -550,7 +575,10 @@ class WoocommerceVariationSwatches {
 			WHERE tr.object_id = %d
 			AND tt.taxonomy LIKE 'pa_colo%%'
 			ORDER BY tt.term_order ASC, t.name ASC
-		", $product_id ) );
+		",
+				$product_id
+			)
+		);
 
 		if ( empty( $color_terms ) ) {
 			return '';
@@ -581,7 +609,7 @@ class WoocommerceVariationSwatches {
 					if ( $swatch_index === $term_position ) {
 						return $attr['type'];
 					}
-					$swatch_index++;
+					++$swatch_index;
 				}
 			}
 		}
@@ -632,7 +660,7 @@ class WoocommerceVariationSwatches {
 
 		// The hash might contain the term slug or term ID
 		$term_slug = $term->slug;
-		$term_id = $term->term_id;
+		$term_id   = $term->term_id;
 		$term_name = strtolower( $term->name );
 
 		// Check various matching patterns
@@ -645,8 +673,8 @@ class WoocommerceVariationSwatches {
 
 		// Substring matches
 		if ( strpos( $hash_lower, $term_slug ) !== false ||
-			 strpos( $hash_lower, (string) $term_id ) !== false ||
-			 strpos( $hash_lower, $term_name ) !== false ) {
+			strpos( $hash_lower, (string) $term_id ) !== false ||
+			strpos( $hash_lower, $term_name ) !== false ) {
 			return true;
 		}
 
@@ -780,12 +808,17 @@ class WoocommerceVariationSwatches {
 		}
 
 		// Get all products that have this term in their attributes
-		$products_with_term = $wpdb->get_results( $wpdb->prepare( "
+		$products_with_term = $wpdb->get_results(
+			$wpdb->prepare(
+				"
 			SELECT DISTINCT tr.object_id as post_id
 			FROM {$wpdb->term_relationships} tr
 			INNER JOIN {$wpdb->term_taxonomy} tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
 			WHERE tt.term_id = %d
-		", $term_id ) );
+		",
+				$term_id
+			)
+		);
 
 		if ( empty( $products_with_term ) ) {
 			return '';
@@ -859,7 +892,7 @@ class WoocommerceVariationSwatches {
 
 		// CONFIRMED PATTERN: The WooCommerce Variation Swatches plugin uses md5($term->slug)
 		$primary_hash = md5( $term->slug );
-		$hashes[] = $primary_hash;
+		$hashes[]     = $primary_hash;
 
 		// Also include the slug itself as a fallback
 		$hashes[] = $term->slug;
@@ -902,7 +935,9 @@ class WoocommerceVariationSwatches {
 		// Get all terms for this product's color attribute
 		global $wpdb;
 
-		$color_terms = $wpdb->get_results( $wpdb->prepare( "
+		$color_terms = $wpdb->get_results(
+			$wpdb->prepare(
+				"
 			SELECT t.term_id, t.name, t.slug, tt.term_order
 			FROM {$wpdb->terms} t
 			INNER JOIN {$wpdb->term_taxonomy} tt ON t.term_id = tt.term_id
@@ -910,7 +945,10 @@ class WoocommerceVariationSwatches {
 			WHERE tr.object_id = %d
 			AND tt.taxonomy LIKE 'pa_colo%%'
 			ORDER BY tt.term_order ASC, t.name ASC
-		", $product_id ) );
+		",
+				$product_id
+			)
+		);
 
 		if ( empty( $color_terms ) ) {
 			return '';
@@ -944,7 +982,7 @@ class WoocommerceVariationSwatches {
 							return $image_url;
 						}
 					}
-					$image_index++;
+					++$image_index;
 				}
 			}
 		}
@@ -959,7 +997,9 @@ class WoocommerceVariationSwatches {
 		// Get all terms for this product's color attribute
 		global $wpdb;
 
-		$color_terms = $wpdb->get_results( $wpdb->prepare( "
+		$color_terms = $wpdb->get_results(
+			$wpdb->prepare(
+				"
 			SELECT t.term_id, t.name, t.slug, tt.term_order
 			FROM {$wpdb->terms} t
 			INNER JOIN {$wpdb->term_taxonomy} tt ON t.term_id = tt.term_id
@@ -967,7 +1007,10 @@ class WoocommerceVariationSwatches {
 			WHERE tr.object_id = %d
 			AND tt.taxonomy LIKE 'pa_colo%%'
 			ORDER BY tt.term_order ASC, t.name ASC
-		", $product_id ) );
+		",
+				$product_id
+			)
+		);
 
 		if ( empty( $color_terms ) ) {
 			return '';
@@ -998,7 +1041,7 @@ class WoocommerceVariationSwatches {
 					if ( $color_index === $term_position ) {
 						return $attr['color'];
 					}
-					$color_index++;
+					++$color_index;
 				}
 			}
 		}
@@ -1117,8 +1160,8 @@ class WoocommerceVariationSwatches {
 
 		// Check if it has a valid image extension
 		$image_extensions = array( 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg' );
-		$url_path = parse_url( $url, PHP_URL_PATH );
-		$extension = strtolower( pathinfo( $url_path, PATHINFO_EXTENSION ) );
+		$url_path         = parse_url( $url, PHP_URL_PATH );
+		$extension        = strtolower( pathinfo( $url_path, PATHINFO_EXTENSION ) );
 
 		return in_array( $extension, $image_extensions );
 	}
@@ -1132,7 +1175,7 @@ class WoocommerceVariationSwatches {
 			return;
 		}
 
-		$term = get_term( $term_id );
+		$term      = get_term( $term_id );
 		$term_name = $term ? $term->name : 'Unknown';
 
 		$log_message = sprintf(
@@ -1155,7 +1198,7 @@ class WoocommerceVariationSwatches {
 			return;
 		}
 
-		$term = get_term( $term_id );
+		$term      = get_term( $term_id );
 		$term_name = $term ? $term->name : 'Unknown';
 
 		$log_message = sprintf(
@@ -1232,7 +1275,7 @@ class WoocommerceVariationSwatches {
 		$color_name = trim( $color_name );
 
 		// Debug logging
-		$logger = wc_get_logger();
+		$logger  = wc_get_logger();
 		$context = array( 'source' => 'blazecommerce-color-validation' );
 		$logger->debug( 'Validating color name: "' . $color_name . '"', $context );
 
@@ -1296,7 +1339,7 @@ class WoocommerceVariationSwatches {
 		}
 
 		// Process the product-specific swatches
-		$attribute_to_register['type'] = 'color'; // Default to color, will be overridden if images are found
+		$attribute_to_register['type']    = 'color'; // Default to color, will be overridden if images are found
 		$attribute_to_register['options'] = array();
 
 		foreach ( $product_swatches as $swatch_config ) {
@@ -1310,9 +1353,9 @@ class WoocommerceVariationSwatches {
 			}
 
 			$option = array(
-				'label' => $swatch_config['label'] ?? $swatch_config['name'],
-				'name' => $swatch_config['name'],
-				'slug' => sanitize_title( $swatch_config['name'] ),
+				'label'   => $swatch_config['label'] ?? $swatch_config['name'],
+				'name'    => $swatch_config['name'],
+				'slug'    => sanitize_title( $swatch_config['name'] ),
 				'term_id' => $swatch_config['term_id'] ?? '',
 			);
 
@@ -1320,11 +1363,11 @@ class WoocommerceVariationSwatches {
 			if ( ! empty( $swatch_config['color'] ) ) {
 				// Color swatch - return ONLY the hex color string
 				$attribute_to_register['type'] = 'color';
-				$option['value'] = $swatch_config['color'];
+				$option['value']               = $swatch_config['color'];
 			} elseif ( ! empty( $swatch_config['image'] ) ) {
 				// Image swatch - return ONLY the image URL string
 				$attribute_to_register['type'] = 'image';
-				$option['value'] = $swatch_config['image'];
+				$option['value']               = $swatch_config['image'];
 			} else {
 				// No swatch data, skip this option
 				continue;
@@ -1432,8 +1475,8 @@ class WoocommerceVariationSwatches {
 				}
 
 				$swatch = array(
-					'name' => $hash,
-					'label' => $attr['label'] ?? $hash,
+					'name'    => $hash,
+					'label'   => $attr['label'] ?? $hash,
 					'term_id' => $attr['term_id'] ?? '',
 				);
 
@@ -1486,8 +1529,8 @@ class WoocommerceVariationSwatches {
 					}
 
 					$swatch = array(
-						'name' => $term->name,
-						'label' => $term->name,
+						'name'    => $term->name,
+						'label'   => $term->name,
 						'term_id' => $term->term_id,
 					);
 
@@ -1557,8 +1600,8 @@ class WoocommerceVariationSwatches {
 		foreach ( $meta_value as $key => $value ) {
 			if ( is_array( $value ) && isset( $value['name'] ) ) {
 				$swatch = array(
-					'name' => $value['name'],
-					'label' => $value['label'] ?? $value['name'],
+					'name'    => $value['name'],
+					'label'   => $value['label'] ?? $value['name'],
 					'term_id' => $value['term_id'] ?? '',
 				);
 
@@ -1582,13 +1625,13 @@ class WoocommerceVariationSwatches {
 	 */
 	public function deduplicate_swatches( $swatches ) {
 		$unique_swatches = array();
-		$seen_names = array();
+		$seen_names      = array();
 
 		foreach ( $swatches as $swatch ) {
 			$name = $swatch['name'] ?? '';
 			if ( ! empty( $name ) && ! in_array( $name, $seen_names ) ) {
 				$unique_swatches[] = $swatch;
-				$seen_names[] = $name;
+				$seen_names[]      = $name;
 			}
 		}
 
@@ -1693,12 +1736,12 @@ class WoocommerceVariationSwatches {
 
 		// Create new attribute if not found
 		if ( $attribute_index === null ) {
-			$attribute_index = count( $product_data['attributes'] );
+			$attribute_index                                = count( $product_data['attributes'] );
 			$product_data['attributes'][ $attribute_index ] = array(
-				'name' => $attribute_name,
-				'label' => ucfirst( str_replace( array( 'pa_', '_', '-' ), array( '', ' ', ' ' ), $attribute_name ) ),
-				'slug' => $attribute_name,
-				'type' => 'color', // Will be updated based on swatch types
+				'name'    => $attribute_name,
+				'label'   => ucfirst( str_replace( array( 'pa_', '_', '-' ), array( '', ' ', ' ' ), $attribute_name ) ),
+				'slug'    => $attribute_name,
+				'type'    => 'color', // Will be updated based on swatch types
 				'options' => array(),
 			);
 		}
@@ -1712,9 +1755,9 @@ class WoocommerceVariationSwatches {
 			}
 
 			$option = array(
-				'label' => $swatch['label'] ?? $swatch['name'],
-				'name' => $swatch['name'],
-				'slug' => sanitize_title( $swatch['name'] ),
+				'label'   => $swatch['label'] ?? $swatch['name'],
+				'name'    => $swatch['name'],
+				'slug'    => sanitize_title( $swatch['name'] ),
 				'term_id' => $swatch['term_id'] ?? '',
 			);
 
@@ -1724,7 +1767,7 @@ class WoocommerceVariationSwatches {
 				$option['value'] = $swatch['color'];
 			} elseif ( ! empty( $swatch['image'] ) ) {
 				// Image swatch - return ONLY the image URL string
-				$has_images = true;
+				$has_images      = true;
 				$option['value'] = $swatch['image'];
 			} else {
 				continue; // Skip options without swatch data
@@ -1752,7 +1795,7 @@ class WoocommerceVariationSwatches {
 		}
 
 		// Debug logging
-		$logger = wc_get_logger();
+		$logger  = wc_get_logger();
 		$context = array( 'source' => 'blazecommerce-color-merge' );
 		$logger->debug( 'Starting color attribute merge. Attributes count: ' . count( $product_data['attributes'] ), $context );
 
@@ -1793,14 +1836,14 @@ class WoocommerceVariationSwatches {
 		}
 
 		// Merge all color options from all color attributes
-		$merged_options = array();
-		$seen_colors = array(); // Track colors by term_id to avoid duplicates
+		$merged_options          = array();
+		$seen_colors             = array(); // Track colors by term_id to avoid duplicates
 		$primary_color_attribute = null;
 
 		foreach ( $color_attributes as $color_attribute ) {
 			// Use the first attribute as the base structure
 			if ( ! $primary_color_attribute ) {
-				$primary_color_attribute = $color_attribute;
+				$primary_color_attribute            = $color_attribute;
 				$primary_color_attribute['options'] = array(); // Reset options, we'll rebuild them
 			}
 
@@ -1816,7 +1859,7 @@ class WoocommerceVariationSwatches {
 				} else {
 					// Fallback to option name/label
 					$option_name = $option['name'] ?? $option['label'] ?? '';
-					$unique_key = 'name_' . sanitize_title( $option_name );
+					$unique_key  = 'name_' . sanitize_title( $option_name );
 				}
 
 				// Skip if we've already seen this color
@@ -1826,7 +1869,7 @@ class WoocommerceVariationSwatches {
 				}
 
 				// Add this color to our merged options
-				$merged_options[] = $option;
+				$merged_options[]           = $option;
 				$seen_colors[ $unique_key ] = true;
 				$logger->debug( 'Added color option: ' . ( $option['label'] ?? $option['name'] ?? 'unknown' ), $context );
 			}
@@ -1838,10 +1881,10 @@ class WoocommerceVariationSwatches {
 		$primary_color_attribute['options'] = $merged_options;
 
 		// Ensure the primary color attribute has the correct name for frontend
-		$primary_color_attribute['name'] = 'attribute_pa_colour';
+		$primary_color_attribute['name']  = 'attribute_pa_colour';
 		$primary_color_attribute['label'] = 'Colour';
-		$primary_color_attribute['slug'] = 'pa_colour';
-		$primary_color_attribute['type'] = 'color';
+		$primary_color_attribute['slug']  = 'pa_colour';
+		$primary_color_attribute['type']  = 'color';
 
 		// Rebuild the attributes array maintaining the original order
 		// Find the position of the first color attribute in the original array
@@ -1855,14 +1898,14 @@ class WoocommerceVariationSwatches {
 
 		// Rebuild the array maintaining original order
 		$rebuilt_attributes = array();
-		$color_inserted = false;
+		$color_inserted     = false;
 
 		foreach ( $product_data['attributes'] as $index => $attribute ) {
 			if ( isset( $attribute['name'] ) && ( $this->is_color_attribute( $attribute['name'] ) || $attribute['name'] === 'attribute_pa_colour' || $attribute['name'] === 'pa_colour' ) ) {
 				// Insert the merged color attribute only once at the first color position
 				if ( ! $color_inserted ) {
 					$rebuilt_attributes[] = $primary_color_attribute;
-					$color_inserted = true;
+					$color_inserted       = true;
 					$logger->debug( 'Inserted merged color attribute at position: ' . count( $rebuilt_attributes ), $context );
 				}
 				// Skip other color attributes (they're already merged)
@@ -1879,5 +1922,3 @@ class WoocommerceVariationSwatches {
 		return $product_data;
 	}
 }
-
-

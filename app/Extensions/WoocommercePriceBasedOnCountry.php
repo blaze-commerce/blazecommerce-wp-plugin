@@ -25,14 +25,14 @@ class WoocommercePriceBasedOnCountry {
 	public function add_multicurrency_prices( $product_data, $product_id ) {
 		foreach ( \WCPBC_Pricing_Zones::get_zones() as $zone ) {
 			$currency = $zone->get_currency();
-			if ( isset( $product_data["price"] ) && ! isset( $product_data["price"][ $currency ] ) ) {
-				$product_data["price"][ $currency ] = Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_price' ) );
+			if ( isset( $product_data['price'] ) && ! isset( $product_data['price'][ $currency ] ) ) {
+				$product_data['price'][ $currency ] = Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_price' ) );
 			}
-			if ( isset( $product_data["regularPrice"] ) && ! isset( $product_data["regularPrice"][ $currency ] ) ) {
-				$product_data["regularPrice"][ $currency ] = Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_regular_price' ) );
+			if ( isset( $product_data['regularPrice'] ) && ! isset( $product_data['regularPrice'][ $currency ] ) ) {
+				$product_data['regularPrice'][ $currency ] = Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_regular_price' ) );
 			}
-			if ( isset( $product_data["salePrice"] ) && ! isset( $product_data["salePrice"][ $currency ] ) ) {
-				$product_data["salePrice"][ $currency ] = Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_sale_price' ) );
+			if ( isset( $product_data['salePrice'] ) && ! isset( $product_data['salePrice'][ $currency ] ) ) {
+				$product_data['salePrice'][ $currency ] = Woocommerce::format_price( $zone->get_exchange_rate_price_by_post( $product_id, '_sale_price' ) );
 			}
 		}
 		return $product_data;
@@ -43,13 +43,17 @@ class WoocommercePriceBasedOnCountry {
 
 		$currencies = $additional_settings['regional_data'];
 
-		$other_currencies = array_reduce( \WCPBC_Pricing_Zones::get_zones(), function ($carry, $zone) {
-			$carry[] = array(
-				'country' => array_values( $zone->get_countries() )[0],
-				'currency' => $zone->get_currency(),
-			);
-			return $carry;
-		}, array() );
+		$other_currencies = array_reduce(
+			\WCPBC_Pricing_Zones::get_zones(),
+			function ( $carry, $zone ) {
+				$carry[] = array(
+					'country'  => array_values( $zone->get_countries() )[0],
+					'currency' => $zone->get_currency(),
+				);
+				return $carry;
+			},
+			array()
+		);
 
 		$currencies = array_merge( $currencies, $other_currencies );
 

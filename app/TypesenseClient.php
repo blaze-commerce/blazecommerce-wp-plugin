@@ -9,12 +9,12 @@ use BlazeWooless\Collections\CollectionAliasManager;
 
 class TypesenseClient {
 	private static $instance = null;
-	protected $api_key = null;
-	protected $host = null;
-	public $store_id = null;
-	private $client = null;
-	private $site_url = null;
-	private $alias_manager = null;
+	protected $api_key       = null;
+	protected $host          = null;
+	public $store_id         = null;
+	private $client          = null;
+	private $site_url        = null;
+	private $alias_manager   = null;
 
 	/**
 	 * Returns the current class
@@ -46,12 +46,12 @@ class TypesenseClient {
 
 			try {
 				$client = $this->get_client( $this->api_key, $settings['typesense_host'] );
-			} catch (\Throwable $th) {
+			} catch ( \Throwable $th ) {
 				$client = null;
 			}
 
 			$this->client = $client;
-		} catch (\Throwable $th) {
+		} catch ( \Throwable $th ) {
 			$this->client = null;
 		}
 
@@ -78,17 +78,19 @@ class TypesenseClient {
 
 	public function get_client( $api_key, $host ) {
 		$this->host = $host;
-		return new Client( [ 
-			'api_key' => $api_key,
-			'nodes' => [ 
-				[ 
-					'host' => $this->host,
-					'port' => '443',
-					'protocol' => 'https',
-				],
-			],
-			'client' => new HttplugClient(),
-		] );
+		return new Client(
+			array(
+				'api_key' => $api_key,
+				'nodes'   => array(
+					array(
+						'host'     => $this->host,
+						'port'     => '443',
+						'protocol' => 'https',
+					),
+				),
+				'client'  => new HttplugClient(),
+			)
+		);
 	}
 
 	public function client() {
@@ -168,6 +170,7 @@ class TypesenseClient {
 	/**
 	 * Get collection access object with alias support (backward compatibility)
 	 * Falls back to legacy naming if alias manager is not available
+	 *
 	 * @deprecated Use get_active_collection_access() for CRUD operations
 	 */
 	private function get_collection_access( $collection_type ) {
@@ -202,13 +205,26 @@ class TypesenseClient {
 		$client = $this->get_client( $api_key, $environement );
 		try {
 			$collections = $client->collections->retrieve();
-			return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
-		} catch (\Typesense\Exception\ObjectNotFound $e) {
-			return array( 'status' => 'error', 'message' => 'Collection not found: ' . $e->getMessage() );
-		} catch (\Typesense\Exception\TypesenseClientError $e) {
-			return array( 'status' => 'error', 'message' => 'Typesense client error: ' . $e->getMessage() );
-		} catch (\Exception $e) {
-			return array( 'status' => 'error', 'message' => 'There was an error connecting to Typesense: ' . $e->getMessage() );
+			return array(
+				'status'     => 'success',
+				'message'    => 'Typesense is working!',
+				'collection' => $collections,
+			);
+		} catch ( \Typesense\Exception\ObjectNotFound $e ) {
+			return array(
+				'status'  => 'error',
+				'message' => 'Collection not found: ' . $e->getMessage(),
+			);
+		} catch ( \Typesense\Exception\TypesenseClientError $e ) {
+			return array(
+				'status'  => 'error',
+				'message' => 'Typesense client error: ' . $e->getMessage(),
+			);
+		} catch ( \Exception $e ) {
+			return array(
+				'status'  => 'error',
+				'message' => 'There was an error connecting to Typesense: ' . $e->getMessage(),
+			);
 		}
 	}
 
@@ -230,24 +246,24 @@ class TypesenseClient {
 			}
 
 			do_action(
-				"inspect",
+				'inspect',
 				array(
-					"delete_all_symptons",
+					'delete_all_symptons',
 					array(
-						"report" => $delete_report,
-						"synonyms" => $synonims,
-					)
+						'report'   => $delete_report,
+						'synonyms' => $synonims,
+					),
 				)
 			);
 
-		} catch (Exception $e) {
+		} catch ( Exception $e ) {
 			do_action(
-				"inspect",
+				'inspect',
 				array(
-					"delete_all_symptons",
+					'delete_all_symptons',
 					array(
-						"error" => $e->getMessage(),
-					)
+						'error' => $e->getMessage(),
+					),
 				)
 			);
 		}
@@ -263,41 +279,41 @@ class TypesenseClient {
 			if ( $type === 'multi-way' ) {
 				$synonym_key  = $value[0] . '-synonyms';
 				$synonym_data = array(
-					"synonyms" => $value
+					'synonyms' => $value,
 				);
 
 			} else {
 				$synonym_key  = sanitize_title( $key ) . '-synonyms';
 				$synonym_data = array(
-					'root' => $key,
-					'synonyms' => $value
+					'root'     => $key,
+					'synonyms' => $value,
 				);
 			}
 
 			$response = $this->get_active_collection_access( 'product' )->synonyms->upsert( $synonym_key, $synonym_data );
 
 			do_action(
-				"inspect",
+				'inspect',
 				array(
-					"add_sympton",
+					'add_sympton',
 					array(
-						"type" => $type,
-						"value" => $value,
-						"key" => $key,
-						"synonym_key" => $synonym_key,
-						"synonym_data" => $synonym_data,
-						"response" => $response,
-					)
+						'type'         => $type,
+						'value'        => $value,
+						'key'          => $key,
+						'synonym_key'  => $synonym_key,
+						'synonym_data' => $synonym_data,
+						'response'     => $response,
+					),
 				)
 			);
-		} catch (Exception $e) {
+		} catch ( Exception $e ) {
 			do_action(
-				"inspect",
+				'inspect',
 				array(
-					"add_sympton",
+					'add_sympton',
 					array(
-						"error" => $e->getMessage(),
-					)
+						'error' => $e->getMessage(),
+					),
 				)
 			);
 		}

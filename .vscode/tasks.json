@@ -1,0 +1,61 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "PHP CodeSniffer: Fix All",
+			"type": "shell",
+			"command": "./vendor/bin/phpcbf",
+			"args": ["--standard=phpcs.xml", "."],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "PHP CodeSniffer: Check",
+			"type": "shell",
+			"command": "./vendor/bin/phpcs",
+			"args": ["--standard=phpcs.xml", "."],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "PHP CodeSniffer: Fix Current File",
+			"type": "shell",
+			"command": "./vendor/bin/phpcbf",
+			"args": ["--standard=phpcs.xml", "${file}"],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "PHP CodeSniffer: Check Current File",
+			"type": "shell",
+			"command": "./vendor/bin/phpcs",
+			"args": ["--standard=phpcs.xml", "${file}"],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		}
+	]
+}

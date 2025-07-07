@@ -50,12 +50,12 @@ class PostType {
 <!-- /wp:generateblocks/container -->';
 
 			$default_homepage = array(
-				'post_title' => 'BlazeCommerce Home',
-				'post_type' => 'page',
-				'post_status' => 'publish',
-				'post_name' => $post_name,
+				'post_title'    => 'BlazeCommerce Home',
+				'post_type'     => 'page',
+				'post_status'   => 'publish',
+				'post_name'     => $post_name,
 				'post_category' => array( 0 ),
-				'post_content' => $content,
+				'post_content'  => $content,
 			);
 
 			$post_id = wp_insert_post( $default_homepage );
@@ -98,11 +98,10 @@ class PostType {
 					do_action( 'ts_before_page_upsert', $post );
 					$page_collection->upsert( $document );
 					do_action( 'ts_page_upsert', $post );
-				} catch (\Exception $e) {
+				} catch ( \Exception $e ) {
 
 				}
 			}
-
 		}
 		return;
 	}

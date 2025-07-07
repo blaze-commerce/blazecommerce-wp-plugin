@@ -6,8 +6,8 @@ use BlazeWooless\TypesenseClient;
 
 class GeneralSettings extends BaseSettings {
 	private static $instance = null;
-	public $tab_key = 'general';
-	public $page_label = 'General';
+	public $tab_key          = 'general';
+	public $page_label       = 'General';
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -29,19 +29,24 @@ class GeneralSettings extends BaseSettings {
 		add_filter( 'page_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
 		add_filter( 'term_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
 
-		add_action( 'wp_enqueue_scripts', function () {
-			$theme = wp_get_theme();
-			wp_enqueue_style(
-				'blazecommerce-frontend-style',
-				$this->remove_cart_from_url( home_url( 'frontend.css' ) ),
-				[],
-				$theme->get( 'Version' ) // Cache-busting with child theme's version
-			);
-		}, 999 );
+		add_action(
+			'wp_enqueue_scripts',
+			function () {
+				$theme = wp_get_theme();
+				wp_enqueue_style(
+					'blazecommerce-frontend-style',
+					$this->remove_cart_from_url( home_url( 'frontend.css' ) ),
+					array(),
+					$theme->get( 'Version' ) // Cache-busting with child theme's version
+				);
+			},
+			999
+		);
 	}
 
 	/**
-	 * Helper method to remove "cart." in url 
+	 * Helper method to remove "cart." in url
+	 *
 	 * @param mixed $url
 	 * @return string
 	 */
@@ -50,9 +55,9 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	/**
-	 * Removes all "cart." in all links when the user is not on admin pages. 
-	 * This function dynamically changes the wordpress site address url in general settings via option_home filter
-	 * 
+	 * Removes all "cart." in all links when the user is not on admin pages.
+	 * This function dynamically changes the WordPress site address url in general settings via option_home filter
+	 *
 	 * @param mixed $value
 	 * @param mixed $option
 	 * @return mixed
@@ -70,7 +75,7 @@ class GeneralSettings extends BaseSettings {
 	/**
 	 * Redirect non admin user to non cart.* url
 	 * Hooked into template_redirect, priority -1
-	 * 
+	 *
 	 * @since   1.5.0
 	 * @return  void
 	 */
@@ -82,8 +87,9 @@ class GeneralSettings extends BaseSettings {
 		}
 
 		// skip redirect for administrator
-		if ( is_user_logged_in() && current_user_can( 'manage_options' ) )
+		if ( is_user_logged_in() && current_user_can( 'manage_options' ) ) {
 			return;
+		}
 
 		// skip redirect for ajax request
 		if ( function_exists( 'is_ajax' ) && is_ajax() ) {
@@ -94,22 +100,21 @@ class GeneralSettings extends BaseSettings {
 			return;
 		}
 
-
-		// Redirect to home page if the user is not logged in and the page is cart 
+		// Redirect to home page if the user is not logged in and the page is cart
 		$restricted_pages = apply_filters( 'blaze_wooless_restricted_pages', is_cart() );
 		if ( $restricted_pages ) {
 			wp_redirect( $this->remove_cart_from_url( home_url() ) );
 			exit;
 		}
 
-		$is_my_account_page = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
+		$is_my_account_page                = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
 		$exclude_page_redirect_to_frontend = apply_filters( 'blaze_wooless_exclude_page_redirect_to_frontend', is_checkout() );
 		if ( $exclude_page_redirect_to_frontend || $is_my_account_page ) {
-			//Since the page is excluded from redirecting to frontend then we just end the function here
+			// Since the page is excluded from redirecting to frontend then we just end the function here
 			return;
 		}
 
-		$has_cart_in_url = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
+		$has_cart_in_url           = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
 		$from_vercel_proxy_request = isset( $_SERVER['HTTP_X_VERCEL_PROXY_SIGNATURE'] ) ? true : false;
 
 		// if the url has cart. on it and the request is not from vercel then we redirect it to frontend page without cart in the url
@@ -117,12 +122,12 @@ class GeneralSettings extends BaseSettings {
 			wp_redirect( $this->remove_cart_from_url( home_url( $_SERVER['REQUEST_URI'] ) ) );
 			exit;
 		}
-
 	}
 
 	/**
 	 * Overwrite rest url, so we can use guttenberg editor when the site url is different
 	 * Hooked into rest_url, priority 10
+	 *
 	 * @param string $url
 	 * @return string
 	 */
@@ -138,162 +143,161 @@ class GeneralSettings extends BaseSettings {
 	public function settings() {
 
 		$font_families = array(
-			'Arimo' => 'Arimo',
-			'Barlow' => 'Barlow',
-			'DM Sans' => 'DM Sans',
-			'Dosis' => 'Dosis',
-			'Fira Sans' => 'Fira Sans',
-			'Futura Book' => 'Futura Book',
-			'Heebo' => 'Heebo',
-			'Hind Siliguri' => 'Hind Siliguri',
-			'IBM Plex Sans' => 'IBM Plex Sans',
-			'Inconsolata' => 'Inconsolata',
-			'Inter' => 'Inter',
-			'Josefin Sans' => 'Josefin Sans',
-			'Kanit' => 'Kanit',
-			'Karla' => 'Karla',
-			'Lato' => 'Lato',
-			'Libre Baskerville' => 'Libre Baskerville',
-			'Libre Franklin' => 'Libre Franklin',
-			'Lora' => 'Lora',
-			'Manrope' => 'Manrope',
-			'Material Icons' => 'Material Icons',
+			'Arimo'                   => 'Arimo',
+			'Barlow'                  => 'Barlow',
+			'DM Sans'                 => 'DM Sans',
+			'Dosis'                   => 'Dosis',
+			'Fira Sans'               => 'Fira Sans',
+			'Futura Book'             => 'Futura Book',
+			'Heebo'                   => 'Heebo',
+			'Hind Siliguri'           => 'Hind Siliguri',
+			'IBM Plex Sans'           => 'IBM Plex Sans',
+			'Inconsolata'             => 'Inconsolata',
+			'Inter'                   => 'Inter',
+			'Josefin Sans'            => 'Josefin Sans',
+			'Kanit'                   => 'Kanit',
+			'Karla'                   => 'Karla',
+			'Lato'                    => 'Lato',
+			'Libre Baskerville'       => 'Libre Baskerville',
+			'Libre Franklin'          => 'Libre Franklin',
+			'Lora'                    => 'Lora',
+			'Manrope'                 => 'Manrope',
+			'Material Icons'          => 'Material Icons',
 			'Material Icons Outlined' => 'Material Icons Outlined',
-			'Merriweather' => 'Merriweather',
-			'Montserrat' => 'Montserrat',
-			'Mukta' => 'Mukta',
-			'Mulish' => 'Mulish',
-			'Nanum Gothic' => 'Nanum Gothic',
-			'Noto Sans' => 'Noto Sans',
-			'Noto Sans JP' => 'Noto Sans JP',
-			'Noto Sans KR' => 'Noto Sans KR',
-			'Noto Sans TC' => 'Noto Sans TC',
-			'Noto Serif' => 'Noto Serif',
-			'Nunito' => 'Nunito',
-			'Nunito Sans' => 'Nunito Sans',
-			'Open Sans' => 'Open Sans',
-			'Oswald' => 'Oswald',
-			'Playfair Display' => 'Playfair Display',
-			'Poppins' => 'Poppins',
-			'PT Sans' => 'PT Sans',
-			'PT Serif' => 'PT Serif',
-			'Quicksand' => 'Quicksand',
-			'Raleway' => 'Raleway',
-			'Roboto' => 'Roboto',
-			'Roboto Condensed' => 'Roboto Condensed',
-			'Roboto Mono' => 'Roboto Mono',
-			'Roboto Slab' => 'Roboto Slab',
-			'Rubik' => 'Rubik',
-			'Source Sans Pro' => 'Source Sans Pro',
-			'Titillium Web' => 'Titillium Web',
-			'Ubuntu' => 'Ubuntu',
-			'Work Sans' => 'Work Sans',
+			'Merriweather'            => 'Merriweather',
+			'Montserrat'              => 'Montserrat',
+			'Mukta'                   => 'Mukta',
+			'Mulish'                  => 'Mulish',
+			'Nanum Gothic'            => 'Nanum Gothic',
+			'Noto Sans'               => 'Noto Sans',
+			'Noto Sans JP'            => 'Noto Sans JP',
+			'Noto Sans KR'            => 'Noto Sans KR',
+			'Noto Sans TC'            => 'Noto Sans TC',
+			'Noto Serif'              => 'Noto Serif',
+			'Nunito'                  => 'Nunito',
+			'Nunito Sans'             => 'Nunito Sans',
+			'Open Sans'               => 'Open Sans',
+			'Oswald'                  => 'Oswald',
+			'Playfair Display'        => 'Playfair Display',
+			'Poppins'                 => 'Poppins',
+			'PT Sans'                 => 'PT Sans',
+			'PT Serif'                => 'PT Serif',
+			'Quicksand'               => 'Quicksand',
+			'Raleway'                 => 'Raleway',
+			'Roboto'                  => 'Roboto',
+			'Roboto Condensed'        => 'Roboto Condensed',
+			'Roboto Mono'             => 'Roboto Mono',
+			'Roboto Slab'             => 'Roboto Slab',
+			'Rubik'                   => 'Rubik',
+			'Source Sans Pro'         => 'Source Sans Pro',
+			'Titillium Web'           => 'Titillium Web',
+			'Ubuntu'                  => 'Ubuntu',
+			'Work Sans'               => 'Work Sans',
 		);
-		$fields = array(
+		$fields        = array(
 			'wooless_general_settings_section' => array(
-				'label' => 'General Settings',
+				'label'   => 'General Settings',
 				'options' => array(
 					array(
-						'id' => 'enable_system',
+						'id'    => 'enable_system',
 						'label' => 'Enable System',
-						'type' => 'checkbox',
-						'args' => array(
-							'description' => 'Check this to enable the system.'
+						'type'  => 'checkbox',
+						'args'  => array(
+							'description' => 'Check this to enable the system.',
 						),
 					),
 					array(
-						'id' => 'typesense_api_key',
+						'id'    => 'typesense_api_key',
 						'label' => 'API Key',
-						'type' => 'password',
-						'args' => array(
-							'description' => 'API Key generated from typesense cloud API keys page.'
+						'type'  => 'password',
+						'args'  => array(
+							'description' => 'API Key generated from typesense cloud API keys page.',
 						),
 					),
 					array(
-						'id' => 'typesense_host',
+						'id'    => 'typesense_host',
 						'label' => 'Typesense Host',
-						'type' => 'text',
-						'args' => array(
-							'description' => 'This is the host url found in your cluster overview page in typesense clould'
+						'type'  => 'text',
+						'args'  => array(
+							'description' => 'This is the host url found in your cluster overview page in typesense clould',
 						),
 					),
 					array(
-						'id' => 'store_id',
+						'id'    => 'store_id',
 						'label' => 'Store Id',
-						'type' => 'number',
-						'args' => array(
-							'description' => 'We use store id to identify a store collection in your typesense cluster. This allows you to use one cluster for different websites'
+						'type'  => 'number',
+						'args'  => array(
+							'description' => 'We use store id to identify a store collection in your typesense cluster. This allows you to use one cluster for different websites',
 						),
 					),
 					array(
-						'id' => 'shop_domain',
+						'id'    => 'shop_domain',
 						'label' => 'Shop Domain',
-						'type' => 'text',
-						'args' => array(
-							'description' => 'Live site domain. (e.g. website.com.au)'
+						'type'  => 'text',
+						'args'  => array(
+							'description' => 'Live site domain. (e.g. website.com.au)',
 						),
 					),
-				)
+				),
 			),
 		);
 
 		if ( $this->is_typesense_connected() ) {
 			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'show_free_shipping_banner',
+				'id'    => 'show_free_shipping_banner',
 				'label' => 'Show free shipping banner',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to show shipping banner dynamically based on nearest free shipping rate.'
+				'type'  => 'checkbox',
+				'args'  => array(
+					'description' => 'Check this to show shipping banner dynamically based on nearest free shipping rate.',
 				),
 			);
 
 			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'show_free_shipping_minicart_component',
+				'id'    => 'show_free_shipping_minicart_component',
 				'label' => 'Show free shipping minicart component',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to show shipping minicart component dynamically based on nearest free shipping rate.'
+				'type'  => 'checkbox',
+				'args'  => array(
+					'description' => 'Check this to show shipping minicart component dynamically based on nearest free shipping rate.',
 				),
 			);
 
 			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'show_variant_as_separate_product_cards',
+				'id'    => 'show_variant_as_separate_product_cards',
 				'label' => 'Display separate variant product cards',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to show variant as product cards in catalog pages or in any product list.'
+				'type'  => 'checkbox',
+				'args'  => array(
+					'description' => 'Check this to show variant as product cards in catalog pages or in any product list.',
 				),
 			);
 
 			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'font_family',
+				'id'    => 'font_family',
 				'label' => 'Font Family',
-				'type' => 'select',
-				'args' => array(
-					'options' => $font_families,
+				'type'  => 'select',
+				'args'  => array(
+					'options'     => $font_families,
 					'description' => 'Select the font family for your frontend pages',
 				),
 			);
 
 			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'enable_geo_restrictions',
+				'id'    => 'enable_geo_restrictions',
 				'label' => 'Enable Geo Restrictions',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to enable geo restrictions.'
+				'type'  => 'checkbox',
+				'args'  => array(
+					'description' => 'Check this to enable geo restrictions.',
 				),
 			);
 
 			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'enable_override_best_seller',
+				'id'    => 'enable_override_best_seller',
 				'label' => 'Override Best Seller Functionality',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to override the best seller products functionality.'
+				'type'  => 'checkbox',
+				'args'  => array(
+					'description' => 'Check this to override the best seller products functionality.',
 				),
 			);
 		}
-		;
 
 		return apply_filters( 'blazecommerce/settings/general/fields', $fields );
 	}
@@ -322,12 +326,12 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner'] = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
-		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner']              = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component']  = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
-		$additional_data['enable_geo_restrictions'] = json_encode( $this->get_option( 'enable_geo_restrictions' ) == 1 ?: false );
-		$additional_data['enable_override_best_seller'] = json_encode( $this->get_option( 'enable_override_best_seller' ) == 1 ?: false );
-		$additional_data['font_family'] = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
+		$additional_data['enable_geo_restrictions']                = json_encode( $this->get_option( 'enable_geo_restrictions' ) == 1 ?: false );
+		$additional_data['enable_override_best_seller']            = json_encode( $this->get_option( 'enable_override_best_seller' ) == 1 ?: false );
+		$additional_data['font_family']                            = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
 
 		return $additional_data;
 	}

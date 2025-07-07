@@ -31,15 +31,31 @@ class AdvancedCustomFields {
 	}
 
 	public function set_fields( $fields ) {
-		$fields[] = [ 'name' => 'metaData.acf', 'type' => 'object[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.acf.field_name', 'type' => 'string', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.acf.field_value', 'type' => 'string', 'optional' => true ];
+		$fields[] = array(
+			'name'     => 'metaData.acf',
+			'type'     => 'object[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.acf.field_name',
+			'type'     => 'string',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.acf.field_value',
+			'type'     => 'string',
+			'optional' => true,
+		);
 
 		return $fields;
 	}
 
 	public function set_page_fields( $fields ) {
-		$fields[] = [ 'name' => 'metaData.acf', 'type' => 'auto', 'optional' => true ];
+		$fields[] = array(
+			'name'     => 'metaData.acf',
+			'type'     => 'auto',
+			'optional' => true,
+		);
 
 		return $fields;
 	}
@@ -48,21 +64,22 @@ class AdvancedCustomFields {
 		if ( ! function_exists( 'acf_get_field_groups' ) ) {
 			return null;
 		}
-		$field_groups = acf_get_field_groups( [ 
-			'post_id' => $object_id
-		] );
+		$field_groups = acf_get_field_groups(
+			array(
+				'post_id' => $object_id,
+			)
+		);
 
-		$fields = [];
+		$fields = array();
 
 		foreach ( $field_groups as $field_group ) {
 			$fields = array_merge( $fields, acf_get_fields( $field_group['key'] ) );
 		}
 
-		$field_values = [];
+		$field_values = array();
 		foreach ( $fields as $field ) {
 			$field_values[ $field['name'] ] = get_field( $field['name'], $object_id );
 		}
-
 
 		return $field_values;
 	}
@@ -88,6 +105,7 @@ class AdvancedCustomFields {
 
 	/**
 	 * Sync ACF options page data to Typesense
+	 *
 	 * @param array $document
 	 * @return array
 	 */
@@ -95,13 +113,13 @@ class AdvancedCustomFields {
 		if ( function_exists( 'get_field' ) ) {
 
 			$theme_options = array(
-				'product_tabs' => get_field( 'product_tabs', 'option' ),
-				'shipping_informations' => get_field( 'shipping_informations', 'option' )
+				'product_tabs'          => get_field( 'product_tabs', 'option' ),
+				'shipping_informations' => get_field( 'shipping_informations', 'option' ),
 			);
 
 			$document[] = array(
-				'name' => 'acf_options',
-				'value' => (string) json_encode( $theme_options ),
+				'name'       => 'acf_options',
+				'value'      => (string) json_encode( $theme_options ),
 				'updated_at' => time(),
 			);
 

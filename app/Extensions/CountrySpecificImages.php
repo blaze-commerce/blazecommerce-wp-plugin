@@ -46,11 +46,11 @@ class CountrySpecificImages {
 		// Only add setting if Aelia Currency Switcher is active
 		if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'woocommerce-aelia-currencyswitcher/woocommerce-aelia-currencyswitcher.php' ) ) {
 			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'enable_country_specific_images',
+				'id'    => 'enable_country_specific_images',
 				'label' => 'Enable Country-Specific Product Images',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to enable setting different primary images for different countries using Aelia Currency Switcher regions.'
+				'type'  => 'checkbox',
+				'args'  => array(
+					'description' => 'Check this to enable setting different primary images for different countries using Aelia Currency Switcher regions.',
 				),
 			);
 		}
@@ -62,7 +62,7 @@ class CountrySpecificImages {
 	 * Add country-specific images info to additional site info
 	 */
 	public function add_country_images_site_info( $additional_data ) {
-		$general_settings = bw_get_general_settings();
+		$general_settings                                  = bw_get_general_settings();
 		$additional_data['enable_country_specific_images'] = json_encode( ! empty( $general_settings['enable_country_specific_images'] ) );
 
 		return $additional_data;
@@ -95,7 +95,7 @@ class CountrySpecificImages {
 		}
 
 		$currency_mappings = $aelia_options['currency_countries_mappings'];
-		$all_countries = \WC()->countries->get_countries();
+		$all_countries     = \WC()->countries->get_countries();
 
 		foreach ( $currency_mappings as $currency => $mapping ) {
 			if ( isset( $mapping['countries'] ) && is_array( $mapping['countries'] ) ) {
@@ -149,12 +149,12 @@ class CountrySpecificImages {
 		echo '<p><strong>Set different primary images for different countries:</strong></p>';
 
 		foreach ( $countries as $country_code => $country_name ) {
-			$image_id = isset( $country_images[ $country_code ] ) ? $country_images[ $country_code ] : '';
-			$image_url = '';
+			$image_id    = isset( $country_images[ $country_code ] ) ? $country_images[ $country_code ] : '';
+			$image_url   = '';
 			$image_title = 'Select Image';
 
 			if ( $image_id ) {
-				$image_url = wp_get_attachment_image_url( $image_id, 'thumbnail' );
+				$image_url  = wp_get_attachment_image_url( $image_id, 'thumbnail' );
 				$attachment = get_post( $image_id );
 				if ( $attachment ) {
 					$image_title = $attachment->post_title;
@@ -254,13 +254,13 @@ class CountrySpecificImages {
 	public function get_country_specific_thumbnail( $thumbnail, $product ) {
 		// Get current country from Aelia Currency Switcher
 		$current_country = $this->get_current_country();
-		
+
 		if ( ! $current_country ) {
 			return $thumbnail; // Return default thumbnail
 		}
 
 		// Get country-specific images for this product
-		$product_id = $product->get_id();
+		$product_id     = $product->get_id();
 		$country_images = get_post_meta( $product_id, '_blaze_country_images', true );
 
 		if ( ! is_array( $country_images ) || ! isset( $country_images[ $current_country ] ) ) {
@@ -273,9 +273,9 @@ class CountrySpecificImages {
 		}
 
 		// Get the country-specific image data
-		$attachment = get_post( $country_image_id );
+		$attachment     = get_post( $country_image_id );
 		$image_alt_text = get_post_meta( $country_image_id, '_wp_attachment_image_alt', true );
-		$image_src = wp_get_attachment_url( $country_image_id );
+		$image_src      = wp_get_attachment_url( $country_image_id );
 
 		if ( ! $image_src ) {
 			return $thumbnail; // Return default thumbnail if image not found
@@ -284,10 +284,10 @@ class CountrySpecificImages {
 		$attachment_title = ( $attachment && ! empty( $attachment->post_title ) ) ? $attachment->post_title : '';
 
 		return array(
-			'id' => $country_image_id,
-			'title' => $attachment_title,
+			'id'      => $country_image_id,
+			'title'   => $attachment_title,
 			'altText' => $image_alt_text ? $image_alt_text : $attachment_title,
-			'src' => $image_src,
+			'src'     => $image_src,
 		);
 	}
 
@@ -301,7 +301,7 @@ class CountrySpecificImages {
 		// Check if we have a selected currency and can map it to country
 		if ( isset( $_COOKIE['aelia_cs_selected_currency'] ) ) {
 			$selected_currency = sanitize_text_field( $_COOKIE['aelia_cs_selected_currency'] );
-			$country = $this->get_country_from_currency( $selected_currency );
+			$country           = $this->get_country_from_currency( $selected_currency );
 		}
 
 		// Fallback to WooCommerce customer country

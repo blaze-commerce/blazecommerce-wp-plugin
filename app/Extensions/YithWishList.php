@@ -22,20 +22,18 @@ class YithWishList {
 		if ( function_exists( 'YITH_WCWL' ) ) {
 			self::$session_header = apply_filters( 'graphql_yith_wcwl_session_http_header', 'yith-wcwl-session' );
 
-			add_action( 'graphql_register_types', [ $this, 'register_types' ] );
+			add_action( 'graphql_register_types', array( $this, 'register_types' ) );
 
-			add_filter( 'graphql_response_headers_to_send', [ $this, 'add_session_header_to_expose_headers' ] );
-			add_filter( 'graphql_access_control_allow_headers', [ $this, 'add_session_header_to_allow_headers' ] );
-
+			add_filter( 'graphql_response_headers_to_send', array( $this, 'add_session_header_to_expose_headers' ) );
+			add_filter( 'graphql_access_control_allow_headers', array( $this, 'add_session_header_to_allow_headers' ) );
 
 			add_filter(
 				'graphql_response_headers_to_send',
-				[ $this, 'response_headers' ]
+				array( $this, 'response_headers' )
 			);
 
-			add_action( 'graphql_process_http_request', [ $this, 'http_request' ] );
+			add_action( 'graphql_process_http_request', array( $this, 'http_request' ) );
 		}
-
 	}
 
 	public function http_request() {
@@ -43,12 +41,12 @@ class YithWishList {
 		if ( ! empty( $all_headers['yith-wcwl-session'] ) ) {
 			$yith_session = json_decode( $all_headers['yith-wcwl-session'], true );
 
-			$cookie_value = [ 
-				'session_id' => $yith_session['session_id'],
+			$cookie_value = array(
+				'session_id'         => $yith_session['session_id'],
 				'session_expiration' => $yith_session['session_expiration'],
-				'session_expiring' => $yith_session['session_expiring'],
-				'cookie_hash' => $yith_session['cookie_hash'],
-			];
+				'session_expiring'   => $yith_session['session_expiring'],
+				'cookie_hash'        => $yith_session['cookie_hash'],
+			);
 
 			foreach ( $_COOKIE as $name => $value ) {
 				if ( strpos( $name, 'yith_wcwl' ) === 0 ) {
@@ -101,12 +99,12 @@ class YithWishList {
 	 */
 	public function add_to_wishlist( $atts = array() ) {
 		$defaults = array(
-			'add_to_wishlist' => 0,
-			'wishlist_id' => 0,
-			'quantity' => 1,
-			'user_id' => false,
-			'dateadded' => '',
-			'wishlist_name' => '',
+			'add_to_wishlist'     => 0,
+			'wishlist_id'         => 0,
+			'quantity'            => 1,
+			'user_id'             => false,
+			'dateadded'           => '',
+			'wishlist_name'       => '',
 			'wishlist_visibility' => 0,
 		);
 
@@ -169,49 +167,46 @@ class YithWishList {
 		do_action( 'yith_wcwl_added_to_wishlist', $prod_id, $item->get_wishlist_id(), $item->get_user_id() );
 
 		return $wishlist;
-
 	}
 
 
 	public function add_to_wishlist_mutation() {
-		return function ($input) {
+		return function ( $input ) {
 
 			$product_id                  = $input['productId'];
 			$_REQUEST['add_to_wishlist'] = $product_id;
 			$_REQUEST['wishlist_id']     = 0;
 
-			$args = [ 
-				'add_to_wishlist' => $product_id
-			];
+			$args = array(
+				'add_to_wishlist' => $product_id,
+			);
 			try {
 				\YITH_WCWL()->add( $args );
-			} catch (\YITH_WCWL_Exception $e) {
+			} catch ( \YITH_WCWL_Exception $e ) {
 				$error = $e->getMessage();
-				return [ 
-					'added' => false,
+				return array(
+					'added'     => false,
 					'productId' => $product_id,
-					'error' => $error
-				];
-			} catch (\Exception $e) {
+					'error'     => $error,
+				);
+			} catch ( \Exception $e ) {
 				$error = $e->getMessage();
-				return [ 
-					'added' => false,
+				return array(
+					'added'     => false,
 					'productId' => $product_id,
-					'error' => $error
-				];
+					'error'     => $error,
+				);
 			}
 
-			return [ 
-				'added' => true,
+			return array(
+				'added'     => true,
 				'productId' => $product_id,
-			];
+			);
 		};
 	}
 
 	public function remove_to_wishlist_mutation() {
-		return function ($input) {
-
-
+		return function ( $input ) {
 
 			$product_id  = $input['productId'];
 			$wishlist_id = $input['wishlistId'];
@@ -219,10 +214,10 @@ class YithWishList {
 			$_REQUEST['remove_from_wishlist'] = $product_id;
 			$_REQUEST['wishlist_id']          = $wishlist_id;
 
-			return [ 
-				'added' => true,
+			return array(
+				'added'     => true,
 				'productId' => $product_id,
-			];
+			);
 		};
 	}
 
@@ -230,62 +225,61 @@ class YithWishList {
 		register_graphql_mutation(
 			'addProductToWishList',
 			array(
-				'inputFields' => [ 
-					'productId' => [ 
-						'type' => 'Int',
+				'inputFields'         => array(
+					'productId' => array(
+						'type'        => 'Int',
 						'description' => __( 'Product database ID or global ID to be added into wishlist', 'wp-graphql-woocommerce' ),
-					],
-				],
-				'outputFields' => [ 
-					'added' => [ 
-						'type' => 'Boolean',
+					),
+				),
+				'outputFields'        => array(
+					'added'     => array(
+						'type'        => 'Boolean',
 						'description' => __( 'True if the product is removed, false otherwise', 'headless-cms' ),
-					],
-					'productId' => [ 
-						'type' => 'Integer',
+					),
+					'productId' => array(
+						'type'        => 'Integer',
 						'description' => __( 'The Product id that was added', 'headless-cms' ),
-					],
+					),
 					// 'wishlistProductIds' => [
-					// 	'type' => ['list_of' => 'Integer'],
-					// 	'description' => __('The Product ids in the wishlist', 'headless-cms'),
+					// 'type' => ['list_of' => 'Integer'],
+					// 'description' => __('The Product ids in the wishlist', 'headless-cms'),
 					// ],
-					'error' => [ 
-						'type' => 'String',
+					'error'     => array(
+						'type'        => 'String',
 						'description' => __( 'Description of the error', 'headless-cms' ),
-					],
-				],
+					),
+				),
 				'mutateAndGetPayload' => $this->add_to_wishlist_mutation(),
 			)
 		);
 
-
 		register_graphql_mutation(
 			'removeProductToWishList',
 			array(
-				'inputFields' => [ 
-					'productId' => [ 
-						'type' => 'Int',
+				'inputFields'         => array(
+					'productId'  => array(
+						'type'        => 'Int',
 						'description' => __( 'Product database ID or global ID to be added into wishlist', 'wp-graphql-woocommerce' ),
-					],
-					'wishlistId' => [ 
-						'type' => 'Int',
+					),
+					'wishlistId' => array(
+						'type'        => 'Int',
 						'description' => __( 'This is the database Id of the wishlist item', 'wp-graphql-woocommerce' ),
-					],
-				],
-				'outputFields' => [ 
-					'removed' => [ 
-						'type' => 'Boolean',
+					),
+				),
+				'outputFields'        => array(
+					'removed'   => array(
+						'type'        => 'Boolean',
 						'description' => __( 'True if the product is removed, false otherwise', 'headless-cms' ),
-					],
-					'productId' => [ 
-						'type' => 'Integer',
+					),
+					'productId' => array(
+						'type'        => 'Integer',
 						'description' => __( 'The Product id that was added', 'headless-cms' ),
-					],
-					'error' => [ 
-						'type' => 'String',
+					),
+					'error'     => array(
+						'type'        => 'String',
 						'description' => __( 'Description of the error', 'headless-cms' ),
-					],
-				],
+					),
+				),
 				'mutateAndGetPayload' => $this->remove_to_wishlist_mutation(),
 			)
 		);

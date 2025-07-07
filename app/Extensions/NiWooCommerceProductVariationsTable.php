@@ -21,16 +21,16 @@ class NiWooCommerceProductVariationsTable {
 
 	public function get_default_columns() {
 		$columns           = array();
-		$columns["sku"]    = __( "SKU" );
-		$columns["custom"] = __( "Custom" );
-		$columns["price"]  = __( "Price" );
+		$columns['sku']    = __( 'SKU' );
+		$columns['custom'] = __( 'Custom' );
+		$columns['price']  = __( 'Price' );
 		return $columns;
 	}
 
 	public function generate_html_table( $product ) {
 		$columns       = array();
 		$this->options = get_option( 'nipv_setting_option' );
-		$columns       = isset( $this->options["nipv_setting_option"] ) ? $this->options["nipv_setting_option"] : array();
+		$columns       = isset( $this->options['nipv_setting_option'] ) ? $this->options['nipv_setting_option'] : array();
 
 		$has_color         = false;
 		$output            = '';
@@ -46,8 +46,6 @@ class NiWooCommerceProductVariationsTable {
 		if ( get_field( 'show_message', $product->get_id() ) ) {
 			$show_message = get_field( 'show_message', $product->get_id() );
 		}
-
-
 
 		if ( ! $product->has_child() ) {
 			return '';
@@ -72,7 +70,7 @@ class NiWooCommerceProductVariationsTable {
 			}
 		}
 
-		//ksort($sort);
+		// ksort($sort);
 		$true = array();
 		foreach ( $sort as $ss ) {
 			foreach ( $ss as $s ) {
@@ -90,63 +88,65 @@ class NiWooCommerceProductVariationsTable {
 				<thead>
 					<tr>
 						<?php foreach ( $columns as $key => $value ) : ?>
-							<?php switch ( $key ) {
-								case "image":
-									$columns_count++;
+							<?php
+							switch ( $key ) {
+								case 'image':
+									++$columns_count;
 									?>
 									<th data-sorter="false" style="width:5%"><?php echo $value; ?></th>
 									<?php
 									break;
-								case "variation":
-									$columns_count++;
+								case 'variation':
+									++$columns_count;
 									?>
 									<th><?php echo $value; ?></th>
 									<?php
 									break;
-								case "sku":
-									$columns_count++;
+								case 'sku':
+									++$columns_count;
 									?>
 									<th><?php echo $value; ?></th>
 									<?php
 									break;
-								case "price":
-									$columns_count++;
+								case 'price':
+									++$columns_count;
 									?>
 									<th class="{sorter: 'digit'}"><?php echo $value; ?></th>
 									<?php
 									break;
-								case "stock_status":
-									$columns_count++;
+								case 'stock_status':
+									++$columns_count;
 									?>
 									<th><?php echo $value; ?></th>
 									<?php
 									break;
-								case "stock_quantity":
-									$columns_count++;
+								case 'stock_quantity':
+									++$columns_count;
 									?>
 									<th class="{sorter: 'digit'}"><?php echo $value; ?></th>
 									<?php
 									break;
-								case "variation_description":
-									$columns_count++;
+								case 'variation_description':
+									++$columns_count;
 									?>
 									<th><?php echo $value; ?></th>
 									<?php
 									break;
-								case "custom":
+								case 'custom':
 									if ( ! empty( $custom_headers ) ) :
 										foreach ( $custom_headers as $ch ) :
-											$columns_count++;
-											if ( strtolower( $ch["header"] ) == 'color' ) {
+											++$columns_count;
+											if ( strtolower( $ch['header'] ) == 'color' ) {
 												$has_color = true;
 											}
 											?>
-											<th><?php echo $ch["header"]; ?></th>
+											<th><?php echo $ch['header']; ?></th>
 											<?php
 										endforeach;
 									endif;
 									break;
-							} ?>
+							}
+							?>
 
 						<?php endforeach; ?>
 					</tr>
@@ -164,8 +164,9 @@ class NiWooCommerceProductVariationsTable {
 							$product_custom = get_field( 'variation_data', $product_id );
 						}
 
-						if ( ! $product_variation->variation_is_visible() )
+						if ( ! $product_variation->variation_is_visible() ) {
 							continue;
+						}
 
 						// get a list of all attributes key/value pairs (aside from color) and see if it matches any existing products
 						$all_attributes_arr        = array();
@@ -201,7 +202,7 @@ class NiWooCommerceProductVariationsTable {
 
 						if ( ! in_array( $attributes_sans_color_str, $variation_all_attributes_arr ) ) :
 							$variation_all_attributes_arr[] = $attributes_sans_color_str;
-							$row_classes .= ' show-row';
+							$row_classes                   .= ' show-row';
 						else :
 							$row_classes .= ' hide-row';
 						endif;
@@ -213,7 +214,7 @@ class NiWooCommerceProductVariationsTable {
 							<?php
 							foreach ( $columns as $k => $v ) {
 								switch ( $k ) {
-									case "image":
+									case 'image':
 										?>
 										<td>
 											<?php echo $product_variation->get_image(); ?>
@@ -221,82 +222,93 @@ class NiWooCommerceProductVariationsTable {
 										<?php
 										break;
 
-									case "custom":
+									case 'custom':
 										if ( ! empty( $product_custom ) ) :
 											foreach ( $product_custom as $pc ) :
 												?>
-												<td><?php echo $pc["data_entry"]; ?></td>
+												<td><?php echo $pc['data_entry']; ?></td>
 												<?php
 											endforeach;
 
 											if ( $has_color ) :
-												//show color variation ?>
-												<?php foreach ( $attributes as $attribute_name => $options ) :
-													if ( $attribute_name == 'pa_color' ) : ?>
+												// show color variation
+												?>
+												<?php
+												foreach ( $attributes as $attribute_name => $options ) :
+													if ( $attribute_name == 'pa_color' ) :
+														?>
 														<td class="color-select">
 															<select name="attribute_pa_color" data-attribute_name="attribute_pa_color">
-																<?php foreach ( $options as $option ) {
+																<?php
+																foreach ( $options as $option ) {
 																	if ( $fc == '' ) {
 																		$fc = $option;
 																	}
 																	$option_term = get_term_by( 'slug', $option, 'pa_color' );
 																	echo '<option value="' . esc_attr( $option ) . '">' . $option_term->name . '</option>';
-																} ?>
+																}
+																?>
 															</select>
 
 
 														</td>
-													<?php endif; endforeach; ?>
+														<?php
+													endif;
+endforeach;
+												?>
 
-											<?php endif;
+												<?php
+											endif;
 										endif;
 										break;
-									case "variation":
+									case 'variation':
 										?>
 										<td>
-											<?php $all_variation = ""; ?>
-											<?php foreach ( $product_variation->get_attributes() as $key => $val ) {
+											<?php $all_variation = ''; ?>
+											<?php
+											foreach ( $product_variation->get_attributes() as $key => $val ) {
 												$val = str_replace( array( '-', '_' ), ' ', $val );
 												if ( strlen( $all_variation ) > 0 ) {
 
-													$all_variation .= " - " . ucwords( $val );
+													$all_variation .= ' - ' . ucwords( $val );
 												} else {
 													$all_variation .= ucwords( $val );
 												}
-											} ?>
+											}
+											?>
 											<?php echo $all_variation; ?>
 										</td>
 										<?php
 										break;
-									case "sku":
+									case 'sku':
 										?>
 										<td class="vt-sku" data-sku="<?php echo $product_variation->get_sku(); ?>">
 											<?php echo $product_variation->get_sku(); ?>
 										</td>
 										<?php
 										break;
-									case "price":
+									case 'price':
 										?>
 										<td style="text-align:right">
 											<?php echo $product_variation->get_price_html(); ?>
 										</td>
 										<?php
 										break;
-									case "color":
+									case 'color':
 										?>
 										<td style="text-align:right">
 											<?php echo 'color'; ?>
 										</td>
 										<?php
 										break;
-									case "stock_status":
+									case 'stock_status':
 										?>
 										<td>
-											<?php echo $product_variation->get_stock_status() ?>
+											<?php echo $product_variation->get_stock_status(); ?>
 										</td>
 										<?php
 										break;
-									case "stock_quantity":
+									case 'stock_quantity':
 										?>
 										<td style="text-align:right">
 											<?php
@@ -305,7 +317,7 @@ class NiWooCommerceProductVariationsTable {
 										</td>
 										<?php
 										break;
-									case "variation_description":
+									case 'variation_description':
 										?>
 										<td>
 											<?php
@@ -320,8 +332,10 @@ class NiWooCommerceProductVariationsTable {
 							?>
 						</tr>
 
-						<?php if ( ! in_array( $attributes_sans_color_str, $displayed_cart_row ) ) :
-							$displayed_cart_row[] = $attributes_sans_color_str; ?>
+						<?php
+						if ( ! in_array( $attributes_sans_color_str, $displayed_cart_row ) ) :
+							$displayed_cart_row[] = $attributes_sans_color_str;
+							?>
 							<tr class="add-to-cart-row" data-shared-atts="<?php echo $attributes_sans_color_str; ?>">
 								<td colspan="<?php echo $columns_count; ?>">
 								</td>
@@ -332,7 +346,6 @@ class NiWooCommerceProductVariationsTable {
 			</table>
 		</div>
 		<?php
-
 	}
 	public function get_variation_table( $product ) {
 		if ( class_exists( 'Ni_wooCommerce_After_Single_Product_Summary' ) ) {

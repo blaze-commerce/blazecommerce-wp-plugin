@@ -28,26 +28,83 @@ class WoocommerceGiftCards {
 
 	/**
 	 * Set collection fields for gift card products
+	 *
 	 * @param array $fields
 	 * @return array
 	 */
 	public function set_fields( $fields ) {
-		$fields[] = array( 'name' => 'metaData.giftCard', 'type' => 'object', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.allowCustomAmount', 'type' => 'bool', 'optional' => true );
+		$fields[] = array(
+			'name'     => 'metaData.giftCard',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.allowCustomAmount',
+			'type'     => 'bool',
+			'optional' => true,
+		);
 
-		$fields[] = array( 'name' => 'metaData.giftCard.min', 'type' => 'object', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.min.USD', 'type' => 'float', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.min.NZD', 'type' => 'float', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.min.AUD', 'type' => 'float', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.min.CAD', 'type' => 'float', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.min.GBP', 'type' => 'float', 'optional' => true );
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.min',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.min.USD',
+			'type'     => 'float',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.min.NZD',
+			'type'     => 'float',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.min.AUD',
+			'type'     => 'float',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.min.CAD',
+			'type'     => 'float',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.min.GBP',
+			'type'     => 'float',
+			'optional' => true,
+		);
 
-		$fields[] = array( 'name' => 'metaData.giftCard.max', 'type' => 'object', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.max.USD', 'type' => 'float', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.max.NZD', 'type' => 'float', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.max.AUD', 'type' => 'float', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.max.CAD', 'type' => 'float', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.giftCard.max.GBP', 'type' => 'float', 'optional' => true );
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.max',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.max.USD',
+			'type'     => 'float',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.max.NZD',
+			'type'     => 'float',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.max.AUD',
+			'type'     => 'float',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.max.CAD',
+			'type'     => 'float',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.giftCard.max.GBP',
+			'type'     => 'float',
+			'optional' => true,
+		);
 
 		return $fields;
 	}
@@ -58,7 +115,7 @@ class WoocommerceGiftCards {
 		}
 
 		if ( $email_footer_text = get_option( 'woocommerce_email_footer_text' ) ) {
-			$email_footer_text = apply_filters( 'woocommerce_email_footer_text', $email_footer_text );
+			$email_footer_text                        = apply_filters( 'woocommerce_email_footer_text', $email_footer_text );
 			$additional_settings['email_footer_text'] = wpautop( $email_footer_text );
 		}
 
@@ -75,7 +132,6 @@ class WoocommerceGiftCards {
 		}
 
 		return $args;
-
 	}
 
 	public function sync_gift_card_data( $product_data, $product_id, $product ) {
@@ -83,12 +139,15 @@ class WoocommerceGiftCards {
 		if ( $product_data['productType'] === 'pw-gift-card' ) {
 
 			$variation_prices = $product->get_variation_prices();
-			$currency = get_woocommerce_currency();
+			$currency         = get_woocommerce_currency();
 
 			// find the lowest price and exclude 0
-			$prices = array_filter( $variation_prices['price'], function ($price) {
-				return $price > 0;
-			} );
+			$prices = array_filter(
+				$variation_prices['price'],
+				function ( $price ) {
+					return $price > 0;
+				}
+			);
 
 			$product_price = min( $prices );
 
@@ -106,14 +165,14 @@ class WoocommerceGiftCards {
 
 			// fallback if the aelia currency switcher is disabled
 			if ( ! is_array( $price ) || ! array_key_exists( $currency, $price ) ) {
-				$price = [
-					$currency => Woocommerce::format_price( $price )
-				];
+				$price = array(
+					$currency => Woocommerce::format_price( $price ),
+				);
 			}
 
-			$product_data['price'] = $price;
+			$product_data['price']        = $price;
 			$product_data['regularPrice'] = $price;
-			$product_data['salePrice'] = $price;
+			$product_data['salePrice']    = $price;
 
 		}
 
@@ -122,8 +181,9 @@ class WoocommerceGiftCards {
 
 	/**
 	 * Set metadata for gift card products
-	 * @param array $product_data
-	 * @param integer $product_id
+	 *
+	 * @param array       $product_data
+	 * @param integer     $product_id
 	 * @param \WC_Product $product
 	 * @return array
 	 */
@@ -139,9 +199,12 @@ class WoocommerceGiftCards {
 				$min_price = Woocommerce::format_price( get_post_meta( $product_id, '_pwgc_custom_amount_min', true ) );
 				$max_price = Woocommerce::format_price( get_post_meta( $product_id, '_pwgc_custom_amount_max', true ) );
 			} else {
-				$variation_prices = array_filter( $product->get_variation_prices(), function ($price) {
-					return $price > 0;
-				} );
+				$variation_prices = array_filter(
+					$product->get_variation_prices(),
+					function ( $price ) {
+						return $price > 0;
+					}
+				);
 
 				$min_price = Woocommerce::format_price( min( $variation_prices['price'] ) );
 				$max_price = Woocommerce::format_price( max( $variation_prices['price'] ) );
@@ -149,15 +212,15 @@ class WoocommerceGiftCards {
 
 			// later we need to check if include tax is enabled or multicurrency is enabled
 
-			$product_data['metaData']['giftCard'] = [
+			$product_data['metaData']['giftCard'] = array(
 				'allowCustomAmount' => $allowed_custom_amounts,
-				'min' => [
-					$currency => $min_price
-				],
-				'max' => [
-					$currency => $max_price
-				],
-			];
+				'min'               => array(
+					$currency => $min_price,
+				),
+				'max'               => array(
+					$currency => $max_price,
+				),
+			);
 		}
 
 		return $product_data;

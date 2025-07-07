@@ -19,11 +19,11 @@ class Pinterest {
 
 	public function register_settings( $fields ) {
 		$fields['wooless_general_settings_section']['options'][] = array(
-			'id' => 'show_share_to_pinterest_button',
+			'id'    => 'show_share_to_pinterest_button',
 			'label' => 'Enable Pinterest Share',
-			'type' => 'checkbox',
-			'args' => array(
-				'description' => 'Check this to show pinterest share button on the product cards image.'
+			'type'  => 'checkbox',
+			'args'  => array(
+				'description' => 'Check this to show pinterest share button on the product cards image.',
 			),
 		);
 
@@ -31,7 +31,7 @@ class Pinterest {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$show_share_to_pinterest_button = bw_get_general_settings( 'show_share_to_pinterest_button');
+		$show_share_to_pinterest_button                    = bw_get_general_settings( 'show_share_to_pinterest_button' );
 		$additional_data['show_share_to_pinterest_button'] = json_encode( $show_share_to_pinterest_button == 1 ?: false );
 
 		return $additional_data;

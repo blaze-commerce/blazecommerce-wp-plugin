@@ -24,10 +24,10 @@ class Cli extends WP_CLI_Command {
 		$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
 		if ( $use_aliases ) {
 			$target_collection = $collection->get_inactive_collection_name();
-			WP_CLI::line( "Target collection: " . $target_collection );
+			WP_CLI::line( 'Target collection: ' . $target_collection );
 		} else {
 			$target_collection = $collection->collection_name();
-			WP_CLI::line( "Target collection: " . $target_collection );
+			WP_CLI::line( 'Target collection: ' . $target_collection );
 		}
 		return $target_collection;
 	}
@@ -36,46 +36,46 @@ class Cli extends WP_CLI_Command {
 	 * Complete sync operation with standardized error handling and success messages
 	 *
 	 * @param object $collection Collection instance
-	 * @param array $options Optional parameters to pass to the sync method
+	 * @param array  $options Optional parameters to pass to the sync method
 	 * @return void
 	 */
 	private function complete_collection_sync( $collection, $options = array() ) {
 		try {
 			$sync_result = $collection->complete_collection_sync( $options );
 			if ( $sync_result ) {
-				WP_CLI::success( "Alias updated successfully. New collection: " . $sync_result['new_collection'] );
+				WP_CLI::success( 'Alias updated successfully. New collection: ' . $sync_result['new_collection'] );
 				if ( ! empty( $sync_result['deleted_collections'] ) ) {
-					WP_CLI::success( "Cleaned up old collections: " . implode( ', ', $sync_result['deleted_collections'] ) );
+					WP_CLI::success( 'Cleaned up old collections: ' . implode( ', ', $sync_result['deleted_collections'] ) );
 				}
 			}
-		} catch (\Exception $e) {
-			WP_CLI::warning( "Failed to complete sync: " . $e->getMessage() );
+		} catch ( \Exception $e ) {
+			WP_CLI::warning( 'Failed to complete sync: ' . $e->getMessage() );
 		}
 	}
 
 	/**
 	 * Display standardized sync completion statistics
 	 *
-	 * @param int $start_time Start time in microtime
-	 * @param int $total_imports Total number of items processed
-	 * @param int $successful_imports Number of successfully imported items
-	 * @param int $page_count Number of batches processed (optional)
+	 * @param int    $start_time Start time in microtime
+	 * @param int    $total_imports Total number of items processed
+	 * @param int    $successful_imports Number of successfully imported items
+	 * @param int    $page_count Number of batches processed (optional)
 	 * @param string $item_type Type of items synced (e.g., 'products', 'pages')
 	 * @return void
 	 */
 	private function display_sync_stats( $start_time, $total_imports, $successful_imports, $page_count = null, $item_type = 'items' ) {
 		if ( $page_count !== null ) {
-			WP_CLI::success( "Total batch imported: " . $page_count );
+			WP_CLI::success( 'Total batch imported: ' . $page_count );
 		}
-		WP_CLI::success( "Total import: " . $total_imports );
-		WP_CLI::success( "Successful import: " . $successful_imports );
+		WP_CLI::success( 'Total import: ' . $total_imports );
+		WP_CLI::success( 'Successful import: ' . $successful_imports );
 
 		// End tracking time
 		$end_time       = microtime( true );
 		$execution_time = $end_time - $start_time;
 		// Convert execution time to hours, minutes, seconds
-		$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-		WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+		$formatted_time = gmdate( 'H:i:s', (int) $execution_time );
+		WP_CLI::success( 'Total time spent: ' . $formatted_time . ' (hh:mm:ss)' );
 	}
 
 	/**
@@ -105,7 +105,7 @@ class Cli extends WP_CLI_Command {
 		$should_sync = apply_filters( 'blazecommerce/settings/sync/products', true );
 
 		if ( isset( $assoc_args['all'] ) ) {
-			WP_CLI::line( "Syncing all products in batches..." );
+			WP_CLI::line( 'Syncing all products in batches...' );
 
 			// Display the collection name we'll be syncing to
 			$product_collection = Product::get_instance();
@@ -123,7 +123,7 @@ class Cli extends WP_CLI_Command {
 			$iteration_count = 0;
 
 			do {
-				$iteration_count++;
+				++$iteration_count;
 
 				// Safety check to prevent infinite loops
 				if ( $iteration_count > $max_iterations ) {
@@ -151,23 +151,22 @@ class Cli extends WP_CLI_Command {
 					if ( function_exists( 'gc_collect_cycles' ) ) {
 						gc_collect_cycles();
 					}
-					WP_CLI::line( "Memory usage: " . size_format( memory_get_usage( true ) ) );
+					WP_CLI::line( 'Memory usage: ' . size_format( memory_get_usage( true ) ) );
 				}
 
 				$products_batch     = $product_collection->prepare_batch_data( $product_ids );
 				$successful_imports = $product_collection->import_prepared_batch( $products_batch );
 
 				$imported_products_count += count( $successful_imports ); // Increment the count of imported products
-				$total_imports += count( $products_batch ); // Increment the count of imported products
-
+				$total_imports           += count( $products_batch ); // Increment the count of imported products
 
 				WP_CLI::success( "Completed batch {$page}..." );
-				$page++; // Move to the next batch
+				++$page; // Move to the next batch
 
 			} while ( true );
 
 			// After syncing all products, sync their variations to the same collection
-			WP_CLI::line( "Syncing product variations to the same collection..." );
+			WP_CLI::line( 'Syncing product variations to the same collection...' );
 			try {
 				$this->sync_variations_to_current_collection( $product_collection );
 			} catch ( \Exception $e ) {
@@ -177,7 +176,7 @@ class Cli extends WP_CLI_Command {
 			// Complete the sync by updating alias if using new system
 			$this->complete_collection_sync( $product_collection );
 
-			WP_CLI::success( "All products and variations have been synced." );
+			WP_CLI::success( 'All products and variations have been synced.' );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_products_count, $page );
 
 			WP_CLI::halt( 0 );
@@ -187,23 +186,23 @@ class Cli extends WP_CLI_Command {
 			$start_time = microtime( true );
 			$page       = 1;
 
-			WP_CLI::line( "Syncing all product variants in batches..." );
+			WP_CLI::line( 'Syncing all product variants in batches...' );
 
 			$args = array(
-				'post_type' => 'product',
-				'post_status' => 'publish',
+				'post_type'      => 'product',
+				'post_status'    => 'publish',
 				'posts_per_page' => -1,
-				'tax_query' => array(
+				'tax_query'      => array(
 					array(
 						'taxonomy' => 'product_type',
-						'field' => 'slug',
-						'terms' => 'variable',
+						'field'    => 'slug',
+						'terms'    => 'variable',
 					),
 				),
 			);
 
 			$query         = new \WP_Query( $args );
-			$variation_ids = [];
+			$variation_ids = array();
 
 			if ( $query->have_posts() ) {
 				while ( $query->have_posts() ) {
@@ -223,19 +222,19 @@ class Cli extends WP_CLI_Command {
 					\BlazeWooless\Woocommerce::get_instance()->variation_update( $chunk );
 
 					WP_CLI::success( "Completed batch {$page}..." );
-					$page++; // Move to the next batch
+					++$page; // Move to the next batch
 				}
 
-				WP_CLI::success( "All product variants have been synced." );
-				WP_CLI::success( "Total variation prouct: " . count( $query->posts ) );
-				WP_CLI::success( "Total child variation product: " . count( $variation_ids ) );
+				WP_CLI::success( 'All product variants have been synced.' );
+				WP_CLI::success( 'Total variation prouct: ' . count( $query->posts ) );
+				WP_CLI::success( 'Total child variation product: ' . count( $variation_ids ) );
 
 				// End tracking time
 				$end_time       = microtime( true );
 				$execution_time = $end_time - $start_time;
 				// Convert execution time to hours, minutes, seconds
-				$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-				WP_CLI::success( "Total time spent: " . $formatted_time . " (hh:mm:ss)" );
+				$formatted_time = gmdate( 'H:i:s', (int) $execution_time );
+				WP_CLI::success( 'Total time spent: ' . $formatted_time . ' (hh:mm:ss)' );
 
 				WP_CLI::halt( 0 );
 			}
@@ -245,18 +244,18 @@ class Cli extends WP_CLI_Command {
 			$start_time = microtime( true );
 			$page       = 1;
 
-			WP_CLI::line( "Syncing all non-variant products in batches..." );
+			WP_CLI::line( 'Syncing all non-variant products in batches...' );
 
 			$args = array(
-				'post_type' => 'product',
-				'post_status' => 'publish',
+				'post_type'      => 'product',
+				'post_status'    => 'publish',
 				'posts_per_page' => -1,
-				'tax_query' => array(
+				'tax_query'      => array(
 					array(
 						'taxonomy' => 'product_type',
-						'field' => 'slug',
-						'terms' => array( 'variable' ),
-						'operator' => 'NOT IN'
+						'field'    => 'slug',
+						'terms'    => array( 'variable' ),
+						'operator' => 'NOT IN',
 					),
 				),
 			);
@@ -287,24 +286,24 @@ class Cli extends WP_CLI_Command {
 					$successful_imports = $product_collection->import_prepared_batch( $products_batch );
 
 					$imported_products_count += count( $successful_imports );
-					$total_imports += count( $products_batch );
+					$total_imports           += count( $products_batch );
 
 					WP_CLI::success( "Completed batch {$page}..." );
-					$page++; // Move to the next batch
+					++$page; // Move to the next batch
 				}
 
 				// Complete the sync by updating alias if using new system
 				$this->complete_collection_sync( $product_collection );
 
-				WP_CLI::success( "All non-variant products have been synced." );
-				WP_CLI::success( "Total non-variant products: " . count( $nonvariant_product_ids ) );
+				WP_CLI::success( 'All non-variant products have been synced.' );
+				WP_CLI::success( 'Total non-variant products: ' . count( $nonvariant_product_ids ) );
 				$this->display_sync_stats( $start_time, $total_imports, $imported_products_count );
 
 				WP_CLI::halt( 0 );
 			}
 		}
 
-		WP_CLI::error( "Nothing was sync" );
+		WP_CLI::error( 'Nothing was sync' );
 	}
 
 	/**
@@ -323,7 +322,7 @@ class Cli extends WP_CLI_Command {
 	 */
 	public function page_and_post( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
-			WP_CLI::line( "Syncing all pages and posts in batches..." );
+			WP_CLI::line( 'Syncing all pages and posts in batches...' );
 
 			// Display the collection name we'll be syncing to
 			$collection = Page::get_instance();
@@ -357,26 +356,24 @@ class Cli extends WP_CLI_Command {
 				$object_batch = $collection->prepare_batch_data( $ids );
 				if ( ! empty( $object_batch ) ) {
 					$successful_imports = $collection->import_prepared_batch( $object_batch );
-					$imported_count += count( $successful_imports ); // Increment the count of imported products
-					$total_imports += count( $object_batch ); // Increment the count of imported products
+					$imported_count    += count( $successful_imports ); // Increment the count of imported products
+					$total_imports     += count( $object_batch ); // Increment the count of imported products
 				}
 
-
-
 				WP_CLI::success( "Completed batch {$page}..." );
-				$page++; // Move to the next batch
+				++$page; // Move to the next batch
 
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
 			$this->complete_collection_sync( $collection );
 
-			WP_CLI::success( "Completed! All page and post have been synced." );
+			WP_CLI::success( 'Completed! All page and post have been synced.' );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
 			WP_CLI::halt( 0 );
 		}
 
-		WP_CLI::error( "Nothing was sync" );
+		WP_CLI::error( 'Nothing was sync' );
 	}
 
 
@@ -396,7 +393,7 @@ class Cli extends WP_CLI_Command {
 	 */
 	public function menu( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
-			WP_CLI::line( "Syncing all menus in batches..." );
+			WP_CLI::line( 'Syncing all menus in batches...' );
 
 			// Display the collection name we'll be syncing to
 			$collection = Menu::get_instance();
@@ -413,17 +410,17 @@ class Cli extends WP_CLI_Command {
 			$successful_imports = $collection->import_prepared_batch( $object_batch );
 
 			$imported_count += count( $successful_imports ); // Increment the count of imported products
-			$total_imports += count( $object_batch ); // Increment the count of imported products
+			$total_imports  += count( $object_batch ); // Increment the count of imported products
 
 			// Complete the sync by updating alias if using new system
 			$this->complete_collection_sync( $collection );
 
-			WP_CLI::success( "Completed! All menus have been synced." );
+			WP_CLI::success( 'Completed! All menus have been synced.' );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count );
 			WP_CLI::halt( 0 );
 		}
 
-		WP_CLI::error( "Nothing was sync" );
+		WP_CLI::error( 'Nothing was sync' );
 	}
 
 	/**
@@ -442,7 +439,7 @@ class Cli extends WP_CLI_Command {
 	 */
 	public function site_info( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
-			WP_CLI::line( "Syncing all site info in batches..." );
+			WP_CLI::line( 'Syncing all site info in batches...' );
 
 			// Display the collection name we'll be syncing to
 			$collection = SiteInfo::get_instance();
@@ -459,20 +456,20 @@ class Cli extends WP_CLI_Command {
 
 			$object_batch       = $collection->prepare_batch_data();
 			$successful_imports = $collection->import_prepared_batch( $object_batch );
-			$imported_count += count( $successful_imports ); // Increment the count of imported products
-			$total_imports += count( $object_batch ); // Increment the count of imported products
+			$imported_count    += count( $successful_imports ); // Increment the count of imported products
+			$total_imports     += count( $object_batch ); // Increment the count of imported products
 
 			// Complete the sync by updating alias if using new system
 			$this->complete_collection_sync( $collection );
 
 			$collection->after_site_info_sync();
 
-			WP_CLI::success( "Completed! All site info have been synced." );
+			WP_CLI::success( 'Completed! All site info have been synced.' );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count );
 			WP_CLI::halt( 0 );
 		}
 
-		WP_CLI::error( "Nothing was sync" );
+		WP_CLI::error( 'Nothing was sync' );
 	}
 
 
@@ -492,7 +489,7 @@ class Cli extends WP_CLI_Command {
 	 */
 	public function taxonomy( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
-			WP_CLI::line( "Syncing all taxonomies in batches..." );
+			WP_CLI::line( 'Syncing all taxonomies in batches...' );
 
 			// Display the collection name we'll be syncing to
 			$collection = Taxonomy::get_instance();
@@ -510,7 +507,7 @@ class Cli extends WP_CLI_Command {
 			$iteration_count = 0;
 
 			do {
-				$iteration_count++;
+				++$iteration_count;
 
 				// Safety check to prevent infinite loops
 				if ( $iteration_count > $max_iterations ) {
@@ -541,30 +538,29 @@ class Cli extends WP_CLI_Command {
 					if ( function_exists( 'gc_collect_cycles' ) ) {
 						gc_collect_cycles();
 					}
-					WP_CLI::line( "Memory usage: " . size_format( memory_get_usage( true ) ) );
+					WP_CLI::line( 'Memory usage: ' . size_format( memory_get_usage( true ) ) );
 				}
 
 				$object_batch       = $collection->prepare_batch_data( $term_query->terms );
 				$successful_imports = $collection->import_prepared_batch( $object_batch );
 
 				$imported_count += count( $successful_imports ); // Increment the count of imported products
-				$total_imports += count( $object_batch ); // Increment the count of imported products
-
+				$total_imports  += count( $object_batch ); // Increment the count of imported products
 
 				WP_CLI::success( "Completed batch {$page}..." );
-				$page++; // Move to the next batch
+				++$page; // Move to the next batch
 
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
 			$this->complete_collection_sync( $collection );
 
-			WP_CLI::success( "Completed! All taxonomies have been synced." );
+			WP_CLI::success( 'Completed! All taxonomies have been synced.' );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
 			WP_CLI::halt( 0 );
 		}
 
-		WP_CLI::error( "Nothing was sync" );
+		WP_CLI::error( 'Nothing was sync' );
 	}
 
 	/**
@@ -583,7 +579,7 @@ class Cli extends WP_CLI_Command {
 	 */
 	public function navigation( $args, $assoc_args ) {
 		if ( isset( $assoc_args['all'] ) ) {
-			WP_CLI::line( "Syncing all published wp_navigation posts in batches..." );
+			WP_CLI::line( 'Syncing all published wp_navigation posts in batches...' );
 
 			// Display the collection name we'll be syncing to
 			$collection = Navigation::get_instance();
@@ -617,24 +613,24 @@ class Cli extends WP_CLI_Command {
 				$object_batch = $collection->prepare_batch_data( $navigation_ids );
 				if ( ! empty( $object_batch ) ) {
 					$successful_imports = $collection->import_prepared_batch( $object_batch );
-					$imported_count += count( $successful_imports ); // Increment the count of imported items
-					$total_imports += count( $object_batch ); // Increment the count of imported items
+					$imported_count    += count( $successful_imports ); // Increment the count of imported items
+					$total_imports     += count( $object_batch ); // Increment the count of imported items
 				}
 
 				WP_CLI::success( "Completed batch {$page}..." );
-				$page++; // Move to the next batch
+				++$page; // Move to the next batch
 
 			} while ( true );
 
 			// Complete the sync by updating alias if using new system
 			$this->complete_collection_sync( $collection );
 
-			WP_CLI::success( "Completed! All published wp_navigation posts have been synced." );
+			WP_CLI::success( 'Completed! All published wp_navigation posts have been synced.' );
 			$this->display_sync_stats( $start_time, $total_imports, $imported_count, $page );
 			WP_CLI::halt( 0 );
 		}
 
-		WP_CLI::error( "Nothing was sync" );
+		WP_CLI::error( 'Nothing was sync' );
 	}
 
 	/**
@@ -671,52 +667,52 @@ class Cli extends WP_CLI_Command {
 		$alias_manager = new \BlazeWooless\Collections\CollectionAliasManager();
 
 		if ( isset( $assoc_args['list'] ) ) {
-			WP_CLI::line( "Listing all Typesense aliases..." );
+			WP_CLI::line( 'Listing all Typesense aliases...' );
 
 			try {
 				$typesense = \BlazeWooless\TypesenseClient::get_instance();
 				$aliases   = $typesense->client()->aliases->retrieve();
 
 				if ( empty( $aliases['aliases'] ) ) {
-					WP_CLI::success( "No aliases found." );
+					WP_CLI::success( 'No aliases found.' );
 					return;
 				}
 
-				WP_CLI::line( sprintf( "%-30s %-50s", "Alias Name", "Target Collection" ) );
-				WP_CLI::line( str_repeat( "-", 80 ) );
+				WP_CLI::line( sprintf( '%-30s %-50s', 'Alias Name', 'Target Collection' ) );
+				WP_CLI::line( str_repeat( '-', 80 ) );
 
 				foreach ( $aliases['aliases'] as $alias ) {
-					WP_CLI::line( sprintf( "%-30s %-50s", $alias['name'], $alias['collection_name'] ) );
+					WP_CLI::line( sprintf( '%-30s %-50s', $alias['name'], $alias['collection_name'] ) );
 				}
 
-				WP_CLI::success( "Found " . count( $aliases['aliases'] ) . " aliases." );
-			} catch (\Exception $e) {
-				WP_CLI::error( "Failed to retrieve aliases: " . $e->getMessage() );
+				WP_CLI::success( 'Found ' . count( $aliases['aliases'] ) . ' aliases.' );
+			} catch ( \Exception $e ) {
+				WP_CLI::error( 'Failed to retrieve aliases: ' . $e->getMessage() );
 			}
 		}
 
 		if ( isset( $assoc_args['get-aliases'] ) ) {
-			WP_CLI::line( "Getting all collection alias names..." );
+			WP_CLI::line( 'Getting all collection alias names...' );
 
 			$alias_names = $alias_manager->get_all_alias_names();
 
 			if ( empty( $alias_names ) ) {
-				WP_CLI::success( "No alias names configured." );
+				WP_CLI::success( 'No alias names configured.' );
 				return;
 			}
 
-			WP_CLI::line( "Collection Alias Names:" );
-			WP_CLI::line( str_repeat( "-", 30 ) );
+			WP_CLI::line( 'Collection Alias Names:' );
+			WP_CLI::line( str_repeat( '-', 30 ) );
 
 			foreach ( $alias_names as $alias_name ) {
 				WP_CLI::line( $alias_name );
 			}
 
-			WP_CLI::success( "Found " . count( $alias_names ) . " alias names." );
+			WP_CLI::success( 'Found ' . count( $alias_names ) . ' alias names.' );
 		}
 
 		if ( isset( $assoc_args['status'] ) ) {
-			WP_CLI::line( "Checking alias status for all collection types..." );
+			WP_CLI::line( 'Checking alias status for all collection types...' );
 
 			$collection_types = array( 'product', 'taxonomy', 'page', 'menu', 'site_info', 'navigation' );
 
@@ -725,21 +721,21 @@ class Cli extends WP_CLI_Command {
 				$current_collection = $alias_manager->get_current_collection( $type );
 				$all_collections    = $alias_manager->get_all_collections_for_type( $type );
 
-				WP_CLI::line( "\n" . strtoupper( $type ) . " Collections:" );
-				WP_CLI::line( "  Alias: " . $alias_name );
-				WP_CLI::line( "  Current: " . ( $current_collection ?: 'No alias found' ) );
-				WP_CLI::line( "  All collections: " . ( empty( $all_collections ) ? 'None' : implode( ', ', $all_collections ) ) );
+				WP_CLI::line( "\n" . strtoupper( $type ) . ' Collections:' );
+				WP_CLI::line( '  Alias: ' . $alias_name );
+				WP_CLI::line( '  Current: ' . ( $current_collection ?: 'No alias found' ) );
+				WP_CLI::line( '  All collections: ' . ( empty( $all_collections ) ? 'None' : implode( ', ', $all_collections ) ) );
 
 				if ( $current_collection ) {
 					$newer = $alias_manager->get_newer_collections( $type );
 					$older = $alias_manager->get_older_collections( $type, 1 );
 
 					if ( ! empty( $newer ) ) {
-						WP_CLI::line( "  ⚠️  Newer collections (should be cleaned): " . implode( ', ', $newer ) );
+						WP_CLI::line( '  ⚠️  Newer collections (should be cleaned): ' . implode( ', ', $newer ) );
 					}
 
 					if ( ! empty( $older ) ) {
-						WP_CLI::line( "  🗑️  Old collections (can be cleaned): " . implode( ', ', $older ) );
+						WP_CLI::line( '  🗑️  Old collections (can be cleaned): ' . implode( ', ', $older ) );
 					}
 				}
 			}
@@ -747,30 +743,30 @@ class Cli extends WP_CLI_Command {
 
 		if ( isset( $assoc_args['cleanup'] ) ) {
 			$type = $assoc_args['cleanup'];
-			WP_CLI::line( "Cleaning up old collections for type: " . $type );
+			WP_CLI::line( 'Cleaning up old collections for type: ' . $type );
 
 			try {
 				$deleted = $alias_manager->cleanup_old_collections( $type, 1 );
 
 				if ( empty( $deleted ) ) {
-					WP_CLI::success( "No old collections to clean up for " . $type );
+					WP_CLI::success( 'No old collections to clean up for ' . $type );
 				} else {
-					WP_CLI::success( "Deleted old collections: " . implode( ', ', $deleted ) );
+					WP_CLI::success( 'Deleted old collections: ' . implode( ', ', $deleted ) );
 				}
-			} catch (\Exception $e) {
-				WP_CLI::error( "Failed to cleanup collections: " . $e->getMessage() );
+			} catch ( \Exception $e ) {
+				WP_CLI::error( 'Failed to cleanup collections: ' . $e->getMessage() );
 			}
 		}
 
 		if ( isset( $assoc_args['force-alias'] ) ) {
 			$type = $assoc_args['force-alias'];
-			WP_CLI::line( "Force creating alias for type: " . $type );
+			WP_CLI::line( 'Force creating alias for type: ' . $type );
 
 			try {
 				$all_collections = $alias_manager->get_all_collections_for_type( $type );
 
 				if ( empty( $all_collections ) ) {
-					WP_CLI::error( "No collections found for type: " . $type );
+					WP_CLI::error( 'No collections found for type: ' . $type );
 					return;
 				}
 
@@ -778,15 +774,15 @@ class Cli extends WP_CLI_Command {
 				$target_collection = $all_collections[0]; // Already sorted newest first
 
 				$result = $alias_manager->update_alias( $type, $target_collection );
-				WP_CLI::success( "Created alias " . $alias_manager->get_alias_name( $type ) . " pointing to " . $target_collection );
+				WP_CLI::success( 'Created alias ' . $alias_manager->get_alias_name( $type ) . ' pointing to ' . $target_collection );
 
-			} catch (\Exception $e) {
-				WP_CLI::error( "Failed to create alias: " . $e->getMessage() );
+			} catch ( \Exception $e ) {
+				WP_CLI::error( 'Failed to create alias: ' . $e->getMessage() );
 			}
 		}
 
 		if ( empty( $assoc_args ) ) {
-			WP_CLI::error( "Please specify an option. Use --help for available options." );
+			WP_CLI::error( 'Please specify an option. Use --help for available options.' );
 		}
 	}
 
@@ -809,7 +805,7 @@ class Cli extends WP_CLI_Command {
 		$alias_manager = new \BlazeWooless\Collections\CollectionAliasManager();
 
 		if ( isset( $assoc_args['clear'] ) ) {
-			WP_CLI::line( "Clearing all caches..." );
+			WP_CLI::line( 'Clearing all caches...' );
 
 			// Clear alias manager caches
 			$alias_manager->clear_all_caches();
@@ -817,32 +813,32 @@ class Cli extends WP_CLI_Command {
 			// Clear BaseCollection caches
 			\BlazeWooless\Collections\BaseCollection::clear_collection_cache();
 
-			WP_CLI::success( "All caches cleared successfully." );
+			WP_CLI::success( 'All caches cleared successfully.' );
 			return;
 		}
 
 		// Show cache statistics
-		WP_CLI::line( "Cache Statistics:" );
-		WP_CLI::line( str_repeat( "-", 40 ) );
+		WP_CLI::line( 'Cache Statistics:' );
+		WP_CLI::line( str_repeat( '-', 40 ) );
 
 		$stats = $alias_manager->get_cache_stats();
 
-		WP_CLI::line( "Alias Manager Caches:" );
-		WP_CLI::line( "  - Alias cache entries: " . $stats['alias_cache_count'] );
-		WP_CLI::line( "  - Current collection cache entries: " . $stats['current_collection_cache_count'] );
-		WP_CLI::line( "  - Alias exists cache entries: " . $stats['alias_exists_cache_count'] );
-		WP_CLI::line( "  - Cache TTL: " . $stats['cache_ttl'] . " seconds" );
+		WP_CLI::line( 'Alias Manager Caches:' );
+		WP_CLI::line( '  - Alias cache entries: ' . $stats['alias_cache_count'] );
+		WP_CLI::line( '  - Current collection cache entries: ' . $stats['current_collection_cache_count'] );
+		WP_CLI::line( '  - Alias exists cache entries: ' . $stats['alias_exists_cache_count'] );
+		WP_CLI::line( '  - Cache TTL: ' . $stats['cache_ttl'] . ' seconds' );
 
 		WP_CLI::line( "\nMemory Usage:" );
-		WP_CLI::line( "  - Current: " . size_format( memory_get_usage( true ) ) );
-		WP_CLI::line( "  - Peak: " . size_format( memory_get_peak_usage( true ) ) );
+		WP_CLI::line( '  - Current: ' . size_format( memory_get_usage( true ) ) );
+		WP_CLI::line( '  - Peak: ' . size_format( memory_get_peak_usage( true ) ) );
 
 		$total_cache_entries = $stats['alias_cache_count'] + $stats['current_collection_cache_count'] + $stats['alias_exists_cache_count'];
 
 		if ( $total_cache_entries > 0 ) {
-			WP_CLI::success( "Total cache entries: " . $total_cache_entries );
+			WP_CLI::success( 'Total cache entries: ' . $total_cache_entries );
 		} else {
-			WP_CLI::line( "No cache entries found." );
+			WP_CLI::line( 'No cache entries found.' );
 		}
 	}
 
@@ -866,24 +862,24 @@ class Cli extends WP_CLI_Command {
 		}
 
 		$start_time = microtime( true );
-		$page = 1;
+		$page       = 1;
 
 		try {
 			// Query for all variable products
 			$args = array(
-				'post_type' => 'product',
-				'post_status' => 'publish',
+				'post_type'      => 'product',
+				'post_status'    => 'publish',
 				'posts_per_page' => -1,
-				'tax_query' => array(
+				'tax_query'      => array(
 					array(
 						'taxonomy' => 'product_type',
-						'field' => 'slug',
-						'terms' => 'variable',
+						'field'    => 'slug',
+						'terms'    => 'variable',
 					),
 				),
 			);
 
-			$query = new \WP_Query( $args );
+			$query         = new \WP_Query( $args );
 			$variation_ids = array();
 
 			// Check for WP_Query errors
@@ -913,7 +909,7 @@ class Cli extends WP_CLI_Command {
 				}
 
 				if ( ! empty( $variation_ids ) ) {
-					WP_CLI::line( "Found " . count( $variation_ids ) . " variations to sync..." );
+					WP_CLI::line( 'Found ' . count( $variation_ids ) . ' variations to sync...' );
 
 					// Process variations in chunks, but sync to the current collection
 					$chunks = array_chunk( $variation_ids, 50 );
@@ -924,24 +920,23 @@ class Cli extends WP_CLI_Command {
 							$this->sync_variations_to_collection( $chunk, $product_collection );
 
 							WP_CLI::success( "Completed variation batch {$page}..." );
-							$page++;
+							++$page;
 						}
 					}
 
-					WP_CLI::success( "All " . count( $variation_ids ) . " product variations synced to the same collection." );
+					WP_CLI::success( 'All ' . count( $variation_ids ) . ' product variations synced to the same collection.' );
 
 					// Display timing
-					$end_time = microtime( true );
+					$end_time       = microtime( true );
 					$execution_time = $end_time - $start_time;
-					$formatted_time = gmdate( "H:i:s", (int) $execution_time );
-					WP_CLI::line( "Variation sync time: " . $formatted_time . " (hh:mm:ss)" );
+					$formatted_time = gmdate( 'H:i:s', (int) $execution_time );
+					WP_CLI::line( 'Variation sync time: ' . $formatted_time . ' (hh:mm:ss)' );
 				} else {
-					WP_CLI::line( "No product variations found to sync." );
+					WP_CLI::line( 'No product variations found to sync.' );
 				}
 			} else {
-				WP_CLI::line( "No variable products found." );
+				WP_CLI::line( 'No variable products found.' );
 			}
-
 		} catch ( \Exception $e ) {
 			WP_CLI::warning( 'Error during variation sync: ' . $e->getMessage() );
 		} finally {
@@ -954,7 +949,7 @@ class Cli extends WP_CLI_Command {
 	 * Sync variation IDs to a specific collection instance
 	 * This is a modified version of the variation_update method that uses a specific collection
 	 *
-	 * @param array $variation_ids Array of variation IDs to sync
+	 * @param array                             $variation_ids Array of variation IDs to sync
 	 * @param \BlazeWooless\Collections\Product $product_collection The product collection instance to sync to
 	 */
 	private function sync_variations_to_collection( $variation_ids, $product_collection ) {
@@ -969,12 +964,12 @@ class Cli extends WP_CLI_Command {
 			return;
 		}
 
-		$logger = null;
+		$logger  = null;
 		$context = array( 'source' => 'wooless-variations-sync-to-collection' );
 
 		try {
-			$logger = wc_get_logger();
-			$variations_data = array();
+			$logger             = wc_get_logger();
+			$variations_data    = array();
 			$parent_product_ids = array();
 
 			foreach ( $variation_ids as $variation_id ) {
@@ -1014,9 +1009,12 @@ class Cli extends WP_CLI_Command {
 				}
 
 				// Import to the current sync collection (same as parent products)
-				$import = $sync_collection->documents->import( $variations_data, array(
-					'action' => 'upsert'
-				) );
+				$import = $sync_collection->documents->import(
+					$variations_data,
+					array(
+						'action' => 'upsert',
+					)
+				);
 
 				if ( $logger ) {
 					$logger->debug( 'Synced ' . count( $variations_data ) . ' variations to collection: ' . print_r( $import, 1 ), $context );
@@ -1045,7 +1043,6 @@ class Cli extends WP_CLI_Command {
 			} else {
 				WP_CLI::line( 'No valid variation data to sync.' );
 			}
-
 		} catch ( \Exception $e ) {
 			if ( ! $logger ) {
 				$logger = wc_get_logger();

@@ -58,17 +58,22 @@ class CategoryBanner {
 			update_term_meta( $term_id, 'blaze_commerce_category_subtitle', $_POST['blaze_commerce_category_subtitle'] );
 		}
 
-		TypesenseClient::get_instance()->taxonomy()->update( [ 
-			'id' => (string) $term_id,
-			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term_id ),
-			'updatedAt' => time(),
-		] );
+		TypesenseClient::get_instance()->taxonomy()->update(
+			array(
+				'id'        => (string) $term_id,
+				'metaData'  => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term_id ),
+				'updatedAt' => time(),
+			)
+		);
 	}
 
 	public function register_taxonomy_meta_datas_to_typesense( $meta_data, $term_id ) {
 		$subtitle = get_term_meta( $term_id, 'blaze_commerce_category_subtitle', true );
 		if ( $subtitle ) {
-			$meta_data[] = array( 'name' => 'subtitle', 'value' => $subtitle );
+			$meta_data[] = array(
+				'name'  => 'subtitle',
+				'value' => $subtitle,
+			);
 		}
 
 		return $meta_data;

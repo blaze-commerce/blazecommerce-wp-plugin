@@ -6,8 +6,8 @@ use BlazeWooless\TypesenseClient;
 
 class RegionalSettings extends BaseSettings {
 	private static $instance = null;
-	public $tab_key = 'regions';
-	public $page_label = 'Regional Settings';
+	public $tab_key          = 'regions';
+	public $page_label       = 'Regional Settings';
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -26,31 +26,30 @@ class RegionalSettings extends BaseSettings {
 
 			$fields = array(
 				array(
-					'id' => 'regions',
+					'id'    => 'regions',
 					'label' => 'Regions',
-					'type' => 'multiselect',
-					'args' => array(
-						'options' => \WC()->countries->get_countries(),
+					'type'  => 'multiselect',
+					'args'  => array(
+						'options'     => \WC()->countries->get_countries(),
 						'placeholder' => 'Select countries',
 					),
 				),
 			);
 
-
 			if ( ! empty( $regions = $this->get_option( 'regions' ) ) ) {
 				$fields[] = array(
-					'id' => 'regions_header',
+					'id'    => 'regions_header',
 					'label' => 'Map Regions',
-					'type' => 'heading',
+					'type'  => 'heading',
 				);
 
 				foreach ( $regions as $region ) {
 					$fields[] = array(
-						'id' => 'region_' . $region,
+						'id'    => 'region_' . $region,
 						'label' => $region,
-						'type' => 'multiselect',
-						'args' => array(
-							'options' => \WC()->countries->get_countries(),
+						'type'  => 'multiselect',
+						'args'  => array(
+							'options'     => \WC()->countries->get_countries(),
 							'placeholder' => 'Select countries',
 							'description' => 'Select countries you want to map to the front-end. If a country is not found it will use the next country.',
 						),
@@ -60,14 +59,14 @@ class RegionalSettings extends BaseSettings {
 
 			return $fields = array(
 				'wooless_regional_settings_section' => array(
-					'label' => 'Regional Data',
+					'label'   => 'Regional Data',
 					'options' => $fields,
 				),
 			);
 
 		}
 
-		return [];
+		return array();
 	}
 
 	public static function get_selected_regions() {
@@ -83,8 +82,8 @@ class RegionalSettings extends BaseSettings {
 		if ( count( $additional_site_info ) > 0 ) {
 			$additional_site_info['regions'] = array();
 			foreach ( $regions as $region ) {
-				$region_mappings = $this->get_option( 'region_' . $region );
-				$additional_site_info['regions'][ $region ] = $region_mappings ?? [];
+				$region_mappings                            = $this->get_option( 'region_' . $region );
+				$additional_site_info['regions'][ $region ] = $region_mappings ?? array();
 			}
 		}
 		return $additional_site_info;

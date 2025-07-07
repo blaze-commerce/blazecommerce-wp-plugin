@@ -34,7 +34,6 @@ function typesense_register_homepage_settings() {
 
 	register_setting( 'typesense_homepage_settings', 'typesense_homepage_settings', 'typesense_homepage_settings_sanitize' );
 
-
 	// Add the homepage banner settings section
 	add_settings_section(
 		'typesense_homepage_banner_settings',
@@ -100,7 +99,6 @@ function typesense_homepage_banner_settings_callback() {
 		'typesense_homepage_settings',
 		'typesense_homepage_banner_settings'
 	);
-
 }
 
 function typesense_homepage_banner_image_callback() {
@@ -345,12 +343,10 @@ add_action( 'wp_ajax_save_category_order', 'save_category_order' );
 
 function typesense_render_popular_categories_field() {
 	$popular_categories = get_option( 'typesense_homepage_settings' )['popular_categories'];
-
 }
 
 
 function typesense_homepage_settings_sanitize( $input ) {
-
 
 	if ( isset( $input['popular_categories'] ) ) {
 		$sanitized_categories = array();
@@ -360,13 +356,12 @@ function typesense_homepage_settings_sanitize( $input ) {
 			$sanitized_categories[] = array(
 				'image' => sanitize_text_field( $categories['image'][ $i ] ),
 				'title' => sanitize_text_field( $categories['title'][ $i ] ),
-				'link' => sanitize_text_field( $categories['link'][ $i ] ),
+				'link'  => sanitize_text_field( $categories['link'][ $i ] ),
 			);
 		}
 
 		$input['popular_categories'] = $sanitized_categories;
 	}
-
 
 	return $input;
 }
@@ -416,7 +411,7 @@ if ( ! class_exists( 'Blaze_Wooless_Homepage_Settings_Compatibility' ) ) {
 								$additional_settings[ $setting_name . '_' . $index ] = $json_category;
 							}
 						}
-					} else if ( ! empty( $setting_value ) ) {
+					} elseif ( ! empty( $setting_value ) ) {
 						$additional_settings[ $setting_name ] = $setting_value;
 					}
 				}
@@ -424,7 +419,6 @@ if ( ! class_exists( 'Blaze_Wooless_Homepage_Settings_Compatibility' ) ) {
 
 			return $additional_settings;
 		}
-
 	}
 
 	Blaze_Wooless_Homepage_Settings_Compatibility::get_instance();

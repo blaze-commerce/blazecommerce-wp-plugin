@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<ruleset name="WordPress Plugin Coding Standards">
+    <description>WordPress coding standards for BlazeCommerce plugin</description>
+
+    <!-- Files to check -->
+    <file>.</file>
+
+    <!-- Exclude patterns -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/tests/coverage/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/build/*</exclude-pattern>
+    <exclude-pattern>*/blocks/node_modules/*</exclude-pattern>
+    <exclude-pattern>*.min.js</exclude-pattern>
+    <exclude-pattern>*.min.css</exclude-pattern>
+
+    <!-- Use WordPress coding standards -->
+    <rule ref="WordPress">
+        <!-- Allow short array syntax -->
+        <exclude name="Generic.Arrays.DisallowShortArraySyntax" />
+        
+        <!-- Allow long array syntax if needed -->
+        <exclude name="Generic.Arrays.DisallowLongArraySyntax" />
+        
+        <!-- Skip some file naming rules for existing files -->
+        <exclude name="WordPress.Files.FileName.InvalidClassFileName" />
+        <exclude name="WordPress.Files.FileName.NotHyphenatedLowercase" />
+        
+        <!-- Skip some comment rules -->
+        <exclude name="Squiz.Commenting.FileComment.Missing" />
+        <exclude name="Squiz.Commenting.ClassComment.Missing" />
+        <exclude name="Squiz.Commenting.FunctionComment.Missing" />
+        <exclude name="Squiz.Commenting.VariableComment.Missing" />
+        
+        <!-- Skip some security rules that may not apply -->
+        <exclude name="WordPress.Security.ValidatedSanitizedInput" />
+        <exclude name="WordPress.Security.NonceVerification" />
+        
+        <!-- Skip some hooks rules -->
+        <exclude name="WordPress.NamingConventions.ValidHookName" />
+    </rule>
+
+    <!-- Show progress -->
+    <arg value="p"/>
+    
+    <!-- Show sniff codes in all reports -->
+    <arg value="s"/>
+    
+    <!-- Use colors in output -->
+    <arg name="colors"/>
+    
+    <!-- Show results with . and progress -->
+    <arg name="extensions" value="php"/>
+    
+    <!-- Enable caching for better performance -->
+    <arg name="cache" value=".phpcs-cache"/>
+    
+    <!-- Run in parallel for better performance -->
+    <arg name="parallel" value="8"/>
+</ruleset>

@@ -6,7 +6,7 @@ use BlazeWooless\Settings\RegionalSettings;
 use BlazeWooless\Woocommerce;
 
 class B2BWholesaleSuite {
-    private static $instance = null;
+	private static $instance = null;
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -16,11 +16,11 @@ class B2BWholesaleSuite {
 		return self::$instance;
 	}
 
-    public function is_plugin_active() {
+	public function is_plugin_active() {
 		return function_exists( 'is_plugin_active' ) && is_plugin_active( 'b2b-wholesale-suite/b2b-wholesale-suite.php' );
 	}
 
-    public function __construct() {
+	public function __construct() {
 		if ( $this->is_plugin_active() ) {
 			add_action( 'rest_api_init', array( $this, 'register_rest_endpoints' ) );
 			add_filter( 'blaze_commerce_taxonomy_meta_data', array( $this, 'blaze_commerce_taxonomy_meta_data' ), 10, 2 );
@@ -28,34 +28,34 @@ class B2BWholesaleSuite {
 		}
 	}
 
-    public function register_rest_endpoints() {
+	public function register_rest_endpoints() {
 		register_rest_route(
 			'wooless-wc/v1',
 			'/wholesale-price',
 			array(
-				'methods' => 'GET',
+				'methods'  => 'GET',
 				'callback' => array( $this, 'get_wholesale_price' ),
-				'args' => array(
+				'args'     => array(
 					'product_id' => array(
 						'required' => true,
 					),
 				),
 			)
 		);
-
 	}
 
-    public function get_wholesale_price( \WP_REST_Request $request ) {
+	public function get_wholesale_price( \WP_REST_Request $request ) {
 		try {
 			$product_id = $request->get_param( 'product_id' );
-			$user_id = $request->get_param( 'user_id' );
+			$user_id    = $request->get_param( 'user_id' );
 			$product    = wc_get_product( $product_id );
-            wp_set_current_user($user_id);
+			wp_set_current_user( $user_id );
 
-            // var_dump(wp_get_current_user()->user_login ); exit;
-            $regular_price = $product->get_regular_price();
-            // var_dump(\B2bwhs_Dynamic_Rules::b2bwhs_dynamic_rule_fixed_price($regular_price, $product)); exit;
-            var_dump($product->get_regular_price()); exit;
+			// var_dump(wp_get_current_user()->user_login ); exit;
+			$regular_price = $product->get_regular_price();
+			// var_dump(\B2bwhs_Dynamic_Rules::b2bwhs_dynamic_rule_fixed_price($regular_price, $product)); exit;
+			var_dump( $product->get_regular_price() );
+			exit;
 
 			$data = $product;
 
@@ -63,10 +63,12 @@ class B2BWholesaleSuite {
 
 			// Add a custom status code
 			$response->set_status( 201 );
-		} catch (\Exception $e) {
-			$response = new \WP_REST_Response( array(
-				'error' => $e->getMessage()
-			) );
+		} catch ( \Exception $e ) {
+			$response = new \WP_REST_Response(
+				array(
+					'error' => $e->getMessage(),
+				)
+			);
 			$response->set_status( 400 );
 		}
 
@@ -74,13 +76,13 @@ class B2BWholesaleSuite {
 	}
 
 	public function blaze_commerce_taxonomy_meta_data( $meta_data, $term_id ) {
-		$excluded_roles = [];
+		$excluded_roles    = array();
 		$enabled_for_guest = esc_html( get_term_meta( $term_id, 'b2bwhs_group_0', true ) );
 
 		if ( ! $enabled_for_guest ) {
-			$excluded_roles[] = "Guest";
-		} 
-		
+			$excluded_roles[] = 'Guest';
+		}
+
 		$groups = get_posts(
 			array(
 				'post_type'   => 'b2bwhs_group',
@@ -98,8 +100,11 @@ class B2BWholesaleSuite {
 			}
 		}
 
-		if ( count($excluded_roles) !== count($groups) + 1 ) {
-			$meta_data[] = array( 'name' => 'hide_for_roles', 'value' => $excluded_roles );
+		if ( count( $excluded_roles ) !== count( $groups ) + 1 ) {
+			$meta_data[] = array(
+				'name'  => 'hide_for_roles',
+				'value' => $excluded_roles,
+			);
 		}
 
 		return $meta_data;
@@ -109,12 +114,12 @@ class B2BWholesaleSuite {
 		$visibility = get_post_meta( $product_id, 'b2bwhs_product_visibility_override', true );
 		$product_data['metaData']['b2b_wholesale_visibility'] = $visibility;
 
-		if ( "manual" === $visibility ) {
-			$excluded_roles = [];
+		if ( 'manual' === $visibility ) {
+			$excluded_roles    = array();
 			$enabled_for_guest = esc_html( get_post_meta( $product_id, 'b2bwhs_group_0', true ) );
 
 			if ( ! $enabled_for_guest ) {
-				$excluded_roles[] = "Guest";
+				$excluded_roles[] = 'Guest';
 			}
 
 			$groups = get_posts(
@@ -128,7 +133,7 @@ class B2BWholesaleSuite {
 			foreach ( $groups as $group ) {
 				// retrieve the existing value(s) for this meta field.
 				$enabled_for_product = esc_html( get_post_meta( $product_id, 'b2bwhs_group_' . $group->ID, true ) );
-	
+
 				if ( ! $enabled_for_product ) {
 					$excluded_roles[] = esc_html( $group->post_title );
 				}

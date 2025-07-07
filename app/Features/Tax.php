@@ -1,6 +1,7 @@
 <?php
 
 namespace BlazeWooless\Features;
+
 use BlazeWooless\Woocommerce;
 
 class Tax {
@@ -25,21 +26,65 @@ class Tax {
 	}
 
 	public function add_price_with_tax_meta_data_fields( $fields ) {
-		$fields[] = [ 'name' => 'metaData.pricesByLocation', 'type' => 'object', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax', 'type' => 'object', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax.regularPrice', 'type' => 'object', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.pricesByLocation.with_tax.salePrice', 'type' => 'object', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.pricesByLocation.without_tax', 'type' => 'object', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.pricesByLocation.without_tax.regularPrice', 'type' => 'object', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.pricesByLocation.without_tax.salePrice', 'type' => 'object', 'optional' => true ];
+		$fields[] = array(
+			'name'     => 'metaData.pricesByLocation',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.pricesByLocation.with_tax',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.pricesByLocation.with_tax.regularPrice',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.pricesByLocation.with_tax.salePrice',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.pricesByLocation.without_tax',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.pricesByLocation.without_tax.regularPrice',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.pricesByLocation.without_tax.salePrice',
+			'type'     => 'object',
+			'optional' => true,
+		);
 
 		// Bundle prices
 		$currencies = Woocommerce::get_currencies();
 		foreach ( $currencies as $currency ) {
-			$fields[] = array( 'name' => 'metaData.pricesByLocation.with_tax.regularPrice.' . $currency, 'type' => 'int64', 'optional' => true );
-			$fields[] = array( 'name' => 'metaData.pricesByLocation.with_tax.salePrice.' . $currency, 'type' => 'int64', 'optional' => true );
-			$fields[] = array( 'name' => 'metaData.pricesByLocation.without_tax.regularPrice.' . $currency, 'type' => 'int64', 'optional' => true );
-			$fields[] = array( 'name' => 'metaData.pricesByLocation.without_tax.salePrice.' . $currency, 'type' => 'int64', 'optional' => true );
+			$fields[] = array(
+				'name'     => 'metaData.pricesByLocation.with_tax.regularPrice.' . $currency,
+				'type'     => 'int64',
+				'optional' => true,
+			);
+			$fields[] = array(
+				'name'     => 'metaData.pricesByLocation.with_tax.salePrice.' . $currency,
+				'type'     => 'int64',
+				'optional' => true,
+			);
+			$fields[] = array(
+				'name'     => 'metaData.pricesByLocation.without_tax.regularPrice.' . $currency,
+				'type'     => 'int64',
+				'optional' => true,
+			);
+			$fields[] = array(
+				'name'     => 'metaData.pricesByLocation.without_tax.salePrice.' . $currency,
+				'type'     => 'int64',
+				'optional' => true,
+			);
 		}
 
 		return $fields;
@@ -52,7 +97,7 @@ class Tax {
 		}
 
 		$args = array(
-			'qty' => 1,
+			'qty'   => 1,
 			'price' => $product->get_price(),
 		);
 
@@ -67,7 +112,7 @@ class Tax {
 		);
 
 		$tax_rates          = $this->get_tax_rate_array( 'Standard' );
-		$prices_by_location = [];
+		$prices_by_location = array();
 		$is_tax_inclusive   = get_option( 'woocommerce_prices_include_tax' );
 
 		foreach ( $tax_rates as $rate ) {
@@ -82,24 +127,46 @@ class Tax {
 				$final_regular_price = \wc_get_price_including_tax( $product, array( 'price' => $regular_price ) );
 				$final_sale_price    = \wc_get_price_including_tax( $product, array( 'price' => $sale_price ) );
 
-				$prices_by_location['with_tax']['locations'][]  = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['with_tax']['regularPrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/with_tax/regular_price', array(
-					$currency => Woocommerce::format_price_to_int64( $final_regular_price ),
-				), $currency );
-				$prices_by_location['with_tax']['salePrice']    = apply_filters( 'blazecommerce/product/metaData/price_by_location/with_tax/sale_price', array(
-					$currency => Woocommerce::format_price_to_int64( $final_sale_price ),
-				), $currency);
+				$prices_by_location['with_tax']['locations'][]  = array(
+					'country' => $country,
+					'state'   => $state,
+				);
+				$prices_by_location['with_tax']['regularPrice'] = apply_filters(
+					'blazecommerce/product/metaData/price_by_location/with_tax/regular_price',
+					array(
+						$currency => Woocommerce::format_price_to_int64( $final_regular_price ),
+					),
+					$currency
+				);
+				$prices_by_location['with_tax']['salePrice']    = apply_filters(
+					'blazecommerce/product/metaData/price_by_location/with_tax/sale_price',
+					array(
+						$currency => Woocommerce::format_price_to_int64( $final_sale_price ),
+					),
+					$currency
+				);
 			} else {
 				$final_regular_price = \wc_get_price_excluding_tax( $product, array( 'price' => $regular_price ) );
 				$final_sale_price    = \wc_get_price_excluding_tax( $product, array( 'price' => $sale_price ) );
 
-				$prices_by_location['without_tax']['locations'][]  = array( 'country' => $country, 'state' => $state );
-				$prices_by_location['without_tax']['regularPrice'] = apply_filters( 'blazecommerce/product/metaData/price_by_location/without_tax/regular_price', array(
-					$currency => Woocommerce::format_price_to_int64( $final_regular_price ),
-				), $currency );
-				$prices_by_location['without_tax']['salePrice']    = apply_filters( 'blazecommerce/product/metaData/price_by_location/without_tax/sale_price', array(
-					$currency => Woocommerce::format_price_to_int64( $final_sale_price ),
-				), $currency);
+				$prices_by_location['without_tax']['locations'][]  = array(
+					'country' => $country,
+					'state'   => $state,
+				);
+				$prices_by_location['without_tax']['regularPrice'] = apply_filters(
+					'blazecommerce/product/metaData/price_by_location/without_tax/regular_price',
+					array(
+						$currency => Woocommerce::format_price_to_int64( $final_regular_price ),
+					),
+					$currency
+				);
+				$prices_by_location['without_tax']['salePrice']    = apply_filters(
+					'blazecommerce/product/metaData/price_by_location/without_tax/sale_price',
+					array(
+						$currency => Woocommerce::format_price_to_int64( $final_sale_price ),
+					),
+					$currency
+				);
 			}
 		}
 
@@ -115,7 +182,7 @@ class Tax {
 	}
 
 	public function get_tax_rates_array() {
-		$tax_rates   = [];
+		$tax_rates   = array();
 		$tax_classes = \WC_Tax::get_tax_classes();
 
 		$tax_rates['Standard'] = $this->get_tax_rate_array( 'Standard' );
@@ -129,30 +196,13 @@ class Tax {
 
 	public function get_tax_rate_array( $rate_name ) {
 		$tax_rates = \WC_Tax::get_rates_for_tax_class( $rate_name );
-		$tax_rates = array_map( function ($rate) {
-			return (array) $rate;
-		}, $tax_rates );
+		$tax_rates = array_map(
+			function ( $rate ) {
+				return (array) $rate;
+			},
+			$tax_rates
+		);
 
 		return array_values( $tax_rates );
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -18,18 +18,18 @@ class GraphQL {
 	public function __construct() {
 
 		if ( $this->is_extension_active() ) {
-			add_filter( 'graphql_jwt_auth_secret_key', [ $this, 'auth_secret_key' ], 10 );
-			add_filter( 'graphql_jwt_auth_expire', [ $this, 'auth_expiration' ], 10 );
+			add_filter( 'graphql_jwt_auth_secret_key', array( $this, 'auth_secret_key' ), 10 );
+			add_filter( 'graphql_jwt_auth_expire', array( $this, 'auth_expiration' ), 10 );
 
 			$this->maybe_define_auth_cookies();
-			add_action( 'graphql_register_types', [ $this, 'register_types' ] );
+			add_action( 'graphql_register_types', array( $this, 'register_types' ) );
 
-			add_filter( 'graphql_response_headers_to_send', [ $this, 'modify_response_headers' ], 20 );
-			add_filter( 'graphql_access_control_allow_headers', [ $this, 'modify_access_control_allow_headers' ], 20, 1 );
+			add_filter( 'graphql_response_headers_to_send', array( $this, 'modify_response_headers' ), 20 );
+			add_filter( 'graphql_access_control_allow_headers', array( $this, 'modify_access_control_allow_headers' ), 20, 1 );
 
-			add_filter( 'blaze_wooless_additional_site_info', [ $this, 'woographql_is_composite_enabled' ], 10, 1 );
+			add_filter( 'blaze_wooless_additional_site_info', array( $this, 'woographql_is_composite_enabled' ), 10, 1 );
 
-			add_action( 'init', [ $this, 'maybe_save_jwt_secret' ] );
+			add_action( 'init', array( $this, 'maybe_save_jwt_secret' ) );
 
 			add_action( 'graphql_register_types', array( $this, 'register_min_amount_to_shipping_rates' ) );
 			add_filter( 'woographql_cart_field_definitions', array( $this, 'graphql_cart_fields' ), 10, 1 );
@@ -37,27 +37,32 @@ class GraphQL {
 	}
 
 	public function register_min_amount_to_shipping_rates() {
-		register_graphql_field( 'ShippingRate', 'min_amount', [ 
-			'type' => 'String',
-			'description' => __( 'Shipping rate min order amount if free shipping', 'wp-graphql-woocommerce' ),
-			'resolve' => static function ($source) {
-				if ( $source->get_method_id() !== 'free_shipping' )
-					return null;
+		register_graphql_field(
+			'ShippingRate',
+			'min_amount',
+			array(
+				'type'        => 'String',
+				'description' => __( 'Shipping rate min order amount if free shipping', 'wp-graphql-woocommerce' ),
+				'resolve'     => static function ( $source ) {
+					if ( $source->get_method_id() !== 'free_shipping' ) {
+						return null;
+					}
 
-				$rate_settings = get_option( 'woocommerce_' . $source->get_method_id() . '_' . $source->get_instance_id() . '_settings' );
-				return ! empty( $rate_settings['min_amount'] ) ? $rate_settings['min_amount'] : null;
-			},
-		] );
+					$rate_settings = get_option( 'woocommerce_' . $source->get_method_id() . '_' . $source->get_instance_id() . '_settings' );
+					return ! empty( $rate_settings['min_amount'] ) ? $rate_settings['min_amount'] : null;
+				},
+			)
+		);
 	}
 
 	public function graphql_cart_fields( $fields ) {
 		$fields['freeShippingMethods'] = array(
-			'type' => 'ShippingRate',
+			'type'        => 'ShippingRate',
 			'description' => __( 'Available free shipping methods for this order.', 'wp-graphql-woocommerce' ),
-			'resolve' => static function ($source) {
+			'resolve'     => static function ( $source ) {
 				$available_packages = $source->needs_shipping()
 					? \WC()->shipping()->calculate_shipping( $source->get_shipping_packages() )
-					: [];
+					: array();
 
 				/**
 				 * @var \WC_Shipping_Zone
@@ -68,19 +73,26 @@ class GraphQL {
 					$shipping_zone = wc_get_shipping_zone( $package );
 				}
 
-				if ( empty( $shipping_zone ) )
+				if ( empty( $shipping_zone ) ) {
 					return null;
+				}
 
 				$all_shipping_methods = $shipping_zone->get_shipping_methods();
-				$free_shipping_method = reset( array_filter( $all_shipping_methods, function ($shipping) {
-					return $shipping instanceof \WC_Shipping_Free_Shipping;
-				} ) );
+				$free_shipping_method = reset(
+					array_filter(
+						$all_shipping_methods,
+						function ( $shipping ) {
+							return $shipping instanceof \WC_Shipping_Free_Shipping;
+						}
+					)
+				);
 
 				$show_free_shipping_banner = bw_get_general_settings( 'show_free_shipping_banner' );
 				$show_free_shipping_minicart_component = bw_get_general_settings( 'show_free_shipping_minicart_component' );
 
-				if ( empty( $show_free_shipping_banner ) && empty( $show_free_shipping_minicart_component ) )
+				if ( empty( $show_free_shipping_banner ) && empty( $show_free_shipping_minicart_component ) ) {
 					return null;
+				}
 
 				return new \WC_Shipping_Rate(
 					'free_shipping:' . $free_shipping_method->instance_id,
@@ -119,15 +131,15 @@ class GraphQL {
 	public function modify_response_headers( $headers ) {
 		$http_origin = get_http_origin();
 
-		$allowed_origins = [ 
+		$allowed_origins = array(
 			'http://localhost:3000',
 			home_url(),
 			site_url(),
-		];
+		);
 
 		if ( function_exists( 'wpgraphql_cors_allowed_origins' ) ) {
 			$possible_origins = wpgraphql_cors_allowed_origins();
-			$allowed_origins = array_merge( $allowed_origins, $possible_origins );
+			$allowed_origins  = array_merge( $allowed_origins, $possible_origins );
 		}
 
 		// If the request is coming from an allowed origin (HEADLESS_FRONTEND_URL), tell the browser it can accept the response.
@@ -137,7 +149,7 @@ class GraphQL {
 
 		// Tells browsers to expose the response to frontend JavaScript code when the request credentials mode is "include".
 		$headers['Access-Control-Allow-Credentials'] = 'true';
-		$headers['Access-Control-Expose-Headers'] = $headers['Access-Control-Expose-Headers'] . ', set-cookie, woocommerce-session';
+		$headers['Access-Control-Expose-Headers']    = $headers['Access-Control-Expose-Headers'] . ', set-cookie, woocommerce-session';
 
 		return $headers;
 	}
@@ -152,12 +164,12 @@ class GraphQL {
 		register_graphql_mutation(
 			'logout',
 			array(
-				'inputFields' => array(),
-				'outputFields' => array(
+				'inputFields'         => array(),
+				'outputFields'        => array(
 					'status' => array(
-						'type' => 'String',
+						'type'        => 'String',
 						'description' => 'Logout operation status',
-						'resolve' => function ($payload) {
+						'resolve'     => function ( $payload ) {
 							return $payload['status'];
 						},
 					),
@@ -177,64 +189,64 @@ class GraphQL {
 		register_graphql_mutation(
 			'loginWithCookies',
 			array(
-				'inputFields' => array(
-					'login' => array(
-						'type' => array( 'non_null' => 'String' ),
+				'inputFields'         => array(
+					'login'    => array(
+						'type'        => array( 'non_null' => 'String' ),
 						'description' => __( 'Input your username/email.' ),
 					),
 					'password' => array(
-						'type' => array( 'non_null' => 'String' ),
+						'type'        => array( 'non_null' => 'String' ),
 						'description' => __( 'Input your password.' ),
 					),
 				),
-				'outputFields' => array(
-					'status' => array(
-						'type' => 'String',
+				'outputFields'        => array(
+					'status'   => array(
+						'type'        => 'String',
 						'description' => 'Login operation status',
-						'resolve' => function ($payload) {
+						'resolve'     => function ( $payload ) {
 							return $payload['status'];
 						},
 					),
-					'email' => array(
-						'type' => 'String',
+					'email'    => array(
+						'type'        => 'String',
 						'description' => 'Logged in user email',
-						'resolve' => function ($payload) {
+						'resolve'     => function ( $payload ) {
 							return $payload['email'];
 						},
 					),
 					'username' => array(
-						'type' => 'String',
+						'type'        => 'String',
 						'description' => 'Logged in username',
-						'resolve' => function ($payload) {
+						'resolve'     => function ( $payload ) {
 							return $payload['username'];
 						},
 					),
-					'name' => array(
-						'type' => 'String',
+					'name'     => array(
+						'type'        => 'String',
 						'description' => 'Logged in name',
-						'resolve' => function ($payload) {
+						'resolve'     => function ( $payload ) {
 							return $payload['name'];
 						},
 					),
-					'user_id' => array(
-						'type' => 'Integer',
+					'user_id'  => array(
+						'type'        => 'Integer',
 						'description' => 'Logged in user id',
-						'resolve' => function ($payload) {
+						'resolve'     => function ( $payload ) {
 							return $payload['user_id'];
 						},
 					),
-					'roles' => array(
-						'type' => array( 'list_of' => 'String' ),
+					'roles'    => array(
+						'type'        => array( 'list_of' => 'String' ),
 						'description' => 'Logged in user roles',
-						'resolve' => function ($payload) {
+						'resolve'     => function ( $payload ) {
 							return $payload['roles'];
 						},
 					),
 				),
-				'mutateAndGetPayload' => function ($input) {
+				'mutateAndGetPayload' => function ( $input ) {
 					$user = wp_signon(
 						array(
-							'user_login' => wp_unslash( $input['login'] ),
+							'user_login'    => wp_unslash( $input['login'] ),
 							'user_password' => $input['password'],
 						),
 						true
@@ -245,12 +257,12 @@ class GraphQL {
 					}
 
 					return array(
-						'status' => 'SUCCESS',
-						'email' => esc_html( $user->user_email ),
-						'user_id' => esc_html( $user->ID ),
+						'status'   => 'SUCCESS',
+						'email'    => esc_html( $user->user_email ),
+						'user_id'  => esc_html( $user->ID ),
 						'username' => esc_html( $user->user_login ),
-						'name' => esc_html( $user->display_name ),
-						'roles' => $user->roles,
+						'name'     => esc_html( $user->display_name ),
+						'roles'    => $user->roles,
 					);
 				},
 			)
@@ -276,7 +288,7 @@ class GraphQL {
 
 	public function auth_secret_key() {
 		$auth_key = wp_salt( 'auth' );
-		$jwt_key = get_option( 'wooless_custom_jwt_secret_key', $auth_key );
+		$jwt_key  = get_option( 'wooless_custom_jwt_secret_key', $auth_key );
 
 		return $jwt_key;
 	}

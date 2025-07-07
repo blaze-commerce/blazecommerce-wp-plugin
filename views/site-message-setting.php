@@ -33,7 +33,7 @@ function site_message_page() {
 function site_message_settings() {
 	register_setting( 'site_message_settings', 'default_message' );
 
-	$regions = [ 'NZ', 'US' ]; // Add more regions as needed.
+	$regions = array( 'NZ', 'US' ); // Add more regions as needed.
 	foreach ( $regions as $region ) {
 		register_setting( 'site_message_settings', $region . '_message' );
 		register_setting( 'site_message_settings', $region . '_enabled' );
@@ -69,7 +69,7 @@ function default_message_callback() {
 }
 
 function region_messages_callback() {
-	$regions = [ 'NZ', 'US' ]; // Add more regions as needed.
+	$regions = array( 'NZ', 'US' ); // Add more regions as needed.
 	foreach ( $regions as $region ) {
 		$region_message = get_option( $region . '_message', '' );
 		$region_enabled = get_option( $region . '_enabled', '' ) === '1' ? 'checked' : '';
@@ -99,7 +99,7 @@ if ( ! class_exists( 'Blaze_Wooless_Site_Message_Compatibility' ) ) {
 				$site_messages_settings['default_message'] = $default_message;
 			}
 
-			$regions = [ 'NZ', 'US' ]; // Add more regions as needed
+			$regions = array( 'NZ', 'US' ); // Add more regions as needed
 			foreach ( $regions as $region ) {
 				$region_message = get_option( $region . '_message', '' );
 				if ( $region_message !== '' ) {

@@ -22,20 +22,71 @@ class WoocommercePhotoReviews {
 	}
 
 	public function additional_meta_fields( $fields ) {
-		$fields[] = array( 'name' => 'metaData.wooProductReviews', 'type' => 'object', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews', 'type' => 'object[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.comment_ID', 'type' => 'int64[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.author', 'type' => 'string[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.content', 'type' => 'string[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.date', 'type' => 'string[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.rating', 'type' => 'int32[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.vote_up_count', 'type' => 'int32[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.vote_down_count', 'type' => 'int32[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.verified', 'type' => 'bool[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.images', 'type' => 'string[]', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.reviews.replies', 'type' => 'string[]', 'optional' => true );
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews',
+			'type'     => 'object[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.comment_ID',
+			'type'     => 'int64[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.author',
+			'type'     => 'string[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.content',
+			'type'     => 'string[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.date',
+			'type'     => 'string[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.rating',
+			'type'     => 'int32[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.vote_up_count',
+			'type'     => 'int32[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.vote_down_count',
+			'type'     => 'int32[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.verified',
+			'type'     => 'bool[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.images',
+			'type'     => 'string[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.wooProductReviews.reviews.replies',
+			'type'     => 'string[]',
+			'optional' => true,
+		);
 
-		$fields[] = array( 'name' => 'metaData.wooProductReviews.stats.average_rating', 'type' => 'float' );
+		$fields[] = array(
+			'name' => 'metaData.wooProductReviews.stats.average_rating',
+			'type' => 'float',
+		);
 
 		return $fields;
 	}
@@ -82,8 +133,8 @@ class WoocommercePhotoReviews {
 
 	public function reviews_summary( $product_data, $product_id ) {
 		if ( ! empty( $product_data ) && $product_id ) {
-			$product = wc_get_product( $product_id );
-			$review_count = $product->get_review_count();
+			$product        = wc_get_product( $product_id );
+			$review_count   = $product->get_review_count();
 			$average_rating = $product->get_average_rating();
 			for ( $i = 5; $i > 0; $i-- ) {
 				$rating_count[ 'rating_' . $i ] = $product->get_rating_count( $i );
@@ -92,9 +143,9 @@ class WoocommercePhotoReviews {
 			unset( $product );
 
 			$product_data['metaData']['wooProductReviews']['stats'] = array(
-				'average_rating' => floatval( $average_rating ),
-				'count_reviews' => intval( $review_count ),
-				'stars_count' => array(
+				'average_rating'    => floatval( $average_rating ),
+				'count_reviews'     => intval( $review_count ),
+				'stars_count'       => array(
 					'rating_5' => intval( $rating_count['rating_5'] ),
 					'rating_4' => intval( $rating_count['rating_4'] ),
 					'rating_3' => intval( $rating_count['rating_3'] ),
@@ -102,7 +153,7 @@ class WoocommercePhotoReviews {
 					'rating_1' => intval( $rating_count['rating_1'] ),
 				),
 				'count_with_images' => $this->get_total_comment_with_images( $product_id ),
-				'verified_count' => $this->get_total_verified_comments( $product_id ),
+				'verified_count'    => $this->get_total_verified_comments( $product_id ),
 			);
 
 			unset( $average_rating, $review_count, $rating_count );
@@ -113,57 +164,59 @@ class WoocommercePhotoReviews {
 
 	public function product_reviews( $product_data, $product_id ) {
 		if ( ! empty( $product_data ) && $product_id ) {
-			$args = array(
-				'post_type' => 'product',
-				'post_id' => $product_id,
-				'status' => 'approve',
+			$args           = array(
+				'post_type'   => 'product',
+				'post_id'     => $product_id,
+				'status'      => 'approve',
 				'post_status' => 'publish',
 			);
-			$comments = get_comments( $args );
+			$comments       = get_comments( $args );
 			$comments_array = array();
 
 			$replies = array();
 
 			foreach ( $comments as $comment ) {
 				if ( ! empty( $comment ) ) {
-					$images = array();
-					$rating = get_comment_meta( $comment->comment_ID, 'rating', true );
-					$vote_up_count = get_comment_meta( $comment->comment_ID, 'wcpr_vote_up_count', true );
+					$images          = array();
+					$rating          = get_comment_meta( $comment->comment_ID, 'rating', true );
+					$vote_up_count   = get_comment_meta( $comment->comment_ID, 'wcpr_vote_up_count', true );
 					$vote_down_count = get_comment_meta( $comment->comment_ID, 'wcpr_vote_down_count', true );
-					$review_images = get_comment_meta( $comment->comment_ID, 'reviews-images', true );
+					$review_images   = get_comment_meta( $comment->comment_ID, 'reviews-images', true );
 					if ( is_array( $review_images ) && count( $review_images ) > 0 ) {
-						$images = array_map( function ($image) {
-							return wp_get_attachment_url( $image );
-						}, $review_images );
+						$images = array_map(
+							function ( $image ) {
+								return wp_get_attachment_url( $image );
+							},
+							$review_images
+						);
 					}
 
 					if ( $comment->comment_parent > 0 ) {
 						$replies[] = array(
-							'comment_ID' => intval( $comment->comment_ID ),
-							'author' => strval( $comment->comment_author ),
-							'content' => strval( $comment->comment_content ),
-							'date' => strval( $comment->comment_date ),
-							'rating' => intval( $rating ),
-							'vote_up_count' => intval( $vote_up_count ),
+							'comment_ID'      => intval( $comment->comment_ID ),
+							'author'          => strval( $comment->comment_author ),
+							'content'         => strval( $comment->comment_content ),
+							'date'            => strval( $comment->comment_date ),
+							'rating'          => intval( $rating ),
+							'vote_up_count'   => intval( $vote_up_count ),
 							'vote_down_count' => intval( $vote_down_count ),
-							'verified' => boolval( get_comment_meta( $comment->comment_ID, 'verified', true ) ),
-							'images' => $images,
-							'comment_parent' => intval( $comment->comment_parent )
+							'verified'        => boolval( get_comment_meta( $comment->comment_ID, 'verified', true ) ),
+							'images'          => $images,
+							'comment_parent'  => intval( $comment->comment_parent ),
 						);
 					} else {
 
-
 						$comments_array[] = array(
-							'comment_ID' => intval( $comment->comment_ID ),
-							'author' => strval( $comment->comment_author ),
-							'content' => strval( $comment->comment_content ),
-							'date' => strval( $comment->comment_date ),
-							'rating' => intval( $rating ),
-							'vote_up_count' => intval( $vote_up_count ),
+							'comment_ID'      => intval( $comment->comment_ID ),
+							'author'          => strval( $comment->comment_author ),
+							'content'         => strval( $comment->comment_content ),
+							'date'            => strval( $comment->comment_date ),
+							'rating'          => intval( $rating ),
+							'vote_up_count'   => intval( $vote_up_count ),
 							'vote_down_count' => intval( $vote_down_count ),
-							'verified' => boolval( get_comment_meta( $comment->comment_ID, 'verified', true ) ),
-							'images' => $images,
-							'replies' => ''
+							'verified'        => boolval( get_comment_meta( $comment->comment_ID, 'verified', true ) ),
+							'images'          => $images,
+							'replies'         => '',
 						);
 
 					}

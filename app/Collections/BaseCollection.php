@@ -11,9 +11,9 @@ class BaseCollection {
 	public $active_sync_collection = null;
 
 	// Class-level cache for collection access objects
-	private static $collection_cache = array();
+	private static $collection_cache       = array();
 	private static $collection_cache_times = array();
-	private static $collection_cache_ttl = 300; // 5 minutes
+	private static $collection_cache_ttl   = 300; // 5 minutes
 
 	public function __construct() {
 		$this->typesense = TypesenseClient::get_instance();
@@ -97,6 +97,7 @@ class BaseCollection {
 
 	/**
 	 * Get current live collection name (legacy method for backward compatibility)
+	 *
 	 * @deprecated Use get_active_collection_name() instead
 	 */
 	public function get_current_collection() {
@@ -114,7 +115,7 @@ class BaseCollection {
 	public function drop_collection() {
 		try {
 			return $this->collection()->delete();
-		} catch (\Exception $e) {
+		} catch ( \Exception $e ) {
 			return $e;
 		}
 	}
@@ -137,21 +138,24 @@ class BaseCollection {
 
 		$curl = curl_init();
 
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => 'https://' . $this->typesense->get_host() . '/collections/' . $target_collection . '/documents/import?action=upsert',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_POSTFIELDS => $to_jsonl,
-			CURLOPT_HTTPHEADER => array(
-				'X-TYPESENSE-API-KEY: ' . $this->typesense->get_api_key(),
-				'Content-Type: text/plain'
-			),
-		) );
+		curl_setopt_array(
+			$curl,
+			array(
+				CURLOPT_URL            => 'https://' . $this->typesense->get_host() . '/collections/' . $target_collection . '/documents/import?action=upsert',
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_ENCODING       => '',
+				CURLOPT_MAXREDIRS      => 10,
+				CURLOPT_TIMEOUT        => 0,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+				CURLOPT_CUSTOMREQUEST  => 'POST',
+				CURLOPT_POSTFIELDS     => $to_jsonl,
+				CURLOPT_HTTPHEADER     => array(
+					'X-TYPESENSE-API-KEY: ' . $this->typesense->get_api_key(),
+					'Content-Type: text/plain',
+				),
+			)
+		);
 
 		$response = curl_exec( $curl );
 
@@ -159,9 +163,12 @@ class BaseCollection {
 
 		$response_from_jsonl = explode( PHP_EOL, $response );
 
-		$mapped_response = array_map( function ($resp) {
-			return json_decode( $resp, true );
-		}, $response_from_jsonl );
+		$mapped_response = array_map(
+			function ( $resp ) {
+				return json_decode( $resp, true );
+			},
+			$response_from_jsonl
+		);
 
 		return $mapped_response;
 	}
@@ -200,6 +207,7 @@ class BaseCollection {
 	/**
 	 * Get the target collection name for operations
 	 * Returns the active collection name if using aliases, otherwise the legacy name
+	 *
 	 * @deprecated Use get_active_collection_name() instead
 	 */
 	public function get_target_collection_name() {
@@ -380,8 +388,8 @@ class BaseCollection {
 			$logger->debug( 'Initialized sync collection for ' . $this->collection_name . ': ' . $inactive_collection_name, $context );
 
 			return $inactive_collection_name;
-		} catch (\Exception $e) {
-			throw new \Exception( "Failed to create new collection: " . $e->getMessage() );
+		} catch ( \Exception $e ) {
+			throw new \Exception( 'Failed to create new collection: ' . $e->getMessage() );
 		}
 	}
 
@@ -396,12 +404,12 @@ class BaseCollection {
 			// In blue-green deployment, we don't clean up the old collection immediately
 			// It becomes the inactive collection for the next sync
 			return array(
-				'success' => true,
+				'success'        => true,
 				'new_collection' => $new_collection_name,
-				'switched_alias' => true
+				'switched_alias' => true,
 			);
-		} catch (\Exception $e) {
-			throw new \Exception( "Failed to complete sync: " . $e->getMessage() );
+		} catch ( \Exception $e ) {
+			throw new \Exception( 'Failed to complete sync: ' . $e->getMessage() );
 		}
 	}
 
@@ -440,7 +448,7 @@ class BaseCollection {
 				}
 
 				return $result;
-			} catch (\Exception $e) {
+			} catch ( \Exception $e ) {
 				$logger->debug( 'TS ' . ucfirst( $this->collection_name ) . ' sync completion failed: ' . $e->getMessage(), $context );
 				throw $e;
 			}
@@ -448,7 +456,10 @@ class BaseCollection {
 
 		// Return custom fallback message or default null
 		if ( isset( $options['fallback_message'] ) ) {
-			return array( 'success' => true, 'message' => $options['fallback_message'] );
+			return array(
+				'success' => true,
+				'message' => $options['fallback_message'],
+			);
 		}
 
 		return null;
@@ -486,7 +497,7 @@ class BaseCollection {
 			// Fallback to regular collection if no sync collection is active
 			return $this->collection();
 		} catch ( \Exception $e ) {
-			$logger = wc_get_logger();
+			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-get-sync-collection-error' );
 			$logger->debug( 'Failed to get sync collection: ' . $e->getMessage(), $context );
 			return null;

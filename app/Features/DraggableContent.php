@@ -25,12 +25,12 @@ class DraggableContent {
 
 	// public function register_settings($product_page_settings)
 	// {
-	//     $product_page_settings['wooless_settings_attributes_section'] = array(
-	//         'label' => 'Attributes',
-	//         'options' => $this->get_attribute_mapping_settings(),
-	//     );
+	// $product_page_settings['wooless_settings_attributes_section'] = array(
+	// 'label' => 'Attributes',
+	// 'options' => $this->get_attribute_mapping_settings(),
+	// );
 
-	//     return $product_page_settings;
+	// return $product_page_settings;
 	// }
 
 	public function content_region_selector() {
@@ -38,13 +38,16 @@ class DraggableContent {
 		$countries    = \WC()->countries->get_countries();
 		$base_country = \WC()->countries->get_base_country();
 		?>
-		<input type="hidden" id="available-countries" value='<?php echo json_encode( $regions ) ?>' />
-		<input type="hidden" id="base-country" value='<?php echo json_encode( $base_country ) ?>' />
+		<input type="hidden" id="available-countries" value='<?php echo json_encode( $regions ); ?>' />
+		<input type="hidden" id="base-country" value='<?php echo json_encode( $base_country ); ?>' />
 		<select name="region_selector" id="region_selector">
 			<?php foreach ( $regions as $country_code ) : ?>
-				<?php if ( $country_code != $base_country ) continue; ?>
-				<option value="<?php echo $country_code ?>" <?php echo $base_country == $country_code ? 'selected' : '' ?>>
-					<?php echo $countries[ $country_code ] ?>
+				<?php
+				if ( $country_code != $base_country ) {
+					continue;}
+				?>
+				<option value="<?php echo $country_code; ?>" <?php echo $base_country == $country_code ? 'selected' : ''; ?>>
+					<?php echo $countries[ $country_code ]; ?>
 				</option>
 			<?php endforeach; ?>
 		</select>

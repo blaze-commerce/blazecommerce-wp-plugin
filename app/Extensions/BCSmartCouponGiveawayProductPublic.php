@@ -2,65 +2,63 @@
 
 namespace BlazeWooless\Extensions;
 
-use \Wt_Smart_Coupon_Giveaway_Product;
-use \Wt_Smart_Coupon;
-use \Wt_Smart_Coupon_Security_Helper;
-use \Wt_Smart_Coupon_Admin;
-use \Wt_Smart_Coupon_Common;
-use \Wt_Smart_Coupon_Restriction_Public;
-use \Wt_Smart_Coupon_Public;
-use \Wt_Smart_Coupon_Restriction;
-use \Wt_Smart_Coupon_Mulitlanguage;
-use \WC_Coupon;
+use Wt_Smart_Coupon_Giveaway_Product;
+use Wt_Smart_Coupon;
+use Wt_Smart_Coupon_Security_Helper;
+use Wt_Smart_Coupon_Admin;
+use Wt_Smart_Coupon_Common;
+use Wt_Smart_Coupon_Restriction_Public;
+use Wt_Smart_Coupon_Public;
+use Wt_Smart_Coupon_Restriction;
+use Wt_Smart_Coupon_Mulitlanguage;
+use WC_Coupon;
 
 /**
  * Giveaway products public section
  *
- * @link       
- * @since 2.0.1     
+ * @link
+ * @since 2.0.1
  *
- * @package  Wt_Smart_Coupon  
+ * @package  Wt_Smart_Coupon
  */
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-if (!class_exists('Wt_Smart_Coupon_Giveaway_Product')) { /* common module class not found so return */
+if ( ! class_exists( 'Wt_Smart_Coupon_Giveaway_Product' ) ) { /* common module class not found so return */
 	return;
 }
 
-class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Product
-{
-	public $module_base = 'giveaway_product';
-	public $module_id = '';
-	public static $module_id_static = '';
-	private static $instance = null;
-	public static $bogo_allowed_options_to_display_products = array('specific_product', 'same_product_in_the_cart');
-	public static $bogo_eligible_session_id = 'wt_sc_bogo_eligible';
-	public static $break_add_to_cart_loop_session_id = 'wt_sc_break_add_to_cart_loop'; /* this is used to break add to cart indefinite looping when cart contents convert as giveaway */
-	public static $giveaway_count_adjust = false;
-	public static $specific_product_addtocart_hooked = false; /* To check single specific product add to cart is hooked already */
-	public static $giveaway_fully_availed_flag = 'fully_availed'; /* value to indicate giveaway was fully availed. This value is used to hide the giveaway eligible message */
-	
-	private static $cheapest_giveaway_loop_count = 0;
+class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Product {
+
+	public $module_base                                     = 'giveaway_product';
+	public $module_id                                       = '';
+	public static $module_id_static                         = '';
+	private static $instance                                = null;
+	public static $bogo_allowed_options_to_display_products = array( 'specific_product', 'same_product_in_the_cart' );
+	public static $bogo_eligible_session_id                 = 'wt_sc_bogo_eligible';
+	public static $break_add_to_cart_loop_session_id        = 'wt_sc_break_add_to_cart_loop'; /* this is used to break add to cart indefinite looping when cart contents convert as giveaway */
+	public static $giveaway_count_adjust                    = false;
+	public static $specific_product_addtocart_hooked        = false; /* To check single specific product add to cart is hooked already */
+	public static $giveaway_fully_availed_flag              = 'fully_availed'; /* value to indicate giveaway was fully availed. This value is used to hide the giveaway eligible message */
+
+	private static $cheapest_giveaway_loop_count       = 0;
 	private static $cheapest_giveaway_frequency_backup = 0;
 
 	public static $bogo_discounts = array(); /* BOGO coupon type giveaway total discount */
-	
-	private static $allowed_customer_gets_cheapest_giveaway = array('any_product_from_category', 'any_product_from_store', 'any_product_from_category_in_the_cart'); /* `Customer gets` allowed for cheapest giveaway option. */
 
-	public function __construct()
-	{
-		$this->module_id = Wt_Smart_Coupon::get_module_id($this->module_base);
+	private static $allowed_customer_gets_cheapest_giveaway = array( 'any_product_from_category', 'any_product_from_store', 'any_product_from_category_in_the_cart' ); /* `Customer gets` allowed for cheapest giveaway option. */
+
+	public function __construct() {
+		$this->module_id        = Wt_Smart_Coupon::get_module_id( $this->module_base );
 		self::$module_id_static = $this->module_id;
 	}
 
 	/**
 	 * Get Instance
 	 */
-	public static function get_instance()
-	{
-		if (self::$instance == null) {
+	public static function get_instance() {
+		if ( self::$instance == null ) {
 			self::$instance = new BCSmartCouponGiveawayProductPublic();
 		}
 		return self::$instance;
@@ -130,7 +128,6 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				 */
 				$this->set_hook_to_show_giveaway_products();
 			}
-
 		} else {
 			$this->process_specific_product_giveaway( $coupon_id, $coupon_code );
 		}
@@ -194,7 +191,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 			if ( self::is_a_free_item( $cart_item ) ) {
 				continue;
 			}
-			$item_id = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+			$item_id                         = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
 			$new_coupon_products[ $item_id ] = $qty_price_data;
 		}
 		return $new_coupon_products;
@@ -202,6 +199,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Callback function for displaying giveaway products in the cart page.
+	 *
 	 * @since 1.0.0
 	 * @since 1.3.5  [Bug fix] Variation product image not displaying on checkout page
 	 * @since 2.0.4  Added compatibility with BOGO type coupons
@@ -214,9 +212,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 			return;
 		}
 
-		$free_products         = array();
-		$add_to_cart_all       = array();
-		$show_quantity_option  = array();
+		$free_products        = array();
+		$add_to_cart_all      = array();
+		$show_quantity_option = array();
 		foreach ( $applied_coupons as $coupon_code ) {
 			$coupon_code = wc_format_coupon_code( $coupon_code );
 			$coupon      = new WC_Coupon( $coupon_code );
@@ -224,8 +222,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				continue;
 			}
 
-			$coupon_id                      = $coupon->get_id();
-			$add_to_cart_all[ $coupon_id ]  = false;
+			$coupon_id                          = $coupon->get_id();
+			$add_to_cart_all[ $coupon_id ]      = false;
 			$show_quantity_option[ $coupon_id ] = 0;
 
 			$qty_price_data = array(
@@ -246,7 +244,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 						/**
 						 *  Giveaway max quantity checking
-						 *  Note: `$bogo_products` is a reference argument for the below function 
+						 *  Note: `$bogo_products` is a reference argument for the below function
 						 */
 						$this->check_giveaway_max_quantity( $coupon_code, $coupon_id, $bogo_customer_gets, $bogo_product_condition, $bogo_products, $frequency );
 
@@ -263,27 +261,26 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 								if ( $balance_qty > 0 ) { /* show products only when balance quantity exists */
 									$new_coupon_products = $this->prepare_cart_items_as_giveaway( $qty_price_data );
 									if ( ! empty( $new_coupon_products ) ) {
-										$free_products[ $coupon_code ] = $new_coupon_products;
+										$free_products[ $coupon_code ]      = $new_coupon_products;
 										$show_quantity_option[ $coupon_id ] = $balance_qty;
 									}
 								}
 							}
-						} else {
-							if ( 'same_product_in_the_cart' === $bogo_customer_gets ) {
+						} elseif ( 'same_product_in_the_cart' === $bogo_customer_gets ) {
 								$balance_qty = $this->prepare_balance_quantity_for_same_product_in_cart( $coupon_id, $coupon_code );
-								if ( $balance_qty > 0 ) { /* show products only when balance quantity exists */
-									/* this function will prepare product list based product/category restriction */
-									$coupon_products = $this->prepare_product_list_for_any_product_from_cart( $coupon, $qty_price_data );
-									if ( count( $coupon_products ) > 0 ) {
-										$free_products[ $coupon_code ] = $coupon_products;
+							if ( $balance_qty > 0 ) { /*
+								show products only when balance quantity exists */
+								/* this function will prepare product list based product/category restriction */
+								$coupon_products = $this->prepare_product_list_for_any_product_from_cart( $coupon, $qty_price_data );
+								if ( count( $coupon_products ) > 0 ) {
+									$free_products[ $coupon_code ]      = $coupon_products;
+									$show_quantity_option[ $coupon_id ] = $balance_qty;
+								} else {
+									// no products in the coupon restriction section, so use entire cart items
+									$coupon_products = $this->prepare_cart_items_as_giveaway( $qty_price_data );
+									if ( ! empty( $coupon_products ) ) {
+										$free_products[ $coupon_code ]      = $coupon_products;
 										$show_quantity_option[ $coupon_id ] = $balance_qty;
-									} else {
-										// no products in the coupon restriction section, so use entire cart items
-										$coupon_products = $this->prepare_cart_items_as_giveaway( $qty_price_data );
-										if ( ! empty( $coupon_products ) ) {
-											$free_products[ $coupon_code ] = $coupon_products;
-											$show_quantity_option[ $coupon_id ] = $balance_qty;
-										}
 									}
 								}
 							}
@@ -301,8 +298,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				if ( $discount_quantity > $total_qty ) { /* balance quantity exists. Otherwise it will not show the giveaway products */
 					$free_product_id_arr = self::get_giveaway_products( $coupon_id );
 					if ( ! empty( $free_product_id_arr ) ) {
-						$qty_price_arr = array_fill( 0, count( $free_product_id_arr ), $qty_price_data );
-						$new_coupon_products = array_combine( $free_product_id_arr, $qty_price_arr );
+						$qty_price_arr                 = array_fill( 0, count( $free_product_id_arr ), $qty_price_data );
+						$new_coupon_products           = array_combine( $free_product_id_arr, $qty_price_arr );
 						$free_products[ $coupon_code ] = $new_coupon_products;
 					}
 				}
@@ -317,6 +314,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Ajax action function for getting variation id
+	 *
 	 * @since 1.0.0
 	 */
 	public function ajax_find_matching_product_variation_id() {
@@ -351,6 +349,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Function for getting variation id from product and selected attributes
+	 *
 	 * @param $prodcut_id Given Product Id.
 	 * @param $attributes Attribute values ad key value pair.
 	 * @since 1.0.0
@@ -364,6 +363,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Helper function to get giveaway product discount text
+	 *
 	 * @since 1.2.4
 	 * @since 2.0.4 Added compatibility with BOGO type coupons
 	 */
@@ -410,21 +410,21 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	}
 
 	/**
-	 *  When the giveaway scenario: 
-	 *  1. The giveaway condition is specific product 
+	 *  When the giveaway scenario:
+	 *  1. The giveaway condition is specific product
 	 *  2. Only single product with 100% discount
 	 *  3. Apply repeatedly enabled
 	 *  This method will be called when product quantity is updated
-	 *  
+	 *
 	 *  @since 2.0.4
-	 *  @param      string      $cart_item_key      Cart item key
-	 *  @param      int         $quantity
-	 *  @param      int         $old_quantity
-	 *  @param      object      $cart
+	 *  @param      string $cart_item_key      Cart item key
+	 *  @param      int    $quantity
+	 *  @param      int    $old_quantity
+	 *  @param      object $cart
 	 */
 	public function check_to_add_giveaway( $cart_item_key, $quantity, $old_quantity, $cart ) {
 		$cart_item_data = isset( $cart->cart_contents[ $cart_item_key ] ) ? $cart->cart_contents[ $cart_item_key ] : null;
-		
+
 		if ( is_null( $cart_item_data ) ) {
 			return;
 		}
@@ -432,23 +432,23 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		if ( self::is_a_free_item( $cart_item_data ) ) {
 			return; /* already a free item so no need to check */
 		}
-		
+
 		if ( $old_quantity < $quantity ) { // quantity increased
 			$cart    = WC()->cart;
 			$coupons = $cart->get_applied_coupons();
-			
+
 			foreach ( $coupons as $coupon_code ) {
 				$coupon_code = wc_format_coupon_code( $coupon_code );
 				$coupon      = new WC_Coupon( $coupon_code );
-				
+
 				if ( ! $coupon ) {
 					continue;
 				}
-				
+
 				if ( self::is_bogo( $coupon ) ) {
-					$coupon_id         = $coupon->get_id();
+					$coupon_id          = $coupon->get_id();
 					$bogo_customer_gets = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_customer_gets' );
-					
+
 					if ( 'specific_product' === $bogo_customer_gets ) {
 						/* recalculate the apply frequency quantity with the newly added quantity */
 						$this->recalculate_apply_frequency_count( $coupon );
@@ -462,6 +462,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Get free product added success message
+	 *
 	 * @since 1.3.5
 	 * @since 2.0.4 Code updated
 	 *              New argument $giveaway_data - Giveaway price, price type, quantity
@@ -483,7 +484,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 			} else {
 				$discount_text = $this->get_give_away_discount_text( 0, $giveaway_data );
-				$message       = sprintf( __( "You're in luck! %s A free product is added to your cart at a %s discount.", 'wt-smart-coupons-for-woocommerce-pro' ), '<br/>', $discount_text );
+				$message       = sprintf( __( "You're in luck! %1\$s A free product is added to your cart at a %2\$s discount.", 'wt-smart-coupons-for-woocommerce-pro' ), '<br/>', $discount_text );
 			}
 		}
 		return apply_filters( 'wt_sc_alter_free_product_added_message', $message, $product, $coupon_code );
@@ -491,42 +492,44 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Add Giveaway product into cart ( When product is single )
+	 *
 	 *  @since 1.0.0
 	 *  @since 1.3.4  [Bug fix] Giveaway product is added repeatedly when logged in back to the site.
 	 *  @since 2.0.4  Code updated
-	 *                Added compatibility for BOGO coupon types 
+	 *                Added compatibility for BOGO coupon types
 	 */
 	public function add_free_product_into_cart( $coupon_code ) {
-		$cart = WC()->cart;
-		$coupons = $cart->get_applied_coupons();
-		$coupon_code = wc_format_coupon_code( $coupon_code );   
+		$cart        = WC()->cart;
+		$coupons     = $cart->get_applied_coupons();
+		$coupon_code = wc_format_coupon_code( $coupon_code );
 		if ( ! in_array( $coupon_code, $coupons ) ) {
 			return;
-		} 
-		
-		$coupon_id = wc_get_coupon_id_by_code( $coupon_code );
+		}
+
+		$coupon_id     = wc_get_coupon_id_by_code( $coupon_code );
 		$free_products = self::get_giveaway_products( $coupon_id );
-		if ( ! empty( $free_products ) ) {          
+		if ( ! empty( $free_products ) ) {
 			$first_product = wc_get_product( $free_products[0] );
 			if ( sizeof( $free_products ) == 1 && $this->is_purchasable( $first_product ) && 'variable' !== $first_product->get_type() ) { /* single product with no variations */
-				$item_id = $free_products[0];
-				$giveaway_data = $this->get_product_giveaway_data( $item_id, $coupon_code ); 
-				if ( $this->is_full_free_item( $first_product, $giveaway_data ) ) { /* add to cart */
+				$item_id       = $free_products[0];
+				$giveaway_data = $this->get_product_giveaway_data( $item_id, $coupon_code );
+				if ( $this->is_full_free_item( $first_product, $giveaway_data ) ) { /*
+					add to cart */
 					/* This function will prepare quantity based on coupon frequency. If apply repeatedly enabled */
 					$giveaway_qty = $this->prepare_quantity_based_on_apply_frequency( $coupon_id, $giveaway_data['qty'] );
 
-					//get cart item data
+					// get cart item data
 					$product_cart_item_qty = self::get_product_cart_item_qty( $item_id, $coupon_code );
-					
+
 					if ( empty( $product_cart_item_qty ) ) { /* product does not exists in the cart */
 						$this->add_item_to_cart( $item_id, $giveaway_qty, $coupon_code );
 						$success_message = $this->get_free_product_added_message( $first_product, $coupon_code, $giveaway_data );
-						if ( $success_message != "" ) {
+						if ( $success_message != '' ) {
 							wc_add_notice( $success_message, 'success' );
 						}
 					} else {
 						$total_qty_in_cart = array_sum( $product_cart_item_qty );
-						if ( $total_qty_in_cart < $giveaway_qty ) { //lesser qty in cart. Case when apply repeatedly enabled and customer increased the cart item quantity
+						if ( $total_qty_in_cart < $giveaway_qty ) { // lesser qty in cart. Case when apply repeatedly enabled and customer increased the cart item quantity
 							$this->add_item_to_cart( $item_id, ( $giveaway_qty - $total_qty_in_cart ), $coupon_code );
 						}
 					}
@@ -539,70 +542,72 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		}
 	}
 
-	/** 
+	/**
 	 *  This function will store the message for customer to add products to avail the giveaway
 	 *  The stored message will show via wp_head hook. Applicable for any_product_from_category, any_product_from_store, any_product_from_category_in_the_cart
-	 *  
-	 *  @since 2.0.4    
-	 *  @since 2.0.7 Added compatibility for `Any product from category in the cart`   
-	 *  @param      int         $coupon_id              ID of coupon
-	 *  @param      string      $bogo_customer_gets     BOGO customer gets option value
+	 *
+	 *  @since 2.0.4
+	 *  @since 2.0.7 Added compatibility for `Any product from category in the cart`
+	 *  @param      int    $coupon_id              ID of coupon
+	 *  @param      string $bogo_customer_gets     BOGO customer gets option value
 	 */
 	public function store_giveaway_available_message( $coupon_id, $bogo_customer_gets ) {
-		$coupon_code    = wc_get_coupon_code_by_id( $coupon_id );
-		$message        = '';
-		
-		$bogo_eligible  = self::get_bogo_eligible_session();      
-		$bogo_eligible  = ( ! isset( $bogo_eligible[ $coupon_code ] ) ? '' : $bogo_eligible[ $coupon_code ] );
+		$coupon_code = wc_get_coupon_code_by_id( $coupon_id );
+		$message     = '';
+
+		$bogo_eligible = self::get_bogo_eligible_session();
+		$bogo_eligible = ( ! isset( $bogo_eligible[ $coupon_code ] ) ? '' : $bogo_eligible[ $coupon_code ] );
 
 		if ( 'any_product_from_category' === $bogo_customer_gets || 'any_product_from_category_in_the_cart' === $bogo_customer_gets ) {
-			$bogo_free_categories = ( 'any_product_from_category' === $bogo_customer_gets ? $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_free_categories' ) : $this->get_cart_item_categories_for_coupon( $coupon_code, $coupon_id ) ); 
+			$bogo_free_categories = ( 'any_product_from_category' === $bogo_customer_gets ? $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_free_categories' ) : $this->get_cart_item_categories_for_coupon( $coupon_code, $coupon_id ) );
 
 			if ( ! empty( $bogo_free_categories ) ) {
-				$cat_arr = get_terms( array(
-					'taxonomy'      => 'product_cat',
-					'orderby'       => 'name',
-					'hide_empty'    => false,
-					'include'       => array_keys( $bogo_free_categories ),
-				) );              
+				$cat_arr = get_terms(
+					array(
+						'taxonomy'   => 'product_cat',
+						'orderby'    => 'name',
+						'hide_empty' => false,
+						'include'    => array_keys( $bogo_free_categories ),
+					)
+				);
 
 				if ( is_array( $cat_arr ) && $bogo_eligible != self::$giveaway_fully_availed_flag ) {
 					$cat_link_arr = array();
-					
+
 					foreach ( $cat_arr as $cat ) {
 						$cat_link_arr[] = '<a href="' . esc_attr( get_term_link( $cat->term_id ) ) . '" class="wt_sc_giveaway_category_link">' . esc_html( $cat->name ) . '</a>';
 					}
-					
-					$message     =  sprintf( __( "Congrats! you've earned a giveaway by applying coupon %s! Add any products from the following category to your cart to redeem the offer.", 'wt-smart-coupons-for-woocommerce-pro' ), "<b>{$coupon_code}</b>" );
-					$message    .=  '<br />'; 
-					$message    .=  __( "Eligible categories: ", 'wt-smart-coupons-for-woocommerce-pro' );
-					$message    .=  implode( ", ", $cat_link_arr );
-					
+
+					$message  = sprintf( __( "Congrats! you've earned a giveaway by applying coupon %s! Add any products from the following category to your cart to redeem the offer.", 'wt-smart-coupons-for-woocommerce-pro' ), "<b>{$coupon_code}</b>" );
+					$message .= '<br />';
+					$message .= __( 'Eligible categories: ', 'wt-smart-coupons-for-woocommerce-pro' );
+					$message .= implode( ', ', $cat_link_arr );
+
 					self::set_bogo_eligible_session( $coupon_id, $message );
 				}
 			}
-
 		} elseif ( 'any_product_from_store' === $bogo_customer_gets ) { /* when coupon condition is `all products from store` */
-			$message = sprintf( __( "Congrats! you've earned a giveaway by applying coupon %s! Add any product to your cart to redeem the offer. ", 'wt-smart-coupons-for-woocommerce-pro' ), "<b>{$coupon_code}</b>" );           
+			$message = sprintf( __( "Congrats! you've earned a giveaway by applying coupon %s! Add any product to your cart to redeem the offer. ", 'wt-smart-coupons-for-woocommerce-pro' ), "<b>{$coupon_code}</b>" );
 			self::set_bogo_eligible_session( $coupon_id, $message );
 		}
 	}
 
-	/** 
+	/**
 	 *  Check customer was added the full eligible quantities of free products.
 	 *  This function was using to toggle the giveaway available message. Applicable for any_product_from_category, any_product_from_store, any_product_from_category_in_the_cart
-	 *  @since 2.0.4    
-	 *  @param      int         $coupon_id              ID of coupon
-	 *  @param      string      $coupon_code            Coupon code
-	 *  @param      int         $max_qty_allowed        Maximum giveaway quantity allowed. `Apply frequency` calculation included.
-	 *  @param      int         $total_qty_in_cart      Total quantity of giveaway in the cart
+	 *
+	 *  @since 2.0.4
+	 *  @param      int    $coupon_id              ID of coupon
+	 *  @param      string $coupon_code            Coupon code
+	 *  @param      int    $max_qty_allowed        Maximum giveaway quantity allowed. `Apply frequency` calculation included.
+	 *  @param      int    $total_qty_in_cart      Total quantity of giveaway in the cart
 	 */
-	public static function set_bogo_fully_availed( $coupon_id, $coupon_code, $max_qty_allowed, $total_qty_in_cart ) { 
+	public static function set_bogo_fully_availed( $coupon_id, $coupon_code, $max_qty_allowed, $total_qty_in_cart ) {
 		if ( $max_qty_allowed <= $total_qty_in_cart ) {
-			//all eligible quantities of free products are in the cart. So can remove the info message
+			// all eligible quantities of free products are in the cart. So can remove the info message
 			self::remove_bogo_eligible_session( $coupon_code );
 			self::set_bogo_eligible_session( $coupon_id, self::$giveaway_fully_availed_flag );
-					
+
 		} else {
 			/* this is to clear the existing eligible session. The value assigning hook will be called later */
 			self::remove_bogo_eligible_session( $coupon_code );
@@ -612,12 +617,13 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Remove BOGO eligible session when the corresponding coupon was removed
-	 *  @since 2.0.4 
+	 *
+	 *  @since 2.0.4
 	 *  @param coupon code
 	 */
 	public static function remove_bogo_eligible_session( $coupon_code ) {
 		$bogo_eligible = self::get_bogo_eligible_session();
-		$coupon_code = wc_format_coupon_code( $coupon_code );
+		$coupon_code   = wc_format_coupon_code( $coupon_code );
 		if ( isset( $bogo_eligible[ $coupon_code ] ) ) {
 			unset( $bogo_eligible[ $coupon_code ] );
 			WC()->session->set( self::$bogo_eligible_session_id, $bogo_eligible );
@@ -626,130 +632,134 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Get BOGO eligible sessions if exists
-	 *  @since 2.0.4 
+	 *
+	 *  @since 2.0.4
 	 *  @return     array   Empty array if not exists, otherwise an array with the session info
 	 */
 	public static function get_bogo_eligible_session() {
-		$bogo_eligible = WC()->session->get(self::$bogo_eligible_session_id);
-		return (is_null($bogo_eligible) ? array() : $bogo_eligible);
+		$bogo_eligible = WC()->session->get( self::$bogo_eligible_session_id );
+		return ( is_null( $bogo_eligible ) ? array() : $bogo_eligible );
 	}
 
 	/**
 	 *  Add the coupon code to BOGO eligible session array
-	 *  @since 2.0.4 
+	 *
+	 *  @since 2.0.4
 	 *  @param int      coupon id
 	 *  @param string   value for BOGO eligible session. Here BOGO available message, BOGO fully availed info etc
 	 */
-	public static function set_bogo_eligible_session($coupon_id, $data) {
+	public static function set_bogo_eligible_session( $coupon_id, $data ) {
 		$bogo_eligible = self::get_bogo_eligible_session();
-		$coupon_code = wc_format_coupon_code(wc_get_coupon_code_by_id($coupon_id));
-		if (!isset($bogo_eligible[$coupon_code]) || (isset($bogo_eligible[$coupon_code]) && $bogo_eligible[$coupon_code] == "")) {
-			$bogo_eligible[$coupon_code] = $data;
-			WC()->session->set(self::$bogo_eligible_session_id, $bogo_eligible);
+		$coupon_code   = wc_format_coupon_code( wc_get_coupon_code_by_id( $coupon_id ) );
+		if ( ! isset( $bogo_eligible[ $coupon_code ] ) || ( isset( $bogo_eligible[ $coupon_code ] ) && $bogo_eligible[ $coupon_code ] == '' ) ) {
+			$bogo_eligible[ $coupon_code ] = $data;
+			WC()->session->set( self::$bogo_eligible_session_id, $bogo_eligible );
 		}
 	}
 
 	/**
 	 *  Error/Validation messages when giveaway products are adding to cart.
+	 *
 	 *  @since 2.0.4
 	 *  @since 2.0.5    Message is added to wc_notice for removing alert error message on ajax response
 	 *  @param string $reason reason string
-	 *  @param array $extra_args extra arguments to process the message
+	 *  @param array  $extra_args extra arguments to process the message
 	 *  @param string $coupon_type coupon type
 	 */
-	public static function set_add_to_cart_messages($reason, $extra_args = array(), $coupon_type = null) {
+	public static function set_add_to_cart_messages( $reason, $extra_args = array(), $coupon_type = null ) {
 		$out = '';
-		switch ($reason) {
-			case "product_id_missing":
-			case "coupon_id_missing":
-			case "product_not_under_giveaway_list":
-				$out = __("Oops! It seems like you've made an invalid request. Please try again.", 'wt-smart-coupons-for-woocommerce-pro');
+		switch ( $reason ) {
+			case 'product_id_missing':
+			case 'coupon_id_missing':
+			case 'product_not_under_giveaway_list':
+				$out = __( "Oops! It seems like you've made an invalid request. Please try again.", 'wt-smart-coupons-for-woocommerce-pro' );
 				break;
-			case "product_is_not_a_bogo_product":
-			case "given_product_is_not_under_the_category":
-			case "non_free_item_of_the_given_category_product_not_in_the_cart":
-			case "non_free_product_not_found_in_the_cart": //`same_product_in_the_cart`
-				$out = __("Oops! It seems like you've moved an invalid product to cart. Please try again.", 'wt-smart-coupons-for-woocommerce-pro');
+			case 'product_is_not_a_bogo_product':
+			case 'given_product_is_not_under_the_category':
+			case 'non_free_item_of_the_given_category_product_not_in_the_cart':
+			case 'non_free_product_not_found_in_the_cart': // `same_product_in_the_cart`
+				$out = __( "Oops! It seems like you've moved an invalid product to cart. Please try again.", 'wt-smart-coupons-for-woocommerce-pro' );
 				break;
-			case "product_max_quantity_reached":
-				$out = __("You've exceeded the maximum quantity of products to avail the giveaway.", 'wt-smart-coupons-for-woocommerce-pro');
+			case 'product_max_quantity_reached':
+				$out = __( "You've exceeded the maximum quantity of products to avail the giveaway.", 'wt-smart-coupons-for-woocommerce-pro' );
 				break;
-			case "coupon_max_quantity_reached":
-				$out = __("You've exceeded the maximum quantity allowed as a giveaway.", 'wt-smart-coupons-for-woocommerce-pro');
+			case 'coupon_max_quantity_reached':
+				$out = __( "You've exceeded the maximum quantity allowed as a giveaway.", 'wt-smart-coupons-for-woocommerce-pro' );
 				break;
-			case "no_free_product_in_the_cart":
-				$out = __("Something went wrong! It seems like there are no products available for this coupon. Please contact our support team.", 'wt-smart-coupons-for-woocommerce-pro');
+			case 'no_free_product_in_the_cart':
+				$out = __( 'Something went wrong! It seems like there are no products available for this coupon. Please contact our support team.', 'wt-smart-coupons-for-woocommerce-pro' );
 				break;
-			case "already_availed_bogo":
-				$out = __("Seems like you have already moved all the giveaway products in the cart.", 'wt-smart-coupons-for-woocommerce-pro');
+			case 'already_availed_bogo':
+				$out = __( 'Seems like you have already moved all the giveaway products in the cart.', 'wt-smart-coupons-for-woocommerce-pro' );
 				break;
 			default:
-				$out = __("Oops! It seems like you've made an invalid request. Please try again.", 'wt-smart-coupons-for-woocommerce-pro');
+				$out = __( "Oops! It seems like you've made an invalid request. Please try again.", 'wt-smart-coupons-for-woocommerce-pro' );
 		}
 
-		if (isset($extra_args['apply_frequency']) && 'repeat' == $extra_args['apply_frequency']) {
-			$out .= " " . __("Please add more products to cart to avail more giveaway.", 'wt-smart-coupons-for-woocommerce-pro');
+		if ( isset( $extra_args['apply_frequency'] ) && 'repeat' == $extra_args['apply_frequency'] ) {
+			$out .= ' ' . __( 'Please add more products to cart to avail more giveaway.', 'wt-smart-coupons-for-woocommerce-pro' );
 		}
 
-		$msg = apply_filters('wt_sc_alter_giveaway_addtocart_messages', $out, $reason, $extra_args, $coupon_type);
+		$msg = apply_filters( 'wt_sc_alter_giveaway_addtocart_messages', $out, $reason, $extra_args, $coupon_type );
 
-		wc_add_notice($msg, 'error');
+		wc_add_notice( $msg, 'error' );
 		wc_print_notices();
 	}
 
 	/**
 	 *  Ajax action function for adding Giveaway products into cart.
+	 *
 	 *  @since 1.0.0
-	 *  @since 2.0.4 Added compatibility with BOGO type coupons 
+	 *  @since 2.0.4 Added compatibility with BOGO type coupons
 	 */
-	public function add_to_cart($coupon_id, $product_id, $variation_id, $add_to_cart_all, $quantity) {
-		if (0 === $coupon_id) {
+	public function add_to_cart( $coupon_id, $product_id, $variation_id, $add_to_cart_all, $quantity ) {
+		if ( 0 === $coupon_id ) {
 			return array(
-				"status" => "FAILED",
-				"message" => "Coupon ID missing."
+				'status'  => 'FAILED',
+				'message' => 'Coupon ID missing.',
 			);
 		}
-		if (0 === $add_to_cart_all) { /* individual add to cart */
-			if (0 === $product_id) {
+		if ( 0 === $add_to_cart_all ) { /* individual add to cart */
+			if ( 0 === $product_id ) {
 				return array(
-					"status" => "FAILED",
-					"message" => "Product ID missing. Coupon ID: " . $coupon_id,
+					'status'  => 'FAILED',
+					'message' => 'Product ID missing. Coupon ID: ' . $coupon_id,
 				);
 			}
 		}
 
-		$coupon = new WC_Coupon($coupon_id);
-		$coupon_code = wc_format_coupon_code($coupon->get_code());
-		if (self::is_bogo($coupon)) {
-			$bogo_customer_gets = $this->get_coupon_meta_value($coupon_id, '_wt_sc_bogo_customer_gets');
-			if ('specific_product' === $bogo_customer_gets) {
-				return $this->specific_product_add_to_cart($coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id);
+		$coupon      = new WC_Coupon( $coupon_id );
+		$coupon_code = wc_format_coupon_code( $coupon->get_code() );
+		if ( self::is_bogo( $coupon ) ) {
+			$bogo_customer_gets = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_customer_gets' );
+			if ( 'specific_product' === $bogo_customer_gets ) {
+				return $this->specific_product_add_to_cart( $coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id );
 
-			} elseif ('same_product_in_the_cart' === $bogo_customer_gets) {
-				return $this->same_product_add_to_cart($coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id, $quantity);
+			} elseif ( 'same_product_in_the_cart' === $bogo_customer_gets ) {
+				return $this->same_product_add_to_cart( $coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id, $quantity );
 
 			}
 
-			/** only the above 2 types are allowed in BOGO **/
+			/** only the above 2 types are allowed in BOGO */
 
 		} else {
-			return $this->non_bogo_add_to_cart($coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id);
+			return $this->non_bogo_add_to_cart( $coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id );
 		}
 
-		$notices = wc_get_notices('error');
-		if (count($notices) > 0) {
-			$last_error = end($notices);
-			if (isset($last_error['notice'])) {
+		$notices = wc_get_notices( 'error' );
+		if ( count( $notices ) > 0 ) {
+			$last_error = end( $notices );
+			if ( isset( $last_error['notice'] ) ) {
 				wc_clear_notices(); /* to avoid notice printing on page refresh */
 				return array(
-					"status" => "FAILED",
-					"message" => "Something went wrong.",
+					'status'  => 'FAILED',
+					'message' => 'Something went wrong.',
 				);
 			}
 		} else {
 			return array(
-				"status" => "SUCCESS",
-				"message" => "Successfully added to cart",
+				'status'  => 'SUCCESS',
+				'message' => 'Successfully added to cart',
 			);
 		}
 	}
@@ -758,51 +768,53 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	/**
 	 *  Ajax sub function
 	 *  Add to cart for non BOGO coupon types
+	 *
 	 *  @since 2.0.4
 	 */
-	private function non_bogo_add_to_cart($coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id) {
-		$free_product_id_arr = self::get_giveaway_products($coupon_id);
-		$item_id = 0;
-		if (in_array($variation_id, $free_product_id_arr)) {
+	private function non_bogo_add_to_cart( $coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id ) {
+		$free_product_id_arr = self::get_giveaway_products( $coupon_id );
+		$item_id             = 0;
+		if ( in_array( $variation_id, $free_product_id_arr ) ) {
 			$item_id = $variation_id;
 
-		} elseif (in_array($product_id, $free_product_id_arr)) {
+		} elseif ( in_array( $product_id, $free_product_id_arr ) ) {
 			$item_id = $product_id;
 		} else {
 			return array(
-				"status" => "FAILED",
-				"message" => "Product not under giveaway list.",
+				'status'  => 'FAILED',
+				'message' => 'Product not under giveaway list.',
 			);
 		}
 
-		//get cart item data
-		$total_qty = self::get_total_coupon_cart_item_qty($coupon_code); //total cart quantity for the coupon
+		// get cart item data
+		$total_qty = self::get_total_coupon_cart_item_qty( $coupon_code ); // total cart quantity for the coupon
 
 		/* allowed maximum quantity */
-		$discount_quantity = $this->get_non_individual_discount_quantity($coupon_id);
+		$discount_quantity = $this->get_non_individual_discount_quantity( $coupon_id );
 
-		if (empty($total_qty)) { /* product does not exists in the cart */
+		if ( empty( $total_qty ) ) { /*
+			product does not exists in the cart */
 			/* no free product in the cart */
-			$this->add_item_to_cart(($variation_id > 0 ? $variation_id : $product_id), $discount_quantity, $coupon_code);
+			$this->add_item_to_cart( ( $variation_id > 0 ? $variation_id : $product_id ), $discount_quantity, $coupon_code );
 			return array(
-				"status" => "SUCCESS",
-				"message" => "No free product in the cart",
+				'status'  => 'SUCCESS',
+				'message' => 'No free product in the cart',
 			);
 
 		} else {
 
-			$total_qty = array_sum($total_qty);
-			if ($discount_quantity > $total_qty) { /* balance quantity exists */
-				$this->add_item_to_cart(($variation_id > 0 ? $variation_id : $product_id), ($discount_quantity - $total_qty), $coupon_code);
+			$total_qty = array_sum( $total_qty );
+			if ( $discount_quantity > $total_qty ) { /* balance quantity exists */
+				$this->add_item_to_cart( ( $variation_id > 0 ? $variation_id : $product_id ), ( $discount_quantity - $total_qty ), $coupon_code );
 				return array(
-					"status" => "SUCCESS",
-					"message" => "Item added to cart.",
+					'status'  => 'SUCCESS',
+					'message' => 'Item added to cart.',
 				);
 
 			} else {
 				return array(
-					"status" => "FAILED",
-					"message" => "Coupon max quantity reached.",
+					'status'  => 'FAILED',
+					'message' => 'Coupon max quantity reached.',
 				);
 			}
 		}
@@ -847,7 +859,12 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 */
 	private function same_product_add_to_cart( $coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id, $quantity = 0 ) {
 		// check the current product is in the cart as non giveaway product
-		if ( ! self::non_free_product_exists( array( 'product_id' => $product_id, 'variation_id' => $variation_id ) ) ) {
+		if ( ! self::non_free_product_exists(
+			array(
+				'product_id'   => $product_id,
+				'variation_id' => $variation_id,
+			)
+		) ) {
 			return array(
 				'status'  => 'FAILED',
 				'message' => 'Non free product not found in cart.',
@@ -876,11 +893,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		if ( ! $this->is_product_category_restriction_enabled( $coupon_id ) || empty( $coupon_products ) ) {
 			/* No product/category restriction */
 			$this->add_item_to_cart( $add_to_cart_id, $add_to_cart_qty, $coupon_code );
-		} else {
-			if ( isset( $coupon_products[ $product_id ] ) || isset( $coupon_products[ $variation_id ] ) ) {
+		} elseif ( isset( $coupon_products[ $product_id ] ) || isset( $coupon_products[ $variation_id ] ) ) {
 				/* current product is under coupon product list */
 				$this->add_item_to_cart( $add_to_cart_id, $add_to_cart_qty, $coupon_code );
-			}
 		}
 
 		return array(
@@ -896,9 +911,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 * @since 2.0.4
 	 */
 	private function specific_product_add_to_cart( $coupon, $coupon_id, $coupon_code, $bogo_customer_gets, $product_id, $variation_id ) {
-		$coupon_code           = wc_format_coupon_code( $coupon_code );
+		$coupon_code            = wc_format_coupon_code( $coupon_code );
 		$bogo_product_condition = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_product_condition' );
-		$bogo_products         = $this->get_all_bogo_giveaway_products( $coupon_id );
+		$bogo_products          = $this->get_all_bogo_giveaway_products( $coupon_id );
 
 		$frequency = $this->get_coupon_applicable_count( $coupon_id, $coupon_code );
 
@@ -926,11 +941,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 						$giveaway_qty = $this->prepare_quantity_based_on_apply_frequency( $coupon_id, $giveaway_qty );
 						$this->add_item_to_cart( $variation_id, $giveaway_qty, $coupon_code );
 
-					} else {
-						if ( isset( $bogo_products[ $product_id ] ) ) {
+					} elseif ( isset( $bogo_products[ $product_id ] ) ) {
 							$giveaway_qty = $this->prepare_quantity_based_on_apply_frequency( $coupon_id, $bogo_products[ $product_id ]['qty'] );
 							$this->add_item_to_cart( $product_id, $giveaway_qty, $coupon_code );
-						}
 					}
 				}
 			}
@@ -973,7 +986,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 			$product_cart_item_qty = self::get_product_cart_item_qty( $item_id, $coupon_code ); /* get cart item data. Coupon code is given so return single item array. Here the quantity will be total if multiple records exists */
 			if ( empty( $product_cart_item_qty ) ) {
-				/* product not already added so add it. */
+				/*
+				product not already added so add it. */
 				// add to cart with the $giveaway_qty quantity
 				$this->add_item_to_cart( ( $variation_id > 0 ? $variation_id : $product_id ), $giveaway_qty, $coupon_code );
 
@@ -981,7 +995,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				/* product already in cart. So check its a free item of current coupon */
 				$total_qty = array_sum( $product_cart_item_qty ); // total cart quantity
 				if ( $giveaway_qty != $total_qty ) {
-					/* quantity mismatch so update */
+					/*
+					quantity mismatch so update */
 					// update quantity. And show a quantity updated message
 					$qty_increment = $giveaway_qty - $total_qty;
 					$this->update_existing_free_item_qty( $product_cart_item_qty, $qty_increment );
@@ -1027,10 +1042,10 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 * Giveaway add to cart function
 	 *
 	 * @since 2.0.4
-	 * @param int $item_id Product/variation id
-	 * @param int $quantity Quantity
+	 * @param int    $item_id Product/variation id
+	 * @param int    $quantity Quantity
 	 * @param string $coupon_code Coupon code
-	 * @param int $category Category ID, On category wise giveaway [Optional]
+	 * @param int    $category Category ID, On category wise giveaway [Optional]
 	 */
 	private function add_item_to_cart( $item_id, $quantity, $coupon_code, $category = '' ) {
 		$product = wc_get_product( $item_id );
@@ -1079,7 +1094,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 *
 	 * @since 2.0.4
 	 * @param WC_Product $_product
-	 * @param array $variation_attributes optional only applicable for variable products, If any of the variation was purchasable, the attributes of first purchasable variation will assigned to this variable.
+	 * @param array      $variation_attributes optional only applicable for variable products, If any of the variation was purchasable, the attributes of first purchasable variation will assigned to this variable.
 	 * @return boolean|integer
 	 */
 	public function is_purchasable( $_product, &$variation_attributes = array() ) {
@@ -1116,12 +1131,10 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 					return $variation_id; // ID of first purchasable variation
 				}
 			}
-		} else {
-			if ( ! $_product->has_enough_stock( 1 ) ) {
+		} elseif ( ! $_product->has_enough_stock( 1 ) ) {
 				$quantity = $_product->get_stock_quantity();
-				if ( 0 === $quantity ) {
-					return false;
-				}
+			if ( 0 === $quantity ) {
+				return false;
 			}
 		}
 
@@ -1130,15 +1143,15 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Register for applicable for giveaway checking. This function will trigger after cart item quantity update
-	 * 
+	 *
 	 * @since 2.0.4
 	 */
 	public function reg_applicable_for_giveaway( $cart_item_key, $quantity, $old_quantity, $cart ) {
 		if ( $old_quantity < $quantity ) { // quantity increased
-			$cart_item_data = $cart->cart_contents[ $cart_item_key ];
-			$product_id     = $cart_item_data['product_id'];
-			$variation_id   = $cart_item_data['variation_id'];
-			$variation      = $cart_item_data['variation'];
+			$cart_item_data     = $cart->cart_contents[ $cart_item_key ];
+			$product_id         = $cart_item_data['product_id'];
+			$variation_id       = $cart_item_data['variation_id'];
+			$variation          = $cart_item_data['variation'];
 			$increased_quantity = $quantity - $old_quantity;
 
 			/**
@@ -1153,7 +1166,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Checks the newly added item is eligible as giveaway product. If yes then convert the item as giveaway
-	 * 
+	 *
 	 * @since 2.0.4
 	 * @since 2.0.7 Added compatibility for `Any product from category in the cart`
 	 */
@@ -1172,9 +1185,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		$bogo_eligible = self::get_bogo_eligible_session();
 
 		if ( ! empty( $bogo_eligible ) ) {
-			$cart           = WC()->cart;
-			$bogo_eligible  = array_keys( $bogo_eligible ); // not needed the eligible message
-			$coupons        = $cart->get_applied_coupons();
+			$cart             = WC()->cart;
+			$bogo_eligible    = array_keys( $bogo_eligible ); // not needed the eligible message
+			$coupons          = $cart->get_applied_coupons();
 			$applied_eligible = array_intersect( $bogo_eligible, $coupons );
 
 			if ( ! empty( $applied_eligible ) ) {
@@ -1192,7 +1205,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				$wt_sc_just_added_coupons = ! is_array( $wt_sc_just_added_coupons ) ? array() : array_unique( $wt_sc_just_added_coupons );
 				$existing_coupons         = array_diff( $applied_eligible, $wt_sc_just_added_coupons );
 
-				if ( ! empty( $existing_coupons ) ) { /* already added coupons are there. So give priority */
+				if ( ! empty( $existing_coupons ) ) { /*
+					already added coupons are there. So give priority */
 					/* $quantity is a reference argument */
 					$this->set_as_giveaway( $existing_coupons, $variation_id, $product_id, $quantity );
 				}
@@ -1215,8 +1229,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 								continue;
 							}
 
-							$coupon            = new WC_Coupon( $coupon_code );
-							$coupon_id         = $coupon->get_id();
+							$coupon             = new WC_Coupon( $coupon_code );
+							$coupon_id          = $coupon->get_id();
 							$bogo_customer_gets = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_customer_gets' );
 
 							if ( 'any_product_from_category' === $bogo_customer_gets ) {
@@ -1235,12 +1249,10 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 										unset( $wt_sc_just_added_coupons[ $i ] );
 										continue;
 									}
-
 								} else {
 									unset( $wt_sc_just_added_coupons[ $i ] );
 									continue;
 								}
-
 							} elseif ( 'any_product_from_store' === $bogo_customer_gets || 'any_product_from_category_in_the_cart' === $bogo_customer_gets ) {
 								// check contribution for eligibility by the current product
 								$do_qty_chk = true;
@@ -1262,15 +1274,15 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 									 * sometimes same product may give eligibility for multiple coupons
 									 */
 									if ( 0 === $new_coupon_eligibility_qty ) {
-										$quantity -= $eligibility_qty;
+										$quantity                  -= $eligibility_qty;
 										$new_coupon_eligibility_qty = $eligibility_qty;
 
-									} else {
-										if ( $new_coupon_eligibility_qty < $eligibility_qty ) { /* product gives eligibility for multiple coupons, current coupon needs more quantity than previous coupon */
+									} elseif ( $new_coupon_eligibility_qty < $eligibility_qty ) {
+										/* product gives eligibility for multiple coupons, current coupon needs more quantity than previous coupon */
 											$quantity -= ( $eligibility_qty - $new_coupon_eligibility_qty );
 
 											$new_coupon_eligibility_qty = $eligibility_qty; // reset the value with new higher value
-										}
+
 									}
 								}
 							}
@@ -1304,145 +1316,141 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		return $eligibility_qty;
 	}
 
-	private function set_as_normal_cartitem($product_id, $variation_id, $quantity)
-	{
-		$product = wc_get_product(($variation_id > 0 ? $variation_id : $product_id));
+	private function set_as_normal_cartitem( $product_id, $variation_id, $quantity ) {
+		$product   = wc_get_product( ( $variation_id > 0 ? $variation_id : $product_id ) );
 		$variation = array();
 
-		if ('variation' === $product->get_type()) {
+		if ( 'variation' === $product->get_type() ) {
 			$variation = $product->get_variation_attributes();
 		}
 
-		WC()->session->set(self::$break_add_to_cart_loop_session_id, 1); /* to inform not check again for giveaway */
-		
-		WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation, array());
+		WC()->session->set( self::$break_add_to_cart_loop_session_id, 1 ); /* to inform not check again for giveaway */
+
+		WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variation, array() );
 	}
 
-	private function set_as_giveaway($coupons, $variation_id, $product_id, &$quantity)
-	{
-		$item_id = ($variation_id > 0 ? $variation_id : $product_id);
-		
-		foreach ($coupons as $coupon_code) {
-			$coupon_code = wc_format_coupon_code($coupon_code);
-			$coupon = new WC_Coupon($coupon_code);
-			
-			if ($coupon) {
+	private function set_as_giveaway( $coupons, $variation_id, $product_id, &$quantity ) {
+		$item_id = ( $variation_id > 0 ? $variation_id : $product_id );
+
+		foreach ( $coupons as $coupon_code ) {
+			$coupon_code = wc_format_coupon_code( $coupon_code );
+			$coupon      = new WC_Coupon( $coupon_code );
+
+			if ( $coupon ) {
 				// recalculate the eligibility count for the current coupon. Because we removed the newly added quantity
-				$this->recalculate_apply_frequency_count($coupon);                 
+				$this->recalculate_apply_frequency_count( $coupon );
 
-				$coupon_id = $coupon->get_id();
-				$bogo_customer_gets = $this->get_coupon_meta_value($coupon_id, '_wt_sc_bogo_customer_gets');                       
-				$cart_items = WC()->cart->get_cart();
-				
-				if ('any_product_from_category' === $bogo_customer_gets) {
-					$bogo_free_categories = $this->get_coupon_meta_value($coupon_id, '_wt_sc_bogo_free_categories');
-					if (!empty($bogo_free_categories)) {   
-						$bogo_free_category_ids = array_keys($bogo_free_categories);
-						$product_cats = wc_get_product_cat_ids($product_id);
-						$cat_qty_arr = array(); // already in cart quantity
-						$matching_cats = array_values(array_intersect($product_cats, $bogo_free_category_ids));
+				$coupon_id          = $coupon->get_id();
+				$bogo_customer_gets = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_customer_gets' );
+				$cart_items         = WC()->cart->get_cart();
 
-						if (empty($matching_cats)) { /* current product not belongs to the coupon categories */
+				if ( 'any_product_from_category' === $bogo_customer_gets ) {
+					$bogo_free_categories = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_free_categories' );
+					if ( ! empty( $bogo_free_categories ) ) {
+						$bogo_free_category_ids = array_keys( $bogo_free_categories );
+						$product_cats           = wc_get_product_cat_ids( $product_id );
+						$cat_qty_arr            = array(); // already in cart quantity
+						$matching_cats          = array_values( array_intersect( $product_cats, $bogo_free_category_ids ) );
+
+						if ( empty( $matching_cats ) ) { /* current product not belongs to the coupon categories */
 							continue;
 						}
 
-						foreach ($cart_items as $item_key => $cart_item) {
-							if (self::is_a_free_item($cart_item, $coupon_code)) { /* a free item under the given coupon */
-								if (isset($cart_item['free_category']) && in_array($cart_item['free_category'], $matching_cats)) {
-									if (isset($cat_qty_arr[$cart_item['free_category']])) {
-										$cat_qty_arr[$cart_item['free_category']] += $cart_item['quantity'];
+						foreach ( $cart_items as $item_key => $cart_item ) {
+							if ( self::is_a_free_item( $cart_item, $coupon_code ) ) { /* a free item under the given coupon */
+								if ( isset( $cart_item['free_category'] ) && in_array( $cart_item['free_category'], $matching_cats ) ) {
+									if ( isset( $cat_qty_arr[ $cart_item['free_category'] ] ) ) {
+										$cat_qty_arr[ $cart_item['free_category'] ] += $cart_item['quantity'];
 									} else {
-										$cat_qty_arr[$cart_item['free_category']] = $cart_item['quantity'];
+										$cat_qty_arr[ $cart_item['free_category'] ] = $cart_item['quantity'];
 									}
 								}
 							}
 						}
-						
-						$product = wc_get_product($item_id);
 
-						$matching_cat_data = $this->sort_category_by_profit($matching_cats, $bogo_free_categories, $product, $coupon_id); /* sort the category based on discount, update quantity based on `Apply repeatedly` option */
+						$product = wc_get_product( $item_id );
 
-						$total_allowed_free_qty_for_cats = array_sum(array_column($matching_cat_data, 'qty')); // maximum free products allowed for the categories. 
-						$total_free_qty_for_cats_in_the_cart = array_sum($cat_qty_arr);
-						$total_qty_for_free = 0;
-						if ($total_allowed_free_qty_for_cats > $total_free_qty_for_cats_in_the_cart) { // balance qty exists in allowed maximum
+						$matching_cat_data = $this->sort_category_by_profit( $matching_cats, $bogo_free_categories, $product, $coupon_id ); /* sort the category based on discount, update quantity based on `Apply repeatedly` option */
+
+						$total_allowed_free_qty_for_cats     = array_sum( array_column( $matching_cat_data, 'qty' ) ); // maximum free products allowed for the categories.
+						$total_free_qty_for_cats_in_the_cart = array_sum( $cat_qty_arr );
+						$total_qty_for_free                  = 0;
+						if ( $total_allowed_free_qty_for_cats > $total_free_qty_for_cats_in_the_cart ) { // balance qty exists in allowed maximum
 							$balance_discount_qty = $total_allowed_free_qty_for_cats - $total_free_qty_for_cats_in_the_cart;
-							$total_qty_for_free = min($quantity, $balance_discount_qty);
-							$quantity -= $total_qty_for_free; // any balance will added to next coupon, in the next iteration
+							$total_qty_for_free   = min( $quantity, $balance_discount_qty );
+							$quantity            -= $total_qty_for_free; // any balance will added to next coupon, in the next iteration
 						}
 
-						foreach ($matching_cat_data as $matching_cat => $cat_data) {
-							if ($cat_data['qty'] == 0) { // no qty added by admin, so skip
+						foreach ( $matching_cat_data as $matching_cat => $cat_data ) {
+							if ( $cat_data['qty'] == 0 ) { // no qty added by admin, so skip
 								continue;
 							}
-							if ($total_qty_for_free <= 0) {
+							if ( $total_qty_for_free <= 0 ) {
 								break;
 							}
 
-							$total_qty_in_cart = isset($cat_qty_arr[$matching_cat]) ? $cat_qty_arr[$matching_cat] : 0; /* total quantity for the category in the cart */  
-							if ($total_qty_in_cart < $cat_data['qty']) { /* total quantity in the cart is lesser than the maximum allowed */
-								$qty_for_current_cat = min($total_qty_for_free, ($cat_data['qty'] - $total_qty_in_cart));
-								$this->add_item_to_cart($item_id, $qty_for_current_cat, $coupon_code, $matching_cat);
+							$total_qty_in_cart = isset( $cat_qty_arr[ $matching_cat ] ) ? $cat_qty_arr[ $matching_cat ] : 0; /* total quantity for the category in the cart */
+							if ( $total_qty_in_cart < $cat_data['qty'] ) { /* total quantity in the cart is lesser than the maximum allowed */
+								$qty_for_current_cat = min( $total_qty_for_free, ( $cat_data['qty'] - $total_qty_in_cart ) );
+								$this->add_item_to_cart( $item_id, $qty_for_current_cat, $coupon_code, $matching_cat );
 								$total_qty_for_free -= $qty_for_current_cat;
 							}
 						}
 
 						/* check and set is bogo fully availed or not */
-						self::set_bogo_fully_availed($coupon_id, $coupon_code, $total_allowed_free_qty_for_cats, ($total_free_qty_for_cats_in_the_cart + $total_qty_for_free));
-						
-						if ($quantity == 0) { // no more quantity in total added quantity so break the main loop, otherwise continue the loop for other coupon(if exists)
+						self::set_bogo_fully_availed( $coupon_id, $coupon_code, $total_allowed_free_qty_for_cats, ( $total_free_qty_for_cats_in_the_cart + $total_qty_for_free ) );
+
+						if ( $quantity == 0 ) { // no more quantity in total added quantity so break the main loop, otherwise continue the loop for other coupon(if exists)
 							break;
 						}
-
 					} else {
 						// no category added by admin
 					}
-
-				} elseif ('any_product_from_store' === $bogo_customer_gets) {
-					$total_qty_used = 0;
+				} elseif ( 'any_product_from_store' === $bogo_customer_gets ) {
+					$total_qty_used           = 0;
 					$current_product_free_qty = 0;
-					foreach ($cart_items as $item_key => $cart_item) {
-						if (self::is_a_free_item($cart_item, $coupon_code)) { /* a free item under the given coupon */
+					foreach ( $cart_items as $item_key => $cart_item ) {
+						if ( self::is_a_free_item( $cart_item, $coupon_code ) ) { /* a free item under the given coupon */
 							$total_qty_used += $cart_item['quantity'];
-							if (self::is_same_prodct($cart_item, $product_id, $variation_id)) {
+							if ( self::is_same_prodct( $cart_item, $product_id, $variation_id ) ) {
 								$current_product_free_qty += $cart_item['quantity'];
-								WC()->cart->remove_cart_item($item_key);  
+								WC()->cart->remove_cart_item( $item_key );
 							}
 						}
 					}
 
 					/* allowed quantity */
-					$max_item_qty = $this->get_quantity_for_non_individual_quantity_bogo($coupon_id);
+					$max_item_qty = $this->get_quantity_for_non_individual_quantity_bogo( $coupon_id );
 
 					$qty_for_free = 0;
-					if ($total_qty_used < $max_item_qty) { /* remaining quantity exists */
+					if ( $total_qty_used < $max_item_qty ) { /* remaining quantity exists */
 						$balance_discount_qty = $max_item_qty - $total_qty_used;
-						$qty_for_free = min($quantity, $balance_discount_qty);
-						$quantity -= $qty_for_free; // any balance will added to next coupon, in the next iteration
+						$qty_for_free         = min( $quantity, $balance_discount_qty );
+						$quantity            -= $qty_for_free; // any balance will added to next coupon, in the next iteration
 					}
 
 					$total_qty_for_free = $current_product_free_qty + $qty_for_free;
 
-					$this->add_item_to_cart($item_id, $total_qty_for_free, $coupon_code);
-											
-					/* check and set, is bogo fully availed or not */
-					self::set_bogo_fully_availed($coupon_id, $coupon_code, $max_item_qty, ($total_qty_used + $qty_for_free));
+					$this->add_item_to_cart( $item_id, $total_qty_for_free, $coupon_code );
 
-					if ($quantity == 0) { // no more quantity in total added quantity so break the main loop, otherwise continue the loop for other coupon(if exists)
+					/* check and set, is bogo fully availed or not */
+					self::set_bogo_fully_availed( $coupon_id, $coupon_code, $max_item_qty, ( $total_qty_used + $qty_for_free ) );
+
+					if ( $quantity == 0 ) { // no more quantity in total added quantity so break the main loop, otherwise continue the loop for other coupon(if exists)
 						break;
 					}
-				} elseif ('any_product_from_category_in_the_cart' === $bogo_customer_gets) {
-					$bogo_free_categories = $this->get_cart_item_categories_for_coupon($coupon_code, $coupon_id);
-					$frequency = $this->get_coupon_applicable_count($coupon_id, $coupon_code);
-					$in_cart_frequency = array_sum(array_column($bogo_free_categories, 'frequency'));
-					$remaining_frequency = $frequency - $in_cart_frequency;
+				} elseif ( 'any_product_from_category_in_the_cart' === $bogo_customer_gets ) {
+					$bogo_free_categories = $this->get_cart_item_categories_for_coupon( $coupon_code, $coupon_id );
+					$frequency            = $this->get_coupon_applicable_count( $coupon_id, $coupon_code );
+					$in_cart_frequency    = array_sum( array_column( $bogo_free_categories, 'frequency' ) );
+					$remaining_frequency  = $frequency - $in_cart_frequency;
 
-					if (!empty($bogo_free_categories) && 0 < $remaining_frequency) {
-						$bogo_free_category_ids = array_keys($bogo_free_categories);
-						$product_cats = wc_get_product_cat_ids($product_id);
-						$matching_cats = array_values(array_intersect($product_cats, $bogo_free_category_ids));
+					if ( ! empty( $bogo_free_categories ) && 0 < $remaining_frequency ) {
+						$bogo_free_category_ids = array_keys( $bogo_free_categories );
+						$product_cats           = wc_get_product_cat_ids( $product_id );
+						$matching_cats          = array_values( array_intersect( $product_cats, $bogo_free_category_ids ) );
 
-						if (empty($matching_cats)) { /* current product not belongs to the coupon allowed categories */
+						if ( empty( $matching_cats ) ) { /* current product not belongs to the coupon allowed categories */
 							continue;
 						}
 
@@ -1453,12 +1461,12 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 						$required_qty_arr   = array(); // for sorting
 						$is_reminder_exists = false;
 
-						foreach ($matching_cats as $cat_id) {
-							$cat_data = $bogo_free_categories[$cat_id];
-							$matching_cat_data[$cat_id] = $cat_data;
-							$required_qty_arr[] = $cat_data['required'];
+						foreach ( $matching_cats as $cat_id ) {
+							$cat_data                     = $bogo_free_categories[ $cat_id ];
+							$matching_cat_data[ $cat_id ] = $cat_data;
+							$required_qty_arr[]           = $cat_data['required'];
 
-							if (0 > $cat_data['reminder']) {
+							if ( 0 > $cat_data['reminder'] ) {
 								$is_reminder_exists = true;
 							}
 						}
@@ -1466,65 +1474,64 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 						/**
 						 * Only when reminder exists for any categories, otherwise same priority for all categories
 						 */
-						if ($is_reminder_exists) {
+						if ( $is_reminder_exists ) {
 							/**
 							 *  Sort the array by incomplete frequency filled at first
 							 */
-							array_multisort($required_qty_arr, SORT_DESC, $matching_cat_data);
+							array_multisort( $required_qty_arr, SORT_DESC, $matching_cat_data );
 
 							/**
 							 *  First loop for incompletely filled frequencies
 							 *  Fill the remaining quantities
 							 */
-							foreach ($matching_cat_data as $matching_cat => $cat_data) {
+							foreach ( $matching_cat_data as $matching_cat => $cat_data ) {
 								// Category with reminder, convert it as giveaway
-								if (0 > $cat_data['reminder']) {
-									$qty_for_current_cat = min($cat_data['reminder'], $quantity);
-									$quantity -= $qty_for_current_cat;
+								if ( 0 > $cat_data['reminder'] ) {
+									$qty_for_current_cat = min( $cat_data['reminder'], $quantity );
+									$quantity           -= $qty_for_current_cat;
 
-									$this->add_item_to_cart($item_id, $cat_data['reminder'], $coupon_code, $matching_cat);
+									$this->add_item_to_cart( $item_id, $cat_data['reminder'], $coupon_code, $matching_cat );
 								}
 							}
 						}
 
-						if (0 < $quantity) { // if any quantity remains 
-							
-							$single_eligibility_qty = $this->get_non_individual_discount_quantity($coupon_id);
-							$current_qty_frq = ceil($quantity / $single_eligibility_qty); // available frequency in current quantity
-							
-							foreach ($matching_cat_data as $matching_cat => $cat_data) {                              
-								if ($current_qty_frq <= $remaining_frequency) {
+						if ( 0 < $quantity ) { // if any quantity remains
+
+							$single_eligibility_qty = $this->get_non_individual_discount_quantity( $coupon_id );
+							$current_qty_frq        = ceil( $quantity / $single_eligibility_qty ); // available frequency in current quantity
+
+							foreach ( $matching_cat_data as $matching_cat => $cat_data ) {
+								if ( $current_qty_frq <= $remaining_frequency ) {
 									$remaining_frequency = $remaining_frequency - $current_qty_frq;
 
 									// convert full quantity as giveaway
-									$this->add_item_to_cart($item_id, $quantity, $coupon_code, $matching_cat);
+									$this->add_item_to_cart( $item_id, $quantity, $coupon_code, $matching_cat );
 
 									$quantity = 0;
 
 									break 2; // no quantity so break both loops
-								} else {                               
-									$new_quantity = ($remaining_frequency * $single_eligibility_qty);
+								} else {
+									$new_quantity = ( $remaining_frequency * $single_eligibility_qty );
 
 									// convert as giveaway
-									$this->add_item_to_cart($item_id, $new_quantity, $coupon_code, $matching_cat);
-									
-									$quantity -= $new_quantity; // reduce the quantity
+									$this->add_item_to_cart( $item_id, $new_quantity, $coupon_code, $matching_cat );
+
+									$quantity           -= $new_quantity; // reduce the quantity
 									$remaining_frequency = 0;
 
 									break;
 								}
 							}
 						}
-
 					} else {
 						// may be fully availed
 					}
 
 					/* check and set, is bogo fully availed or not */
-					$in_cart_qty = array_sum(array_column($bogo_free_categories, 'qty'));
-					$max_qty_allowed = $this->get_quantity_for_non_individual_quantity_bogo($coupon_id);
+					$in_cart_qty     = array_sum( array_column( $bogo_free_categories, 'qty' ) );
+					$max_qty_allowed = $this->get_quantity_for_non_individual_quantity_bogo( $coupon_id );
 
-					self::set_bogo_fully_availed($coupon_id, $coupon_code, $max_qty_allowed, $in_cart_qty);
+					self::set_bogo_fully_availed( $coupon_id, $coupon_code, $max_qty_allowed, $in_cart_qty );
 				}
 			}
 		}
@@ -1533,12 +1540,13 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	/**
 	 * Sort the coupon categories based on the discount amount. Category with least discount amount will be the first one.
 	 * Update the quantity based on `Apply repeatedly` option
+	 *
 	 * @since 2.0.4
 	 */
 	public function sort_category_by_profit( $matching_cats, $bogo_free_categories, $product, $coupon_id ) {
 		$out = array();
 		if ( count( $matching_cats ) == 1 ) {
-			$cat_id = $matching_cats[0];
+			$cat_id   = $matching_cats[0];
 			$cat_data = $bogo_free_categories[ $cat_id ];
 
 			/* prepare quantity for apply repeatedly */
@@ -1561,11 +1569,11 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				$discount_amount = $cat_data['price'] * $cat_data['qty'];
 			}
 			$cat_data['discount_amount'] = $discount_amount;
-			$out[ $cat_id ] = $cat_data;
+			$out[ $cat_id ]              = $cat_data;
 		}
 		uasort(
 			$out,
-			function( $a, $b ) {
+			function ( $a, $b ) {
 				return $a['discount_amount'] - $b['discount_amount'];
 			}
 		);
@@ -1574,24 +1582,25 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Action function for displaying description for Giveaway product on cart page
+	 *
 	 * @since 1.0.0
 	 * @since 2.0.4 Added compatibility for BOGO type coupons
 	 */
 	public function display_giveaway_product_description( $cart_item ) {
-		$product_id = $cart_item['product_id'];
+		$product_id   = $cart_item['product_id'];
 		$variation_id = $cart_item['variation_id'];
 
 		if ( self::is_a_free_item( $cart_item ) ) {
 			$coupon_code = wc_format_coupon_code( $cart_item['free_gift_coupon'] );
-			$item_id = ( $variation_id > 0 ? $variation_id : $product_id );
-			$product = wc_get_product( $item_id );
+			$item_id     = ( $variation_id > 0 ? $variation_id : $product_id );
+			$product     = wc_get_product( $item_id );
 
 			$giveaway_data = $this->get_product_giveaway_data( $item_id, $coupon_code, $cart_item );
 
 			if ( $this->is_full_free_item( $product, $giveaway_data ) ) {
 				$free_gift_text = __( "Congrats! you've got a free gift from us!", 'wt-smart-coupons-for-woocommerce-pro' );
 			} else {
-				$discount_text = $this->get_give_away_discount_text( 0, $giveaway_data ); /* set coupon id as zero(first argument) because we have already fetched data */
+				$discount_text  = $this->get_give_away_discount_text( 0, $giveaway_data ); /* set coupon id as zero(first argument) because we have already fetched data */
 				$free_gift_text = sprintf( __( "You're in luck! A free product is added to the cart with a %s discount.", 'wt-smart-coupons-for-woocommerce-pro' ), $discount_text );
 			}
 
@@ -1602,21 +1611,22 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Update Cart item values
+	 *
 	 * @since 1.0.0
 	 * @since 2.0.4 Added compatibility for BOGO type coupons
 	 */
 	public function update_cart_item_values( $cart_item, $product_id = 0, $variation_id = 0, $qty = 1 ) {
 		if ( self::is_a_free_item( $cart_item ) ) {
 			$coupon_code = wc_format_coupon_code( $cart_item['free_gift_coupon'] );
-			$coupon = new WC_Coupon( $coupon_code );
+			$coupon      = new WC_Coupon( $coupon_code );
 			if ( $coupon ) {
 				$coupon_id = $coupon->get_id();
 				if ( wc_string_to_bool( $this->get_coupon_meta_value( $coupon_id, 'wt_apply_discount_before_tax_calculation' ) ) === false ) {
 					return $cart_item;
 				}
 
-				$item_id = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
-				$product = wc_get_product( $item_id );
+				$item_id       = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+				$product       = wc_get_product( $item_id );
 				$giveaway_data = $this->get_product_giveaway_data( $item_id, $coupon_code, $cart_item );
 
 				$discount = self::get_available_discount_for_giveaway_product( $product, $giveaway_data );
@@ -1634,12 +1644,13 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Update cart item value for applying price before tax calculation.
+	 *
 	 * @since 1.0.0
 	 */
 	public function update_cart_item_in_session( $session_data = array(), $values = array(), $key = '' ) {
 		if ( self::is_a_free_item( $session_data ) ) {
 			$coupon_code = wc_format_coupon_code( $session_data['free_gift_coupon'] );
-			$coupon_id = wc_get_coupon_id_by_code( $coupon_code );
+			$coupon_id   = wc_get_coupon_id_by_code( $coupon_code );
 			if ( wc_string_to_bool( $this->get_coupon_meta_value( $coupon_id, 'wt_apply_discount_before_tax_calculation' ) ) === false ) {
 				return $session_data;
 			}
@@ -1653,6 +1664,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Function for updating cart item price display ( used when apply giveaway discount before tax calculation).
+	 *
 	 * @since 1.2.4
 	 */
 	public function update_cart_item_price( $price, $cart_item ) {
@@ -1661,6 +1673,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Update Cart item Quantity field non editable
+	 *
 	 * @since 1.0.0
 	 */
 	public function update_cart_item_quantity_field( $product_quantity = '', $cart_item_key = '', $cart_item = array() ) {
@@ -1720,10 +1733,10 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 * Exclude the free giveaway products from applying other coupons.
 	 * This is applicable when product is 'free giveaway`.
 	 *
-	 * @param bool        $valid   is valid or not
-	 * @param WC_Product  $product Product instance
-	 * @param WC_Product  $coupon  Coupon data
-	 * @param array       $values  Cart item values.
+	 * @param bool       $valid   is valid or not
+	 * @param WC_Product $product Product instance
+	 * @param WC_Product $coupon  Coupon data
+	 * @param array      $values  Cart item values.
 	 * @return bool
 	 * @since 2.0.6
 	 */
@@ -1749,14 +1762,14 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	private function alter_cart_item_price( $price, $cart_item, $is_total = true ) {
 		$out = $price;
 		if ( self::is_a_free_item( $cart_item ) ) {
-			$coupon_code = wc_format_coupon_code( $cart_item['free_gift_coupon'] );
-			$coupon_id   = wc_get_coupon_id_by_code( $coupon_code );
-			$item_id     = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
-			$product     = wc_get_product( $item_id );
+			$coupon_code   = wc_format_coupon_code( $cart_item['free_gift_coupon'] );
+			$coupon_id     = wc_get_coupon_id_by_code( $coupon_code );
+			$item_id       = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+			$product       = wc_get_product( $item_id );
 			$product_price = self::get_product_price( $product );
 			$giveaway_data = $this->get_product_giveaway_data( $item_id, $coupon_code, $cart_item );
 
-			$discount = self::get_available_discount_for_giveaway_product( $product, $giveaway_data );
+			$discount                  = self::get_available_discount_for_giveaway_product( $product, $giveaway_data );
 			$sale_price_after_discount = ( $product_price - $discount );
 
 			if ( $is_total ) {
@@ -1845,6 +1858,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Remove giveaway available session. If already added
+	 *
 	 * @since 2.0.2
 	 */
 	public function remove_giveaway_available_session( $coupon_code ) {
@@ -1853,6 +1867,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Remove Free Product from cart (Hook to When Coupon removed)
+	 *
 	 * @since 1.0.0
 	 * @since 2.0.2     Code updated
 	 */
@@ -1870,6 +1885,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Add Free Prodcut details on cart item list.
+	 *
 	 * @since 1.0.0
 	 * @since 2.0.2 Code updated
 	 */
@@ -1883,6 +1899,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Display free product discount detail in order details.
+	 *
 	 * @since 1.0.0
 	 */
 	public function woocommerce_get_order_item_totals( $total_rows, $order, $tax_display ) {
@@ -1891,7 +1908,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		foreach ( $order_items as $order_item_id => $order_item ) {
 			$giveaway_info = $this->prepare_giveaway_info_for_order( $order_item_id, $order_item, $order );
 			if ( $giveaway_info ) {
-				$label_text = apply_filters( 'wt_sc_alter_order_detail_giveaway_info_label', __( 'Free gift:', 'wt-smart-coupons-for-woocommerce-pro' ), $order_item, $order_item_id, $order );
+				$label_text                              = apply_filters( 'wt_sc_alter_order_detail_giveaway_info_label', __( 'Free gift:', 'wt-smart-coupons-for-woocommerce-pro' ), $order_item, $order_item_id, $order );
 				$out[ 'free_product_' . $order_item_id ] = array(
 					'label' => $label_text,
 					'value' => $giveaway_info,
@@ -1913,6 +1930,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Manage Item Meta on order page
+	 *
 	 * @since 1.0.0
 	 */
 	public function unset_free_product_order_item_meta_data( $formatted_meta, $item ) {
@@ -1926,6 +1944,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Get current product cart item quantity
+	 *
 	 * @since 2.0.4
 	 * @return array
 	 */
@@ -1943,6 +1962,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Checks the current cart item is a free item. Or a free item under the given coupon code
+	 *
 	 * @since 2.0.4
 	 * @return bool
 	 */
@@ -1959,10 +1979,11 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 * Checks the current cart item is the same product/variation
+	 *
 	 * @since 2.0.4
 	 * @param array $cart_item Cart item array
-	 * @param int $product_id Product ID
-	 * @param int $variation_id Variation ID
+	 * @param int   $product_id Product ID
+	 * @param int   $variation_id Variation ID
 	 * @return bool
 	 */
 	public static function is_same_prodct( $cart_item, $product_id, $variation_id ) {
@@ -1995,15 +2016,15 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 * @return bool
 	 */
 	public function is_cart_contains_free_products( $coupon_code = '', $cart = null ) {
-		$cart       = ( is_null( $cart ) ? WC()->cart : $cart );
-		$cart_items = $cart->get_cart();
+		$cart              = ( is_null( $cart ) ? WC()->cart : $cart );
+		$cart_items        = $cart->get_cart();
 		$wt_give_away_meta = array_column( $cart_items, 'free_product' );
 
 		$out = in_array( 'wt_give_away_product', $wt_give_away_meta, true );
 
 		if ( '' !== $coupon_code && $out ) {
 			$wt_give_away_coupon_meta = array_column( $cart_items, 'free_gift_coupon' );
-			$out = in_array( $coupon_code, $wt_give_away_coupon_meta, true );
+			$out                      = in_array( $coupon_code, $wt_give_away_coupon_meta, true );
 		}
 
 		return $out;
@@ -2012,7 +2033,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Remove/Update quantity of giveaway items when eligibility count was changed. This will be called on `wp_loaded` hook
-	 *  
+	 *
 	 *  @since  2.0.4
 	 *  @since  2.0.7       Added compatibility for WPML on `Specific product` giveaway.
 	 *                      Added compatibility for `Any product from category in the cart`.
@@ -2025,9 +2046,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 		self::$giveaway_count_adjust = true;
 
-		$applied_coupons  = $cart->applied_coupons;
-		$applied_coupons  = ( ! is_array( $applied_coupons ) ? array() : $applied_coupons );
-		$cart_items       = $cart->get_cart();
+		$applied_coupons = $cart->applied_coupons;
+		$applied_coupons = ( ! is_array( $applied_coupons ) ? array() : $applied_coupons );
+		$cart_items      = $cart->get_cart();
 		foreach ( $applied_coupons as $coupon_code ) {
 			$coupon_code = wc_format_coupon_code( $coupon_code );
 			$coupon      = new WC_Coupon( $coupon_code );
@@ -2041,8 +2062,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				$bogo_customer_gets = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_customer_gets' );
 
 				if ( 'specific_product' === $bogo_customer_gets ) {
-					$bogo_products       = $this->get_all_bogo_giveaway_products( $coupon_id );
-					$cart_available_qty  = array();
+					$bogo_products      = $this->get_all_bogo_giveaway_products( $coupon_id );
+					$cart_available_qty = array();
 					foreach ( $cart_items as $item_key => $cart_item ) {
 						if ( self::is_a_free_item( $cart_item, $coupon_code ) ) { /* a free item under the given coupon */
 							$item_id = $this->check_giveaway_id_match_on_multi_lang_site( $cart_item, $coupon_id, $bogo_products );
@@ -2120,26 +2141,21 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 						if ( self::is_a_free_item( $cart_item, $coupon_code ) ) { // this is a free item but not from this coupon, so we need to skip it
 							if ( ! $this->non_free_product_exists( $cart_item ) ) { // non free product for the current free product not found so the current free product is not valid as giveaway */
 								WC()->cart->remove_cart_item( $cart_item_key );
-							} else {
-
-								if ( $total_qty_in_cart < $item_qty ) {
+							} elseif ( $total_qty_in_cart < $item_qty ) {
 
 									$balance_qty = $item_qty - $total_qty_in_cart; /* balance quantity allowed for giveaway */
 
-									if ( $balance_qty < $cart_item['quantity'] ) { /* current cart item quantity is greater than allowed. So adjust the quantity */
-										$this->update_cart_qty( $cart_item_key, $balance_qty );
-										$total_qty_in_cart += $balance_qty;
-									} else {
-										$total_qty_in_cart += $cart_item['quantity'];
-									}
-
-								} else { /* max quantity reached. So remove the upcoming items */
-									WC()->cart->remove_cart_item( $cart_item_key );
+								if ( $balance_qty < $cart_item['quantity'] ) { /* current cart item quantity is greater than allowed. So adjust the quantity */
+									$this->update_cart_qty( $cart_item_key, $balance_qty );
+									$total_qty_in_cart += $balance_qty;
+								} else {
+									$total_qty_in_cart += $cart_item['quantity'];
 								}
+							} else { /* max quantity reached. So remove the upcoming items */
+									WC()->cart->remove_cart_item( $cart_item_key );
 							}
 						}
 					}
-
 				} elseif ( 'any_product_from_store' === $bogo_customer_gets ) {
 					/* allowed quantity */
 					$max_qty_allowed = $this->get_quantity_for_non_individual_quantity_bogo( $coupon_id );
@@ -2219,7 +2235,6 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 							} elseif ( $max_qty_allowed > $total_qty_in_cart ) {
 								$fully_availed = false;
 							}
-
 						} else {
 							$fully_availed = false;
 						}
@@ -2247,9 +2262,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 					 * The category list is a sorted list. Category with reminder will come first
 					 */
 					if ( $max_qty_allowed < $in_cart_qty ) {
-						$to_remove_qty         = $in_cart_qty - $max_qty_allowed;
+						$to_remove_qty          = $in_cart_qty - $max_qty_allowed;
 						$single_eligibility_qty = $this->get_non_individual_discount_quantity( $coupon_id );
-						$in_cart_reminder      = array_sum( array_column( $bogo_free_categories, 'reminder' ) );
+						$in_cart_reminder       = array_sum( array_column( $bogo_free_categories, 'reminder' ) );
 
 						if ( $in_cart_reminder > 0 ) { // Do this only when reminder exists. Otherwise directly remove the items. This is only for to improve user experience.
 							/**
@@ -2261,7 +2276,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 								if ( $cr_cat_reminder > 0 ) { // this loop is only for items with reminder
 									foreach ( $cart_items as $cart_item_key => $cart_item ) {
 										if ( self::is_a_free_item( $cart_item, $coupon_code ) && isset( $cart_item['free_category'] ) && $cat_id === $cart_item['free_category'] ) {
-											$cr_avl_qty      = min( $cart_item['quantity'], $cr_cat_reminder );
+											$cr_avl_qty       = min( $cart_item['quantity'], $cr_cat_reminder );
 											$cr_cat_reminder -= $cr_avl_qty;
 
 											/* remove extra quantity */
@@ -2317,9 +2332,10 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Alter coupon block title text.
+	 *
 	 *  @since  2.0.4
-	 *  @param      array     $coupon_data    Coupon data
-	 *  @param      object    $coupon         WC_Coupon object
+	 *  @param      array  $coupon_data    Coupon data
+	 *  @param      object $coupon         WC_Coupon object
 	 *  @return     array     $coupon_data
 	 */
 	public function alter_coupon_title_text( $coupon_data, $coupon ) {
@@ -2332,9 +2348,10 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Checks non free product of current cart item exists. Using in `same_product_in_the_cart` option
+	 *
 	 *  @since  2.0.4
-	 *  @param      array     $cart_item_to_check    Cart item 
-	 *  @return     bool  
+	 *  @param      array $cart_item_to_check    Cart item
+	 *  @return     bool
 	 */
 	private function non_free_product_exists( $cart_item_to_check ) {
 		$is_exists = false;
@@ -2345,16 +2362,17 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 					break;
 				}
 			}
-		} 
+		}
 
 		return $is_exists;
 	}
 
 	/**
 	 *  Is product/category restriction enabled
+	 *
 	 *  @since  2.0.4
-	 *  @param      int      $coupon_id    Coupon ID 
-	 *  @return     bool  
+	 *  @param      int $coupon_id    Coupon ID
+	 *  @return     bool
 	 */
 	private function is_product_category_restriction_enabled( $coupon_id ) {
 		$wt_enable_product_category_restriction = 'yes';
@@ -2367,19 +2385,20 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Is apply frequency enabled and prepare the quantity based on applicable frequency
+	 *
 	 *  @since  2.0.4
 	 *  @since  2.0.5   Frequency taking functionality moved to another new function named `get_coupon_applicable_count`
 	 *  @since 2.0.7    $frequency added as an optional argument. If frequency given then value will be prepared based on the given frequency
-	 *  @param      int      $coupon_id    Coupon ID 
-	 *  @param      int      $quantity     Quantity 
-	 *  @return     int      $quantity     Quantity 
+	 *  @param      int $coupon_id    Coupon ID
+	 *  @param      int $quantity     Quantity
+	 *  @return     int      $quantity     Quantity
 	 */
 	private function prepare_quantity_based_on_apply_frequency( $coupon_id, $quantity, $frequency = null ) {
 		$wt_sc_bogo_apply_frequency = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_apply_frequency' );
-		
+
 		if ( 'repeat' === $wt_sc_bogo_apply_frequency ) {
 			$coupon_code = wc_get_coupon_code_by_id( $coupon_id );
-			$frequency   = ( is_null( $frequency ) ? $this->get_coupon_applicable_count( $coupon_id, $coupon_code ) : $frequency );     
+			$frequency   = ( is_null( $frequency ) ? $this->get_coupon_applicable_count( $coupon_id, $coupon_code ) : $frequency );
 			$quantity    = ( $quantity * $frequency );
 		}
 
@@ -2388,8 +2407,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  This method will take coupon applicable count from session created by coupon restriction module
+	 *
 	 *  @since 2.0.5
-	 */ 
+	 */
 	private function get_coupon_applicable_count( $coupon_id, $coupon_code ) {
 		$frequency = 1;
 		if ( Wt_Smart_Coupon_Public::module_exists( 'coupon_restriction' ) ) {
@@ -2407,11 +2427,12 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Recalculate apply frequency count.
+	 *
 	 *  @since  2.0.4
-	 *  @param  object      $coupon    WC_Coupon object 
+	 *  @param  object $coupon    WC_Coupon object
 	 */
 	private function recalculate_apply_frequency_count( $coupon ) {
-		$coupon_id = $coupon->get_id();
+		$coupon_id                  = $coupon->get_id();
 		$wt_sc_bogo_apply_frequency = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_apply_frequency' );
 		if ( 'repeat' == $wt_sc_bogo_apply_frequency ) {
 			if ( Wt_Smart_Coupon_Public::module_exists( 'coupon_restriction' ) ) {
@@ -2419,7 +2440,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				try {
 					$coupon_restriction_obj->wt_woocommerce_coupon_is_valid( true, $coupon );
 				} catch ( Exception $e ) {
-					wc_add_notice( $e->getMessage(), 'error' ); 
+					wc_add_notice( $e->getMessage(), 'error' );
 				}
 			}
 		}
@@ -2427,6 +2448,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  This function will prepare product list based product/category restriction. Applicable for `same_product_in_the_cart`
+	 *
 	 *  @since 2.0.5
 	 *  @param $coupon object WC_coupon object
 	 *  @param $qty_price_data array Price/Quantity data for giveaway (optional)
@@ -2436,31 +2458,29 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		$coupon_products = ( ! is_array( $coupon_products ) ? array() : $coupon_products );
 
 		$coupon_categories = $coupon->get_product_categories();
-		
+
 		$new_coupon_products = array();
 
 		foreach ( WC()->cart->get_cart() as $cart_item ) {
 			$found = false;
-			
+
 			if ( $cart_item['variation_id'] > 0 ) {
 				if ( in_array( $cart_item['variation_id'], $coupon_products ) || in_array( $cart_item['product_id'], $coupon_products ) ) {
 					$new_coupon_products[ $cart_item['variation_id'] ] = $qty_price_data;
 					$found = true;
 				}
-			} else {
-				if ( in_array( $cart_item['product_id'], $coupon_products ) ) {
+			} elseif ( in_array( $cart_item['product_id'], $coupon_products ) ) {
 					$new_coupon_products[ $cart_item['product_id'] ] = $qty_price_data;
 					$found = true;
-				}
 			}
 
 			if ( ! $found ) { /* if the cart item not include in the product restriction */
-				$product_cats = wc_get_product_cat_ids( $cart_item['product_id'] );
+				$product_cats  = wc_get_product_cat_ids( $cart_item['product_id'] );
 				$matching_cats = array_intersect( $coupon_categories, $product_cats ); /* $coupon_categories must be the first argument, because its in the order of product direct category then parent category. To maintain the order we have to use $coupon_categories as first argument */
 				if ( ! empty( $matching_cats ) ) { /* this product is under the given categories */
-					$item_id = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
-					$new_coupon_products[ $item_id ] = $qty_price_data;                                                                                    
-				}          
+					$item_id                         = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+					$new_coupon_products[ $item_id ] = $qty_price_data;
+				}
 			}
 		}
 
@@ -2469,6 +2489,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Calculating balance giveaway quantity based on the giveaway products exists in the cart. (`same_product_in_the_cart`)
+	 *
 	 *  @since  2.0.5
 	 *  @param  $coupon_id      int     ID of coupon
 	 *  @param  $coupon_code    string  Coupon code
@@ -2478,16 +2499,17 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		/* allowed quantity */
 		$item_qty = $this->get_quantity_for_non_individual_quantity_bogo( $coupon_id );
 
-		//get cart item data
+		// get cart item data
 		$total_qty = self::get_total_coupon_cart_item_qty( $coupon_code );
 
-		$total_qty = ! empty( $total_qty ) ? array_sum( $total_qty ) : 0; //existing free products in the cart
+		$total_qty = ! empty( $total_qty ) ? array_sum( $total_qty ) : 0; // existing free products in the cart
 
-		return max( ( $item_qty - $total_qty ), 0 ); //avoid negative values
+		return max( ( $item_qty - $total_qty ), 0 ); // avoid negative values
 	}
 
 	/**
 	 *  Trigger WC is_valid coupon check. This is required for showing giveaway available message
+	 *
 	 *  @since 2.0.5
 	 */
 	public function trigger_coupon_is_valid() {
@@ -2504,17 +2526,17 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 *  @since 2.0.5
 	 *  This function is used to check the giveaway max quantity based on the available giveaway quantity in cart and apply repeatedly option
 	 *  Applicable for `specific_product` condition
-	 *  
+	 *
 	 *  @param  $coupon_code                string              coupon code
 	 *  @param  $coupon_id                  int                 coupon id
 	 *  @param  $bogo_customer_gets         string              customer gets option in giveaway (using when $throw_error argument is true)
-	 *  @param  $bogo_product_condition     string              Any(or)/All(and) products. 
+	 *  @param  $bogo_product_condition     string              Any(or)/All(and) products.
 	 *  @param  $bogo_products              array               Array of giveaway products under the current coupon (reference argument)
-	 *  @param  $frequency                  int                 Applicable frequency based on apply repeatedly option   
+	 *  @param  $frequency                  int                 Applicable frequency based on apply repeatedly option
 	 *  @param  $options                    array               Other optional arguments
 	 *                                                          $throw_error    boolean     Throw error message when max quantity reached. Othewise return an empty array($bogo_products) [Optional]. Default: false (Do not throw error) - Applicable for `or` product condition
 	 *                                                          $update_qty     boolean     Update existing giveaway product quantiy if mismatch found. Default: false (Do not update quantity) - Applicable for `and` product condition
-	 *  
+	 *
 	 *  @return                             void/boolean        `void` when $bogo_product_condition is `or` and $throw_error is true when max quantity reached
 	 *                                                          `boolean` when $bogo_product_condition is `and` and $update_quantity is true
 	 */
@@ -2535,35 +2557,31 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				}
 
 				if ( $item_id > 0 && self::is_a_free_item( $cart_item, $coupon_code ) ) { /* this product is in the bogo list. Check it is a free item */
-					$bogo_item_data = $bogo_products[ $item_id ];
+					$bogo_item_data        = $bogo_products[ $item_id ];
 					$bogo_item_data['qty'] = ( absint( $bogo_item_data['qty'] ) === 0 ? 1 : $bogo_item_data['qty'] );
-					
+
 					$giveaway_qty = $this->prepare_quantity_based_on_apply_frequency( $coupon_id, $bogo_item_data['qty'] );
 					if ( $giveaway_qty != $cart_item['quantity'] ) {
 						if ( $update_qty ) {
-							//quantity mismatch so update
+							// quantity mismatch so update
 							$this->update_cart_qty( $cart_item_key, $giveaway_qty );
 							$is_giveaway_fully_added = false;
 						}
 					}
-					
+
 					if ( $update_qty ) {
 						unset( $bogo_products[ $item_id ] ); /* remove already added product from bogo list */
-					} else {
-						if ( $giveaway_qty == $cart_item['quantity'] ) {
+					} elseif ( $giveaway_qty == $cart_item['quantity'] ) {
 							unset( $bogo_products[ $item_id ] ); /* remove fully added product from bogo list */
-						}
 					}
-					
 				}
 			}
 
 			if ( $update_qty ) {
 				return $is_giveaway_fully_added;
 			}
-
 		} else {
-			
+
 			$throw_error = isset( $options['throw_error'] ) ? (bool) $options['throw_error'] : false;
 
 			$cart_available_qty = array();
@@ -2581,9 +2599,9 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 							$cart_available_qty[ $item_id ] = array();
 						}
 						$cart_available_qty[ $item_id ][ $item_key ] = $cart_item['quantity'];
-						
+
 					} else {
-						//a non giveaway free product. Remove it
+						// a non giveaway free product. Remove it
 						WC()->cart->remove_cart_item( $item_key );
 					}
 				}
@@ -2592,16 +2610,16 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 			$total_eligibility = $frequency;
 			foreach ( $cart_available_qty as $item_id => $available_qty_data ) {
 				$total_qty_in_cart = array_sum( $available_qty_data );
-				$cr_eligibility = floor( $total_qty_in_cart / $bogo_products[ $item_id ]['qty'] );
+				$cr_eligibility    = floor( $total_qty_in_cart / $bogo_products[ $item_id ]['qty'] );
 				if ( $cr_eligibility >= $total_eligibility ) {
 					if ( $throw_error ) {
 						self::set_add_to_cart_messages(
-							"already_availed_bogo", 
+							'already_availed_bogo',
 							array(
-								'coupon_id' => $coupon_id, 
-								'customer_gets' => $bogo_customer_gets,
+								'coupon_id'       => $coupon_id,
+								'customer_gets'   => $bogo_customer_gets,
 								'apply_frequency' => $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_apply_frequency' ),
-							), 
+							),
 							self::$bogo_coupon_type_name
 						);
 
@@ -2617,12 +2635,11 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	}
 
 
-	public function alter_coupon_discount_amount_html($discount_amount_html, $coupon)
-	{
-		if (self::is_bogo($coupon)) {
-			$coupon_code = wc_format_coupon_code($coupon->get_code());
-			$discount = (isset(self::$bogo_discounts[$coupon_code]) ? self::$bogo_discounts[$coupon_code] : 0);
-			$discount_amount_html = wc_price($discount);
+	public function alter_coupon_discount_amount_html( $discount_amount_html, $coupon ) {
+		if ( self::is_bogo( $coupon ) ) {
+			$coupon_code          = wc_format_coupon_code( $coupon->get_code() );
+			$discount             = ( isset( self::$bogo_discounts[ $coupon_code ] ) ? self::$bogo_discounts[ $coupon_code ] : 0 );
+			$discount_amount_html = wc_price( $discount );
 		}
 
 		return $discount_amount_html;
@@ -2637,9 +2654,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 *
 	 * @since 2.0.7
 	 */
-	public function check_and_add_giveaway_on_add_to_cart($cart_item_key, $product_id, $quantity, $variation_id, $variation, $cart_item_data)
-	{
-		$this->check_to_add_giveaway($cart_item_key, $quantity, 0, WC()->cart);
+	public function check_and_add_giveaway_on_add_to_cart( $cart_item_key, $product_id, $quantity, $variation_id, $variation, $cart_item_data ) {
+		$this->check_to_add_giveaway( $cart_item_key, $quantity, 0, WC()->cart );
 	}
 
 	/**
@@ -2647,29 +2663,28 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 *
 	 * @since 2.0.7
 	 */
-	public function convert_cheapest_as_giveaway()
-	{
-		if (is_admin()) {
+	public function convert_cheapest_as_giveaway() {
+		if ( is_admin() ) {
 			return;
 		}
 
 		$applied_coupon_codes = WC()->cart->get_applied_coupons();
 
-		if (empty($applied_coupon_codes)) {
+		if ( empty( $applied_coupon_codes ) ) {
 			return; // no coupons applied
 		}
 
-		foreach ($applied_coupon_codes as $applied_coupon_code) { // find cheapest giveaway enabled coupons
-			$coupon = new WC_Coupon($applied_coupon_code);
-			$coupon_id = $coupon->get_id();
-			$bogo_customer_gets = $this->get_coupon_meta_value($coupon_id, '_wt_sc_bogo_customer_gets');
+		foreach ( $applied_coupon_codes as $applied_coupon_code ) { // find cheapest giveaway enabled coupons
+			$coupon             = new WC_Coupon( $applied_coupon_code );
+			$coupon_id          = $coupon->get_id();
+			$bogo_customer_gets = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_customer_gets' );
 
-			if ($this->is_cheapest_giveaway_enabled_coupon($coupon)) {
-				if ('any_product_from_category' === $bogo_customer_gets) {
-					$this->apply_cheapest_giveaway_for_any_product_from_category($coupon, $coupon_id, $applied_coupon_code);
-				} elseif ('any_product_from_store' === $bogo_customer_gets) {
-					$this->apply_cheapest_giveaway_for_any_product_from_store($coupon, $coupon_id, $applied_coupon_code);
-				} elseif ('any_product_from_category_in_the_cart' === $bogo_customer_gets) {
+			if ( $this->is_cheapest_giveaway_enabled_coupon( $coupon ) ) {
+				if ( 'any_product_from_category' === $bogo_customer_gets ) {
+					$this->apply_cheapest_giveaway_for_any_product_from_category( $coupon, $coupon_id, $applied_coupon_code );
+				} elseif ( 'any_product_from_store' === $bogo_customer_gets ) {
+					$this->apply_cheapest_giveaway_for_any_product_from_store( $coupon, $coupon_id, $applied_coupon_code );
+				} elseif ( 'any_product_from_category_in_the_cart' === $bogo_customer_gets ) {
 					// coming soon
 				}
 			}
@@ -2680,13 +2695,12 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 * Enable Individual use` option for cheapest giveaway enabled coupons
 	 *
 	 * @since 2.0.7
-	 * @param bool $is_enabled `Individual use` enabled or not
+	 * @param bool      $is_enabled `Individual use` enabled or not
 	 * @param WC_Coupon $coupon WC_Coupon object
 	 * @return bool `Individual use` enabled or not
 	 */
-	public function set_cheapest_giveaway_coupon_to_individual_use($is_enabled, $coupon)
-	{
-		if ($this->is_cheapest_giveaway_enabled_coupon($coupon)) {
+	public function set_cheapest_giveaway_coupon_to_individual_use( $is_enabled, $coupon ) {
+		if ( $this->is_cheapest_giveaway_enabled_coupon( $coupon ) ) {
 			$is_enabled = true; // always an individual use coupon
 		}
 
@@ -2697,16 +2711,15 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 * Force remove coupons that can be used along with individual use coupons
 	 *
 	 * @since 2.0.7
-	 * @param array $allowed_coupons Array of coupon codes that can be used along with individual use coupons
+	 * @param array     $allowed_coupons Array of coupon codes that can be used along with individual use coupons
 	 * @param WC_Coupon $the_coupon WC_Coupon object
-	 * @param array $applied_coupons Array of applied coupon codes
+	 * @param array     $applied_coupons Array of applied coupon codes
 	 */
-	public function force_remove_individual_use_allowed_coupons($allowed_coupons, $the_coupon, $applied_coupons)
-	{
-		foreach ($applied_coupons as $applied_coupon_code) { // find any coupon with cheapest giveaway option enabled.
-			$coupon = new WC_Coupon($applied_coupon_code);
+	public function force_remove_individual_use_allowed_coupons( $allowed_coupons, $the_coupon, $applied_coupons ) {
+		foreach ( $applied_coupons as $applied_coupon_code ) { // find any coupon with cheapest giveaway option enabled.
+			$coupon = new WC_Coupon( $applied_coupon_code );
 
-			if ($this->is_cheapest_giveaway_enabled_coupon($coupon)) {
+			if ( $this->is_cheapest_giveaway_enabled_coupon( $coupon ) ) {
 				$allowed_coupons = array(); // empty the array
 				break;
 			}
@@ -2719,14 +2732,13 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 * Do not allow other coupons along with `cheapest as giveaway` enabled coupons
 	 *
 	 * @since 2.0.7
-	 * @param bool $allow_coupon Is allow the newly applied coupon
+	 * @param bool      $allow_coupon Is allow the newly applied coupon
 	 * @param WC_Coupon $coupon WC_Coupon object for newly applied coupon
 	 * @param WC_Coupon $individual_enabled_coupon WC_Coupon object for individual enabled coupon
 	 * @return bool Is allow or not the current coupon
 	 */
-	public function reject_other_coupon_along_with_cheapest_giveaway_coupon($allow_coupon, $coupon, $individual_enabled_coupon)
-	{
-		return ($this->is_cheapest_giveaway_enabled_coupon($individual_enabled_coupon) ? false : $allow_coupon);
+	public function reject_other_coupon_along_with_cheapest_giveaway_coupon( $allow_coupon, $coupon, $individual_enabled_coupon ) {
+		return ( $this->is_cheapest_giveaway_enabled_coupon( $individual_enabled_coupon ) ? false : $allow_coupon );
 	}
 
 	/**
@@ -2736,18 +2748,17 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 * @param WC_Coupon $coupon WC_Coupon object
 	 * @return bool Is `Cheapest giveaway` enabled or not
 	 */
-	private function is_cheapest_giveaway_enabled_coupon($coupon)
-	{
-		$coupon_id = $coupon->get_id();
-		$bogo_customer_gets = $this->get_coupon_meta_value($coupon_id, '_wt_sc_bogo_customer_gets');
+	private function is_cheapest_giveaway_enabled_coupon( $coupon ) {
+		$coupon_id          = $coupon->get_id();
+		$bogo_customer_gets = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_customer_gets' );
 
-		return (self::is_bogo($coupon)
-			&& wc_string_to_bool(self::get_coupon_meta_value($coupon_id, '_wt_sc_cheapest_item_as_giveaway'))
-			&& in_array($bogo_customer_gets, self::$allowed_customer_gets_cheapest_giveaway)
+		return ( self::is_bogo( $coupon )
+			&& wc_string_to_bool( self::get_coupon_meta_value( $coupon_id, '_wt_sc_cheapest_item_as_giveaway' ) )
+			&& in_array( $bogo_customer_gets, self::$allowed_customer_gets_cheapest_giveaway )
 		);
 	}
 
-	
+
 	/**
 	 * Convert cheapest item as giveaway if the coupon giveaway option is `any_product_from_category`
 	 *
@@ -2760,14 +2771,14 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		$bogo_free_categories   = $this->get_coupon_meta_value( $coupon_id, '_wt_sc_bogo_free_categories' );
 		$bogo_free_category_ids = array_keys( $bogo_free_categories );
 
-		$already_converted_as_giveaway = array(); // cart item keys of giveaway items
+		$already_converted_as_giveaway               = array(); // cart item keys of giveaway items
 		$price_of_eligibility_item_with_lowest_price = $this->get_price_of_eligibility_item_having_lowest_price( $coupon, $coupon_id, $coupon_code );
-		$frequency = $this->get_coupon_applicable_count( $coupon_id, $coupon_code );
+		$frequency                                   = $this->get_coupon_applicable_count( $coupon_id, $coupon_code );
 
 		foreach ( $bogo_free_category_ids as $category_id ) {
 			category_loop_start: // we have to re-start from here in some cases
 
-			$temp_arr   = array(); // temp cart items array
+			$temp_arr = array(); // temp cart items array
 
 			// for sorting purpose
 			$price_arr  = array();
@@ -2786,8 +2797,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				$product_cats = wc_get_product_cat_ids( $cart_item['product_id'] );
 
 				if ( in_array( $category_id, $product_cats ) ) { // this item belongs to the current coupon category
-					$item_id = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
-					$product = wc_get_product( $item_id );
+					$item_id       = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+					$product       = wc_get_product( $item_id );
 					$product_price = self::get_product_price( $product );
 
 					$cart_item['wt_price']      = $product_price;
@@ -2809,13 +2820,13 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				$old_giveaway_count = 0;
 				$new_giveaway_count = 0;
 
-				$cat_data = $bogo_free_categories[ $category_id ];
-				$eligibility_qty = $this->prepare_quantity_based_on_apply_frequency( $coupon_id, $cat_data['qty'], $frequency );
+				$cat_data             = $bogo_free_categories[ $category_id ];
+				$eligibility_qty      = $this->prepare_quantity_based_on_apply_frequency( $coupon_id, $cat_data['qty'], $frequency );
 				$eligibility_qty_back = $eligibility_qty; // value backup
 
 				// loop through the sorted cart items
 				foreach ( $temp_arr as $cart_item_key => $cart_item ) {
-					$item_id = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+					$item_id       = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
 					$product_price = $cart_item['wt_price'];
 
 					/**
@@ -2855,18 +2866,18 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 							}
 
 							$new_giveaway_count += $to_deduct;
-							$eligibility_qty -= $to_deduct;
+							$eligibility_qty    -= $to_deduct;
 						}
 					} else {
 						$qty_available_for_giveaway = 0;
-						$cart_item_quantity = $cart_item['quantity'];
+						$cart_item_quantity         = $cart_item['quantity'];
 
 						// loop through the eligibility qty
 						for ( $i = 0; $i < min( $eligibility_qty, $cart_item_quantity ); $i++ ) {
 							$cart_items = WC()->cart->get_cart(); // need to take the cart list again to get the refreshed list.
 
 							$cart_item = $cart_items[ $cart_item_key ];
-							$new_qty = $cart_item['quantity'] - 1;
+							$new_qty   = $cart_item['quantity'] - 1;
 
 							$this->update_cart_qty( $cart_item_key, $new_qty );
 
@@ -2879,7 +2890,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 								break; // break the loop
 							} else {
-								$qty_available_for_giveaway++;
+								++$qty_available_for_giveaway;
 							}
 						}
 
@@ -2887,7 +2898,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 							$new_cart_item_key = $this->add_item_to_cart( $item_id, $qty_available_for_giveaway, $coupon_code, $category_id ); // add the quantity as giveaway
 
 							if ( false !== $new_cart_item_key ) {
-								$eligibility_qty = $eligibility_qty - $qty_available_for_giveaway; // deduct the currently converted quantity
+								$eligibility_qty     = $eligibility_qty - $qty_available_for_giveaway; // deduct the currently converted quantity
 								$new_giveaway_count += $qty_available_for_giveaway;
 
 								// this is to skip this item in the next category loop
@@ -2924,12 +2935,12 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 */
 	private function get_price_of_eligibility_item_having_lowest_price( $coupon, $coupon_id, $coupon_code ) {
 		$cart_items = WC()->cart->get_cart();
-		$price_arr = array(); // for sorting purpose
+		$price_arr  = array(); // for sorting purpose
 		$coupon_arr = array(); // for sorting purpose
 
 		foreach ( $cart_items as $cart_item_key => $cart_item ) {
-			$item_id = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
-			$product = wc_get_product( $item_id );
+			$item_id       = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+			$product       = wc_get_product( $item_id );
 			$product_price = self::get_product_price( $product );
 
 			$cart_items[ $cart_item_key ]['wt_price'] = $product_price;
@@ -2942,7 +2953,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		$cart_items = array_reverse( $cart_items );
 
 		$price_of_eligibility_item_with_lowest_price = null;
-		$frequency = $this->get_coupon_applicable_count( $coupon_id, $coupon_code ); // if it was a second iteration then take old frequency backup otherwise fresh one.
+		$frequency                                   = $this->get_coupon_applicable_count( $coupon_id, $coupon_code ); // if it was a second iteration then take old frequency backup otherwise fresh one.
 
 		// loop through the sorted cart items
 		foreach ( $cart_items as $cart_item_key => $cart_item ) {
@@ -2954,8 +2965,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 			if ( ! $coupon->is_valid() || $frequency > $this->get_coupon_applicable_count( $coupon_id, $coupon_code ) ) { // coupon eligibility gone, or eligibility count reduced.
 				// this item is required for the coupon to be valid or for eligibility count
-				$item_id = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
-				$product = wc_get_product( $item_id );
+				$item_id                                     = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+				$product                                     = wc_get_product( $item_id );
 				$price_of_eligibility_item_with_lowest_price = self::get_product_price( $product );
 
 				$this->set_as_normal_cartitem( $cart_item['product_id'], $cart_item['variation_id'], $cart_item['quantity'] );
@@ -2969,7 +2980,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		return $price_of_eligibility_item_with_lowest_price;
 	}
 
-	
+
 	/**
 	 * Convert cheapest item as giveaway if the coupon giveaway option is `any_product_from_store`
 	 *
@@ -2992,8 +3003,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		$new_giveaway_count = 0;
 
 		foreach ( $cart_items as $cart_item_key => $cart_item ) {
-			$item_id      = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
-			$product      = wc_get_product( $item_id );
+			$item_id       = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+			$product       = wc_get_product( $item_id );
 			$product_price = self::get_product_price( $product );
 
 			$cart_items[ $cart_item_key ]['wt_price'] = $product_price;
@@ -3008,15 +3019,15 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		/**
 		 * Check the cart items and convert as giveaway
 		 */
-		$frequency              = ( 1 === self::$cheapest_giveaway_loop_count ? self::$cheapest_giveaway_frequency_backup : $this->get_coupon_applicable_count( $coupon_id, $coupon_code ) ); // if it was a second iteration then take old frequency backup otherwise fresh one.
-		$eligibility_qty        = $this->get_quantity_for_non_individual_quantity_bogo( $coupon_id, $frequency ); // Prepare based on the given $frequency. This is for giving compatibility when multiple iteration exists
-		$eligibility_qty_back   = $eligibility_qty; // value backup
+		$frequency            = ( 1 === self::$cheapest_giveaway_loop_count ? self::$cheapest_giveaway_frequency_backup : $this->get_coupon_applicable_count( $coupon_id, $coupon_code ) ); // if it was a second iteration then take old frequency backup otherwise fresh one.
+		$eligibility_qty      = $this->get_quantity_for_non_individual_quantity_bogo( $coupon_id, $frequency ); // Prepare based on the given $frequency. This is for giving compatibility when multiple iteration exists
+		$eligibility_qty_back = $eligibility_qty; // value backup
 
 		$price_of_eligibility_item_with_lowest_price = null; // this is useful when multiple cheapest item with same price exists
 
 		// loop through the sorted cart items
 		foreach ( $cart_items as $cart_item_key => $cart_item ) {
-			$item_id      = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
+			$item_id       = ( $cart_item['variation_id'] > 0 ? $cart_item['variation_id'] : $cart_item['product_id'] );
 			$product_price = $cart_item['wt_price'];
 
 			/**
@@ -3055,9 +3066,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 					}
 
 					$new_giveaway_count += $to_deduct;
-					$eligibility_qty -= $to_deduct;
+					$eligibility_qty    -= $to_deduct;
 				}
-
 			} else {
 				$qty_available_for_giveaway = 0;
 
@@ -3081,22 +3091,21 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 						$price_of_eligibility_item_with_lowest_price = $product_price; // take the price of eligibility item with lowest price. Not giving giveaways with price greater than this price.
 						break;  // break the loop
 					} else {
-						$qty_available_for_giveaway++;
+						++$qty_available_for_giveaway;
 					}
-
 				}
 
 				if ( $qty_available_for_giveaway > 0 ) { // we got some quantity to convert as giveaway
 					$this->add_item_to_cart( $item_id, $qty_available_for_giveaway, $coupon_code ); // add the quantity as giveaway
 
-					$eligibility_qty = $eligibility_qty - $qty_available_for_giveaway; // deduct the currently converted quantity
+					$eligibility_qty     = $eligibility_qty - $qty_available_for_giveaway; // deduct the currently converted quantity
 					$new_giveaway_count += $qty_available_for_giveaway;
 				}
 			}
 		}
 
 		if ( 1 > self::$cheapest_giveaway_loop_count && $old_giveaway_count > $new_giveaway_count ) { // we have to recheck the items.
-			self::$cheapest_giveaway_loop_count = 1; // to prevent indefinite loop
+			self::$cheapest_giveaway_loop_count       = 1; // to prevent indefinite loop
 			self::$cheapest_giveaway_frequency_backup = $frequency; // assumes the frequency will also change. So we are storing the existing value for next iteration
 
 			return $this->apply_cheapest_giveaway_for_any_product_from_store( $coupon, $coupon_id, $coupon_code );
@@ -3128,7 +3137,6 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		}
 
 		$this->set_as_normal_cartitem( $cart_item['product_id'], $cart_item['variation_id'], $quantity );
-
 	}
 
 	/**
@@ -3191,13 +3199,13 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Get all giveaway product ids for cart operations.
-	 * 
+	 *
 	 *  @since 2.0.7
 	 *  @param $post_id     int     Id of coupon
 	 *  @return $free_products     int[]     Array of giveaway product ids. Product ids will be updated to current language product ids if multi language plugin(WPML) is active
 	 */
 	public static function get_giveaway_products( $post_id ) {
-		$free_products = parent::get_giveaway_products( $post_id );
+		$free_products          = parent::get_giveaway_products( $post_id );
 		$free_products_original = $free_products; // assumes main language product id
 
 		$multi_lang_obj = Wt_Smart_Coupon_Mulitlanguage::get_instance();
@@ -3208,25 +3216,23 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 			foreach ( $free_products as $product_id ) {
 				/**
 				 *  Take id of product in the current language.
-				 * 
+				 *
 				 *  @param  $product_id         int     Id of product
 				 *  @param  post type           string  Post type
 				 *  @param  Return original     bool    Return original if no translation found in the current language. Default: false
-				 * 
 				 */
 				$out[] = apply_filters( 'wpml_object_id', $product_id, 'product', true );
 			}
-			
+
 			$free_products = $out;
 		}
 
 		/**
 		 *  Alter BOGO product ids for cart (Only applicable for frontend functionalities)
-		 * 
+		 *
 		 *  @param  $free_products              int[]       Array of giveaway product ids. Product ids of this array was converted to current language ids if any multi lang plugin(WPML) exists.
 		 *  @param  $post_id                    int         Id of coupon
 		 *  @param  $free_products_original     int[]       Array of giveaway product ids. Here the product ids are the ids configured by admin from backend.
-		 * 
 		 */
 		return apply_filters( 'wt_sc_alter_bogo_giveaway_product_ids_for_cart', $free_products, $post_id, $free_products_original );
 	}
@@ -3234,13 +3240,13 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 
 	/**
 	 *  Get all giveaway products and its data for cart operations.
-	 * 
+	 *
 	 *  @since 2.0.7
 	 *  @param $post_id     int     Id of coupon
 	 *  @return $bogo_products     array     Associative array of giveaway products and its data. Product ids will be updated to current language product ids if multi language plugin(WPML) is active
 	 */
 	public static function get_all_bogo_giveaway_products( $post_id ) {
-		$bogo_products = parent::get_all_bogo_giveaway_products( $post_id );
+		$bogo_products          = parent::get_all_bogo_giveaway_products( $post_id );
 		$bogo_products_original = $bogo_products; // assumes main language product id
 
 		$multi_lang_obj = Wt_Smart_Coupon_Mulitlanguage::get_instance();
@@ -3251,36 +3257,34 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 			foreach ( $bogo_products as $product_id => $product_data ) {
 				/**
 				 *  Take id of product in the current language.
-				 * 
+				 *
 				 *  @param  $product_id         int     Id of product
 				 *  @param  post type           string  Post type
 				 *  @param  Return original     bool    Return original if no translation found in the current language. Default: false
-				 * 
 				 */
 				$product_id = apply_filters( 'wpml_object_id', $product_id, 'product', true );
 
 				$out[ $product_id ] = $product_data;
 			}
-			
+
 			$bogo_products = $out;
 		}
 
 		/**
 		 *  Alter BOGO products data for cart (Only applicable for frontend functionalities)
-		 * 
+		 *
 		 *  @param  $bogo_products              array       An associative array of giveaway products and its giveaway data. Product ids of this array was converted to current language ids if any multi lang plugin(WPML) exists.
 		 *  @param  $post_id                    int         Id of coupon
 		 *  @param  $bogo_products_original     array       An associative array of giveaway products and its giveaway data. Here the product ids are the ids configured by admin from backend.
-		 * 
 		 */
 		return apply_filters( 'wt_sc_alter_bogo_giveaway_products_for_cart', $bogo_products, $post_id, $bogo_products_original );
 	}
 
-	
+
 	/**
 	 *  Get giveaway categories for BOGO coupon
 	 *  This is applicable for any_product_from_category_in_the_cart
-	 *  
+	 *
 	 *  Return array structure: array(
 	 *      category_id => array(
 	 *          'qty'       => (int) Current cart giveaway quantity of this category,
@@ -3289,8 +3293,7 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 	 *          'required'  => (int) Required quantity to fill the existing/next frequency. If any incomplete frequency exists then `required` will be (`single eligibility quantity` - `reminder`). Otherwise it will be `single eligibility quantity`,
 	 *      )
 	 *  )
-	 *  
-	 * 
+	 *
 	 *  @since 2.0.7
 	 *  @param $coupon_code   string     Code of coupon
 	 *  @return array               Coupon category id array
@@ -3304,12 +3307,12 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 		}
 
 		$single_eligibility_qty = $this->get_non_individual_discount_quantity( $coupon_id );
-		$frequency = $this->get_coupon_applicable_count( $coupon_id, $coupon_code );
+		$frequency              = $this->get_coupon_applicable_count( $coupon_id, $coupon_code );
 
 		/* allowed quantity by frequency */
-		$item_qty = $this->get_quantity_for_non_individual_quantity_bogo( $coupon_id );
-		$cart_items = $cart->get_cart();
-		$cat_qty_arr = array(); // already in cart quantity
+		$item_qty         = $this->get_quantity_for_non_individual_quantity_bogo( $coupon_id );
+		$cart_items       = $cart->get_cart();
+		$cat_qty_arr      = array(); // already in cart quantity
 		$required_qty_arr = array(); // for sorting
 
 		foreach ( $cart_items as $cart_item_key => $cart_item ) {
@@ -3317,9 +3320,8 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 				if ( isset( $cat_qty_arr[ $cart_item['free_category'] ] ) ) {
 					$cat_qty_arr[ $cart_item['free_category'] ] += $cart_item['quantity'];
 				} else {
-					$cat_qty_arr[ $cart_item['free_category'] ]  = $cart_item['quantity'];
+					$cat_qty_arr[ $cart_item['free_category'] ] = $cart_item['quantity'];
 				}
-
 			} else {
 				$product_cats = wc_get_product_cat_ids( $cart_item['product_id'] );
 
@@ -3343,13 +3345,12 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 			);
 
 			$cat_qty_arr[ $category_id ]['required'] = $single_eligibility_qty - $cat_qty_arr[ $category_id ]['reminder'];
-			$required_qty_arr[] = $cat_qty_arr[ $category_id ]['required']; // for sorting purpose
+			$required_qty_arr[]                      = $cat_qty_arr[ $category_id ]['required']; // for sorting purpose
 		}
 
 		$cart_giveaway_frequency_full_filled = array_sum( array_column( $cat_qty_arr, 'frequency' ) );
-		$cart_giveaway_total_reminder = array_sum( array_column( $cat_qty_arr, 'reminder' ) );
+		$cart_giveaway_total_reminder        = array_sum( array_column( $cat_qty_arr, 'reminder' ) );
 
-		
 		/**
 		 *  Frequency is fullfilled and some category have incomplete quantity. Then we have to remove categories other than incomplete giveaways
 		 */
@@ -3357,14 +3358,13 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 			if ( 0 < $cart_giveaway_total_reminder ) {
 				foreach ( $cat_qty_arr as $category_id => $cat_qty_data ) {
 					if ( 0 === $cat_qty_data['reminder'] ) { // remove completed items
-					   unset( $cat_qty_arr[ $category_id ] ); 
+						unset( $cat_qty_arr[ $category_id ] );
 					}
 				}
 			} else {
 				// fully availed
 				$cat_qty_arr = array();
 			}
-
 		} elseif ( $cart_giveaway_frequency_full_filled > $frequency ) { // more giveaway is added. So sort by reminder items first.
 			/**
 			 *  Sort the array by incomplete frequency filled at first
@@ -3399,7 +3399,6 @@ class BCSmartCouponGiveawayProductPublic extends Wt_Smart_Coupon_Giveaway_Produc
 			WC()->cart->remove_cart_item( $cart_item_key ); // no balance quantity so remove the item
 		}
 	}
-
 }
 
 BCSmartCouponGiveawayProductPublic::get_instance();

@@ -6,5 +6,5 @@ $tab = $_GET['tab'];
 	<?php require_once BLAZE_COMMERCE_PLUGIN_DIR . 'views/block-panel.php'; ?>
 	<?php require_once BLAZE_COMMERCE_PLUGIN_DIR . 'views/block-canvas.php'; ?>
 
-	<?php do_action( $tab . '_before_draggable_layout_editor_end' ) ?>
+	<?php do_action( $tab . '_before_draggable_layout_editor_end' ); ?>
 </div>

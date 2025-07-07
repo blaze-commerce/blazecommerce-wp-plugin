@@ -87,5 +87,4 @@ class Authentication {
 	public function graphql_jwt_expiration( $expiration ) {
 		return time() + 3600;
 	}
-
 }

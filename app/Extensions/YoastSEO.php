@@ -30,7 +30,6 @@ class YoastSEO {
 			$document['seoFullHead'] = $this->get_full_head( $meta );
 		}
 
-
 		return $document;
 	}
 

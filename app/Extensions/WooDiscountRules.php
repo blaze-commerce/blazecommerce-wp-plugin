@@ -5,6 +5,8 @@ namespace BlazeWooless\Extensions;
 use BlazeWooless\Woocommerce;
 
 class WooDiscountRules {
+
+
 	private static $instance = null;
 
 	public static function get_instance() {
@@ -32,38 +34,61 @@ class WooDiscountRules {
 
 	/**
 	 * Set collection fields for gift card products
+	 *
 	 * @param array $fields
 	 * @return array
 	 */
 	public function set_fields( $fields ) {
-		$fields[] = array( 'name' => 'metaData.discountRule', 'type' => 'object', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.discountRule.filters', 'type' => 'string', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.discountRule.bulk_adjustments', 'type' => 'string', 'optional' => true );
-		$fields[] = array( 'name' => 'metaData.discountRule.advanced_discount_message', 'type' => 'string', 'optional' => true );
+		$fields[] = array(
+			'name'     => 'metaData.discountRule',
+			'type'     => 'object',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.discountRule.filters',
+			'type'     => 'string',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.discountRule.bulk_adjustments',
+			'type'     => 'string',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.discountRule.advanced_discount_message',
+			'type'     => 'string',
+			'optional' => true,
+		);
 
 		return $fields;
 	}
 
 	public function prepare_discount_data() {
-		if ( ! class_exists( '\Wdr\App\Helpers\Rule' ) )
+		if ( ! class_exists( '\Wdr\App\Helpers\Rule' ) ) {
 			return;
+		}
 
 		$rule_helper = new \Wdr\App\Helpers\Rule();
-		$rules       = $rule_helper->getAllRules( [] );
+		$rules       = $rule_helper->getAllRules( array() );
 
 		// filter rules to get only active rules by checking property enabled is true
-		$rules = array_filter( $rules, function ($rule) {
-			return boolval( $rule->rule->enabled ) === true;
-		} );
+		$rules = array_filter(
+			$rules,
+			function ( $rule ) {
+				return boolval( $rule->rule->enabled ) === true;
+			}
+		);
 
-
-		$rules = array_map( function ($rule) {
-			$new_rule                            = new \stdClass();
-			$new_rule->filters                   = $rule->rule->filters;
-			$new_rule->bulk_adjustments          = $rule->rule->bulk_adjustments;
-			$new_rule->advanced_discount_message = $rule->rule->advanced_discount_message;
-			return $new_rule;
-		}, $rules );
+		$rules = array_map(
+			function ( $rule ) {
+				$new_rule                            = new \stdClass();
+				$new_rule->filters                   = $rule->rule->filters;
+				$new_rule->bulk_adjustments          = $rule->rule->bulk_adjustments;
+				$new_rule->advanced_discount_message = $rule->rule->advanced_discount_message;
+				return $new_rule;
+			},
+			$rules
+		);
 
 		set_transient( 'blaze_commerce_discount_data', $rules, 15 * MINUTE_IN_SECONDS );
 	}
@@ -73,30 +98,32 @@ class WooDiscountRules {
 		if ( class_exists( '\Wdr\App\Helpers\Rule' ) ) {
 
 			$is_applied = true;
+			$the_rule   = null;
 
 			$product_categories = wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) );
 			$discount_rules     = get_transient( 'blaze_commerce_discount_data' );
 
 			foreach ( $discount_rules as $rule ) {
 
-				if ( $rule->type === "product_category" ) {
-					if ( $rule->method === "in_list" && ! array_intersect( $product_categories, $rule->value ) ) {
+				if ( $rule->type === 'product_category' ) {
+					if ( $rule->method === 'in_list' && ! array_intersect( $product_categories, $rule->value ) ) {
 						$is_applied = false;
-					} elseif ( $rule->method === "not_in_list" && array_intersect( $product_categories, $rule->value ) ) {
+						$the_rule   = $rule;
+					} elseif ( $rule->method === 'not_in_list' && array_intersect( $product_categories, $rule->value ) ) {
 						$is_applied = false;
+						$the_rule   = $rule;
 					}
 				}
 			}
 
-			if ( $is_applied ) {
+			if ( $is_applied && ! is_null( $the_rule ) ) {
 
-				$product_data['metaData']['discountRule'] = [ 
-					'filters' => $rule->filters,
-					'bulk_adjustments' => $rule->bulk_adjustments,
-					'advanced_discount_message' => $rule->advanced_discount_message,
-				];
+				$product_data['metaData']['discountRule'] = array(
+					'filters'                   => $the_rule->filters,
+					'bulk_adjustments'          => $the_rule->bulk_adjustments,
+					'advanced_discount_message' => $the_rule->advanced_discount_message,
+				);
 			}
-
 		}
 		return $product_data;
 	}
@@ -114,6 +141,5 @@ class WooDiscountRules {
 			}
 			\WC()->cart->calculate_totals();
 		}
-
 	}
 }

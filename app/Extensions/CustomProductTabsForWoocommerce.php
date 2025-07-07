@@ -37,7 +37,7 @@ class CustomProductTabsForWoocommerce {
 				}
 
 				$additional_tabs[] = array(
-					'title' => $tab['title'],
+					'title'   => $tab['title'],
 					'content' => $tab['content'],
 				);
 			}

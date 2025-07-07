@@ -25,14 +25,14 @@ class AttributeSettings {
 
 	public static function get_all_attributes() {
 		$args = array(
-			'post_type' => 'product',
-			'post_status' => 'publish',
+			'post_type'      => 'product',
+			'post_status'    => 'publish',
 			'posts_per_page' => -1,
-			'tax_query' => array(
+			'tax_query'      => array(
 				array(
 					'taxonomy' => 'product_type',
-					'field' => 'slug',
-					'terms' => 'variable',
+					'field'    => 'slug',
+					'terms'    => 'variable',
 				),
 			),
 		);
@@ -54,7 +54,7 @@ class AttributeSettings {
 
 				foreach ( $attributes as $key => $attribute ) {
 					$attribute_to_register = array(
-						'name' => $key
+						'name' => $key,
 					);
 					if ( $attr = $attribute->get_taxonomy_object() ) {
 						$attribute_to_register['label'] = $attr->attribute_label;
@@ -73,8 +73,8 @@ class AttributeSettings {
 	}
 
 	public function add_available_product_attribute( $product_data, $product_id ) {
-		$product = wc_get_product( $product_id );
-		$attributes = $product->get_attributes();
+		$product                    = wc_get_product( $product_id );
+		$attributes                 = $product->get_attributes();
 		$product_data['attributes'] = $attributes;
 
 		if ( $product->is_type( 'variable' ) ) {
@@ -86,8 +86,8 @@ class AttributeSettings {
 					continue;
 				}
 				$attribute_to_register = array(
-					'slug' => $key,
-					'name' => 'attribute_' . $key,
+					'slug'    => $key,
+					'name'    => 'attribute_' . $key,
 					'options' => $attribute->get_options(),
 				);
 
@@ -96,31 +96,40 @@ class AttributeSettings {
 
 				if ( $attribute->is_taxonomy() ) {
 					// For taxonomy attributes, filter terms based on available option IDs
-					$all_terms = $attribute->get_terms();
-					$filtered_terms = array_filter( $all_terms, function ($term) use ($available_options) {
-						return in_array( $term->term_id, $available_options );
-					} );
+					$all_terms      = $attribute->get_terms();
+					$filtered_terms = array_filter(
+						$all_terms,
+						function ( $term ) use ( $available_options ) {
+							return in_array( $term->term_id, $available_options );
+						}
+					);
 
-					$options = array_map( function ($term) {
-						return [ 
-							'label' => $term->name,
-							'slug' => $term->slug,
-							'name' => $term->slug,
-							'term_id' => $term->term_id,
-							'value' => $term->name,
-						];
-					}, $filtered_terms );
+					$options = array_map(
+						function ( $term ) {
+							return array(
+								'label'   => $term->name,
+								'slug'    => $term->slug,
+								'name'    => $term->slug,
+								'term_id' => $term->term_id,
+								'value'   => $term->name,
+							);
+						},
+						$filtered_terms
+					);
 				} else {
 					// For non-taxonomy attributes, use available options directly
-					$options = array_map( function ($option) {
-						return [ 
-							'label' => $option,
-							'slug' => $option,
-							'name' => $option,
-							'term_id' => 0,
-							'value' => $option
-						];
-					}, $available_options );
+					$options = array_map(
+						function ( $option ) {
+							return array(
+								'label'   => $option,
+								'slug'    => $option,
+								'name'    => $option,
+								'term_id' => 0,
+								'value'   => $option,
+							);
+						},
+						$available_options
+					);
 				}
 
 				$attribute_to_register['options'] = $options;
@@ -134,7 +143,7 @@ class AttributeSettings {
 				$generated_attributes[] = apply_filters( 'blaze_wooless_product_attribute_for_typesense', $attribute_to_register, $attribute );
 			}
 			$product_data['defaultAttributes'] = $product->get_default_attributes();
-			$product_data['attributes'] = $generated_attributes;
+			$product_data['attributes']        = $generated_attributes;
 		}
 
 		if ( $product->is_type( 'variation' ) ) {
@@ -163,7 +172,7 @@ class AttributeSettings {
 
 	public function register_settings( $product_page_settings ) {
 		$product_page_settings['wooless_settings_attributes_section'] = array(
-			'label' => 'Attributes',
+			'label'   => 'Attributes',
 			'options' => $this->get_attribute_mapping_settings(),
 		);
 
@@ -171,34 +180,41 @@ class AttributeSettings {
 	}
 
 	public function get_attribute_mapping_settings() {
-		return array_map( function ($attribute) {
-			return array(
-				'id' => 'attribute_' . $attribute['name'],
-				'label' => $attribute['label'],
-				'type' => 'select',
-				'args' => array(
-					'options' => array(
-						'select' => 'Select',
-						'boxed' => 'Boxed',
-						'swatch' => 'Swatch',
-						'image' => 'Image',
+		return array_map(
+			function ( $attribute ) {
+				return array(
+					'id'    => 'attribute_' . $attribute['name'],
+					'label' => $attribute['label'],
+					'type'  => 'select',
+					'args'  => array(
+						'options' => array(
+							'select' => 'Select',
+							'boxed'  => 'Boxed',
+							'swatch' => 'Swatch',
+							'image'  => 'Image',
+						),
 					),
-				),
-			);
-		}, AttributeSettings::get_all_attributes() );
+				);
+			},
+			self::get_all_attributes()
+		);
 	}
 
 	public function add_settings( $documents, $options ) {
 		if ( ! is_array( $options ) ) {
 			$options = array();
 		}
-		$attributes = array_filter( $options, function ($option, $key) {
-			return str_starts_with( $key, 'attribute_' );
-		}, ARRAY_FILTER_USE_BOTH );
+		$attributes  = array_filter(
+			$options,
+			function ( $option, $key ) {
+				return str_starts_with( $key, 'attribute_' );
+			},
+			ARRAY_FILTER_USE_BOTH
+		);
 		$documents[] = array(
-			'id' => '1000023',
-			'name' => 'attribute_display_type',
-			'value' => json_encode( $attributes ),
+			'id'         => '1000023',
+			'name'       => 'attribute_display_type',
+			'value'      => json_encode( $attributes ),
 			'updated_at' => time(),
 		);
 
@@ -207,8 +223,9 @@ class AttributeSettings {
 
 	/**
 	 * Clear product attributes that are not available for the default variation
-	 * @param array $product_data
-	 * @param int $product_id
+	 *
+	 * @param array      $product_data
+	 * @param int        $product_id
 	 * @param WC_Product $product
 	 * @return array
 	 */
@@ -217,18 +234,21 @@ class AttributeSettings {
 
 			$attributes = $product->get_attributes();
 
-			$default_attributes = array_map( function ($attr) {
-				return $attr->get_options();
-			}, $attributes );
+			$default_attributes = array_map(
+				function ( $attr ) {
+					return $attr->get_options();
+				},
+				$attributes
+			);
 
-			$attributes = $product_data["attributes"];
+			$attributes = $product_data['attributes'];
 
 			// Filter options based on default_attributes
 			foreach ( $attributes as &$attribute ) {
 				if ( isset( $default_attributes[ $attribute['slug'] ] ) ) {
 					$valid_term_ids = $default_attributes[ $attribute['slug'] ];
 					// Create a new array to store the filtered options
-					$filtered_options = [];
+					$filtered_options = array();
 					foreach ( $attribute['options'] as $option ) {
 						if ( in_array( $option['term_id'], $valid_term_ids ) ) {
 							$filtered_options[] = $option;
@@ -239,8 +259,7 @@ class AttributeSettings {
 				}
 			}
 
-			$product_data["attributes"] = $attributes;
-
+			$product_data['attributes'] = $attributes;
 
 		endif;
 

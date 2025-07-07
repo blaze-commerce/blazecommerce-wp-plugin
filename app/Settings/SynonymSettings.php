@@ -6,8 +6,8 @@ use BlazeWooless\TypesenseClient;
 
 class SynonymSettings extends BaseSettings {
 	private static $instance = null;
-	public $tab_key = 'synonyms';
-	public $page_label = 'Synonyms Settings';
+	public $tab_key          = 'synonyms';
+	public $page_label       = 'Synonyms Settings';
 
 	public $key = 'wooless_synonyms';
 
@@ -39,13 +39,14 @@ class SynonymSettings extends BaseSettings {
 
 				$words = array_map( 'trim', explode( ',', $synonym['words'] ) );
 
-				if ( count( $words ) === 0 )
+				if ( count( $words ) === 0 ) {
 					return;
+				}
 
 				$synonyms[] = array(
-					'type' => $synonym['type'],
-					'key' => $synonym['key'],
-					'words' => $words
+					'type'  => $synonym['type'],
+					'key'   => $synonym['key'],
+					'words' => $words,
 				);
 
 				TypesenseClient::get_instance()->set_synonym( $synonym['type'], $words, $synonym['key'] );
@@ -58,7 +59,7 @@ class SynonymSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		return [];
+		return array();
 	}
 
 	public function footer_callback() {

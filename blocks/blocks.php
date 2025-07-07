@@ -45,10 +45,14 @@ function extend_block_example_enqueue_block_editor_assets() {
 		true // Enqueue the script in the footer.
 	);
 
-	wp_localize_script( 'wp-api-fetch', 'wpApiSettings', array(
-		'root' => esc_url_raw( rest_url() ),
-		'nonce' => wp_create_nonce( 'wp_rest' ),
-	) );
+	wp_localize_script(
+		'wp-api-fetch',
+		'wpApiSettings',
+		array(
+			'root'  => esc_url_raw( rest_url() ),
+			'nonce' => wp_create_nonce( 'wp_rest' ),
+		)
+	);
 
 	$menus = get_terms( 'nav_menu' );
 

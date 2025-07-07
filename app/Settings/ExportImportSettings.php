@@ -4,8 +4,8 @@ namespace BlazeWooless\Settings;
 
 class ExportImportSettings extends BaseSettings {
 	private static $instance = null;
-	public $tab_key = 'export_import';
-	public $page_label = 'Export/Import';
+	public $tab_key          = 'export_import';
+	public $page_label       = 'Export/Import';
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -78,7 +78,7 @@ class ExportImportSettings extends BaseSettings {
 	 */
 	public function export_settings() {
 		$settings_keys = $this->get_all_settings_keys();
-		$export_data = array();
+		$export_data   = array();
 
 		foreach ( $settings_keys as $key ) {
 			$value = get_option( $key );
@@ -90,9 +90,9 @@ class ExportImportSettings extends BaseSettings {
 		// Add metadata
 		$export_data['_export_metadata'] = array(
 			'plugin_version' => BLAZE_COMMERCE_VERSION,
-			'export_date' => current_time( 'mysql' ),
-			'site_url' => site_url(),
-			'wp_version' => get_bloginfo( 'version' ),
+			'export_date'    => current_time( 'mysql' ),
+			'site_url'       => site_url(),
+			'wp_version'     => get_bloginfo( 'version' ),
 		);
 
 		return $export_data;
@@ -103,35 +103,41 @@ class ExportImportSettings extends BaseSettings {
 	 */
 	public function import_settings( $import_data ) {
 		if ( ! is_array( $import_data ) ) {
-			return array( 'success' => false, 'message' => 'Invalid import data format.' );
+			return array(
+				'success' => false,
+				'message' => 'Invalid import data format.',
+			);
 		}
 
 		// Check if this is a valid Blaze Commerce export
 		if ( ! isset( $import_data['_export_metadata'] ) ) {
-			return array( 'success' => false, 'message' => 'This does not appear to be a valid Blaze Commerce settings export file.' );
+			return array(
+				'success' => false,
+				'message' => 'This does not appear to be a valid Blaze Commerce settings export file.',
+			);
 		}
 
-		$settings_keys = $this->get_all_settings_keys();
+		$settings_keys  = $this->get_all_settings_keys();
 		$imported_count = 0;
-		$skipped_count = 0;
-		$errors = array();
+		$skipped_count  = 0;
+		$errors         = array();
 
 		foreach ( $settings_keys as $key ) {
 			if ( isset( $import_data[ $key ] ) ) {
 				// Skip empty values to avoid overwriting existing settings with empty data
 				if ( empty( $import_data[ $key ] ) && $import_data[ $key ] !== '0' && $import_data[ $key ] !== 0 ) {
-					$skipped_count++;
+					++$skipped_count;
 					continue;
 				}
 
 				$result = update_option( $key, $import_data[ $key ] );
 				if ( $result !== false ) {
-					$imported_count++;
+					++$imported_count;
 				} else {
 					// Check if the option already exists with the same value
 					$existing_value = get_option( $key );
 					if ( $existing_value === $import_data[ $key ] ) {
-						$imported_count++; // Count as successful even if no update was needed
+						++$imported_count; // Count as successful even if no update was needed
 					} else {
 						$errors[] = "Failed to import setting: {$key}";
 					}
@@ -148,13 +154,13 @@ class ExportImportSettings extends BaseSettings {
 			return array(
 				'success' => true,
 				'message' => $message,
-				'errors' => $errors
+				'errors'  => $errors,
 			);
 		} else {
 			return array(
 				'success' => false,
 				'message' => 'No settings were imported.',
-				'errors' => $errors
+				'errors'  => $errors,
 			);
 		}
 	}
@@ -168,9 +174,9 @@ class ExportImportSettings extends BaseSettings {
 			wp_die( 'Security check failed' );
 		}
 
-		$export_data = $this->export_settings();
+		$export_data  = $this->export_settings();
 		$json_content = json_encode( $export_data, JSON_PRETTY_PRINT );
-		$filename = 'blaze-commerce-settings-' . date( 'Y-m-d-H-i-s' ) . '.json';
+		$filename     = 'blaze-commerce-settings-' . date( 'Y-m-d-H-i-s' ) . '.json';
 
 		// Clear any previous output
 		if ( ob_get_level() ) {
@@ -217,7 +223,7 @@ class ExportImportSettings extends BaseSettings {
 
 		// Read and decode JSON
 		$json_content = file_get_contents( $file['tmp_name'] );
-		$import_data = json_decode( $json_content, true );
+		$import_data  = json_decode( $json_content, true );
 
 		if ( json_last_error() !== JSON_ERROR_NONE ) {
 			wp_send_json_error( array( 'message' => 'Invalid JSON file format' ) );
@@ -227,15 +233,19 @@ class ExportImportSettings extends BaseSettings {
 		$result = $this->import_settings( $import_data );
 
 		if ( $result['success'] ) {
-			wp_send_json_success( array(
-				'message' => $result['message'],
-				'errors' => $result['errors']
-			) );
+			wp_send_json_success(
+				array(
+					'message' => $result['message'],
+					'errors'  => $result['errors'],
+				)
+			);
 		} else {
-			wp_send_json_error( array(
-				'message' => $result['message'],
-				'errors' => $result['errors']
-			) );
+			wp_send_json_error(
+				array(
+					'message' => $result['message'],
+					'errors'  => $result['errors'],
+				)
+			);
 		}
 	}
 
@@ -285,7 +295,7 @@ class ExportImportSettings extends BaseSettings {
 			// Debug information (remove in production)
 			$debug_info = '';
 			if ( WP_DEBUG ) {
-				$debug_info = ' Debug: ';
+				$debug_info  = ' Debug: ';
 				$debug_info .= isset( $_POST['import_nonce'] ) ? 'Custom nonce present, ' : 'Custom nonce missing, ';
 				$debug_info .= isset( $_POST['_wpnonce'] ) ? 'WP nonce present' : 'WP nonce missing';
 			}
@@ -326,7 +336,7 @@ class ExportImportSettings extends BaseSettings {
 
 		// Read and decode JSON
 		$json_content = file_get_contents( $file['tmp_name'] );
-		$import_data = json_decode( $json_content, true );
+		$import_data  = json_decode( $json_content, true );
 
 		if ( json_last_error() !== JSON_ERROR_NONE ) {
 			add_settings_error(

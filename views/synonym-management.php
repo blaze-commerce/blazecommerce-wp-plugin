@@ -39,8 +39,9 @@ $synonyms = get_option( \BlazeWooless\Settings\SynonymSettings::get_option_key()
 <div id="blaze-wooless-synonym-holder">
 	<div id="blaze-wooless-synonym-row-holder">
 		<?php
-		if ( is_array( $synonyms ) && count( $synonyms ) > 0 )
-			foreach ( (array) $synonyms as $index => $synonym ) : ?>
+		if ( is_array( $synonyms ) && count( $synonyms ) > 0 ) {
+			foreach ( (array) $synonyms as $index => $synonym ) :
+				?>
 				<div class="blaze-wooless-synonym-row" data-row="<?php echo $index; ?>">
 					<div class="blaze-wooless-synonym-row__input">
 						<div class="blaze-wooless-synonym-row__input__type field-holder">
@@ -75,7 +76,10 @@ $synonyms = get_option( \BlazeWooless\Settings\SynonymSettings::get_option_key()
 						</div>
 					</div>
 				</div>
-			<?php endforeach; ?>
+				<?php
+			endforeach;
+		}
+		?>
 	</div>
 	<div id="blaze-wooless-synonym-add-row">
 		<button id="blaze-wooless-synonym-add-row__button button" type="button">Add Synonym</button>

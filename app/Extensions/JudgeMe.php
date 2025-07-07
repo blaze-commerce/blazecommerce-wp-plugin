@@ -3,9 +3,9 @@
 namespace BlazeWooless\Extensions;
 
 class JudgeMe {
-	private static $instance = null;
-	public static $API_URL = 'https://judge.me/api/v1';
-	public static $WIDGET_URL = 'https://cache.judge.me/widgets/woocommerce/';
+	private static $instance         = null;
+	public static $API_URL           = 'https://judge.me/api/v1';
+	public static $WIDGET_URL        = 'https://cache.judge.me/widgets/woocommerce/';
 	public static $PRODUCTS_ENDPOINT = '/products/?';
 
 	public static function get_instance() {
@@ -32,6 +32,7 @@ class JudgeMe {
 
 	/**
 	 * Register review setting options
+	 *
 	 * @hooked blaze_wooless_review_setting_options, priority 10
 	 * @param array $options
 	 * @return array
@@ -39,10 +40,10 @@ class JudgeMe {
 	public function register_review_settings( array $options ) {
 
 		$options[] = array(
-			'id' => 'judgeme_single_product_review',
+			'id'    => 'judgeme_single_product_review',
 			'label' => 'JudgeMe - Display Single Review',
-			'type' => 'checkbox',
-			'args' => array( 'description' => 'Check this to enable single review for all products' ),
+			'type'  => 'checkbox',
+			'args'  => array( 'description' => 'Check this to enable single review for all products' ),
 		);
 
 		return $options;
@@ -70,20 +71,19 @@ class JudgeMe {
 
 	public function generate_product_data() {
 
-
-		$shop_domain = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
+		$shop_domain    = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
 		$products_batch = array();
 
 		if ( $this->get_api_key() ) {
 			$finished = false;
-			$page = 1;
+			$page     = 1;
 
 			while ( ! $finished ) {
 				$params = array(
-					'api_token' => $this->get_api_key(),
+					'api_token'   => $this->get_api_key(),
 					'shop_domain' => $shop_domain,
-					'page' => $page,
-					'per_page' => 100,
+					'page'        => $page,
+					'per_page'    => 100,
 				);
 
 				$PRODUCT_PARAMETERS = http_build_query( $params );
@@ -104,7 +104,7 @@ class JudgeMe {
 				unset( $response );
 
 				// Increment the page number
-				$page++;
+				++$page;
 			}
 		}
 
@@ -133,29 +133,30 @@ class JudgeMe {
 
 	protected function set_review_data( $product, $value ) {
 		$average_rating = $this->get_reviews_average_rating( $value );
-		$rating_count = $this->get_reviews_rating_count( $value );
-		$percentage = $this->get_reviews_rating_percentage( $value );
-		$content = $this->get_reviews_content( $value );
+		$rating_count   = $this->get_reviews_rating_count( $value );
+		$percentage     = $this->get_reviews_rating_percentage( $value );
+		$content        = $this->get_reviews_content( $value );
 
 		return array(
-			'id' => (int) $product['id'],
+			'id'         => (int) $product['id'],
 			'externalId' => (int) $product['external_id'],
-			'average' => (float) $average_rating[1],
-			'count' => (int) $rating_count[1],
+			'average'    => (float) $average_rating[1],
+			'count'      => (int) $rating_count[1],
 			'percentage' => $percentage,
-			'content' => $content,
+			'content'    => $content,
 		);
 	}
 
 	public function generate_product_reviews( $products ) {
 		$option = get_option( 'wooless_settings_product_page_options' );
 
-		if ( ! array_key_exists( "judegme_single_product_review", $option ) )
+		if ( ! array_key_exists( 'judegme_single_product_review', $option ) ) {
 			return array();
+		}
 
 		$is_single_review = $option['judegme_single_product_review'];
 
-		$shop_domain = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
+		$shop_domain     = $this->reformat_url( bw_get_general_settings( 'shop_domain' ) );
 		$product_reviews = array();
 
 		if ( ! empty( $products ) ) {
@@ -165,19 +166,22 @@ class JudgeMe {
 			if ( $is_single_review ) {
 				$product_ids = array( $products[0]['external_id'] );
 			} else {
-				$product_ids = array_map( function ($product) {
-					return $product['external_id'];
-				}, $products );
+				$product_ids = array_map(
+					function ( $product ) {
+						return $product['external_id'];
+					},
+					$products
+				);
 			}
 
-			$review_widgets_parameter = 'review_widget_product_ids=' . implode( ",", $product_ids );
+			$review_widgets_parameter = 'review_widget_product_ids=' . implode( ',', $product_ids );
 
-			$result = wp_remote_get( self::$WIDGET_URL . $shop_domain . "?" . $review_widgets_parameter );
+			$result = wp_remote_get( self::$WIDGET_URL . $shop_domain . '?' . $review_widgets_parameter );
 
 			$response = json_decode( wp_remote_retrieve_body( $result ), true );
 
 			foreach ( $products as $product ) {
-				if ( $is_single_review !== "1" ) {
+				if ( $is_single_review !== '1' ) {
 					foreach ( $response['review_widgets'] as $key => $value ) {
 						if ( $product['external_id'] === $key ) {
 							$product_reviews[ $product['handle'] ] = $this->set_review_data( $product, $value );
@@ -185,11 +189,10 @@ class JudgeMe {
 					}
 				} else {
 					// get first key from  $response['review_widgets']
-					$key = array_key_first( $response['review_widgets'] );
+					$key                                   = array_key_first( $response['review_widgets'] );
 					$product_reviews[ $product['handle'] ] = $this->set_review_data( $product, $response['review_widgets'][ $key ] );
 				}
 			}
-
 
 			unset( $response );
 		}
@@ -259,13 +262,13 @@ class JudgeMe {
 	}
 
 	public function get_reviews_content( $html ) {
-		$verified = "/data-verified-buyer='(.*?)'/m";
-		$icon = "/jdgm-rev__icon' >(.*?)<\/div>/m";
-		$rating = "/jdgm-rev__rating' data-score='(.*?)'/m";
+		$verified  = "/data-verified-buyer='(.*?)'/m";
+		$icon      = "/jdgm-rev__icon' >(.*?)<\/div>/m";
+		$rating    = "/jdgm-rev__rating' data-score='(.*?)'/m";
 		$timestamp = "/timestamp jdgm-spinner' data-content='(.*?)'/m";
-		$author = "/jdgm-rev__author'>(.*?)<\/span>/m";
-		$title = "/jdgm-rev__title'>(.*?)<\/b>/m";
-		$body = "/jdgm-rev__body'><p>(.*?)<\/p>/m";
+		$author    = "/jdgm-rev__author'>(.*?)<\/span>/m";
+		$title     = "/jdgm-rev__title'>(.*?)<\/b>/m";
+		$body      = "/jdgm-rev__body'><p>(.*?)<\/p>/m";
 
 		preg_match_all( $verified, $html, $verified_matches, PREG_SET_ORDER, 0 );
 		preg_match_all( $icon, $html, $icon_matches, PREG_SET_ORDER, 0 );
@@ -279,13 +282,13 @@ class JudgeMe {
 
 		foreach ( $body_matches as $key => $value ) {
 			$reviews_content[] = array(
-				'verified' => (bool) $verified_matches[ $key ][1],
-				'icon' => $icon_matches[ $key ][1],
-				'rating' => (int) $rating_matches[ $key ][1],
+				'verified'  => (bool) $verified_matches[ $key ][1],
+				'icon'      => $icon_matches[ $key ][1],
+				'rating'    => (int) $rating_matches[ $key ][1],
 				'timestamp' => $timestamp_matches[ $key ][1],
-				'author' => $author_matches[ $key ][1],
-				'title' => $title_matches[ $key ][1],
-				'body' => $body_matches[ $key ][1],
+				'author'    => $author_matches[ $key ][1],
+				'title'     => $title_matches[ $key ][1],
+				'body'      => $body_matches[ $key ][1],
 			);
 		}
 

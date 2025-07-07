@@ -10,10 +10,10 @@ class CollectionAliasManager {
 	private $site_url;
 
 	// Performance optimization: Cache frequently accessed data
-	private static $alias_cache = array();
+	private static $alias_cache              = array();
 	private static $current_collection_cache = array();
-	private static $alias_exists_cache = array();
-	private static $cache_ttl = 300; // 5 minutes cache TTL
+	private static $alias_exists_cache       = array();
+	private static $cache_ttl                = 300; // 5 minutes cache TTL
 
 	public function __construct( $typesense_client = null ) {
 		// Accept TypesenseClient instance to avoid circular dependency
@@ -86,16 +86,16 @@ class CollectionAliasManager {
 
 			// Cache the result
 			self::$current_collection_cache[ $cache_key ] = array(
-				'value' => $result,
-				'timestamp' => time()
+				'value'     => $result,
+				'timestamp' => time(),
 			);
 
 			return $result;
-		} catch (Exception $e) {
+		} catch ( Exception $e ) {
 			// Cache the null result for failed lookups
 			self::$current_collection_cache[ $cache_key ] = array(
-				'value' => null,
-				'timestamp' => time()
+				'value'     => null,
+				'timestamp' => time(),
 			);
 			return null;
 		}
@@ -116,7 +116,7 @@ class CollectionAliasManager {
 			// Check if collection -a exists
 			$this->typesense->client()->collections[ $collection_a ]->retrieve();
 			$matching_collections[] = $collection_a;
-		} catch (Exception $e) {
+		} catch ( Exception $e ) {
 			// Collection -a doesn't exist, which is fine
 		}
 
@@ -124,7 +124,7 @@ class CollectionAliasManager {
 			// Check if collection -b exists
 			$this->typesense->client()->collections[ $collection_b ]->retrieve();
 			$matching_collections[] = $collection_b;
-		} catch (Exception $e) {
+		} catch ( Exception $e ) {
 			// Collection -b doesn't exist, which is fine
 		}
 
@@ -232,8 +232,8 @@ class CollectionAliasManager {
 			$this->clear_cache_for_collection_type( $collection_type );
 
 			return $result;
-		} catch (Exception $e) {
-			throw new Exception( "Failed to update alias: " . $e->getMessage() );
+		} catch ( Exception $e ) {
+			throw new Exception( 'Failed to update alias: ' . $e->getMessage() );
 		}
 	}
 
@@ -243,7 +243,7 @@ class CollectionAliasManager {
 	public function delete_collection( $collection_name ) {
 		try {
 			return $this->typesense->client()->collections[ $collection_name ]->delete();
-		} catch (Exception $e) {
+		} catch ( Exception $e ) {
 			// Collection might not exist, which is fine
 			return false;
 		}
@@ -302,16 +302,16 @@ class CollectionAliasManager {
 
 			// Cache the positive result
 			self::$alias_exists_cache[ $cache_key ] = array(
-				'value' => true,
-				'timestamp' => time()
+				'value'     => true,
+				'timestamp' => time(),
 			);
 
 			return true;
-		} catch (Exception $e) {
+		} catch ( Exception $e ) {
 			// Cache the negative result
 			self::$alias_exists_cache[ $cache_key ] = array(
-				'value' => false,
-				'timestamp' => time()
+				'value'     => false,
+				'timestamp' => time(),
 			);
 
 			return false;
@@ -347,8 +347,8 @@ class CollectionAliasManager {
 
 		// Cache the result
 		self::$alias_cache[ $cache_key ] = array(
-			'value' => $collection_access,
-			'timestamp' => time()
+			'value'     => $collection_access,
+			'timestamp' => time(),
 		);
 
 		return $collection_access;
@@ -400,10 +400,10 @@ class CollectionAliasManager {
 	 */
 	public function get_cache_stats() {
 		return array(
-			'alias_cache_count' => count( self::$alias_cache ),
+			'alias_cache_count'              => count( self::$alias_cache ),
 			'current_collection_cache_count' => count( self::$current_collection_cache ),
-			'alias_exists_cache_count' => count( self::$alias_exists_cache ),
-			'cache_ttl' => self::$cache_ttl,
+			'alias_exists_cache_count'       => count( self::$alias_exists_cache ),
+			'cache_ttl'                      => self::$cache_ttl,
 		);
 	}
 }

@@ -19,7 +19,6 @@ class LoadCartFromSession {
 		add_action( 'init', array( $this, 'load_user_from_session' ) );
 		add_action( 'wp_footer', array( $this, 'remove_session_id_from_url_script' ) );
 		add_action( 'woocommerce_before_thankyou', array( $this, 'clear_cart_data' ) );
-
 	}
 
 
@@ -33,7 +32,7 @@ class LoadCartFromSession {
 		if ( $_SERVER['REQUEST_URI'] === '/graphql' ) {
 			return;
 		}
-		$data_to_store = [ 'cart', 'applied_coupons', 'coupon_discount_totals', 'coupon_discount_tax_totals' ];
+		$data_to_store = array( 'cart', 'applied_coupons', 'coupon_discount_totals', 'coupon_discount_tax_totals' );
 
 		if ( is_user_logged_in() ) {
 			$current_session = WC()->session;
@@ -94,7 +93,7 @@ class LoadCartFromSession {
 					wc_setcookie( 'guest_session_' . $key, urlencode( $value ) );
 				}
 			}
-		} catch (\Exception $exception) {
+		} catch ( \Exception $exception ) {
 			// ErrorHandling::capture( $exception );
 		}
 	}
@@ -121,7 +120,6 @@ class LoadCartFromSession {
 			$handler      = new \WC_Session_Handler();
 			$session_data = $handler->get_session( $session_id );
 
-
 			// We were passed a session ID, yet no session was found. Let's log this and bail.
 			if ( empty( $session_data ) ) {
 				throw new \Exception( 'Could not locate WooCommerce session on checkout' );
@@ -136,7 +134,7 @@ class LoadCartFromSession {
 					wp_set_auth_cookie( $customer_id );
 				}
 			}
-		} catch (\Exception $exception) {
+		} catch ( \Exception $exception ) {
 			// ErrorHandling::capture( $exception );
 		}
 	}

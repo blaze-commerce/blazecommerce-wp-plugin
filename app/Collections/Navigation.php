@@ -4,7 +4,7 @@ namespace BlazeWooless\Collections;
 
 class Navigation extends BaseCollection {
 	private static $instance = null;
-	public $collection_name = 'navigation';
+	public $collection_name  = 'navigation';
 
 	const BATCH_SIZE = 5;
 
@@ -18,12 +18,32 @@ class Navigation extends BaseCollection {
 
 	public function get_fields() {
 		$fields = array(
-			array( 'name' => 'objectId', 'type' => 'string' ),
-			array( 'name' => 'name', 'type' => 'string' ),
-			array( 'name' => 'content', 'type' => 'string', 'optional' => true ),
-			array( 'name' => 'status', 'type' => 'string', 'facet' => true ),
-			array( 'name' => 'updatedAt', 'type' => 'int64' ),
-			array( 'name' => 'createdAt', 'type' => 'int64' ),
+			array(
+				'name' => 'objectId',
+				'type' => 'string',
+			),
+			array(
+				'name' => 'name',
+				'type' => 'string',
+			),
+			array(
+				'name'     => 'content',
+				'type'     => 'string',
+				'optional' => true,
+			),
+			array(
+				'name'  => 'status',
+				'type'  => 'string',
+				'facet' => true,
+			),
+			array(
+				'name' => 'updatedAt',
+				'type' => 'int64',
+			),
+			array(
+				'name' => 'createdAt',
+				'type' => 'int64',
+			),
 		);
 
 		return apply_filters( 'blazecommerce/collection/navigation/typesense_fields', $fields );
@@ -38,9 +58,9 @@ class Navigation extends BaseCollection {
 		if ( $use_aliases ) {
 			try {
 				$schema = array(
-					'fields' => $this->get_fields(),
+					'fields'                => $this->get_fields(),
 					'default_sorting_field' => 'updatedAt',
-					'enable_nested_fields' => true
+					'enable_nested_fields'  => true,
 				);
 
 				$new_collection_name = $this->initialize_with_alias( $schema );
@@ -48,7 +68,7 @@ class Navigation extends BaseCollection {
 
 				// Note: initialize_with_alias() now automatically stores the active sync collection
 
-			} catch (\Exception $e) {
+			} catch ( \Exception $e ) {
 				$logger->debug( 'TS Navigation collection alias initialize Exception: ' . $e->getMessage(), $context );
 				throw $e;
 			}
@@ -56,22 +76,24 @@ class Navigation extends BaseCollection {
 			// Legacy behavior
 			try {
 				$this->drop_collection();
-			} catch (\Exception $e) {
+			} catch ( \Exception $e ) {
 				// Don't error out if the collection was not found
 			}
 
 			$logger->debug( 'TS Navigation collection: ' . $this->collection_name(), $context );
 
 			try {
-				$this->create_collection( [ 
-					'name' => $this->collection_name(),
-					'fields' => $this->get_fields(),
-					'default_sorting_field' => 'updatedAt',
-					'enable_nested_fields' => true
-				] );
-			} catch (\Exception $e) {
+				$this->create_collection(
+					array(
+						'name'                  => $this->collection_name(),
+						'fields'                => $this->get_fields(),
+						'default_sorting_field' => 'updatedAt',
+						'enable_nested_fields'  => true,
+					)
+				);
+			} catch ( \Exception $e ) {
 				$logger->debug( 'TS Navigation collection initialize Exception: ' . $e->getMessage(), $context );
-				echo "Error: " . $e->getMessage() . "\n";
+				echo 'Error: ' . $e->getMessage() . "\n";
 			}
 		}
 	}
@@ -82,10 +104,10 @@ class Navigation extends BaseCollection {
 		$navigation_id = $navigation->ID;
 
 		$data = array(
-			'objectId' => (string) $navigation_id,
-			'name' => $navigation->post_title,
-			'content' => $navigation->post_content,
-			'status' => $navigation->post_status,
+			'objectId'  => (string) $navigation_id,
+			'name'      => $navigation->post_title,
+			'content'   => $navigation->post_content,
+			'status'    => $navigation->post_status,
 			'updatedAt' => (int) strtotime( get_the_modified_date( 'c', $navigation_id ) ),
 			'createdAt' => (int) strtotime( get_the_date( 'c', $navigation_id ) ),
 		);
@@ -143,9 +165,12 @@ class Navigation extends BaseCollection {
 	public function import_prepared_batch( $navigations_batch ) {
 		$import_response = $this->import( $navigations_batch );
 
-		$successful_imports = array_filter( $import_response, function ($batch_result) {
-			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
-		} );
+		$successful_imports = array_filter(
+			$import_response,
+			function ( $batch_result ) {
+				return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+			}
+		);
 
 		return $successful_imports;
 	}
@@ -166,14 +191,16 @@ class Navigation extends BaseCollection {
 		$should_sync = apply_filters( 'blazecommerce/settings/sync/navigation', true );
 		if ( ! $should_sync ) {
 			// This prevents syncing all navigation
-			wp_send_json( array(
-				'imported_count' => 0,
-				'total_imports' => 0,
-				'next_page' => null,
-				'page' => 1,
-				'import_response' => [],
-				'import_data_sent' => [],
-			) );
+			wp_send_json(
+				array(
+					'imported_count'   => 0,
+					'total_imports'    => 0,
+					'next_page'        => null,
+					'page'             => 1,
+					'import_response'  => array(),
+					'import_data_sent' => array(),
+				)
+			);
 		}
 
 		try {
@@ -183,22 +210,24 @@ class Navigation extends BaseCollection {
 				$navigation_datas = $this->prepare_batch_data( $navigation_ids );
 				if ( ! empty( $navigation_datas ) ) {
 					$successful_imports = $this->import_prepared_batch( $navigation_datas );
-					$imported_count += count( $successful_imports );
+					$imported_count    += count( $successful_imports );
 				}
 
 				$total_imports += count( $navigation_datas );
-				$total_pages   = $this->get_total_pages( $batch_size );
-				$next_page     = $page + 1;
-				$has_next_data = $page < $total_pages;
+				$total_pages    = $this->get_total_pages( $batch_size );
+				$next_page      = $page + 1;
+				$has_next_data  = $page < $total_pages;
 
-				wp_send_json( array(
-					'imported_count' => $imported_count,
-					'total_imports' => $total_imports,
-					'next_page' => $has_next_data ? $next_page : null,
-					'page' => $page,
-					'import_response' => $import_response,
-					'import_data_sent' => $navigation_datas,
-				) );
+				wp_send_json(
+					array(
+						'imported_count'   => $imported_count,
+						'total_imports'    => $total_imports,
+						'next_page'        => $has_next_data ? $next_page : null,
+						'page'             => $page,
+						'import_response'  => $import_response,
+						'import_data_sent' => $navigation_datas,
+					)
+				);
 			}
 
 			// Complete the sync if using aliases and this is the final page
@@ -210,24 +239,28 @@ class Navigation extends BaseCollection {
 				$logger->debug( 'TS Navigation sync result: ' . json_encode( $sync_result ), $context );
 			}
 
-			wp_send_json( array(
-				'imported_count' => $imported_count,
-				'total_imports' => $total_imports,
-				'next_page' => null,
-				'page' => $page,
-				'import_response' => $import_response,
-				'import_data_sent' => $navigation_datas,
-			) );
-		} catch (\Exception $e) {
-			wp_send_json( array(
-				'error' => $e->getMessage(),
-				'imported_count' => $imported_count,
-				'total_imports' => $total_imports,
-				'next_page' => null,
-				'page' => $page,
-				'import_response' => $import_response,
-				'import_data_sent' => $navigation_datas,
-			) );
+			wp_send_json(
+				array(
+					'imported_count'   => $imported_count,
+					'total_imports'    => $total_imports,
+					'next_page'        => null,
+					'page'             => $page,
+					'import_response'  => $import_response,
+					'import_data_sent' => $navigation_datas,
+				)
+			);
+		} catch ( \Exception $e ) {
+			wp_send_json(
+				array(
+					'error'            => $e->getMessage(),
+					'imported_count'   => $imported_count,
+					'total_imports'    => $total_imports,
+					'next_page'        => null,
+					'page'             => $page,
+					'import_response'  => $import_response,
+					'import_data_sent' => $navigation_datas,
+				)
+			);
 		}
 	}
 }

@@ -53,7 +53,7 @@ class Woocommerce {
 				try {
 					Product::get_instance()->collection()->documents[ $post_id ]->delete();
 					do_action( 'ts_product_update', $product->get_id(), $product );
-				} catch (\Exception $e) {
+				} catch ( \Exception $e ) {
 					$logger  = wc_get_logger();
 					$context = array( 'source' => 'wooless-product-delete' );
 					$logger->debug( 'TS Product Delete Exception: ' . $e->getMessage(), $context );
@@ -102,13 +102,16 @@ class Woocommerce {
 		if ( ! empty( $menu_orders ) ) {
 			foreach ( $menu_orders as $product_id => $menu_order ) {
 				$menu_orders_for_import[] = array(
-					'id' => (string) $product_id,
-					'menuOrder' => intval( $menu_order )
+					'id'        => (string) $product_id,
+					'menuOrder' => intval( $menu_order ),
 				);
 			}
-			$response = Product::get_instance()->collection()->documents->import( $menu_orders_for_import, array(
-				'action' => 'update'
-			) );
+			$response = Product::get_instance()->collection()->documents->import(
+				$menu_orders_for_import,
+				array(
+					'action' => 'update',
+				)
+			);
 
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-menu-ordering' );
@@ -144,7 +147,6 @@ class Woocommerce {
 		if ( $wc_product ) {
 			$this->on_product_save( $product_id, $wc_product );
 		}
-
 	}
 
 	public function after_product_is_saved( $product_id ) {
@@ -171,12 +173,12 @@ class Woocommerce {
 			$document_data = Product::get_instance()->generate_typesense_data( $wc_product );
 			Product::get_instance()->upsert( $document_data );
 			do_action( 'ts_product_update', $product_id, $wc_product, $document_data );
-		} catch (\Exception $e) {
+		} catch ( \Exception $e ) {
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-product-update' );
 
 			$logger->debug( 'TS Product Update Exception: ' . $e->getMessage(), $context );
-			error_log( "Error updating product in Typesense: " . $e->getMessage() );
+			error_log( 'Error updating product in Typesense: ' . $e->getMessage() );
 		}
 	}
 
@@ -218,9 +220,12 @@ class Woocommerce {
 				}
 			}
 
-			$import = $typsense_product->collection()->documents->import( $variations_data, array(
-				'action' => 'upsert'
-			) );
+			$import = $typsense_product->collection()->documents->import(
+				$variations_data,
+				array(
+					'action' => 'upsert',
+				)
+			);
 
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-success-import' );
@@ -232,8 +237,7 @@ class Woocommerce {
 				$revalidate->revalidate_product_page( $parent_id );
 				$logger->debug( "Scheduled revalidation for parent product ID: {$parent_id}", $context );
 			}
-
-		} catch (\Exception $e) {
+		} catch ( \Exception $e ) {
 			$logger  = wc_get_logger();
 			$context = array( 'source' => 'wooless-variations-import' );
 			$logger->debug( 'TS Variations Import Exception: ' . $e->getMessage(), $context );
@@ -261,7 +265,6 @@ class Woocommerce {
 			if ( $wc_product ) {
 				$this->on_product_save( $product_id, $wc_product );
 			}
-
 		}
 	}
 
@@ -288,9 +291,12 @@ class Woocommerce {
 
 	public static function get_currencies() {
 		$base_currency = get_woocommerce_currency();
-		return apply_filters( 'blaze_wooless_currencies', array(
-			$base_currency => $base_currency
-		) );
+		return apply_filters(
+			'blaze_wooless_currencies',
+			array(
+				$base_currency => $base_currency,
+			)
+		);
 	}
 
 	/**
@@ -299,9 +305,10 @@ class Woocommerce {
 	 * Since the price of a variable product is not stored in the product itself, we need to get the price from the variations
 	 * Hooked to blaze_wooless_get_variation_prices filter, priority 999
 	 * Task : https://app.clickup.com/t/86eprwe91
+	 *
 	 * @since   1.5.0
-	 * @param   array $product_data
-	 * @param   int $product_id
+	 * @param   array       $product_data
+	 * @param   int         $product_id
 	 * @param   \WC_Product $product
 	 * @return  array
 	 */
@@ -332,7 +339,7 @@ class Woocommerce {
 						throw new \Exception( 'No variations found for product ' . $product_id );
 					}
 				}
-			} catch (\Exception $e) {
+			} catch ( \Exception $e ) {
 				$logger  = wc_get_logger();
 				$context = array( 'source' => 'wooless-variable-product-price' );
 				$logger->debug( 'TS Variable Product Price Exception: ' . $e->getMessage(), $context );

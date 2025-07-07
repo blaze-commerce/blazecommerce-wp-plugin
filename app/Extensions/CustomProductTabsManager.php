@@ -19,10 +19,9 @@ class CustomProductTabsManager {
 	}
 
 	public function __construct() {
-		if ( class_exists( "\Custom_Product_Tabs_Main" ) ) {
-			add_filter( 'wooless_product_tabs', [ $this, 'generate_product_tabs' ], 999, 3 );
+		if ( class_exists( '\Custom_Product_Tabs_Main' ) ) {
+			add_filter( 'wooless_product_tabs', array( $this, 'generate_product_tabs' ), 999, 3 );
 		}
-
 	}
 
 
@@ -34,11 +33,11 @@ class CustomProductTabsManager {
 		}
 
 		if ( isset( $product_tabs['description'] ) ) {
-			// We are removing desription because this is processed by the frontend separately 
+			// We are removing desription because this is processed by the frontend separately
 			unset( $product_tabs['description'] );
 		}
 
-		$formatted_additional_tabs = []; // resets or initialize the data to empty array
+		$formatted_additional_tabs = array(); // resets or initialize the data to empty array
 		foreach ( $product_tabs as $key => $product_tab ) {
 			$content = '';
 			if ( isset( $product_tab['callback'] ) ) {
@@ -47,16 +46,15 @@ class CustomProductTabsManager {
 				$content = ob_get_clean();
 			}
 
-			$tab_item = [ 
-				'title' => wp_kses_post( apply_filters( 'woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key ) ),
-				'content' => $content,
-				'isOpen' => 0,
-				'location' => 'side'
-			];
+			$tab_item = array(
+				'title'    => wp_kses_post( apply_filters( 'woocommerce_product_' . $key . '_tab_title', $product_tab['title'], $key ) ),
+				'content'  => $content,
+				'isOpen'   => 0,
+				'location' => 'side',
+			);
 
 			$formatted_additional_tabs[] = apply_filters( 'wooless_tab_' . $key, $tab_item, $product_tab, $product );
 		}
-
 
 		return $formatted_additional_tabs;
 	}
@@ -130,11 +128,11 @@ class CustomProductTabsManager {
 		}
 
 		$args          = array(
-			'post_type' => 'product_tab',
-			'post_status' => 'publish',
-			'numberposts' => -1,
-			'order_by' => 'post_date',
-			'fields' => 'ids',
+			'post_type'        => 'product_tab',
+			'post_status'      => 'publish',
+			'numberposts'      => -1,
+			'order_by'         => 'post_date',
+			'fields'           => 'ids',
 			'suppress_filters' => false,
 		);
 		$allcustomtabs = get_posts( $args );
@@ -148,11 +146,11 @@ class CustomProductTabsManager {
 				continue;
 			}
 
-			$custom_tab_tittle   = get_post_meta( $alltabs_id, 'tabetittle', true );
+			$custom_tab_tittle     = get_post_meta( $alltabs_id, 'tabetittle', true );
 			$newtab[ $alltabs_id ] = array(
-				'title' => $custom_tab_tittle,
-				'callback' => array( $this, 'tab_content' ),
-				'priority' => 50,
+				'title'             => $custom_tab_tittle,
+				'callback'          => array( $this, 'tab_content' ),
+				'priority'          => 50,
 				'ka_custom_tabs_id' => $alltabs_id,
 			);
 		}
@@ -167,11 +165,9 @@ class CustomProductTabsManager {
 					if ( ! empty( $tab_post ) && isset( $newtab[ $value ] ) ) {
 						$sorted_array[ $value ] = $newtab[ $value ];
 					}
-				} else {
+				} elseif ( isset( $newtab[ $value ] ) ) {
 
-					if ( isset( $newtab[ $value ] ) ) {
 						$sorted_array[ $value ] = $newtab[ $value ];
-					}
 				}
 			}
 			foreach ( $newtab as $key => $value ) {
@@ -202,5 +198,4 @@ class CustomProductTabsManager {
 			echo wp_kses_post( apply_filters( 'the_content', $af_tab_content ) );
 		}
 	}
-
 }

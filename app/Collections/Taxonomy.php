@@ -4,7 +4,7 @@ namespace BlazeWooless\Collections;
 
 class Taxonomy extends BaseCollection {
 	private static $instance = null;
-	public $collection_name = 'taxonomy';
+	public $collection_name  = 'taxonomy';
 
 	const BATCH_SIZE = 5;
 
@@ -18,23 +18,87 @@ class Taxonomy extends BaseCollection {
 
 	public function get_fields() {
 		$fields = array(
-			array( 'name' => 'id', 'type' => 'string', 'facet' => true ),
-			array( 'name' => 'termId', 'type' => 'string', 'facet' => true ),
-			array( 'name' => 'slug', 'type' => 'string', 'facet' => true ),
-			array( 'name' => 'name', 'type' => 'string', 'facet' => true, 'infix' => true, 'sort' => true ),
-			array( 'name' => 'description', 'type' => 'string' ),
-			array( 'name' => 'type', 'type' => 'string', 'facet' => true, 'infix' => true ),
-			array( 'name' => 'seoFullHead', 'type' => 'string', 'facet' => true, 'infix' => true ),
-			array( 'name' => 'permalink', 'type' => 'string' ),
-			array( 'name' => 'updatedAt', 'type' => 'int64' ),
-			array( 'name' => 'bannerThumbnail', 'type' => 'string' ),
-			array( 'name' => 'bannerText', 'type' => 'string' ),
-			array( 'name' => 'parentTerm', 'type' => 'string' ),
-			array( 'name' => 'parentSlug', 'type' => 'string', 'facet' => true ),
-			array( 'name' => 'productCount', 'type' => 'int64' ),
-			array( 'name' => 'order', 'type' => 'int64' ),
-			array( 'name' => 'breadcrumbs', 'type' => 'object[]', 'optional' => true ),
-			array( 'name' => 'metaData', 'type' => 'object[]', 'optional' => true ),
+			array(
+				'name'  => 'id',
+				'type'  => 'string',
+				'facet' => true,
+			),
+			array(
+				'name'  => 'termId',
+				'type'  => 'string',
+				'facet' => true,
+			),
+			array(
+				'name'  => 'slug',
+				'type'  => 'string',
+				'facet' => true,
+			),
+			array(
+				'name'  => 'name',
+				'type'  => 'string',
+				'facet' => true,
+				'infix' => true,
+				'sort'  => true,
+			),
+			array(
+				'name' => 'description',
+				'type' => 'string',
+			),
+			array(
+				'name'  => 'type',
+				'type'  => 'string',
+				'facet' => true,
+				'infix' => true,
+			),
+			array(
+				'name'  => 'seoFullHead',
+				'type'  => 'string',
+				'facet' => true,
+				'infix' => true,
+			),
+			array(
+				'name' => 'permalink',
+				'type' => 'string',
+			),
+			array(
+				'name' => 'updatedAt',
+				'type' => 'int64',
+			),
+			array(
+				'name' => 'bannerThumbnail',
+				'type' => 'string',
+			),
+			array(
+				'name' => 'bannerText',
+				'type' => 'string',
+			),
+			array(
+				'name' => 'parentTerm',
+				'type' => 'string',
+			),
+			array(
+				'name'  => 'parentSlug',
+				'type'  => 'string',
+				'facet' => true,
+			),
+			array(
+				'name' => 'productCount',
+				'type' => 'int64',
+			),
+			array(
+				'name' => 'order',
+				'type' => 'int64',
+			),
+			array(
+				'name'     => 'breadcrumbs',
+				'type'     => 'object[]',
+				'optional' => true,
+			),
+			array(
+				'name'     => 'metaData',
+				'type'     => 'object[]',
+				'optional' => true,
+			),
 		);
 		return apply_filters( 'blaze_commerce_taxonomy_fields', $fields );
 	}
@@ -49,9 +113,9 @@ class Taxonomy extends BaseCollection {
 		if ( $use_aliases ) {
 			try {
 				$schema = array(
-					'fields' => $this->get_fields(),
+					'fields'                => $this->get_fields(),
 					'default_sorting_field' => 'updatedAt',
-					'enable_nested_fields' => true
+					'enable_nested_fields'  => true,
 				);
 
 				$new_collection_name = $this->initialize_with_alias( $schema );
@@ -59,7 +123,7 @@ class Taxonomy extends BaseCollection {
 
 				// Note: initialize_with_alias() now automatically stores the active sync collection
 
-			} catch (\Exception $e) {
+			} catch ( \Exception $e ) {
 				$logger->debug( 'TS Taxonomy collection alias initialize Exception: ' . $e->getMessage(), $context );
 				throw $e;
 			}
@@ -69,18 +133,20 @@ class Taxonomy extends BaseCollection {
 
 			try {
 				$this->drop_collection();
-			} catch (\Exception $e) {
+			} catch ( \Exception $e ) {
 				// Don't error out if the collection was not found
 			}
 
 			$logger->debug( 'TS Taxonomy collection: ' . $collection_taxonomy, $context );
 
-			$this->create_collection( [ 
-				'name' => $collection_taxonomy,
-				'fields' => $this->get_fields(),
-				'default_sorting_field' => 'updatedAt',
-				'enable_nested_fields' => true,
-			] );
+			$this->create_collection(
+				array(
+					'name'                  => $collection_taxonomy,
+					'fields'                => $this->get_fields(),
+					'default_sorting_field' => 'updatedAt',
+					'enable_nested_fields'  => true,
+				)
+			);
 		}
 	}
 
@@ -93,8 +159,6 @@ class Taxonomy extends BaseCollection {
 		$bannerThumbnail = get_term_meta( $term->term_id, 'wpcf-image', true );
 		$bannerText      = get_term_meta( $term->term_id, 'wpcf-term-banner-text', true );
 		$order           = get_term_meta( $term->term_id, 'order', true );
-
-
 
 		// Get Parent Term
 		$parentTerm = get_term( $term->parent, $taxonomy );
@@ -111,12 +175,12 @@ class Taxonomy extends BaseCollection {
 		$attachment   = get_post( $thumbnail_id );
 
 		$attachment_title = ( $attachment && ! empty( $attachment->post_title ) ) ? $attachment->post_title : '';
-		$thumbnail        = [ 
-			'id' => $thumbnail_id,
-			'title' => $attachment_title,
+		$thumbnail        = array(
+			'id'      => $thumbnail_id,
+			'title'   => $attachment_title,
 			'altText' => get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) ?: '',
-			'src' => wp_get_attachment_url( $thumbnail_id ) ?: '',
-		];
+			'src'     => wp_get_attachment_url( $thumbnail_id ) ?: '',
+		);
 
 		$parent_term_name = '';
 		$parent_term_slug = '0';
@@ -126,26 +190,26 @@ class Taxonomy extends BaseCollection {
 		}
 
 		// Prepare the data to be indexed
-		$document = [ 
-			'id' => (string) $term->term_id,
-			'termId' => (string) $term->term_id,
-			'slug' => $term->slug,
-			'name' => $term->name,
-			'description' => $term->description,
-			'type' => $taxonomy,
-			'permalink' => wp_make_link_relative( get_term_link( $term ) ),
-			'updatedAt' => time(),
+		$document = array(
+			'id'              => (string) $term->term_id,
+			'termId'          => (string) $term->term_id,
+			'slug'            => $term->slug,
+			'name'            => $term->name,
+			'description'     => $term->description,
+			'type'            => $taxonomy,
+			'permalink'       => wp_make_link_relative( get_term_link( $term ) ),
+			'updatedAt'       => time(),
 			'bannerThumbnail' => (string) $bannerThumbnail,
-			'bannerText' => $bannerText,
-			'parentTerm' => $parent_term_name,
-			'parentSlug' => $parent_term_slug,
-			'productCount' => (int) $term->count,
-			'order' => (int) $order,
-			'thumbnail' => $thumbnail,
-			'breadcrumbs' => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
-			'metaData' => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
-			'seoFullHead' => '',
-		];
+			'bannerText'      => $bannerText,
+			'parentTerm'      => $parent_term_name,
+			'parentSlug'      => $parent_term_slug,
+			'productCount'    => (int) $term->count,
+			'order'           => (int) $order,
+			'thumbnail'       => $thumbnail,
+			'breadcrumbs'     => $this->generate_breadcrumbs( $term->term_id, $taxonomy ),
+			'metaData'        => apply_filters( 'blaze_commerce_taxonomy_meta_data', array(), $term->term_id ),
+			'seoFullHead'     => '',
+		);
 
 		return apply_filters( 'blaze_commerce_taxonomy_data', $document, $term );
 	}
@@ -164,14 +228,17 @@ class Taxonomy extends BaseCollection {
 		}
 
 		$offset = ( $page - 1 ) * $batch_size;
-		return apply_filters( 'wooless_taxonomy_query_args', array(
-			'taxonomy' => $taxonomies_for_sync,
-			'hide_empty' => false,
-			'number' => $batch_size,
-			'offset' => $offset,
-			'orderby' => 'term_id',
-			'order' => 'ASC',
-		) );
+		return apply_filters(
+			'wooless_taxonomy_query_args',
+			array(
+				'taxonomy'   => $taxonomies_for_sync,
+				'hide_empty' => false,
+				'number'     => $batch_size,
+				'offset'     => $offset,
+				'orderby'    => 'term_id',
+				'order'      => 'ASC',
+			)
+		);
 	}
 
 
@@ -191,9 +258,12 @@ class Taxonomy extends BaseCollection {
 	public function import_prepared_batch( $documents ) {
 		$import_response = $this->import( $documents );
 
-		$successful_imports = array_filter( $import_response, function ($batch_result) {
-			return isset( $batch_result['success'] ) && $batch_result['success'] == true;
-		} );
+		$successful_imports = array_filter(
+			$import_response,
+			function ( $batch_result ) {
+				return isset( $batch_result['success'] ) && $batch_result['success'] == true;
+			}
+		);
 
 		return $successful_imports;
 	}
@@ -215,20 +285,21 @@ class Taxonomy extends BaseCollection {
 				$this->initialize();
 			}
 
-
 			$query_args = $this->get_query_args( $page, $batch_size );
 
 			// the settings to not sync all taxonomy terms. Set to false so that no taxonomy syncs happen
 			$should_sync = apply_filters( 'blazecommerce/settings/sync/taxonomies', true );
 			if ( ! $should_sync ) {
-				wp_send_json( array(
-					'imported_count' => 0,
-					'total_imports' => 0,
-					'next_page' => null,
-					'query_args' => $query_args,
-					'import_response' => [],
-					'import_data_sent' => [],
-				) );
+				wp_send_json(
+					array(
+						'imported_count'   => 0,
+						'total_imports'    => 0,
+						'next_page'        => null,
+						'query_args'       => $query_args,
+						'import_response'  => array(),
+						'import_data_sent' => array(),
+					)
+				);
 			}
 
 			$term_query = new \WP_Term_Query( $query_args );
@@ -242,14 +313,10 @@ class Taxonomy extends BaseCollection {
 				$total_imports  = count( $taxonomy_datas );
 			}
 
-
-
 			$next_page          = $page + 1;
 			$query_args['page'] = $next_page;
 			$term_query         = new \WP_Term_Query( $query_args );
 			$has_next_data      = ! empty( $term_query->terms ) && ! is_wp_error( $term_query->terms );
-
-
 
 			// Complete the sync if using aliases and this is the final page
 			if ( ! $has_next_data ) {
@@ -260,16 +327,18 @@ class Taxonomy extends BaseCollection {
 				}
 			}
 
-			wp_send_json( array(
-				'imported_count' => $imported_count,
-				'total_imports' => $total_imports,
-				'next_page' => $has_next_data ? $next_page : null,
-				'query_args' => $query_args,
-				'import_response' => $import_response,
-				'import_data_sent' => $taxonomy_datas,
-			) );
+			wp_send_json(
+				array(
+					'imported_count'   => $imported_count,
+					'total_imports'    => $total_imports,
+					'next_page'        => $has_next_data ? $next_page : null,
+					'query_args'       => $query_args,
+					'import_response'  => $import_response,
+					'import_data_sent' => $taxonomy_datas,
+				)
+			);
 
-		} catch (\Exception $e) {
+		} catch ( \Exception $e ) {
 			$import_logger->debug( 'TS Taxonomy collection import Exception: ' . $e->getMessage(), $import_context );
 		}
 	}
@@ -294,7 +363,7 @@ class Taxonomy extends BaseCollection {
 
 			$this->upsert( $document );
 			do_action( 'blaze_wooless_after_term_update', $document );
-		} catch (\Exception $e) {
+		} catch ( \Exception $e ) {
 			error_log( "Error updating term '{$term->name}' in Typesense: " . $e->getMessage() );
 		}
 	}
@@ -310,9 +379,12 @@ class Taxonomy extends BaseCollection {
 		$parents_list_array = explode( '[blz-commerce]', $parents_list );
 
 		// Removes null values
-		$parents_list_clean = array_filter( $parents_list_array, function ($value) {
-			return ! is_null( $value ) && $value !== '';
-		} );
+		$parents_list_clean = array_filter(
+			$parents_list_array,
+			function ( $value ) {
+				return ! is_null( $value ) && $value !== '';
+			}
+		);
 
 		$breadcrumbs = array();
 
@@ -320,7 +392,7 @@ class Taxonomy extends BaseCollection {
 			preg_match_all( '#\bhttps?://[^,\s()<>]+(?:\([\w\d]+\)|([^,[:punct:]\s]|/))#', $value, $match );
 
 			$breadcrumbs[] = array(
-				'name' => wp_strip_all_tags( $value ),
+				'name'      => wp_strip_all_tags( $value ),
 				'permalink' => wp_make_link_relative( $match[0][0] ),
 			);
 		}

@@ -27,14 +27,14 @@ try {
 
 	$typesense = TypesenseClient::get_instance();
 	if ( ! $typesense ) {
-		throw new Exception( "Failed to get TypesenseClient instance" );
+		throw new Exception( 'Failed to get TypesenseClient instance' );
 	}
 
 	$site_url = $typesense->get_site_url();
-	echo "Site URL: " . $site_url . "\n";
+	echo 'Site URL: ' . $site_url . "\n";
 
 	if ( empty( $site_url ) ) {
-		throw new Exception( "Site URL is empty" );
+		throw new Exception( 'Site URL is empty' );
 	}
 
 	echo "✓ TypesenseClient site URL functionality works\n\n";
@@ -47,18 +47,18 @@ try {
 
 	// Test alias name generation
 	$alias_name = $alias_manager->get_alias_name( 'product' );
-	echo "Product alias name: " . $alias_name . "\n";
+	echo 'Product alias name: ' . $alias_name . "\n";
 
 	if ( strpos( $alias_name, 'product_' ) !== 0 ) {
-		throw new Exception( "Alias name format is incorrect" );
+		throw new Exception( 'Alias name format is incorrect' );
 	}
 
 	// Test collection name generation
 	$collection_name = $alias_manager->get_collection_name( 'product', 1234567890 );
-	echo "Product collection name: " . $collection_name . "\n";
+	echo 'Product collection name: ' . $collection_name . "\n";
 
 	if ( strpos( $collection_name, 'product_' ) !== 0 || strpos( $collection_name, '_1234567890' ) === false ) {
-		throw new Exception( "Collection name format is incorrect" );
+		throw new Exception( 'Collection name format is incorrect' );
 	}
 
 	echo "✓ CollectionAliasManager basic functionality works\n\n";
@@ -76,9 +76,9 @@ try {
 		// Try to get collections (this might fail if not configured)
 		try {
 			$collections = $client->collections->retrieve();
-			echo "Current collections count: " . count( $collections['collections'] ) . "\n";
-		} catch (Exception $e) {
-			echo "⚠ Could not retrieve collections: " . $e->getMessage() . "\n";
+			echo 'Current collections count: ' . count( $collections['collections'] ) . "\n";
+		} catch ( Exception $e ) {
+			echo '⚠ Could not retrieve collections: ' . $e->getMessage() . "\n";
 		}
 	}
 
@@ -88,17 +88,17 @@ try {
 	echo "Test 4: Collection type detection\n";
 	echo "---------------------------------\n";
 
-	$collection_types = [ 'product', 'taxonomy', 'page', 'menu', 'site_info', 'navigation' ];
+	$collection_types = array( 'product', 'taxonomy', 'page', 'menu', 'site_info', 'navigation' );
 
 	foreach ( $collection_types as $type ) {
-		$alias_name = $alias_manager->get_alias_name( $type );
+		$alias_name         = $alias_manager->get_alias_name( $type );
 		$current_collection = $alias_manager->get_current_collection( $type );
-		$all_collections = $alias_manager->get_all_collections_for_type( $type );
+		$all_collections    = $alias_manager->get_all_collections_for_type( $type );
 
 		echo "Type: $type\n";
 		echo "  Alias: $alias_name\n";
-		echo "  Current: " . ( $current_collection ?: 'None' ) . "\n";
-		echo "  All collections: " . ( empty( $all_collections ) ? 'None' : implode( ', ', $all_collections ) ) . "\n";
+		echo '  Current: ' . ( $current_collection ?: 'None' ) . "\n";
+		echo '  All collections: ' . ( empty( $all_collections ) ? 'None' : implode( ', ', $all_collections ) ) . "\n";
 		echo "\n";
 	}
 
@@ -110,15 +110,18 @@ try {
 
 	// Test the filter that controls alias usage
 	$use_aliases_default = apply_filters( 'blazecommerce/use_collection_aliases', true );
-	echo "Use aliases (default): " . ( $use_aliases_default ? 'true' : 'false' ) . "\n";
+	echo 'Use aliases (default): ' . ( $use_aliases_default ? 'true' : 'false' ) . "\n";
 
 	// Add a filter to test
-	add_filter( 'blazecommerce/use_collection_aliases', function ($use) {
-		return false;
-	} );
+	add_filter(
+		'blazecommerce/use_collection_aliases',
+		function ( $use ) {
+			return false;
+		}
+	);
 
 	$use_aliases_filtered = apply_filters( 'blazecommerce/use_collection_aliases', true );
-	echo "Use aliases (filtered): " . ( $use_aliases_filtered ? 'true' : 'false' ) . "\n";
+	echo 'Use aliases (filtered): ' . ( $use_aliases_filtered ? 'true' : 'false' ) . "\n";
 
 	// Remove the filter
 	remove_all_filters( 'blazecommerce/use_collection_aliases' );
@@ -134,8 +137,8 @@ try {
 	echo "3. Run a product sync to test the new alias system: wp bc-sync product --all\n";
 	echo "4. Monitor the alias creation and collection management\n";
 
-} catch (Exception $e) {
-	echo "❌ Test failed: " . $e->getMessage() . "\n";
+} catch ( Exception $e ) {
+	echo '❌ Test failed: ' . $e->getMessage() . "\n";
 	echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
 	exit( 1 );
 }

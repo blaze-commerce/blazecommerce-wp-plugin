@@ -7,8 +7,8 @@ use BlazeWooless\TypesenseClient;
 
 class CategoryPageSettings extends BaseSettings {
 	private static $instance = null;
-	public $tab_key = 'category';
-	public $page_label = 'Category Page';
+	public $tab_key          = 'category';
+	public $page_label       = 'Category Page';
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -25,7 +25,7 @@ class CategoryPageSettings extends BaseSettings {
 	public function settings_callback( $options ) {
 		try {
 			$this->update_fields( $options );
-		} catch (\Throwable $th) {
+		} catch ( \Throwable $th ) {
 
 		}
 
@@ -33,23 +33,23 @@ class CategoryPageSettings extends BaseSettings {
 	}
 
 	public function settings() {
-		$category_page_settings = [ 
+		$category_page_settings = array(
 			'wooless_settings_category_page_section' => array(
-				'label' => 'Category Page',
+				'label'   => 'Category Page',
 				'options' => array(
 					array(
-						'id' => 'default_banner_link',
+						'id'    => 'default_banner_link',
 						'label' => 'Default Banner Link',
-						'type' => 'text',
-						'args' => array( 'description' => 'Input the Default Banner Image Link', ),
+						'type'  => 'text',
+						'args'  => array( 'description' => 'Input the Default Banner Image Link' ),
 					),
 					array(
-						'id' => 'default_product_sorting',
+						'id'    => 'default_product_sorting',
 						'label' => 'Default Product Sorting',
-						'type' => 'select',
-						'args' => array(
+						'type'  => 'select',
+						'args'  => array(
 							'description' => 'Select the default sorting for products',
-							'options' => array(
+							'options'     => array(
 								'sort_0' => 'Sort By None',
 								'sort_1' => 'Sort By Popularity',
 								'sort_2' => 'Sort By Latest',
@@ -61,20 +61,20 @@ class CategoryPageSettings extends BaseSettings {
 						),
 					),
 					array(
-						'id' => 'container_max_width',
+						'id'    => 'container_max_width',
 						'label' => 'Container Max Width (px)',
-						'type' => 'text',
-						'args' => array( 'description' => 'Enter Page Content Max Width', ),
+						'type'  => 'text',
+						'args'  => array( 'description' => 'Enter Page Content Max Width' ),
 					),
 					array(
-						'id' => 'container_padding',
+						'id'    => 'container_padding',
 						'label' => 'Container Padding (px)',
-						'type' => 'text',
-						'args' => array( 'description' => 'Enter Page Content Padding', ),
+						'type'  => 'text',
+						'args'  => array( 'description' => 'Enter Page Content Padding' ),
 					),
-				)
+				),
 			),
-		];
+		);
 
 		return apply_filters( 'blaze_wooless_category_page_settings', $category_page_settings );
 	}
@@ -88,44 +88,52 @@ class CategoryPageSettings extends BaseSettings {
 
 		$site_info->upsert(
 			array(
-				'id' => '10089554',
-				'name' => 'category_page_default_banner',
-				'value' => json_encode( array(
-					'url' => $options['default_banner_link']
-				) ),
+				'id'         => '10089554',
+				'name'       => 'category_page_default_banner',
+				'value'      => json_encode(
+					array(
+						'url' => $options['default_banner_link'],
+					)
+				),
 				'updated_at' => time(),
 			)
 		);
 
 		$site_info->upsert(
 			array(
-				'id' => '10089555',
-				'name' => 'category_page_default_sort',
-				'value' => json_encode( array(
-					'sort_option' => $options['default_product_sorting']
-				) ),
+				'id'         => '10089555',
+				'name'       => 'category_page_default_sort',
+				'value'      => json_encode(
+					array(
+						'sort_option' => $options['default_product_sorting'],
+					)
+				),
 				'updated_at' => time(),
 			)
 		);
 
 		$site_info->upsert(
 			array(
-				'id' => '10089556',
-				'name' => 'category_page_max_width',
-				'value' => json_encode( array(
-					'container_max_width' => $options['container_max_width']
-				) ),
+				'id'         => '10089556',
+				'name'       => 'category_page_max_width',
+				'value'      => json_encode(
+					array(
+						'container_max_width' => $options['container_max_width'],
+					)
+				),
 				'updated_at' => time(),
 			)
 		);
 
 		$site_info->upsert(
 			array(
-				'id' => '10089557',
-				'name' => 'category_page_padding',
-				'value' => json_encode( array(
-					'container_padding' => $options['container_padding']
-				) ),
+				'id'         => '10089557',
+				'name'       => 'category_page_padding',
+				'value'      => json_encode(
+					array(
+						'container_padding' => $options['container_padding'],
+					)
+				),
 				'updated_at' => time(),
 			)
 		);
@@ -138,41 +146,49 @@ class CategoryPageSettings extends BaseSettings {
 		if ( ! empty( $options ) ) {
 			// Add category page default banner
 			$documents[] = array(
-				'id' => '10089554',
-				'name' => 'category_page_default_banner',
-				'value' => json_encode( array(
-					'url' => isset( $options['default_banner_link'] ) ? $options['default_banner_link'] : ''
-				) ),
+				'id'         => '10089554',
+				'name'       => 'category_page_default_banner',
+				'value'      => json_encode(
+					array(
+						'url' => isset( $options['default_banner_link'] ) ? $options['default_banner_link'] : '',
+					)
+				),
 				'updated_at' => time(),
 			);
 
 			// Add category page default sort
 			$documents[] = array(
-				'id' => '10089555',
-				'name' => 'category_page_default_sort',
-				'value' => json_encode( array(
-					'sort_option' => isset( $options['default_product_sorting'] ) ? $options['default_product_sorting'] : ''
-				) ),
+				'id'         => '10089555',
+				'name'       => 'category_page_default_sort',
+				'value'      => json_encode(
+					array(
+						'sort_option' => isset( $options['default_product_sorting'] ) ? $options['default_product_sorting'] : '',
+					)
+				),
 				'updated_at' => time(),
 			);
 
 			// Add category page max width
 			$documents[] = array(
-				'id' => '10089556',
-				'name' => 'category_page_max_width',
-				'value' => json_encode( array(
-					'container_max_width' => isset( $options['container_max_width'] ) ? $options['container_max_width'] : ''
-				) ),
+				'id'         => '10089556',
+				'name'       => 'category_page_max_width',
+				'value'      => json_encode(
+					array(
+						'container_max_width' => isset( $options['container_max_width'] ) ? $options['container_max_width'] : '',
+					)
+				),
 				'updated_at' => time(),
 			);
 
 			// Add category page padding
 			$documents[] = array(
-				'id' => '10089557',
-				'name' => 'category_page_padding',
-				'value' => json_encode( array(
-					'container_padding' => isset( $options['container_padding'] ) ? $options['container_padding'] : ''
-				) ),
+				'id'         => '10089557',
+				'name'       => 'category_page_padding',
+				'value'      => json_encode(
+					array(
+						'container_padding' => isset( $options['container_padding'] ) ? $options['container_padding'] : '',
+					)
+				),
 				'updated_at' => time(),
 			);
 

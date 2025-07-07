@@ -39,33 +39,38 @@ class Ajax {
 	}
 
 	public function get_headers() {
-		$api_key = bw_get_general_settings( 'typesense_api_key' );
+		$api_key  = bw_get_general_settings( 'typesense_api_key' );
 		$store_id = bw_get_general_settings( 'store_id' );
 		return array(
-			'x-wooless-secret-token: ' . base64_encode( $api_key . ':' . $store_id )
+			'x-wooless-secret-token: ' . base64_encode( $api_key . ':' . $store_id ),
 		);
 	}
 
 	public function check_deployment() {
 		$api_key = bw_get_general_settings( 'typesense_api_key' );
 		if ( empty( $api_key ) ) {
-			wp_send_json( array(
-				'error' => 'Empty api key.',
-				'message' => 'Empty api key.'
-			) );
+			wp_send_json(
+				array(
+					'error'   => 'Empty api key.',
+					'message' => 'Empty api key.',
+				)
+			);
 		}
 		$curl = curl_init();
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments?checkDeployment=1',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'GET',
-			CURLOPT_HTTPHEADER => $this->get_headers(),
-		) );
+		curl_setopt_array(
+			$curl,
+			array(
+				CURLOPT_URL            => 'https://my-wooless-admin-portal.vercel.app/api/deployments?checkDeployment=1',
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_ENCODING       => '',
+				CURLOPT_MAXREDIRS      => 10,
+				CURLOPT_TIMEOUT        => 0,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+				CURLOPT_CUSTOMREQUEST  => 'GET',
+				CURLOPT_HTTPHEADER     => $this->get_headers(),
+			)
+		);
 		$response = curl_exec( $curl );
 		curl_close( $curl );
 		wp_send_json( json_decode( $response ) );
@@ -74,23 +79,28 @@ class Ajax {
 	public function redeploy_store_front() {
 		$api_key = bw_get_general_settings( 'typesense_api_key' );
 		if ( empty( $api_key ) ) {
-			wp_send_json( array(
-				'error' => 'Empty api key.',
-				'message' => 'Empty api key.'
-			) );
+			wp_send_json(
+				array(
+					'error'   => 'Empty api key.',
+					'message' => 'Empty api key.',
+				)
+			);
 		}
 		$curl = curl_init();
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_HTTPHEADER => $this->get_headers(),
-		) );
+		curl_setopt_array(
+			$curl,
+			array(
+				CURLOPT_URL            => 'https://my-wooless-admin-portal.vercel.app/api/deployments',
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_ENCODING       => '',
+				CURLOPT_MAXREDIRS      => 10,
+				CURLOPT_TIMEOUT        => 0,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+				CURLOPT_CUSTOMREQUEST  => 'POST',
+				CURLOPT_HTTPHEADER     => $this->get_headers(),
+			)
+		);
 		$response = curl_exec( $curl );
 		curl_close( $curl );
 		wp_send_json( json_decode( $response ) );
@@ -98,17 +108,20 @@ class Ajax {
 
 	public function prepare_curl( $url_endpoint, $method ) {
 		$curl = curl_init();
-		curl_setopt_array( $curl, array(
-			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/' . $url_endpoint,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => $method,
-			CURLOPT_HTTPHEADER => $this->get_headers(),
-		) );
+		curl_setopt_array(
+			$curl,
+			array(
+				CURLOPT_URL            => 'https://my-wooless-admin-portal.vercel.app/' . $url_endpoint,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_ENCODING       => '',
+				CURLOPT_MAXREDIRS      => 10,
+				CURLOPT_TIMEOUT        => 0,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+				CURLOPT_CUSTOMREQUEST  => $method,
+				CURLOPT_HTTPHEADER     => $this->get_headers(),
+			)
+		);
 
 		return $curl;
 	}
@@ -116,20 +129,19 @@ class Ajax {
 		$collection_name = ! ( empty( $_REQUEST['collection_name'] ) ) ? $_REQUEST['collection_name'] : '';
 		if ( $collection_name == 'products' ) {
 			Product::get_instance()->index_to_typesense();
-		} else if ( $collection_name == 'site_info' ) {
+		} elseif ( $collection_name == 'site_info' ) {
 			SiteInfo::get_instance()->index_to_typesense();
-		} else if ( $collection_name == 'taxonomy' ) {
+		} elseif ( $collection_name == 'taxonomy' ) {
 			Taxonomy::get_instance()->index_to_typesense();
-		} else if ( $collection_name == 'menu' ) {
+		} elseif ( $collection_name == 'menu' ) {
 			Menu::get_instance()->index_to_typesense();
-		} else if ( $collection_name == 'page' ) {
+		} elseif ( $collection_name == 'page' ) {
 			Page::get_instance()->index_to_typesense();
 		} else {
-			echo "Collection name not found";
+			echo 'Collection name not found';
 		}
 		wp_die();
 	}
-
 }
 
 Ajax::get_instance();

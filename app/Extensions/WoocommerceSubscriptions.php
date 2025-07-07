@@ -5,7 +5,7 @@ namespace BlazeWooless\Extensions;
 class WoocommerceSubscriptions {
 	private static $instance = null;
 
-	private static $post_type = [ 'subscription', 'variable-subscription', 'subscription_variation' ];
+	private static $post_type = array( 'subscription', 'variable-subscription', 'subscription_variation' );
 
 
 	public static function get_instance() {
@@ -41,35 +41,60 @@ class WoocommerceSubscriptions {
 
 	public function set_fields( $fields ) {
 
-		$fields[] = [ 'name' => 'metaData.subscriptions', 'type' => 'object[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.subscriptions.length', 'type' => 'int64[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.subscriptions.period', 'type' => 'string[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.subscriptions.period_interval', 'type' => 'int64[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.subscriptions.sign_up_fee', 'type' => 'float[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.subscriptions.trial_period', 'type' => 'string[]', 'optional' => true ];
-		$fields[] = [ 'name' => 'metaData.subscriptions.trial_length', 'type' => 'int64[]', 'optional' => true ];
+		$fields[] = array(
+			'name'     => 'metaData.subscriptions',
+			'type'     => 'object[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.subscriptions.length',
+			'type'     => 'int64[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.subscriptions.period',
+			'type'     => 'string[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.subscriptions.period_interval',
+			'type'     => 'int64[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.subscriptions.sign_up_fee',
+			'type'     => 'float[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.subscriptions.trial_period',
+			'type'     => 'string[]',
+			'optional' => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.subscriptions.trial_length',
+			'type'     => 'int64[]',
+			'optional' => true,
+		);
 
 		return $fields;
 	}
 
 	public function sync_product_data( $product_data, $product_id, $product ) {
 
+		if ( $product->is_type( array( 'subscription_variation', 'subscription' ) ) ) {
 
-		if ( $product->is_type( [ 'subscription_variation', 'subscription' ] ) ) {
-
-			$product_data['metaData']['subscriptions'] = [ 
-				'length' => $product->get_meta( '_subscription_length' ),
-				'period' => $product->get_meta( '_subscription_period' ),
+			$product_data['metaData']['subscriptions'] = array(
+				'length'          => $product->get_meta( '_subscription_length' ),
+				'period'          => $product->get_meta( '_subscription_period' ),
 				'period_interval' => $product->get_meta( '_subscription_period_interval' ),
-				'sign_up_fee' => $product->get_meta( '_subscription_sign_up_fee' ),
-				'trial_period' => $product->get_meta( '_subscription_trial_period' ),
-				'trial_length' => $product->get_meta( '_subscription_trial_length' ),
-			];
+				'sign_up_fee'     => $product->get_meta( '_subscription_sign_up_fee' ),
+				'trial_period'    => $product->get_meta( '_subscription_trial_period' ),
+				'trial_length'    => $product->get_meta( '_subscription_trial_length' ),
+			);
 
 		}
 
 		return $product_data;
 	}
-
-
 }

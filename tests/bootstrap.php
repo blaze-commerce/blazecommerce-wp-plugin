@@ -1,9 +1,9 @@
 <?php
 /**
  * Test Bootstrap
- * 
+ *
  * Sets up the testing environment for BlazeCommerce WordPress Plugin
- * 
+ *
  * @package BlazeWooless
  * @subpackage Tests
  */
@@ -28,9 +28,9 @@ function _manually_load_plugin() {
 	if ( file_exists( WP_PLUGIN_DIR . '/woocommerce/woocommerce.php' ) ) {
 		require_once WP_PLUGIN_DIR . '/woocommerce/woocommerce.php';
 	}
-	
+
 	// Load our plugin
-	require dirname( dirname( __FILE__ ) ) . '/blaze-wooless.php';
+	require dirname( __DIR__ ) . '/blaze-wooless.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 

@@ -4,7 +4,7 @@ namespace BlazeWooless\Extensions;
 
 class Yotpo {
 	private static $instance = null;
-	public static $API_URL = 'https://api.yotpo.com/v1';
+	public static $API_URL   = 'https://api.yotpo.com/v1';
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -31,14 +31,14 @@ class Yotpo {
 	}
 
 	public function generate_product_data() {
-		$page = 1;
-		$batch_size = 100;
-		$finished = false;
+		$page            = 1;
+		$batch_size      = 100;
+		$finished        = false;
 		$product_reviews = array();
 
 		while ( ! $finished ) {
 			$params = array(
-				'page' => $page,
+				'page'  => $page,
 				'count' => $batch_size,
 			);
 
@@ -60,7 +60,7 @@ class Yotpo {
 				);
 			}
 
-			$page++;
+			++$page;
 
 			unset( $params, $QUERY_PARAMETERS, $result, $response );
 		}

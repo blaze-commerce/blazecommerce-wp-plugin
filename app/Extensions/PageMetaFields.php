@@ -39,28 +39,36 @@ class PageMetaFields {
 	 */
 	public function register_meta_fields() {
 		// Page region - maps to Aelia currency regions
-		register_post_meta( 'page', 'blaze_page_region', array(
-			'show_in_rest' => true,
-			'single' => true,
-			'type' => 'string',
-			'default' => '',
-			'sanitize_callback' => array( $this, 'sanitize_page_region' ),
-			'auth_callback' => function () {
-				return current_user_can( 'edit_posts' );
-			}
-		) );
+		register_post_meta(
+			'page',
+			'blaze_page_region',
+			array(
+				'show_in_rest'      => true,
+				'single'            => true,
+				'type'              => 'string',
+				'default'           => '',
+				'sanitize_callback' => array( $this, 'sanitize_page_region' ),
+				'auth_callback'     => function () {
+					return current_user_can( 'edit_posts' );
+				},
+			)
+		);
 
 		// Related page - stores page ID, pushes slug to Typesense
-		register_post_meta( 'page', 'blaze_related_page', array(
-			'show_in_rest' => true,
-			'single' => true,
-			'type' => 'integer',
-			'default' => 0,
-			'sanitize_callback' => 'absint',
-			'auth_callback' => function () {
-				return current_user_can( 'edit_posts' );
-			}
-		) );
+		register_post_meta(
+			'page',
+			'blaze_related_page',
+			array(
+				'show_in_rest'      => true,
+				'single'            => true,
+				'type'              => 'integer',
+				'default'           => 0,
+				'sanitize_callback' => 'absint',
+				'auth_callback'     => function () {
+					return current_user_can( 'edit_posts' );
+				},
+			)
+		);
 	}
 
 	/**
@@ -92,11 +100,15 @@ class PageMetaFields {
 		);
 
 		// Localize script for AJAX
-		wp_localize_script( 'blaze-page-meta-select2', 'blazePageMeta', array(
-			'ajax_url' => admin_url( 'admin-ajax.php' ),
-			'nonce' => wp_create_nonce( 'blaze_page_search_nonce' ),
-			'current_page_id' => isset( $post->ID ) ? $post->ID : 0
-		) );
+		wp_localize_script(
+			'blaze-page-meta-select2',
+			'blazePageMeta',
+			array(
+				'ajax_url'        => admin_url( 'admin-ajax.php' ),
+				'nonce'           => wp_create_nonce( 'blaze_page_search_nonce' ),
+				'current_page_id' => isset( $post->ID ) ? $post->ID : 0,
+			)
+		);
 
 		// Enqueue custom CSS for Select2 styling
 		wp_enqueue_style(
@@ -129,7 +141,7 @@ class PageMetaFields {
 		wp_nonce_field( 'blaze_page_meta_nonce', 'blaze_page_meta_nonce' );
 
 		// Get current values
-		$page_region = get_post_meta( $post->ID, 'blaze_page_region', true );
+		$page_region  = get_post_meta( $post->ID, 'blaze_page_region', true );
 		$related_page = get_post_meta( $post->ID, 'blaze_related_page', true );
 
 		// Get available regions from Aelia extension
@@ -234,7 +246,7 @@ class PageMetaFields {
 		}
 
 		$currency_mappings = $aelia_options['currency_countries_mappings'];
-		$all_countries = \WC()->countries->get_countries();
+		$all_countries     = \WC()->countries->get_countries();
 
 		// Build regions array - use country codes as keys like CountrySpecificImages
 		foreach ( $currency_mappings as $currency => $mapping ) {
@@ -242,10 +254,10 @@ class PageMetaFields {
 				foreach ( $mapping['countries'] as $country_code ) {
 					if ( isset( $all_countries[ $country_code ] ) ) {
 						$regions[ $country_code ] = array(
-							'label' => $all_countries[ $country_code ] . ' (' . $currency . ')',
-							'currency' => $currency,
+							'label'        => $all_countries[ $country_code ] . ' (' . $currency . ')',
+							'currency'     => $currency,
 							'country_code' => $country_code,
-							'country_name' => $all_countries[ $country_code ]
+							'country_name' => $all_countries[ $country_code ],
 						);
 					}
 				}
@@ -263,12 +275,12 @@ class PageMetaFields {
 
 		// Get all published pages
 		$query_args = array(
-			'post_type' => 'page',
-			'post_status' => 'publish',
+			'post_type'      => 'page',
+			'post_status'    => 'publish',
 			'posts_per_page' => -1,
-			'orderby' => 'title',
-			'order' => 'ASC',
-			'exclude' => array( $current_page_id ), // Exclude current page to prevent self-reference
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'exclude'        => array( $current_page_id ), // Exclude current page to prevent self-reference
 		);
 
 		$page_query = new \WP_Query( $query_args );
@@ -276,7 +288,7 @@ class PageMetaFields {
 		if ( $page_query->have_posts() ) {
 			while ( $page_query->have_posts() ) {
 				$page_query->the_post();
-				$pages[get_the_ID()] = get_the_title();
+				$pages[ get_the_ID() ] = get_the_title();
 			}
 			wp_reset_postdata();
 		}
@@ -304,18 +316,18 @@ class PageMetaFields {
 			wp_send_json_error( 'Insufficient permissions' );
 		}
 
-		$search_term = isset( $_POST['search'] ) ? sanitize_text_field( $_POST['search'] ) : '';
+		$search_term     = isset( $_POST['search'] ) ? sanitize_text_field( $_POST['search'] ) : '';
 		$current_page_id = isset( $_POST['current_page_id'] ) ? absint( $_POST['current_page_id'] ) : 0;
-		$page = isset( $_POST['page'] ) ? absint( $_POST['page'] ) : 1;
-		$per_page = 20; // Limit results for performance
+		$page            = isset( $_POST['page'] ) ? absint( $_POST['page'] ) : 1;
+		$per_page        = 20; // Limit results for performance
 
 		$query_args = array(
-			'post_type' => 'page',
-			'post_status' => 'publish',
+			'post_type'      => 'page',
+			'post_status'    => 'publish',
 			'posts_per_page' => $per_page,
-			'paged' => $page,
-			'orderby' => 'title',
-			'order' => 'ASC',
+			'paged'          => $page,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
 		);
 
 		// Always exclude current page if provided
@@ -329,13 +341,13 @@ class PageMetaFields {
 		}
 
 		$page_query = new \WP_Query( $query_args );
-		$results = array();
+		$results    = array();
 
 		if ( $page_query->have_posts() ) {
 			while ( $page_query->have_posts() ) {
 				$page_query->the_post();
 				$results[] = array(
-					'id' => get_the_ID(),
+					'id'   => get_the_ID(),
 					'text' => get_the_title(),
 				);
 			}
@@ -343,12 +355,14 @@ class PageMetaFields {
 		}
 
 		// Return results in Select2 format
-		wp_send_json_success( array(
-			'results' => $results,
-			'pagination' => array(
-				'more' => $page_query->max_num_pages > $page
+		wp_send_json_success(
+			array(
+				'results'    => $results,
+				'pagination' => array(
+					'more' => $page_query->max_num_pages > $page,
+				),
 			)
-		) );
+		);
 	}
 
 	/**
@@ -368,8 +382,17 @@ class PageMetaFields {
 	 * Add meta fields to Typesense page fields
 	 */
 	public function set_page_fields( $fields ) {
-		$fields[] = array( 'name' => 'metaData.blazePageRegion', 'type' => 'string', 'optional' => true, 'facet' => true );
-		$fields[] = array( 'name' => 'metaData.blazeRelatedPageSlug', 'type' => 'string', 'optional' => true );
+		$fields[] = array(
+			'name'     => 'metaData.blazePageRegion',
+			'type'     => 'string',
+			'optional' => true,
+			'facet'    => true,
+		);
+		$fields[] = array(
+			'name'     => 'metaData.blazeRelatedPageSlug',
+			'type'     => 'string',
+			'optional' => true,
+		);
 
 		return $fields;
 	}
@@ -385,7 +408,7 @@ class PageMetaFields {
 		$document['metaData']['blazePageRegion'] = get_post_meta( $page->ID, 'blaze_page_region', true );
 
 		// Get related page slug
-		$related_page_id = get_post_meta( $page->ID, 'blaze_related_page', true );
+		$related_page_id   = get_post_meta( $page->ID, 'blaze_related_page', true );
 		$related_page_slug = '';
 
 		if ( $related_page_id ) {

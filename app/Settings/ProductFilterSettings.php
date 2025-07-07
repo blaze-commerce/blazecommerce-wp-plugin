@@ -6,8 +6,8 @@ use BlazeWooless\TypesenseClient;
 
 class ProductFilterSettings extends BaseSettings {
 	private static $instance = null;
-	public $tab_key = 'product_filters';
-	public $page_label = 'Product Filters';
+	public $tab_key          = 'product_filters';
+	public $page_label       = 'Product Filters';
 
 	public static function get_instance() {
 		if ( self::$instance === null ) {
@@ -26,12 +26,14 @@ class ProductFilterSettings extends BaseSettings {
 		if ( is_array( $product_filters_content ) ) {
 			update_option( 'blaze_wooless_product_filters_content', $product_filters_content );
 
-			TypesenseClient::get_instance()->site_info()->upsert( [ 
-				'id' => '1000010',
-				'name' => 'product_filters_content',
-				'value' => json_encode( $product_filters_content ),
-				'updated_at' => time(),
-			] );
+			TypesenseClient::get_instance()->site_info()->upsert(
+				array(
+					'id'         => '1000010',
+					'name'       => 'product_filters_content',
+					'value'      => json_encode( $product_filters_content ),
+					'updated_at' => time(),
+				)
+			);
 		}
 
 		return $options;
@@ -55,13 +57,14 @@ class ProductFilterSettings extends BaseSettings {
 	}
 
 	public function default_draggable_data() {
-		if ( empty( $_GET['tab'] ) || $this->tab_key !== $_GET['tab'] )
+		if ( empty( $_GET['tab'] ) || $this->tab_key !== $_GET['tab'] ) {
 			return;
+		}
 
 		$product_filters_content = get_option( 'blaze_wooless_product_filters_content', '' );
 		?>
 		<input type="hidden" id="draggable_result" name="product_filters_content"
-			value='<?php echo json_encode( $product_filters_content ) ?>' />
+			value='<?php echo json_encode( $product_filters_content ); ?>' />
 		<?php
 	}
 
@@ -69,9 +72,9 @@ class ProductFilterSettings extends BaseSettings {
 		$product_filters_content = get_option( 'blaze_wooless_product_filters_content', '' );
 
 		$documents[] = array(
-			'id' => '1000010',
-			'name' => 'product_filters_content',
-			'value' => json_encode( $product_filters_content ),
+			'id'         => '1000010',
+			'name'       => 'product_filters_content',
+			'value'      => json_encode( $product_filters_content ),
 			'updated_at' => time(),
 		);
 

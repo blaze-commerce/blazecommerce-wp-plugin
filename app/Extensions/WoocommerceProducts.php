@@ -23,24 +23,26 @@ class WoocommerceProducts {
 
 	/**
 	 * Add custom product meta fields
+	 *
 	 * @return void
 	 */
 	public function add_custom_fields() {
 		$override_best_seller = bw_get_general_settings( 'enable_override_best_seller' );
 
-		if ( empty( $override_best_seller ) )
+		if ( empty( $override_best_seller ) ) {
 			return;
+		}
 
 		woocommerce_wp_checkbox(
 			array(
-				'id' => '_set_as_best_seller',
-				'label' => __( 'Best seller', 'blaze' ),
+				'id'          => '_set_as_best_seller',
+				'label'       => __( 'Best seller', 'blaze' ),
 				'description' => __( 'Set this product as a best seller', 'blaze' ),
 			)
 		);
 	}
 	public function save_product_meta() {
-		$product = wc_get_product( get_the_ID() );
+		$product            = wc_get_product( get_the_ID() );
 		$set_as_best_seller = isset( $_POST['_set_as_best_seller'] ) ? 'yes' : 'no';
 		$product->update_meta_data( '_set_as_best_seller', $set_as_best_seller );
 		$product->save();
@@ -48,7 +50,8 @@ class WoocommerceProducts {
 
 	/**
 	 * Add "Best Seller" post state to product titles
-	 * @param array $post_states
+	 *
+	 * @param array   $post_states
 	 * @param WP_Post $post
 	 * @return array
 	 */
@@ -66,7 +69,11 @@ class WoocommerceProducts {
 		$override_best_seller = bw_get_general_settings( 'enable_override_best_seller' );
 
 		if ( ! empty( $override_best_seller ) ) {
-			$fields[] = [ 'name' => 'metaData.bestSeller', 'type' => 'bool', 'optional' => true ];
+			$fields[] = array(
+				'name'     => 'metaData.bestSeller',
+				'type'     => 'bool',
+				'optional' => true,
+			);
 		}
 
 		return $fields;

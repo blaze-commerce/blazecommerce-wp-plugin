@@ -1,5 +1,28 @@
 {
-    "prisma-smart-formatter.typescript.defaultFormatter": "esbenp.prettier-vscode",
-    "prisma-smart-formatter.typescriptreact.defaultFormatter": "esbenp.prettier-vscode",
-    "prisma-smart-formatter.prisma.defaultFormatter": "Prisma.prisma"
+	"prisma-smart-formatter.typescript.defaultFormatter": "esbenp.prettier-vscode",
+	"prisma-smart-formatter.typescriptreact.defaultFormatter": "esbenp.prettier-vscode",
+	"prisma-smart-formatter.prisma.defaultFormatter": "Prisma.prisma",
+	"phpcs.standard": "./phpcs.xml",
+	"phpcs.executablePath": "./vendor/bin/phpcs",
+	"phpcs.autoFixOnSave": true,
+	"phpcs.showSources": true,
+	"phpcs.showWarnings": true,
+	"phpcbf.standard": "./phpcs.xml",
+	"phpcbf.executablePath": "./vendor/bin/phpcbf",
+	"phpcbf.onsave": true,
+	"phpcbf.documentFormattingProvider": true,
+	"phpcbf.enable": true,
+	"[php]": {
+		"editor.defaultFormatter": "persoderlind.vscode-phpcbf",
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll.phpcs": "explicit"
+		},
+		"editor.tabSize": 4,
+		"editor.insertSpaces": false,
+		"editor.detectIndentation": false
+	},
+	"files.associations": {
+		"*.php": "php"
+	}
 }
