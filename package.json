@@ -12,7 +12,9 @@
     "build:blocks": "cd blocks && npm run build",
     "release": "npm run build && node scripts/create-release.js",
     "changelog": "node scripts/update-changelog.js",
-    "prepare-release": "npm run changelog && npm run build && git add ."
+    "prepare-release": "npm run changelog && npm run build && git add .",
+    "validate-docs": "node scripts/validate-docs.js",
+    "docs:validate": "node scripts/validate-docs.js"
   },
   "repository": {
     "type": "git",
@@ -32,6 +34,7 @@
   },
   "homepage": "https://www.blazecommerce.io",
   "devDependencies": {
+    "js-yaml": "^4.1.0",
     "semver": "^7.5.4"
   },
   "engines": {
