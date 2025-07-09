@@ -48,3 +48,16 @@ Thumbs.db
 *.mov
 *.wmv
 
+# Documentation images - exclude from Git tracking
+# Images in docs directory should be managed separately to reduce repository size
+docs/**/*.jpg
+docs/**/*.jpeg
+docs/**/*.png
+docs/**/*.gif
+docs/**/*.webp
+docs/**/*.svg
+docs/**/*.bmp
+docs/**/*.ico
+docs/**/*.tiff
+docs/**/*.tif
+
