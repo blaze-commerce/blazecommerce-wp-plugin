@@ -86,7 +86,7 @@ jobs:
       - name: Wait before retry (60s + jitter)
         if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         run: |
-          # Exponential backoff: 60s ± 15s
+          # Exponential backoff: 45-75s
           JITTER=$((RANDOM % 31 + 45))
           echo "⏳ Second attempt failed. Waiting ${JITTER} seconds before final retry..."
           sleep $JITTER
