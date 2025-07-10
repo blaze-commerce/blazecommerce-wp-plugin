@@ -14,7 +14,10 @@
     "changelog": "node scripts/update-changelog.js",
     "prepare-release": "npm run changelog && npm run build && git add .",
     "validate-docs": "node scripts/validate-docs.js",
-    "docs:validate": "node scripts/validate-docs.js"
+    "docs:validate": "node scripts/validate-docs.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "repository": {
     "type": "git",
@@ -34,6 +37,7 @@
   },
   "homepage": "https://www.blazecommerce.io",
   "devDependencies": {
+    "jest": "^29.7.0",
     "js-yaml": "^4.1.0",
     "semver": "^7.5.4"
   },

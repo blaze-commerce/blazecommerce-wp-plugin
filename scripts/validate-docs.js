@@ -16,6 +16,9 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 
+// File size threshold (1MB)
+const MAX_FILE_SIZE = 1024 * 1024;
+
 // Configuration
 const DOCS_DIR = path.join(__dirname, '..', 'docs');
 const VALID_CATEGORIES = ['features', 'api', 'development', 'setup', 'reference', 'troubleshooting'];
@@ -25,10 +28,19 @@ const REQUIRED_FRONTMATTER = ['title', 'description', 'category', 'version', 'la
 let errors = [];
 let warnings = [];
 
+// Performance tracking
+let performanceMetrics = {
+    startTime: 0,
+    endTime: 0,
+    filesProcessed: 0,
+    totalFileSize: 0
+};
+
 /**
  * Main validation function
  */
 function validateDocumentation() {
+    performanceMetrics.startTime = Date.now();
     console.log('🔍 Validating documentation structure and standards...\n');
     
     // Check if docs directory exists
@@ -42,6 +54,8 @@ function validateDocumentation() {
     
     // Validate all markdown files
     validateMarkdownFiles();
+    
+    performanceMetrics.endTime = Date.now();
     
     // Report results
     reportResults();
@@ -94,6 +108,22 @@ function validateMarkdownFile(filePath) {
     }
     
     console.log(`  Checking: ${relativePath}`);
+    
+    // Update performance metrics
+    performanceMetrics.filesProcessed++;
+    
+    // Validate file size
+    try {
+        const stats = fs.statSync(filePath);
+        performanceMetrics.totalFileSize += stats.size;
+        
+        if (stats.size > MAX_FILE_SIZE) {
+            warnings.push(`File size too large: ${relativePath} (${Math.round(stats.size/1024)}KB > ${Math.round(MAX_FILE_SIZE/1024)}KB)`);
+        }
+    } catch (error) {
+        errors.push(`Cannot stat file: ${relativePath} - ${error.message}`);
+        return;
+    }
     
     // Validate file naming convention
     validateFileName(fileName, relativePath);
@@ -178,9 +208,47 @@ function validateFrontmatter(frontmatter, relativePath) {
         warnings.push(`Version should follow semantic versioning (x.y.z): ${relativePath}`);
     }
     
-    // Validate date format
-    if (frontmatter.last_updated && !/^\d{4}-\d{2}-\d{2}$/.test(frontmatter.last_updated)) {
-        errors.push(`Invalid date format for last_updated (use YYYY-MM-DD): ${relativePath}`);
+    // Validate date format and validity
+    if (frontmatter.last_updated) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(frontmatter.last_updated)) {
+            errors.push(`Invalid date format for last_updated (use YYYY-MM-DD): ${relativePath}`);
+        } else {
+            // Check if date is actually valid
+            const date = new Date(frontmatter.last_updated);
+            if (isNaN(date.getTime()) || date.toISOString().split('T')[0] !== frontmatter.last_updated) {
+                errors.push(`Invalid date value for last_updated: ${relativePath}`);
+            }
+        }
+    }
+    
+    // Validate related documents exist
+    if (frontmatter.related_docs && Array.isArray(frontmatter.related_docs)) {
+        frontmatter.related_docs.forEach(relatedDoc => {
+            if (typeof relatedDoc === 'string') {
+                validateRelatedDocument(relatedDoc, relativePath);
+            }
+        });
+    }
+}
+
+/**
+ * Validate related document exists
+ */
+function validateRelatedDocument(relatedDoc, relativePath) {
+    // Check if it's a relative path
+    if (relatedDoc.startsWith('./') || relatedDoc.startsWith('../')) {
+        const currentDir = path.dirname(relativePath);
+        const targetPath = path.resolve(currentDir, relatedDoc);
+        
+        if (!fs.existsSync(targetPath)) {
+            errors.push(`Related document not found: ${relativePath} -> ${relatedDoc}`);
+        }
+    } else {
+        // Check if it's a docs-relative path
+        const docsPath = path.join(DOCS_DIR, relatedDoc);
+        if (!fs.existsSync(docsPath)) {
+            errors.push(`Related document not found: ${relativePath} -> ${relatedDoc}`);
+        }
     }
 }
 
@@ -215,11 +283,36 @@ function validateInternalLinks(content, relativePath) {
  * Validate a single internal link
  */
 function validateInternalLink(linkUrl, relativePath) {
-    const currentDir = path.dirname(relativePath);
-    const targetPath = path.resolve(currentDir, linkUrl);
-    
-    if (!fs.existsSync(targetPath)) {
-        errors.push(`Broken internal link: ${relativePath} -> ${linkUrl}`);
+    try {
+        // Basic URL validation - check for malformed URLs
+        if (!linkUrl || linkUrl.trim() === '') {
+            errors.push(`Empty link URL: ${relativePath}`);
+            return;
+        }
+        
+        // Prevent directory traversal attacks
+        if (linkUrl.includes('..') && linkUrl.includes('..')) {
+            const normalizedPath = path.normalize(linkUrl);
+            if (normalizedPath.startsWith('..')) {
+                warnings.push(`Potentially unsafe link path: ${relativePath} -> ${linkUrl}`);
+            }
+        }
+        
+        const currentDir = path.dirname(relativePath);
+        const targetPath = path.resolve(currentDir, linkUrl);
+        
+        // Security check: ensure resolved path is within the project directory
+        const projectRoot = path.resolve(__dirname, '..');
+        if (!targetPath.startsWith(projectRoot)) {
+            errors.push(`Link points outside project directory: ${relativePath} -> ${linkUrl}`);
+            return;
+        }
+        
+        if (!fs.existsSync(targetPath)) {
+            errors.push(`Broken internal link: ${relativePath} -> ${linkUrl}`);
+        }
+    } catch (error) {
+        errors.push(`Error validating link: ${relativePath} -> ${linkUrl} - ${error.message}`);
     }
 }
 
@@ -248,8 +341,19 @@ function reportResults() {
     console.log('\n📊 Validation Results:');
     console.log('='.repeat(50));
     
+    // Performance metrics
+    const duration = performanceMetrics.endTime - performanceMetrics.startTime;
+    const avgFileSize = performanceMetrics.filesProcessed > 0 ? 
+        Math.round(performanceMetrics.totalFileSize / performanceMetrics.filesProcessed) : 0;
+    
+    console.log(`\n⚡ Performance Metrics:`);
+    console.log(`  • Files processed: ${performanceMetrics.filesProcessed}`);
+    console.log(`  • Total file size: ${Math.round(performanceMetrics.totalFileSize / 1024)}KB`);
+    console.log(`  • Average file size: ${Math.round(avgFileSize / 1024)}KB`);
+    console.log(`  • Validation time: ${duration}ms`);
+    
     if (errors.length === 0 && warnings.length === 0) {
-        console.log('✅ All documentation validation checks passed!');
+        console.log('\n✅ All documentation validation checks passed!');
         process.exit(0);
     }
     
@@ -276,6 +380,11 @@ if (require.main === module) {
 
 module.exports = {
     validateDocumentation,
+    validateMarkdownFile,
+    validateFrontmatter,
+    validateRelatedDocument,
+    validateInternalLink,
     VALID_CATEGORIES,
-    REQUIRED_FRONTMATTER
+    REQUIRED_FRONTMATTER,
+    MAX_FILE_SIZE
 };
