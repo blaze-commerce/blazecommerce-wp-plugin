@@ -50,6 +50,17 @@ Thumbs.db
 
 # Documentation images - exclude from Git tracking
 # Images in docs directory should be managed separately to reduce repository size
+#
+# Recommended alternatives for documentation images:
+# - External hosting: GitHub Pages, CDN, or cloud storage services
+# - Documentation platforms: GitBook, Notion, or similar platforms
+# - Asset repositories: Separate dedicated repositories for media assets
+# - Local development: Images can still be used locally for development
+#
+# Migration strategy for existing large images:
+# - Consider moving existing large images to external hosting
+# - Update documentation links to reference external URLs
+# - Use image optimization tools to reduce file sizes where possible
 docs/**/*.jpg
 docs/**/*.jpeg
 docs/**/*.png
