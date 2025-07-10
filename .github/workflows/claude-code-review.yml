@@ -31,15 +31,17 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Run Claude Code Review
-        id: claude-review
+      # Claude Code Review with Retry Logic for API 529 Errors
+      - name: Run Claude Code Review (Attempt 1)
+        id: claude-review-1
         uses: anthropics/claude-code-action@beta
+        continue-on-error: true
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
+
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
-          
+
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
             Please review this pull request and provide feedback on:
@@ -48,9 +50,83 @@ jobs:
             - Performance considerations
             - Security concerns
             - Test coverage
-            
+
             Be constructive and helpful in your feedback.
-          
+
+      - name: Wait before retry (30s + jitter)
+        if: steps.claude-review-1.outcome == 'failure'
+        run: |
+          # Add jitter to prevent thundering herd (25-35 seconds)
+          JITTER=$((RANDOM % 11 + 25))
+          echo "⏳ Claude API call failed. Waiting ${JITTER} seconds before retry..."
+          sleep $JITTER
+
+      - name: Run Claude Code Review (Attempt 2)
+        id: claude-review-2
+        if: steps.claude-review-1.outcome == 'failure'
+        uses: anthropics/claude-code-action@beta
+        continue-on-error: true
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
+          # model: "claude-opus-4-20250514"
+
+          # Direct prompt for automated review (no @claude mention needed)
+          direct_prompt: |
+            Please review this pull request and provide feedback on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security concerns
+            - Test coverage
+
+            Be constructive and helpful in your feedback.
+
+      - name: Wait before retry (60s + jitter)
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        run: |
+          # Exponential backoff: 60s ± 15s
+          JITTER=$((RANDOM % 31 + 45))
+          echo "⏳ Second attempt failed. Waiting ${JITTER} seconds before final retry..."
+          sleep $JITTER
+
+      - name: Run Claude Code Review (Final Attempt)
+        id: claude-review-3
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        uses: anthropics/claude-code-action@beta
+        continue-on-error: true
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
+          # model: "claude-opus-4-20250514"
+
+          # Direct prompt for automated review (no @claude mention needed)
+          direct_prompt: |
+            Please review this pull request and provide feedback on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security concerns
+            - Test coverage
+
+            Be constructive and helpful in your feedback.
+
+      - name: Handle Final Failure
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure' && steps.claude-review-3.outcome == 'failure'
+        run: |
+          echo "❌ Claude Code Review failed after 3 attempts"
+          echo ""
+          echo "This is likely due to API overload (Error 529) or other temporary issues."
+          echo "🔄 Recommended actions:"
+          echo "• Re-run the workflow in 2-5 minutes when API load decreases"
+          echo "• Check Anthropic's status page: https://status.anthropic.com"
+          echo "• The pull request can still be reviewed manually if needed"
+          echo ""
+          echo "This failure does not indicate issues with your code changes."
+          exit 1
+
           # Optional: Customize review based on file types
           # direct_prompt: |
           #   Review this PR focusing on:
@@ -58,16 +134,16 @@ jobs:
           #   - For API endpoints: Security, input validation, and error handling
           #   - For React components: Performance, accessibility, and best practices
           #   - For tests: Coverage, edge cases, and test quality
-          
+
           # Optional: Different prompts for different authors
           # direct_prompt: |
-          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' && 
+          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
           #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
           #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
-          
+
           # Optional: Add specific tools for running tests or linting
           # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
-          
+
           # Optional: Skip review for certain conditions
           # if: |
           #   !contains(github.event.pull_request.title, '[skip-review]') &&
