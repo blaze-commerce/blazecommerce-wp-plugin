@@ -2,10 +2,19 @@
 
 ## Prerequisites
 - VS Code with Augment Code extension
-- Python environment with kimi-dev installed
+- Python 3.8+ environment with required packages:
+  - `requests` for API communication
+  - `kimi-dev` (optional, for local model)
 - WordPress development environment (Local, XAMPP, etc.)
 - PHP CodeSniffer with WordPress Coding Standards
 - vLLM server running (optional, for local model)
+
+### Python Dependencies
+```bash
+pip install requests
+# Optional: For local Kimi-Dev model
+pip install kimi-dev
+```
 
 ## Setup Steps
 
@@ -101,36 +110,22 @@ Create `.vscode/tasks.json`:
 ```
 
 ### 3. Custom Scripts
-Create helper scripts that bridge Augment Code context with Kimi-Dev:
+The following WordPress-specific scripts are available:
 
-#### Bug Fix Script (`scripts/kimi-dev-bugfix.py`)
-```python
-#!/usr/bin/env python3
-import argparse
-import sys
-import os
-from pathlib import Path
+#### Bug Fix Script (`scripts/wp-kimi-dev-bugfix.py`)
+- WordPress-compliant bug fixes with comprehensive testing
+- Security-focused analysis and remediation
+- Integration with WordPress coding standards
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--file', required=True)
-    parser.add_argument('--issue', required=True)
-    args = parser.parse_args()
-    
-    # Stage 1: File Localization using Augment Code context
-    print("🔍 Stage 1: File Localization")
-    # Use Augment Code's context engine to gather related files
-    
-    # Stage 2: Code Editing using Kimi-Dev approach
-    print("🛠️ Stage 2: Code Editing")
-    # Apply Kimi-Dev's precise editing approach
-    
-    print(f"Processing file: {args.file}")
-    print(f"Issue: {args.issue}")
+#### Test Writer Script (`scripts/wp-kimi-dev-testwriter.py`)
+- Generates WordPress unit tests using WP_UnitTestCase
+- Supports multiple test types (unit, integration, admin, security)
+- WordPress-specific test utilities and assertions
 
-if __name__ == "__main__":
-    main()
-```
+#### Security Audit Script (`scripts/wp-kimi-dev-security.py`)
+- Comprehensive WordPress security vulnerability scanning
+- Automated detection of common security issues
+- Detailed security recommendations and remediation
 
 ### 4. Keybindings
 Add to `keybindings.json`:
@@ -138,14 +133,24 @@ Add to `keybindings.json`:
 ```json
 [
     {
-        "key": "ctrl+shift+k ctrl+shift+b",
+        "key": "ctrl+shift+w ctrl+shift+b",
         "command": "workbench.action.tasks.runTask",
-        "args": "Kimi-Dev Bug Fix"
+        "args": "WordPress Plugin Bug Fix"
     },
     {
-        "key": "ctrl+shift+k ctrl+shift+t",
+        "key": "ctrl+shift+w ctrl+shift+t",
         "command": "workbench.action.tasks.runTask",
-        "args": "Kimi-Dev Test Writer"
+        "args": "WordPress Plugin Test Writer"
+    },
+    {
+        "key": "ctrl+shift+w ctrl+shift+s",
+        "command": "workbench.action.tasks.runTask",
+        "args": "WordPress Security Audit"
+    },
+    {
+        "key": "ctrl+shift+w ctrl+shift+c",
+        "command": "workbench.action.tasks.runTask",
+        "args": "WordPress Standards Check"
     }
 ]
 ```
@@ -153,15 +158,22 @@ Add to `keybindings.json`:
 ## Workflow Examples
 
 ### 1. Bug Fixing Workflow
-1. **Ctrl+Shift+K, Ctrl+Shift+B** → Trigger bug fix task
+1. **Ctrl+Shift+W, Ctrl+Shift+B** → Trigger WordPress bug fix task
 2. Describe the issue in the prompt
-3. Kimi-Dev analyzes and provides fix
+3. Kimi-Dev analyzes and provides WordPress-compliant fix
 4. Review and apply changes
 
 ### 2. Test Writing Workflow
-1. **Ctrl+Shift+K, Ctrl+Shift+T** → Trigger test writer
-2. Kimi-Dev generates comprehensive tests
-3. Review and integrate tests
+1. **Ctrl+Shift+W, Ctrl+Shift+T** → Trigger WordPress test writer
+2. Select test type (unit, integration, admin, security, etc.)
+3. Kimi-Dev generates comprehensive WordPress tests
+4. Review and integrate tests
+
+### 3. Security Audit Workflow
+1. **Ctrl+Shift+W, Ctrl+Shift+S** → Trigger WordPress security audit
+2. Kimi-Dev scans for vulnerabilities and security issues
+3. Review security recommendations
+4. Apply security fixes
 
 ### 3. Combined Workflow
 1. Use Augment Code for broad context gathering
