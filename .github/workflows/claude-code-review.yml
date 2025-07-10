@@ -31,15 +31,17 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Run Claude Code Review
-        id: claude-review
+      # Attempt 1: Initial Claude Code Review
+      - name: Run Claude Code Review (Attempt 1)
+        id: claude-review-1
+        continue-on-error: true
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
+
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
-          
+
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
             Please review this pull request and provide feedback on:
@@ -48,9 +50,9 @@ jobs:
             - Performance considerations
             - Security concerns
             - Test coverage
-            
+
             Be constructive and helpful in your feedback.
-          
+
           # Optional: Customize review based on file types
           # direct_prompt: |
           #   Review this PR focusing on:
@@ -58,18 +60,106 @@ jobs:
           #   - For API endpoints: Security, input validation, and error handling
           #   - For React components: Performance, accessibility, and best practices
           #   - For tests: Coverage, edge cases, and test quality
-          
+
           # Optional: Different prompts for different authors
           # direct_prompt: |
-          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' && 
+          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
           #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
           #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
-          
+
           # Optional: Add specific tools for running tests or linting
           # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
-          
+
           # Optional: Skip review for certain conditions
           # if: |
           #   !contains(github.event.pull_request.title, '[skip-review]') &&
           #   !contains(github.event.pull_request.title, '[WIP]')
+
+      # Wait before retry (30s + jitter) - only if first attempt failed
+      - name: Wait before retry (30s + jitter)
+        if: steps.claude-review-1.outcome == 'failure'
+        run: |
+          # Add jitter to prevent thundering herd: 25-35 seconds
+          JITTER=$((RANDOM % 11 + 25))
+          echo "Waiting ${JITTER} seconds before retry attempt 2..."
+          sleep $JITTER
+
+      # Attempt 2: Retry Claude Code Review
+      - name: Run Claude Code Review (Attempt 2)
+        id: claude-review-2
+        if: steps.claude-review-1.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Use same configuration as attempt 1
+          direct_prompt: |
+            Please review this pull request and provide feedback on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security concerns
+            - Test coverage
+
+            Be constructive and helpful in your feedback.
+
+      # Wait before final retry (60s + jitter) - only if second attempt failed
+      - name: Wait before final retry (60s + jitter)
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        run: |
+          # Add jitter to prevent thundering herd: 45-75 seconds
+          JITTER=$((RANDOM % 31 + 45))
+          echo "Waiting ${JITTER} seconds before final retry attempt..."
+          sleep $JITTER
+
+      # Attempt 3: Final Claude Code Review attempt
+      - name: Run Claude Code Review (Final Attempt)
+        id: claude-review-3
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Use same configuration as previous attempts
+          direct_prompt: |
+            Please review this pull request and provide feedback on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security concerns
+            - Test coverage
+
+            Be constructive and helpful in your feedback.
+
+      # Handle final failure - provide helpful error message
+      - name: Handle Final Failure
+        if: |
+          steps.claude-review-1.outcome == 'failure' &&
+          steps.claude-review-2.outcome == 'failure' &&
+          steps.claude-review-3.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **Claude Code Review Temporarily Unavailable**
+
+              The automated code review failed after 3 attempts due to API overload (Error 529). This is a temporary issue with the Anthropic Claude API service.
+
+              **What this means:**
+              - Your code changes are not the problem
+              - This is a temporary service overload issue
+              - The review will be retried automatically on the next commit
+
+              **Next steps:**
+              - You can proceed with your development work
+              - Consider manually requesting a review with \`@claude\` in a comment if urgent
+              - Check [Anthropic Status](https://status.anthropic.com/) for service updates
+
+              **For maintainers:** This failure indicates high API load. Consider implementing additional retry strategies or alternative review methods during peak times.`
+            })
 
