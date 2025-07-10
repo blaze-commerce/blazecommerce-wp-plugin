@@ -134,7 +134,7 @@ npm run update-plugin-version
 
 If a release fails, check:
 1. All changes are committed
-2. GitHub token has proper permissions
+2. BC_GITHUB_TOKEN secret has proper permissions (contents: write)
 3. Tag doesn't already exist
 
 ### Build Issues
