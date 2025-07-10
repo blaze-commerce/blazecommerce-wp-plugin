@@ -1,3 +1,16 @@
+---
+title: "Changelog"
+description: "Version history and release notes for the BlazeCommerce WordPress Plugin"
+category: "reference"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Commerce Team"
+tags: ["changelog", "releases", "version-history", "updates"]
+related_docs: ["trademark.md"]
+---
+
+# Changelog
+
 ## [1.5.2] - 2025-05-27
 
 - feat: add automated version management and release system (857f384)
