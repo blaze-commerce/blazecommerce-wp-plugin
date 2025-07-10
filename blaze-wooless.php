@@ -3,7 +3,7 @@
 Plugin Name: Blaze Commerce
 Plugin URI: https://www.blazecommerce.io
 Description: The official plugin that integrates your site with the Blaze Commerce service.
-Version: 1.6.0
+Version: 1.7.0
 Requires Plugins: woocommerce, wp-graphql, wp-graphql-cors, wp-graphql-jwt-authentication, wp-graphql-woocommerce
 Author: Blaze Commerce
 Author URI: https://www.blazecommerce.io
@@ -13,7 +13,7 @@ use BlazeWooless\PostType;
 
 define( 'BLAZE_COMMERCE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BLAZE_COMMERCE_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'BLAZE_COMMERCE_VERSION', '1.6.0' );
+define( 'BLAZE_COMMERCE_VERSION', '1.7.0' );
 
 require 'vendor/autoload.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/class-tgm-plugin-activation.php';
