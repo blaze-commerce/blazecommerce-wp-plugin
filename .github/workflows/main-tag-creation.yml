@@ -1,0 +1,161 @@
+name: Create Release Tag
+
+# Triggers when package.json changes are pushed to main branch
+# This typically happens when a PR with version changes is merged
+on:
+  push:
+    branches: [ main ]
+    paths: 
+      - 'package.json'
+      - 'blaze-wooless.php'
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    # Only run if this is a merge commit (PR merge) and not a direct push
+    # Also skip if the commit message indicates it's already a release commit
+    if: |
+      contains(github.event.head_commit.message, 'Merge pull request') ||
+      contains(github.event.head_commit.message, 'chore(release): prepare version')
+    
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Checkout main branch
+      uses: actions/checkout@v4
+      with:
+        # Use automation token for tag creation and pushing
+        token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Extract version information
+      id: version_info
+      run: |
+        # Get the current version from package.json
+        VERSION=$(node -p "require('./package.json').version")
+        echo "Current version in package.json: $VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        
+        # Create the tag name
+        TAG_NAME="v$VERSION"
+        echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
+        
+        # Check if this tag already exists
+        if git tag -l | grep -q "^$TAG_NAME$"; then
+          echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+          echo "⚠️ Tag $TAG_NAME already exists"
+        else
+          echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          echo "✅ Tag $TAG_NAME does not exist, will create it"
+        fi
+
+    - name: Validate version format
+      id: validate_version
+      run: |
+        VERSION="${{ steps.version_info.outputs.VERSION }}"
+        
+        # Check if version follows semantic versioning (x.y.z)
+        if [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "VERSION_VALID=true" >> $GITHUB_OUTPUT
+          echo "✅ Version format is valid: $VERSION"
+        else
+          echo "VERSION_VALID=false" >> $GITHUB_OUTPUT
+          echo "❌ Invalid version format: $VERSION (expected x.y.z)"
+          exit 1
+        fi
+
+    - name: Check for version consistency
+      id: consistency_check
+      run: |
+        PACKAGE_VERSION="${{ steps.version_info.outputs.VERSION }}"
+        
+        # Extract version from plugin header
+        PLUGIN_VERSION=$(grep -oP "Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+" blaze-wooless.php || echo "")
+        
+        echo "Package.json version: $PACKAGE_VERSION"
+        echo "Plugin header version: $PLUGIN_VERSION"
+        
+        if [ "$PACKAGE_VERSION" = "$PLUGIN_VERSION" ]; then
+          echo "VERSIONS_CONSISTENT=true" >> $GITHUB_OUTPUT
+          echo "✅ Version consistency check passed"
+        else
+          echo "VERSIONS_CONSISTENT=false" >> $GITHUB_OUTPUT
+          echo "❌ Version mismatch between package.json ($PACKAGE_VERSION) and plugin header ($PLUGIN_VERSION)"
+          exit 1
+        fi
+
+    - name: Create and push release tag
+      if: |
+        steps.version_info.outputs.TAG_EXISTS == 'false' &&
+        steps.validate_version.outputs.VERSION_VALID == 'true' &&
+        steps.consistency_check.outputs.VERSIONS_CONSISTENT == 'true'
+      run: |
+        TAG_NAME="${{ steps.version_info.outputs.TAG_NAME }}"
+        VERSION="${{ steps.version_info.outputs.VERSION }}"
+        
+        echo "Creating release tag: $TAG_NAME"
+        
+        # Create annotated tag with release information
+        git tag -a "$TAG_NAME" -m "Release version $VERSION
+
+        This release was automatically created from the merged PR.
+        
+        Changes included in this release:
+        - Version bumped to $VERSION
+        - Updated plugin header and package.json
+        - Generated changelog entries
+        
+        Release artifacts will be built and attached by the release workflow."
+        
+        echo "Pushing tag to origin..."
+        git push origin "$TAG_NAME"
+        
+        echo "✅ Successfully created and pushed tag: $TAG_NAME"
+
+    - name: Verify tag creation
+      if: |
+        steps.version_info.outputs.TAG_EXISTS == 'false' &&
+        steps.validate_version.outputs.VERSION_VALID == 'true' &&
+        steps.consistency_check.outputs.VERSIONS_CONSISTENT == 'true'
+      run: |
+        TAG_NAME="${{ steps.version_info.outputs.TAG_NAME }}"
+        
+        # Verify the tag was created and pushed successfully
+        if git ls-remote --tags origin | grep -q "refs/tags/$TAG_NAME"; then
+          echo "✅ Tag $TAG_NAME successfully created and pushed to remote"
+          echo "🚀 Release workflow should trigger automatically"
+        else
+          echo "❌ Failed to verify tag creation"
+          exit 1
+        fi
+
+    - name: Skip tag creation (already exists)
+      if: steps.version_info.outputs.TAG_EXISTS == 'true'
+      run: |
+        TAG_NAME="${{ steps.version_info.outputs.TAG_NAME }}"
+        echo "ℹ️ Tag $TAG_NAME already exists, skipping tag creation"
+        echo "This is normal if the tag was created in a previous run"
+
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Tag Creation Summary"
+        echo "Version: ${{ steps.version_info.outputs.VERSION }}"
+        echo "Tag Name: ${{ steps.version_info.outputs.TAG_NAME }}"
+        echo "Tag Exists: ${{ steps.version_info.outputs.TAG_EXISTS }}"
+        echo "Version Valid: ${{ steps.validate_version.outputs.VERSION_VALID }}"
+        echo "Versions Consistent: ${{ steps.consistency_check.outputs.VERSIONS_CONSISTENT }}"
+        
+        if [[ "${{ steps.version_info.outputs.TAG_EXISTS }}" == "false" && 
+              "${{ steps.validate_version.outputs.VERSION_VALID }}" == "true" && 
+              "${{ steps.consistency_check.outputs.VERSIONS_CONSISTENT }}" == "true" ]]; then
+          echo "✅ Tag creation completed successfully"
+        else
+          echo "ℹ️ Tag creation was skipped or failed validation"
+        fi

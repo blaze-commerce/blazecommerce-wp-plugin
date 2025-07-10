@@ -1,0 +1,265 @@
+name: PR Version Preparation
+
+# Triggers when PRs are opened or updated against main branch
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  prepare-version:
+    runs-on: ubuntu-latest
+    # Skip if PR is from a fork (security) or if it's a version bump commit
+    if: github.event.pull_request.head.repo.full_name == github.repository && !contains(github.event.pull_request.title, 'chore(release)')
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        # Use the PR head ref to checkout the actual PR branch
+        ref: ${{ github.event.pull_request.head.ref }}
+        # Use automation token for write access
+        token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+    - name: Analyze commits in PR
+      id: analyze_commits
+      run: |
+        # Get the base and head SHAs for this PR
+        BASE_SHA="${{ github.event.pull_request.base.sha }}"
+        HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+        
+        echo "Analyzing commits between $BASE_SHA and $HEAD_SHA"
+        
+        # Get commits that are only in this PR (not in base branch)
+        COMMITS=$(git log --oneline --no-merges --format="%s" ${BASE_SHA}..${HEAD_SHA})
+        
+        echo "PR Commits found:"
+        echo "$COMMITS"
+        
+        # Skip if no commits found
+        if [ -z "$COMMITS" ]; then
+          echo "No commits found in PR"
+          echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Analyze commit messages for conventional commit patterns
+        echo "Analyzing commit patterns..."
+        
+        # Check for breaking changes (major version)
+        if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|^fix(\(.+\))?!:|BREAKING CHANGE"; then
+          echo "BUMP_TYPE=major" >> $GITHUB_OUTPUT
+          echo "BUMP_REASON=Breaking changes detected" >> $GITHUB_OUTPUT
+          echo "Found breaking changes - major version bump required"
+        # Check for features (minor version)
+        elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+          echo "BUMP_TYPE=minor" >> $GITHUB_OUTPUT
+          echo "BUMP_REASON=New features added" >> $GITHUB_OUTPUT
+          echo "Found new features - minor version bump required"
+        # Check for fixes and performance improvements (patch version)
+        elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:|^perf(\(.+\))?:"; then
+          echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
+          echo "BUMP_REASON=Bug fixes or performance improvements" >> $GITHUB_OUTPUT
+          echo "Found fixes/performance improvements - patch version bump required"
+        else
+          echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+          echo "BUMP_REASON=No conventional commits requiring version bump" >> $GITHUB_OUTPUT
+          echo "No conventional commits found - no version bump needed"
+        fi
+
+    - name: Check if version files need updating
+      id: check_version_files
+      if: steps.analyze_commits.outputs.BUMP_TYPE != 'none'
+      run: |
+        # Get current version from package.json
+        CURRENT_VERSION=$(node -p "require('./package.json').version")
+        echo "Current version: $CURRENT_VERSION"
+        echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        
+        # Calculate new version based on bump type
+        BUMP_TYPE="${{ steps.analyze_commits.outputs.BUMP_TYPE }}"
+        
+        # Use npm version to calculate new version (dry run)
+        NEW_VERSION=$(npm version $BUMP_TYPE --no-git-tag-version --dry-run | sed 's/^v//')
+        echo "Calculated new version: $NEW_VERSION"
+        echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+        
+        # Check if files already have the correct version (avoid duplicate commits)
+        PLUGIN_VERSION=$(grep -oP "Version:\s*\K[0-9]+\.[0-9]+\.[0-9]+" blaze-wooless.php || echo "")
+        
+        if [ "$CURRENT_VERSION" = "$NEW_VERSION" ] && [ "$PLUGIN_VERSION" = "$NEW_VERSION" ]; then
+          echo "VERSION_NEEDS_UPDATE=false" >> $GITHUB_OUTPUT
+          echo "Version files are already up to date"
+        else
+          echo "VERSION_NEEDS_UPDATE=true" >> $GITHUB_OUTPUT
+          echo "Version files need updating"
+        fi
+
+    - name: Update version files
+      if: steps.analyze_commits.outputs.BUMP_TYPE != 'none' && steps.check_version_files.outputs.VERSION_NEEDS_UPDATE == 'true'
+      run: |
+        BUMP_TYPE="${{ steps.analyze_commits.outputs.BUMP_TYPE }}"
+        echo "Performing $BUMP_TYPE version bump..."
+        
+        # Update package.json version
+        npm run version:$BUMP_TYPE
+        
+        # Get the new version that was just set
+        NEW_VERSION=$(node -p "require('./package.json').version")
+        echo "Updated to version: $NEW_VERSION"
+
+    - name: Generate changelog
+      if: steps.analyze_commits.outputs.BUMP_TYPE != 'none' && steps.check_version_files.outputs.VERSION_NEEDS_UPDATE == 'true'
+      run: |
+        echo "Generating changelog..."
+        npm run changelog
+
+    - name: Commit version changes to PR
+      if: steps.analyze_commits.outputs.BUMP_TYPE != 'none' && steps.check_version_files.outputs.VERSION_NEEDS_UPDATE == 'true'
+      run: |
+        NEW_VERSION="${{ steps.check_version_files.outputs.NEW_VERSION }}"
+        BUMP_TYPE="${{ steps.analyze_commits.outputs.BUMP_TYPE }}"
+        
+        # Check if there are changes to commit
+        if git diff --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+        
+        # Stage all version-related changes
+        git add package.json blaze-wooless.php CHANGELOG.md
+        
+        # Commit with conventional commit format
+        git commit -m "chore(release): prepare version $NEW_VERSION ($BUMP_TYPE bump)
+
+        - Updated package.json version to $NEW_VERSION
+        - Updated plugin header version
+        - Generated changelog entries
+        
+        [skip ci]"
+        
+        # Push changes back to the PR branch
+        git push origin HEAD
+
+    - name: Comment on PR with version information
+      if: steps.analyze_commits.outputs.BUMP_TYPE != 'none'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        script: |
+          const bumpType = '${{ steps.analyze_commits.outputs.BUMP_TYPE }}';
+          const bumpReason = '${{ steps.analyze_commits.outputs.BUMP_REASON }}';
+          const currentVersion = '${{ steps.check_version_files.outputs.CURRENT_VERSION }}';
+          const newVersion = '${{ steps.check_version_files.outputs.NEW_VERSION }}';
+          const versionNeedsUpdate = '${{ steps.check_version_files.outputs.VERSION_NEEDS_UPDATE }}';
+
+          let body = `## 🚀 Automated Version Bump Analysis\n\n`;
+          body += `**Bump Type:** \`${bumpType}\`\n`;
+          body += `**Reason:** ${bumpReason}\n`;
+          body += `**Current Version:** \`${currentVersion}\`\n`;
+          body += `**New Version:** \`${newVersion}\`\n\n`;
+
+          if (versionNeedsUpdate === 'true') {
+            body += `✅ **Version files have been automatically updated in this PR**\n\n`;
+            body += `The following files were updated:\n`;
+            body += `- \`package.json\`\n`;
+            body += `- \`blaze-wooless.php\`\n`;
+            body += `- \`CHANGELOG.md\`\n\n`;
+            body += `When this PR is merged to main, a release tag \`v${newVersion}\` will be automatically created.`;
+          } else {
+            body += `ℹ️ **Version files are already up to date**\n\n`;
+            body += `No changes were needed to the version files.`;
+          }
+
+          // Check if we already commented on this PR
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existingComment = comments.data.find(comment =>
+            comment.user.login === 'github-actions[bot]' &&
+            comment.body.includes('🚀 Automated Version Bump Analysis')
+          );
+
+          if (existingComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: body
+            });
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          }
+
+    - name: Comment when no version bump needed
+      if: steps.analyze_commits.outputs.BUMP_TYPE == 'none'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+        script: |
+          const body = `## ℹ️ No Version Bump Required\n\n` +
+            `This PR does not contain conventional commits that require a version bump.\n\n` +
+            `**Conventional commit patterns that trigger version bumps:**\n` +
+            `- \`feat:\` → minor version bump\n` +
+            `- \`fix:\` → patch version bump\n` +
+            `- \`feat!:\` or \`BREAKING CHANGE\` → major version bump\n` +
+            `- \`perf:\` → patch version bump\n\n` +
+            `If you intended to bump the version, please update your commit messages to follow conventional commit format.`;
+
+          // Check for existing comment and update or create
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existingComment = comments.data.find(comment =>
+            comment.user.login === 'github-actions[bot]' &&
+            (comment.body.includes('🚀 Automated Version Bump Analysis') ||
+             comment.body.includes('ℹ️ No Version Bump Required'))
+          );
+
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          }

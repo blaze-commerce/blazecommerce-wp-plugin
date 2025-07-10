@@ -1,5 +1,6 @@
 name: Create Release
 
+# Triggers when version tags are pushed (created by main-tag-creation.yml)
 on:
   push:
     tags:
@@ -8,10 +9,16 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
-    
+
+    permissions:
+      contents: write
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        # Ensure we have the full history for changelog generation
+        fetch-depth: 0
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -39,35 +46,108 @@ jobs:
         
     - name: Extract version from tag
       id: version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      run: |
+        # Extract version from the tag (remove 'v' prefix)
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+
+        # Validate version format
+        if [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "✅ Valid version format: $VERSION"
+        else
+          echo "❌ Invalid version format: $VERSION"
+          exit 1
+        fi
       
     - name: Create plugin ZIP
       run: |
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        ZIP_NAME="blazecommerce-wp-plugin-$VERSION.zip"
+
+        echo "Creating plugin ZIP: $ZIP_NAME"
+
         # Create a temporary directory for the plugin
         mkdir -p /tmp/blazecommerce-wp-plugin
-        
+
         # Copy plugin files (exclude development files)
-        rsync -av --exclude-from='.github/workflows/.zipignore' . /tmp/blazecommerce-wp-plugin/
-        
+        if [ -f '.github/workflows/.zipignore' ]; then
+          echo "Using .zipignore file for exclusions"
+          rsync -av --exclude-from='.github/workflows/.zipignore' . /tmp/blazecommerce-wp-plugin/
+        else
+          echo "No .zipignore file found, using default exclusions"
+          rsync -av \
+            --exclude='.git*' \
+            --exclude='node_modules' \
+            --exclude='.github' \
+            --exclude='tests' \
+            --exclude='*.md' \
+            --exclude='composer.json' \
+            --exclude='composer.lock' \
+            --exclude='package*.json' \
+            . /tmp/blazecommerce-wp-plugin/
+        fi
+
         # Create the ZIP file
         cd /tmp
-        zip -r blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip blazecommerce-wp-plugin/
-        
+        zip -r "$ZIP_NAME" blazecommerce-wp-plugin/
+
         # Move ZIP back to workspace
-        mv blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
+        mv "$ZIP_NAME" "$GITHUB_WORKSPACE/"
+
+        # Verify ZIP was created
+        if [ -f "$GITHUB_WORKSPACE/$ZIP_NAME" ]; then
+          echo "✅ Successfully created $ZIP_NAME"
+          ls -lh "$GITHUB_WORKSPACE/$ZIP_NAME"
+        else
+          echo "❌ Failed to create ZIP file"
+          exit 1
+        fi
         
     - name: Generate release notes
       id: release_notes
       run: |
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        echo "Generating release notes for version $VERSION"
+
         # Extract changelog for this version
         if [ -f CHANGELOG.md ]; then
+          echo "Found CHANGELOG.md, extracting notes for version $VERSION"
+
           # Get content between this version and next version header
-          awk '/^## \[${{ steps.version.outputs.VERSION }}\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md > release_notes.txt
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
-          cat release_notes.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Look for patterns like ## [1.6.0] or ## v1.6.0 or ## 1.6.0
+          awk -v version="$VERSION" '
+            /^## \[/ || /^## v/ || /^## [0-9]/ {
+              if (match($0, version)) {
+                flag=1; next
+              } else if (flag) {
+                flag=0
+              }
+            }
+            flag && !/^## / { print }
+          ' CHANGELOG.md > release_notes.txt
+
+          # Check if we found any content
+          if [ -s release_notes.txt ]; then
+            echo "✅ Found changelog content for version $VERSION"
+            echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+            cat release_notes.txt >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No specific changelog content found for version $VERSION"
+            echo "RELEASE_NOTES=Release version $VERSION
+
+            This release was automatically generated from the merged pull request.
+
+            For detailed changes, please see the commit history." >> $GITHUB_OUTPUT
+          fi
         else
-          echo "RELEASE_NOTES=Release version ${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          echo "ℹ️ No CHANGELOG.md found, using default release notes"
+          echo "RELEASE_NOTES=Release version $VERSION
+
+          This release was automatically generated from the merged pull request.
+
+          For detailed changes, please see the commit history." >> $GITHUB_OUTPUT
         fi
         
     - name: Create GitHub Release
@@ -80,5 +160,24 @@ jobs:
           blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip
         draft: false
         prerelease: false
+        # Generate release notes automatically if our custom notes are empty
+        generate_release_notes: true
       env:
-        GITHUB_TOKEN: ${{ secrets.BC_GITHUB_TOKEN }}
+        # Use automation token with fallback to default token
+        GITHUB_TOKEN: ${{ secrets.AUTOMATION_TOKEN || secrets.BC_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+
+    - name: Release Summary
+      if: always()
+      run: |
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        echo "## Release Summary"
+        echo "Version: $VERSION"
+        echo "Tag: ${{ github.ref_name }}"
+        echo "ZIP File: blazecommerce-wp-plugin-$VERSION.zip"
+
+        if [ "${{ job.status }}" = "success" ]; then
+          echo "✅ Release created successfully!"
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+        else
+          echo "❌ Release creation failed"
+        fi

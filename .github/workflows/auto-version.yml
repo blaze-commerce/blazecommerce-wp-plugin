@@ -1,86 +1,44 @@
-name: Auto Version Bump
+name: Auto Version Bump (DISABLED)
+
+# This workflow has been replaced by the PR-based version preparation workflow
+# It is disabled to prevent conflicts with the new approach
+#
+# The new workflow files are:
+# - .github/workflows/pr-version-prep.yml (prepares versions in PRs)
+# - .github/workflows/main-tag-creation.yml (creates tags after PR merge)
+# - .github/workflows/release.yml (creates releases from tags)
 
 on:
-  push:
-    branches: [ main ]
-    paths-ignore:
-      - 'CHANGELOG.md'
-      - 'package.json'
-      - 'blaze-wooless.php'
+  # Disabled - no triggers
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: 'Force run this disabled workflow (for emergency use only)'
+        required: true
+        default: 'false'
 
 jobs:
   version-bump:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore(release)')"
+    if: false  # Always skip this job
     permissions:
-      contents: write
-      pull-requests: read
+      contents: read
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
-        fetch-depth: 0
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm install
-
-    - name: Configure Git
+    - name: Workflow Disabled Notice
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-
-    - name: Determine version bump type
-      id: bump_type
-      run: |
-        # Get all non-merge commits since last version tag or last 20 commits if no tags
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-        if [ -n "$LAST_TAG" ]; then
-          COMMITS=$(git log --oneline --no-merges --format="%s" ${LAST_TAG}..HEAD)
-        else
-          COMMITS=$(git log --oneline --no-merges --format="%s" -20)
-        fi
-
-        echo "Analyzing commits:"
-        echo "$COMMITS"
-
-        # Check for breaking changes (major version)
-        if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
-          echo "BUMP_TYPE=major" >> $GITHUB_OUTPUT
-          echo "Found breaking changes - major version bump"
-        # Check for features (minor version)
-        elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
-          echo "BUMP_TYPE=minor" >> $GITHUB_OUTPUT
-          echo "Found features - minor version bump"
-        # Check for fixes (patch version)
-        elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:|^perf(\(.+\))?:"; then
-          echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
-          echo "Found fixes - patch version bump"
-        else
-          echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
-          echo "No conventional commits found - no version bump"
-        fi
-
-    - name: Bump version
-      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
-      run: |
-        npm run version:${{ steps.bump_type.outputs.BUMP_TYPE }}
-
-    - name: Update changelog
-      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
-      run: npm run changelog
-
-    - name: Commit version bump
-      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
-      run: |
-        VERSION=$(node -p "require('./package.json').version")
-        git add .
-        git commit -m "chore(release): bump version to $VERSION [skip ci]"
-        git push
+        echo "🚫 This workflow has been disabled and replaced with a PR-based approach"
+        echo ""
+        echo "📋 New Workflow Process:"
+        echo "1. Create PR with conventional commits (feat:, fix:, etc.)"
+        echo "2. pr-version-prep.yml analyzes commits and prepares version bump"
+        echo "3. Version changes are included in the PR for review"
+        echo "4. When PR is merged, main-tag-creation.yml creates release tag"
+        echo "5. release.yml creates GitHub release with ZIP artifact"
+        echo ""
+        echo "✅ This approach respects branch protection rules and allows version review"
+        echo ""
+        echo "🔧 If you need to re-enable this workflow for emergency use:"
+        echo "   - Update the 'if' condition to remove 'false'"
+        echo "   - Ensure branch protection allows automation token to bypass PR requirements"
+        exit 0
