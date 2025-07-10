@@ -1,3 +1,14 @@
+---
+title: "Country-Specific Images Feature"
+description: "Display different product images based on customer location using Aelia Currency Switcher integration"
+category: "features"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Commerce Team"
+tags: ["country-specific", "images", "aelia", "localization", "product-images"]
+related_docs: ["export-import-feature.md", "../api/typesense-aliases-readme.md"]
+---
+
 # Country-Specific Images Feature
 
 > Display different product images based on customer location using Aelia Currency Switcher integration.
