@@ -83,4 +83,6 @@ jobs:
         VERSION=$(node -p "require('./package.json').version")
         git add .
         git commit -m "chore(release): bump version to $VERSION [skip ci]"
+        git tag "v$VERSION"
         git push
+        git push --tags
