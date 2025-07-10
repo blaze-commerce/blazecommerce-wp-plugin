@@ -1,3 +1,16 @@
+---
+title: "Trademark Policy"
+description: "Trademark usage policy for Blaze Commerce name and logo"
+category: "reference"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Online Pty Ltd"
+tags: ["trademark", "legal", "policy", "usage", "branding"]
+related_docs: ["changelog.md"]
+---
+
+# Trademark Policy
+
 "Blaze Commerce" and the Blaze Commerce logo are trademarks of Blaze Online Pty Ltd, an Australian company. These trademarks, and other related marks, logos, and names, are the property of Blaze Online Pty Ltd. The use of these trademarks is governed by the following policy:
 
 Permissible Use: You may use the Blaze Commerce trademark to refer to the Blaze Commerce open-source project in a descriptive manner. For example, "This project uses Blaze Commerce" or "Built on Blaze Commerce." Such use must be accurate and not misleading.

@@ -1,3 +1,14 @@
+---
+title: "Automation Guide"
+description: "Automated workflows for version management, releases, and plugin packaging in the BlazeCommerce WordPress Plugin"
+category: "development"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Commerce Team"
+tags: ["automation", "version-management", "releases", "workflows", "ci-cd"]
+related_docs: ["usage.md", "claude.md"]
+---
+
 # BlazeCommerce WordPress Plugin - Automation Guide
 
 ## Overview
