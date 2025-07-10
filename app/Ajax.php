@@ -383,6 +383,9 @@ class Ajax {
 	}
 	public function index_data_to_typesense() {
 		$collection_name = ! ( empty( $_REQUEST['collection_name'] ) ) ? $_REQUEST['collection_name'] : '';
+
+		// Validate collection name and call appropriate sync method
+		// Each collection method now handles its own JSON response
 		if ( $collection_name == 'products' ) {
 			Product::get_instance()->index_to_typesense();
 		} else if ( $collection_name == 'site_info' ) {
@@ -394,9 +397,18 @@ class Ajax {
 		} else if ( $collection_name == 'page' ) {
 			Page::get_instance()->index_to_typesense();
 		} else {
-			echo "Collection name not found";
+			// Return standardized error response for invalid collection name
+			wp_send_json( array(
+				'success' => false,
+				'error' => 'Invalid collection name: ' . $collection_name,
+				'imported_count' => 0,
+				'total_imports' => 0,
+				'collection' => $collection_name,
+				'sync_completed' => false
+			) );
 		}
-		wp_die();
+
+		// Note: wp_die() removed as individual collection methods handle JSON responses
 	}
 
 }

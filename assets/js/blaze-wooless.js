@@ -844,12 +844,46 @@
                 _this.syncInProgress = true;
 
                 $.post(ajaxurl, Object.assign({}, data, params), function (response) {
-                    $(_this.syncResultsContainer).append('<div>' + response + '</div>');
+                    // Handle both JSON response and text response for backward compatibility
+                    var message = '';
+                    var success = true;
+
+                    if (typeof response === 'object' && response !== null) {
+                        // New standardized JSON response format
+                        if (response.success !== undefined) {
+                            success = response.success;
+                            if (success) {
+                                message = response.message || 'Sync completed successfully';
+                                if (response.imported_count !== undefined && response.total_imports !== undefined) {
+                                    message += ' (' + response.imported_count + '/' + response.total_imports + ' items)';
+                                }
+                            } else {
+                                message = 'Error: ' + (response.error || 'Unknown error occurred');
+                            }
+                        } else {
+                            // Legacy JSON response format
+                            message = 'Sync completed';
+                        }
+                    } else {
+                        // Legacy text response format
+                        message = response;
+                    }
+
+                    $(_this.syncResultsContainer).append('<div>' + message + '</div>');
                     if (hideLoader) {
                         _this.hideLoader();
                         _this.syncInProgress = false;
                     }
-                    resolve(true);
+                    resolve(success);
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('Sync failed:', status, error);
+                    $(_this.syncResultsContainer).append('<div>Error: ' + error + '</div>');
+                    if (hideLoader) {
+                        _this.hideLoader();
+                        _this.syncInProgress = false;
+                    }
+                    reject(error);
                 });
             })
         },
@@ -965,9 +999,14 @@
                         apiRequest: _this.importProductData,
                         initialPages: [2, 3, 4, 5],
                         onApiRequestSuccess: function (result, page) {
-                            _this.importedProductsCount += result.imported_products_count;
+                            // Handle both old and new response formats for backward compatibility
+                            var importedCount = result.imported_count || result.imported_products_count || 0;
+                            _this.importedProductsCount += importedCount;
                             _this.totalProductImports += result.total_imports;
-                            if (!result.has_next_data) {
+
+                            // Check for completion using new or old format
+                            var hasNextData = result.has_next_data !== undefined ? result.has_next_data : (result.next_page !== null);
+                            if (!hasNextData) {
                                 _this.shouldFinishProductSync = true;
                             }
 
@@ -1013,9 +1052,14 @@
                         apiRequest: _this.importTaxonomyTermData,
                         initialPages: [2, 3, 4, 5],
                         onApiRequestSuccess: function (result, page) {
-                            _this.importedTaxonomyCount += result.imported_count;
-                            _this.totalTaxonomyImports += result.total_imports;
-                            if (result.next_page == null) {
+                            // Handle standardized response format
+                            var importedCount = result.imported_count || 0;
+                            _this.importedTaxonomyCount += importedCount;
+                            _this.totalTaxonomyImports += result.total_imports || 0;
+
+                            // Check for completion using new standardized format
+                            var hasNextData = result.has_next_data !== undefined ? result.has_next_data : (result.next_page !== null);
+                            if (!hasNextData || result.next_page == null) {
                                 _this.shouldFinishTaxonomySync = true;
                             }
 

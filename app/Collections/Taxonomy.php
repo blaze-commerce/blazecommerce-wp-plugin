@@ -222,9 +222,14 @@ class Taxonomy extends BaseCollection {
 			$should_sync = apply_filters( 'blazecommerce/settings/sync/taxonomies', true );
 			if ( ! $should_sync ) {
 				wp_send_json( array(
+					'success' => true,
+					'message' => 'Taxonomy sync disabled by filter',
 					'imported_count' => 0,
 					'total_imports' => 0,
+					'collection' => 'taxonomy',
+					'has_next_data' => false,
 					'next_page' => null,
+					'sync_completed' => true,
 					'query_args' => $query_args,
 					'import_response' => [],
 					'import_data_sent' => [],
@@ -261,9 +266,14 @@ class Taxonomy extends BaseCollection {
 			}
 
 			wp_send_json( array(
+				'success' => true,
+				'message' => 'Taxonomies synced successfully',
 				'imported_count' => $imported_count,
 				'total_imports' => $total_imports,
+				'collection' => 'taxonomy',
+				'has_next_data' => $has_next_data,
 				'next_page' => $has_next_data ? $next_page : null,
+				'sync_completed' => !$has_next_data,
 				'query_args' => $query_args,
 				'import_response' => $import_response,
 				'import_data_sent' => $taxonomy_datas,
@@ -271,6 +281,18 @@ class Taxonomy extends BaseCollection {
 
 		} catch (\Exception $e) {
 			$import_logger->debug( 'TS Taxonomy collection import Exception: ' . $e->getMessage(), $import_context );
+
+			// Return standardized error response
+			wp_send_json( array(
+				'success' => false,
+				'error' => $e->getMessage(),
+				'imported_count' => 0,
+				'total_imports' => 0,
+				'collection' => 'taxonomy',
+				'has_next_data' => false,
+				'next_page' => null,
+				'sync_completed' => false
+			) );
 		}
 	}
 

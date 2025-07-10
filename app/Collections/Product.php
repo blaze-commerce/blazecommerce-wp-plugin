@@ -299,24 +299,31 @@ class Product extends BaseCollection {
 				}
 			}
 
-			echo json_encode( array(
-				'imported_products_count' => count( $successful_imports ),
+			wp_send_json( array(
+				'success' => true,
+				'message' => 'Products synced successfully',
+				'imported_count' => count( $successful_imports ),
 				'total_imports' => $total_imports,
+				'collection' => 'product',
 				'has_next_data' => $has_next_data,
 				'next_page' => $has_next_data ? $next_page : null,
+				'sync_completed' => !$has_next_data
 			) );
 			$this->log_failed_product_import( "============================ END OF PRODUCT IMPORT ============================" );
-
-			wp_die();
 		} catch (\Exception $e) {
 			$logger->debug( 'TS Batch Exception: ' . $e->getMessage(), $context );
-			$error_message = "Error: " . $e->getMessage();
-			echo $error_message; // Print the error message for debugging purposes
-			echo "<script>
-			console.log('Error block executed'); // Log a message to the browser console
-			document.getElementById('error_message').innerHTML = '$error_message';
-		</script>";
-			echo "Error creating collection: " . $e->getMessage() . "\n";
+
+			// Return standardized error response
+			wp_send_json( array(
+				'success' => false,
+				'error' => $e->getMessage(),
+				'imported_count' => 0,
+				'total_imports' => 0,
+				'collection' => 'product',
+				'has_next_data' => false,
+				'next_page' => null,
+				'sync_completed' => false
+			) );
 		}
 	}
 

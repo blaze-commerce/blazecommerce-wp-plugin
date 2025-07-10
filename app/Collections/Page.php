@@ -349,16 +349,31 @@ class Page extends BaseCollection {
 			}
 
 			wp_send_json( array(
+				'success' => true,
+				'message' => 'Pages synced successfully',
 				'imported_count' => $imported_count,
 				'total_imports' => $total_imports,
+				'collection' => 'page',
+				'has_next_data' => $has_next_data,
 				'next_page' => $has_next_data ? $next_page : null,
 				'page' => $page,
+				'sync_completed' => !$has_next_data,
 				'import_response' => $import_response,
 				'import_data_sent' => $post_datas,
 			) );
 
 		} catch (\Exception $e) {
-			echo "Error: " . $e->getMessage() . "\n";
+			// Return standardized error response
+			wp_send_json( array(
+				'success' => false,
+				'error' => $e->getMessage(),
+				'imported_count' => 0,
+				'total_imports' => 0,
+				'collection' => 'page',
+				'has_next_data' => false,
+				'next_page' => null,
+				'sync_completed' => false
+			) );
 		}
 	}
 

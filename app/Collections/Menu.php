@@ -213,10 +213,28 @@ class Menu extends BaseCollection {
 				$logger->debug( 'TS Menu sync result: ' . json_encode( $sync_result ), $context );
 			}
 
-			echo "Menu successfully added\n";
+			// Return standardized JSON response
+			wp_send_json( array(
+				'success' => true,
+				'message' => 'Menu successfully added',
+				'imported_count' => count( $imported_menus ),
+				'total_imports' => count( $menu_documents ),
+				'collection' => 'menu',
+				'sync_completed' => true
+			) );
+
 		} catch (\Exception $e) {
 			$logger->debug( 'TS Menu index Exception: ' . $e->getMessage(), $context );
-			echo "Error: " . $e->getMessage() . "\n";
+
+			// Return standardized error response
+			wp_send_json( array(
+				'success' => false,
+				'error' => $e->getMessage(),
+				'imported_count' => 0,
+				'total_imports' => 0,
+				'collection' => 'menu',
+				'sync_completed' => false
+			) );
 		}
 	}
 

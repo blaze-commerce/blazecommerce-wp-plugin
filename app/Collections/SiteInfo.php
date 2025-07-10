@@ -411,7 +411,7 @@ class SiteInfo extends BaseCollection {
 			$this->initialize();
 
 			$documents = $this->prepare_batch_data();
-			$this->import_prepared_batch( $documents );
+			$successful_imports = $this->import_prepared_batch( $documents );
 
 			// Complete the sync if using aliases
 			$use_aliases = apply_filters( 'blazecommerce/use_collection_aliases', true );
@@ -422,10 +422,28 @@ class SiteInfo extends BaseCollection {
 
 			$this->after_site_info_sync();
 
-			echo "Site info added successfully!";
+			// Return standardized JSON response
+			wp_send_json( array(
+				'success' => true,
+				'message' => 'Site info added successfully!',
+				'imported_count' => count( $successful_imports ),
+				'total_imports' => count( $documents ),
+				'collection' => 'site_info',
+				'sync_completed' => true
+			) );
+
 		} catch (\Exception $e) {
 			$logger->debug( 'TS SiteInfo index Exception: ' . $e->getMessage(), $context );
-			echo $e->getMessage();
+
+			// Return standardized error response
+			wp_send_json( array(
+				'success' => false,
+				'error' => $e->getMessage(),
+				'imported_count' => 0,
+				'total_imports' => 0,
+				'collection' => 'site_info',
+				'sync_completed' => false
+			) );
 		}
 	}
 
