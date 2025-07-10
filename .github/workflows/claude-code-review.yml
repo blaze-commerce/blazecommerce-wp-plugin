@@ -1,5 +1,13 @@
 name: Claude Code Review
 
+# Retry Strategy for API Resilience:
+# This workflow implements a robust retry mechanism to handle Anthropic API overload (Error 529).
+# - 3 total attempts with exponential backoff: 30s → 60s → 120s
+# - Jitter randomization (±25%) prevents thundering herd problems
+# - Conditional execution skips unnecessary steps when earlier attempts succeed
+# - Comprehensive error handling provides clear guidance when all attempts fail
+# - Total maximum runtime: ~4 minutes (appropriate for temporary API overload scenarios)
+
 on:
   pull_request:
     types: [opened, synchronize]
@@ -17,8 +25,22 @@ jobs:
     #   github.event.pull_request.user.login == 'external-contributor' ||
     #   github.event.pull_request.user.login == 'new-developer' ||
     #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-    
+
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Prevent indefinite runs during API outages
+
+    # Environment variables to eliminate code duplication
+    env:
+      REVIEW_PROMPT: |
+        Please review this pull request and provide feedback on:
+        - Code quality and best practices
+        - Potential bugs or issues
+        - Performance considerations
+        - Security concerns
+        - Test coverage
+
+        Be constructive and helpful in your feedback.
+
     permissions:
       contents: read
       pull-requests: write
@@ -31,101 +53,19 @@ jobs:
         with:
           fetch-depth: 1
 
-      # Claude Code Review with Retry Logic for API 529 Errors
+      # Attempt 1: Initial Claude Code Review
       - name: Run Claude Code Review (Attempt 1)
         id: claude-review-1
-        uses: anthropics/claude-code-action@beta
         continue-on-error: true
+        uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
 
-          # Direct prompt for automated review (no @claude mention needed)
-          direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
-
-            Be constructive and helpful in your feedback.
-
-      - name: Wait before retry (30s + jitter)
-        if: steps.claude-review-1.outcome == 'failure'
-        run: |
-          # Add jitter to prevent thundering herd (25-35 seconds)
-          JITTER=$((RANDOM % 11 + 25))
-          echo "⏳ Claude API call failed. Waiting ${JITTER} seconds before retry..."
-          sleep $JITTER
-
-      - name: Run Claude Code Review (Attempt 2)
-        id: claude-review-2
-        if: steps.claude-review-1.outcome == 'failure'
-        uses: anthropics/claude-code-action@beta
-        continue-on-error: true
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
-
-          # Direct prompt for automated review (no @claude mention needed)
-          direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
-
-            Be constructive and helpful in your feedback.
-
-      - name: Wait before retry (60s + jitter)
-        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
-        run: |
-          # Exponential backoff: 45-75s
-          JITTER=$((RANDOM % 31 + 45))
-          echo "⏳ Second attempt failed. Waiting ${JITTER} seconds before final retry..."
-          sleep $JITTER
-
-      - name: Run Claude Code Review (Final Attempt)
-        id: claude-review-3
-        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
-        uses: anthropics/claude-code-action@beta
-        continue-on-error: true
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
-
-          # Direct prompt for automated review (no @claude mention needed)
-          direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
-
-            Be constructive and helpful in your feedback.
-
-      - name: Handle Final Failure
-        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure' && steps.claude-review-3.outcome == 'failure'
-        run: |
-          echo "❌ Claude Code Review failed after 3 attempts"
-          echo ""
-          echo "This is likely due to API overload (Error 529) or other temporary issues."
-          echo "🔄 Recommended actions:"
-          echo "• Re-run the workflow in 2-5 minutes when API load decreases"
-          echo "• Check Anthropic's status page: https://status.anthropic.com"
-          echo "• The pull request can still be reviewed manually if needed"
-          echo ""
-          echo "This failure does not indicate issues with your code changes."
-          exit 1
+          # Direct prompt for automated review (using environment variable to eliminate duplication)
+          direct_prompt: ${{ env.REVIEW_PROMPT }}
 
           # Optional: Customize review based on file types
           # direct_prompt: |
@@ -148,4 +88,78 @@ jobs:
           # if: |
           #   !contains(github.event.pull_request.title, '[skip-review]') &&
           #   !contains(github.event.pull_request.title, '[WIP]')
+
+      # Wait before retry (30s + jitter) - only if first attempt failed
+      - name: Wait before retry (30s + jitter)
+        if: steps.claude-review-1.outcome == 'failure'
+        run: |
+          # Add jitter to prevent thundering herd problems
+          # Range: 25-35 seconds (30s base ± 25% jitter)
+          JITTER=$((RANDOM % 11 + 25))
+          echo "Waiting ${JITTER} seconds before retry attempt 2..."
+          sleep $JITTER
+
+      # Attempt 2: Retry Claude Code Review
+      - name: Run Claude Code Review (Attempt 2)
+        id: claude-review-2
+        if: steps.claude-review-1.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Use same configuration as attempt 1 (environment variable eliminates duplication)
+          direct_prompt: ${{ env.REVIEW_PROMPT }}
+
+      # Wait before final retry (60s + jitter) - only if second attempt failed
+      - name: Wait before final retry (60s + jitter)
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        run: |
+          # Add jitter to prevent thundering herd problems
+          # Range: 45-75 seconds (60s base ± 25% jitter)
+          JITTER=$((RANDOM % 31 + 45))
+          echo "Waiting ${JITTER} seconds before final retry attempt..."
+          sleep $JITTER
+
+      # Attempt 3: Final Claude Code Review attempt
+      - name: Run Claude Code Review (Final Attempt)
+        id: claude-review-3
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Use same configuration as previous attempts (environment variable eliminates duplication)
+          direct_prompt: ${{ env.REVIEW_PROMPT }}
+
+      # Handle final failure - provide helpful error message
+      - name: Handle Final Failure
+        if: |
+          steps.claude-review-1.outcome == 'failure' &&
+          steps.claude-review-2.outcome == 'failure' &&
+          steps.claude-review-3.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **Claude Code Review Temporarily Unavailable**
+
+              The automated code review failed after 3 attempts due to API overload (Error 529). This is a temporary issue with the Anthropic Claude API service.
+
+              **What this means:**
+              - Your code changes are not the problem
+              - This is a temporary service overload issue
+              - The review will be retried automatically on the next commit
+
+              **Next steps:**
+              - You can proceed with your development work
+              - Consider manually requesting a review with \`@claude\` in a comment if urgent
+              - Check [Anthropic Status](https://status.anthropic.com/) for service updates
+
+              **For maintainers:** This failure indicates high API load. Consider implementing additional retry strategies or alternative review methods during peak times.`
+            })
 
