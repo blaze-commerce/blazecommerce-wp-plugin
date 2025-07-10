@@ -1,3 +1,14 @@
+---
+title: "Typesense Collection Aliasing Implementation"
+description: "Implementation guide for Typesense collection aliasing using blue-green deployment pattern to eliminate search downtime during syncs"
+category: "api"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Commerce Team"
+tags: ["typesense", "aliasing", "blue-green", "deployment", "zero-downtime", "collections"]
+related_docs: ["../features/country-specific-images.md", "../setup/installation-and-configuration.md"]
+---
+
 # Typesense Collection Aliasing Implementation
 
 This document describes the implementation of Typesense collection aliasing in the Blaze Commerce WooCommerce plugin to eliminate search downtime during full product syncs using a blue-green deployment pattern.

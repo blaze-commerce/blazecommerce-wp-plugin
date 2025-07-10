@@ -1,3 +1,14 @@
+---
+title: "Quick Usage Guide"
+description: "Daily development workflow and usage guide for the BlazeCommerce WordPress Plugin"
+category: "development"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Commerce Team"
+tags: ["usage", "development", "workflow", "commands", "daily-tasks"]
+related_docs: ["automation.md", "claude.md"]
+---
+
 # BlazeCommerce WordPress Plugin - Quick Usage Guide
 
 ## Daily Development Workflow

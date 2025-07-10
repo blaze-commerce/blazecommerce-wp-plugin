@@ -1,3 +1,14 @@
+---
+title: "Claude AI Development Guide"
+description: "Guidance for Claude AI when working with code in the BlazeCommerce WordPress Plugin repository"
+category: "development"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Commerce Team"
+tags: ["claude", "ai", "development", "guidance", "architecture", "patterns"]
+related_docs: ["automation.md", "usage.md"]
+---
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
