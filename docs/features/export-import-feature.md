@@ -1,3 +1,14 @@
+---
+title: "Export/Import Settings Feature"
+description: "Backup and restore all Blaze Commerce plugin settings in JSON format for migration and configuration management"
+category: "features"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Commerce Team"
+tags: ["export", "import", "settings", "backup", "migration", "configuration"]
+related_docs: ["country-specific-images.md", "../setup/installation-and-configuration.md"]
+---
+
 # Export/Import Settings Feature
 
 ## Overview
