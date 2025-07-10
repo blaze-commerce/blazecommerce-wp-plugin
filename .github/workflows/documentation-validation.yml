@@ -1,0 +1,188 @@
+name: Documentation Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'scripts/validate-docs.js'
+      - '.github/workflows/documentation-validation.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'scripts/validate-docs.js'
+      - '.github/workflows/documentation-validation.yml'
+
+jobs:
+  validate-documentation:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run documentation validation
+      run: npm run validate-docs
+      
+    - name: Run unit tests
+      run: npm run test:coverage
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: matrix.node-version == '20.x'
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage/lcov.info
+        flags: documentation
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  validate-structure:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Validate directory structure
+      run: |
+        # Check that all required directories exist
+        required_dirs=("features" "api" "development" "setup" "reference" "troubleshooting")
+        for dir in "${required_dirs[@]}"; do
+          if [ ! -d "docs/$dir" ]; then
+            echo "❌ Missing required directory: docs/$dir"
+            exit 1
+          fi
+          echo "✅ Found directory: docs/$dir"
+        done
+        
+    - name: Validate documentation standards file
+      run: |
+        if [ ! -f "docs/DOCUMENTATION_STANDARDS.md" ]; then
+          echo "❌ Missing DOCUMENTATION_STANDARDS.md"
+          exit 1
+        fi
+        echo "✅ Found DOCUMENTATION_STANDARDS.md"
+        
+    - name: Check for index files
+      run: |
+        required_dirs=("features" "api" "development" "setup" "reference" "troubleshooting")
+        for dir in "${required_dirs[@]}"; do
+          if [ ! -f "docs/$dir/index.md" ]; then
+            echo "❌ Missing index file: docs/$dir/index.md"
+            exit 1
+          fi
+          echo "✅ Found index file: docs/$dir/index.md"
+        done
+
+  validate-links:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        
+    - name: Install markdown-link-check
+      run: npm install -g markdown-link-check
+      
+    - name: Check internal links
+      run: |
+        find docs -name "*.md" -print0 | while IFS= read -r -d '' file; do
+          echo "Checking links in: $file"
+          markdown-link-check --config .github/markdown-link-check-config.json "$file"
+        done
+
+  validate-markdown:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        
+    - name: Install markdownlint-cli
+      run: npm install -g markdownlint-cli
+      
+    - name: Lint markdown files
+      run: |
+        markdownlint --config .github/markdownlint-config.json docs/**/*.md
+
+  performance-benchmark:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run performance benchmark
+      run: |
+        echo "Running validation performance benchmark..."
+        time npm run validate-docs
+        
+    - name: Check validation performance
+      run: |
+        # Run validation multiple times and check average performance
+        total_time=0
+        runs=3
+        
+        for i in $(seq 1 $runs); do
+          echo "Performance test run $i/$runs"
+          start_time=$(date +%s%N)
+          npm run validate-docs > /dev/null 2>&1
+          end_time=$(date +%s%N)
+          duration=$(( (end_time - start_time) / 1000000 ))
+          total_time=$(( total_time + duration ))
+          echo "Run $i: ${duration}ms"
+        done
+        
+        average_time=$(( total_time / runs ))
+        echo "Average validation time: ${average_time}ms"
+        
+        # Fail if validation takes more than 5 seconds on average
+        if [ $average_time -gt 5000 ]; then
+          echo "❌ Validation performance is too slow (${average_time}ms > 5000ms)"
+          exit 1
+        fi
+        
+        echo "✅ Validation performance is acceptable (${average_time}ms)"
