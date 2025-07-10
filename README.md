@@ -32,14 +32,34 @@ Blaze Commerce is a powerful WordPress plugin that provides seamless integration
 
 ## Installation
 
+For detailed installation and configuration instructions, see our [Installation Guide](docs/setup/installation-and-configuration.md).
+
+**Quick Start:**
 1. Upload the plugin files to `/wp-content/plugins/blaze-commerce/`
 2. Activate the plugin through the 'Plugins' screen in WordPress
 3. Configure your Typesense settings in the admin panel
 4. Run initial data sync using WP-CLI commands
 
+## Documentation
+
+Our documentation is organized into the following categories:
+
+- **[Setup & Installation](docs/setup/)** - Installation guides and initial configuration
+- **[Features](docs/features/)** - Detailed feature documentation and user guides
+- **[API Documentation](docs/api/)** - Technical API references and integration guides
+- **[Development](docs/development/)** - Developer workflows, automation, and coding guidelines
+- **[Reference](docs/reference/)** - Changelog, legal documents, and reference materials
+- **[Troubleshooting](docs/troubleshooting/)** - Problem-solving guides and common issues
+
+For documentation standards and contribution guidelines, see [Documentation Standards](docs/DOCUMENTATION_STANDARDS.md).
+
+📋 **[Documentation Organization Summary](docs/DOCUMENTATION_ORGANIZATION_SUMMARY.md)** - Overview of the recent documentation reorganization project and improvements.
+
 ## Configuration
 
-### Typesense Settings
+For complete configuration instructions, see our [Installation and Configuration Guide](docs/setup/installation-and-configuration.md).
+
+### Quick Configuration
 
 Configure your Typesense connection in the WordPress admin:
 
