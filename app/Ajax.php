@@ -43,7 +43,8 @@ class Ajax {
 		$api_key  = bw_get_general_settings( 'typesense_api_key' );
 		$store_id = bw_get_general_settings( 'store_id' );
 		return array(
-			'x-wooless-secret-token: ' . base64_encode( $api_key . ':' . $store_id )
+			'x-wooless-secret-token: ' . base64_encode( $api_key . ':' . $store_id ),
+			'Content-Type: application/json'
 		);
 	}
 
@@ -247,6 +248,15 @@ class Ajax {
 			) );
 		}
 
+		// Prepare the payload with required "files" field as an array
+		$deployment_payload = array(
+			'files' => array(), // Required by middleware API as an array
+			'source' => 'blazecommerce-plugin',
+			'wordpress_site' => home_url(),
+			'store_id' => bw_get_general_settings( 'store_id' ),
+			'timestamp' => time()
+		);
+
 		$curl = curl_init();
 		curl_setopt_array( $curl, array(
 			CURLOPT_URL => 'https://my-wooless-admin-portal.vercel.app/api/deployments',
@@ -257,6 +267,7 @@ class Ajax {
 			CURLOPT_FOLLOWLOCATION => true,
 			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
 			CURLOPT_CUSTOMREQUEST => 'POST',
+			CURLOPT_POSTFIELDS => json_encode( $deployment_payload ),
 			CURLOPT_HTTPHEADER => $this->get_headers(),
 		) );
 
@@ -275,9 +286,17 @@ class Ajax {
 
 		// Handle HTTP errors
 		if ( $http_code !== 200 ) {
+			// Include response body for better debugging
+			$error_details = 'HTTP error: ' . $http_code;
+			if ( ! empty( $response ) ) {
+				$error_details .= ' - Response: ' . $response;
+			}
+
 			wp_send_json( array(
-				'error' => 'HTTP error: ' . $http_code,
-				'message' => 'Failed to trigger redeploy due to HTTP error'
+				'error' => $error_details,
+				'message' => 'Failed to trigger redeploy due to HTTP error',
+				'http_code' => $http_code,
+				'response_body' => $response
 			) );
 		}
 
