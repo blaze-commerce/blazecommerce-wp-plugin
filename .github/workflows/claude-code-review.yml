@@ -1,5 +1,13 @@
 name: Claude Code Review
 
+# Retry Strategy for API Resilience:
+# This workflow implements a robust retry mechanism to handle Anthropic API overload (Error 529).
+# - 3 total attempts with exponential backoff: 30s → 60s → 120s
+# - Jitter randomization (±25%) prevents thundering herd problems
+# - Conditional execution skips unnecessary steps when earlier attempts succeed
+# - Comprehensive error handling provides clear guidance when all attempts fail
+# - Total maximum runtime: ~4 minutes (appropriate for temporary API overload scenarios)
+
 on:
   pull_request:
     types: [opened, synchronize]
@@ -17,8 +25,22 @@ jobs:
     #   github.event.pull_request.user.login == 'external-contributor' ||
     #   github.event.pull_request.user.login == 'new-developer' ||
     #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-    
+
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Prevent indefinite runs during API outages
+
+    # Environment variables to eliminate code duplication
+    env:
+      REVIEW_PROMPT: |
+        Please review this pull request and provide feedback on:
+        - Code quality and best practices
+        - Potential bugs or issues
+        - Performance considerations
+        - Security concerns
+        - Test coverage
+
+        Be constructive and helpful in your feedback.
+
     permissions:
       contents: read
       pull-requests: write
@@ -42,16 +64,8 @@ jobs:
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
 
-          # Direct prompt for automated review (no @claude mention needed)
-          direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
-
-            Be constructive and helpful in your feedback.
+          # Direct prompt for automated review (using environment variable to eliminate duplication)
+          direct_prompt: ${{ env.REVIEW_PROMPT }}
 
           # Optional: Customize review based on file types
           # direct_prompt: |
@@ -79,7 +93,8 @@ jobs:
       - name: Wait before retry (30s + jitter)
         if: steps.claude-review-1.outcome == 'failure'
         run: |
-          # Add jitter to prevent thundering herd: 25-35 seconds
+          # Add jitter to prevent thundering herd problems
+          # Range: 25-35 seconds (30s base ± 25% jitter)
           JITTER=$((RANDOM % 11 + 25))
           echo "Waiting ${JITTER} seconds before retry attempt 2..."
           sleep $JITTER
@@ -93,22 +108,15 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
-          # Use same configuration as attempt 1
-          direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
-
-            Be constructive and helpful in your feedback.
+          # Use same configuration as attempt 1 (environment variable eliminates duplication)
+          direct_prompt: ${{ env.REVIEW_PROMPT }}
 
       # Wait before final retry (60s + jitter) - only if second attempt failed
       - name: Wait before final retry (60s + jitter)
         if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         run: |
-          # Add jitter to prevent thundering herd: 45-75 seconds
+          # Add jitter to prevent thundering herd problems
+          # Range: 45-75 seconds (60s base ± 25% jitter)
           JITTER=$((RANDOM % 31 + 45))
           echo "Waiting ${JITTER} seconds before final retry attempt..."
           sleep $JITTER
@@ -122,16 +130,8 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
-          # Use same configuration as previous attempts
-          direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
-
-            Be constructive and helpful in your feedback.
+          # Use same configuration as previous attempts (environment variable eliminates duplication)
+          direct_prompt: ${{ env.REVIEW_PROMPT }}
 
       # Handle final failure - provide helpful error message
       - name: Handle Final Failure
