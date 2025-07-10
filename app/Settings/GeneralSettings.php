@@ -28,16 +28,6 @@ class GeneralSettings extends BaseSettings {
 		add_filter( 'post_type_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
 		add_filter( 'page_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
 		add_filter( 'term_link', array( $this, 'remove_cart_from_url' ), 10, 1 );
-
-		add_action( 'wp_enqueue_scripts', function () {
-			$theme = wp_get_theme();
-			wp_enqueue_style(
-				'blazecommerce-frontend-style',
-				$this->remove_cart_from_url( home_url( 'frontend.css' ) ),
-				[],
-				$theme->get( 'Version' ) // Cache-busting with child theme's version
-			);
-		}, 999 );
 	}
 
 	/**
@@ -76,11 +66,6 @@ class GeneralSettings extends BaseSettings {
 	 */
 	public function redirect_non_admin_user() {
 
-		$is_local = strpos( $_SERVER['HTTP_X_FORWARDED_HOST'], 'localhost' ) !== false;
-		if ( isset( $_REQUEST['no-redirect'] ) || $is_local ) {
-			return;
-		}
-
 		// skip redirect for administrator
 		if ( is_user_logged_in() && current_user_can( 'manage_options' ) )
 			return;
@@ -102,14 +87,14 @@ class GeneralSettings extends BaseSettings {
 			exit;
 		}
 
-		$is_my_account_page = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
+		$is_my_account_page                = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
 		$exclude_page_redirect_to_frontend = apply_filters( 'blaze_wooless_exclude_page_redirect_to_frontend', is_checkout() );
 		if ( $exclude_page_redirect_to_frontend || $is_my_account_page ) {
 			//Since the page is excluded from redirecting to frontend then we just end the function here
 			return;
 		}
 
-		$has_cart_in_url = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
+		$has_cart_in_url           = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
 		$from_vercel_proxy_request = isset( $_SERVER['HTTP_X_VERCEL_PROXY_SIGNATURE'] ) ? true : false;
 
 		// if the url has cart. on it and the request is not from vercel then we redirect it to frontend page without cart in the url
@@ -189,7 +174,7 @@ class GeneralSettings extends BaseSettings {
 			'Ubuntu' => 'Ubuntu',
 			'Work Sans' => 'Work Sans',
 		);
-		$fields = array(
+		$fields        = array(
 			'wooless_general_settings_section' => array(
 				'label' => 'General Settings',
 				'options' => array(
@@ -235,6 +220,43 @@ class GeneralSettings extends BaseSettings {
 					),
 				)
 			),
+			'vercel_deployment_settings_section' => array(
+				'label' => 'Vercel Deployment Settings',
+				'options' => array(
+					array(
+						'id' => 'enable_direct_vercel_deployment',
+						'label' => 'Enable Direct Vercel Deployment',
+						'type' => 'checkbox',
+						'args' => array(
+							'description' => 'Use direct Vercel API instead of BlazeCommerce middleware for deployments.'
+						),
+					),
+					array(
+						'id' => 'vercel_deployment_token',
+						'label' => 'Vercel Deployment Token',
+						'type' => 'password',
+						'args' => array(
+							'description' => 'Vercel API token for deployment operations. Get this from your Vercel dashboard under Settings > Tokens.'
+						),
+					),
+					array(
+						'id' => 'vercel_project_id',
+						'label' => 'Vercel Project ID',
+						'type' => 'text',
+						'args' => array(
+							'description' => 'Your Vercel project ID. Found in your Vercel project settings.'
+						),
+					),
+					array(
+						'id' => 'vercel_team_id',
+						'label' => 'Vercel Team ID (Optional)',
+						'type' => 'text',
+						'args' => array(
+							'description' => 'Your Vercel team ID if deploying to a team project. Leave empty for personal projects.'
+						),
+					),
+				)
+			),
 		);
 
 		if ( $this->is_typesense_connected() ) {
@@ -275,27 +297,11 @@ class GeneralSettings extends BaseSettings {
 				),
 			);
 
-			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'enable_geo_restrictions',
-				'label' => 'Enable Geo Restrictions',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to enable geo restrictions.'
-				),
-			);
-
-			$fields['wooless_general_settings_section']['options'][] = array(
-				'id' => 'enable_override_best_seller',
-				'label' => 'Override Best Seller Functionality',
-				'type' => 'checkbox',
-				'args' => array(
-					'description' => 'Check this to override the best seller products functionality.'
-				),
-			);
 		}
-		;
 
-		return apply_filters( 'blazecommerce/settings/general/fields', $fields );
+
+
+		return $fields;
 	}
 
 
@@ -322,14 +328,78 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	public function register_additional_site_info( $additional_data ) {
-		$additional_data['show_free_shipping_banner'] = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
-		$additional_data['show_free_shipping_minicart_component'] = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
+		$additional_data['show_free_shipping_banner']              = json_encode( $this->get_option( 'show_free_shipping_banner' ) == 1 ?: false );
+		$additional_data['show_free_shipping_minicart_component']  = json_encode( $this->get_option( 'show_free_shipping_minicart_component' ) == 1 ?: false );
 		$additional_data['show_variant_as_separate_product_cards'] = json_encode( $this->get_option( 'show_variant_as_separate_product_cards' ) == 1 ?: false );
-		$additional_data['enable_geo_restrictions'] = json_encode( $this->get_option( 'enable_geo_restrictions' ) == 1 ?: false );
-		$additional_data['enable_override_best_seller'] = json_encode( $this->get_option( 'enable_override_best_seller' ) == 1 ?: false );
-		$additional_data['font_family'] = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
+		$additional_data['font_family']                            = apply_filters( 'blazecommerce/settings/site/font_family', $this->get_option( 'font_family' ) );
 
 		return $additional_data;
+	}
+
+	public function settings_callback( $input ) {
+		$sanitized_input = array();
+
+		// Sanitize all text inputs
+		foreach ( $input as $key => $value ) {
+			if ( $key === 'vercel_deployment_token' ) {
+				// Special handling for Vercel token - encrypt it
+				$sanitized_input[ $key ] = $this->encrypt_token( sanitize_text_field( $value ) );
+			} elseif ( in_array( $key, array( 'typesense_api_key' ) ) ) {
+				// Keep existing password fields as-is for backward compatibility
+				$sanitized_input[ $key ] = sanitize_text_field( $value );
+			} elseif ( $key === 'vercel_project_id' || $key === 'vercel_team_id' ) {
+				// Validate Vercel IDs (alphanumeric with hyphens)
+				$sanitized_value = sanitize_text_field( $value );
+				if ( preg_match( '/^[a-zA-Z0-9\-_]+$/', $sanitized_value ) || empty( $sanitized_value ) ) {
+					$sanitized_input[ $key ] = $sanitized_value;
+				} else {
+					add_settings_error( 'vercel_settings', $key, 'Invalid ' . $key . ' format. Only alphanumeric characters, hyphens, and underscores are allowed.' );
+				}
+			} else {
+				// Default sanitization for other fields
+				$sanitized_input[ $key ] = sanitize_text_field( $value );
+			}
+		}
+
+		return $sanitized_input;
+	}
+
+	private function encrypt_token( $token ) {
+		if ( empty( $token ) ) {
+			return '';
+		}
+
+		// Use WordPress salts for encryption key
+		$key = wp_salt( 'auth' );
+		$iv = openssl_random_pseudo_bytes( 16 );
+		$encrypted = openssl_encrypt( $token, 'AES-256-CBC', $key, 0, $iv );
+
+		// Return base64 encoded IV + encrypted data
+		return base64_encode( $iv . $encrypted );
+	}
+
+	private function decrypt_token( $encrypted_token ) {
+		if ( empty( $encrypted_token ) ) {
+			return '';
+		}
+
+		$key = wp_salt( 'auth' );
+		$data = base64_decode( $encrypted_token );
+		$iv = substr( $data, 0, 16 );
+		$encrypted = substr( $data, 16 );
+
+		return openssl_decrypt( $encrypted, 'AES-256-CBC', $key, 0, $iv );
+	}
+
+	public function get_option( $key = false, $default = false ) {
+		$options = parent::get_option( $key, $default );
+
+		// Decrypt Vercel token when retrieving
+		if ( $key === 'vercel_deployment_token' && ! empty( $options ) ) {
+			return $this->decrypt_token( $options );
+		}
+
+		return $options;
 	}
 }
 

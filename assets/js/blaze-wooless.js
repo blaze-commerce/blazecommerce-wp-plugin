@@ -659,39 +659,127 @@
             $(document.body).on('click', this.redeployButton, this.redeployStoreFront.bind(this));
         },
 
-        checkDeployment: function () {
+        checkDeployment: function (retryCount = 0, deploymentId = null) {
             var _this = this;
+            var maxRetries = 10; // Maximum 20 minutes of checking (10 * 2 minutes)
+
             _this.renderLoader('Checking Deployment..');
             _this.syncInProgress = true;
             var data = {
                 'action': 'check_deployment',
             };
-            $.post(ajaxurl, data).done(function (response) {
-                if (response.state === 'BUILDING') {
-                    _this.renderLoader('Store front is deploying..');
-                    setTimeout(function () {
-                        _this.checkDeployment();
-                    }, 120000);
-                } else if (response.state === 'READY') {
-                    $(_this.redeployButton).prop("disabled", false);
-                    _this.hideLoader();
-                    $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
-                }
-            });
+
+            // Add deployment ID for Vercel API if available
+            if (deploymentId) {
+                data.deployment_id = deploymentId;
+            }
+
+            $.post(ajaxurl, data)
+                .done(function (response) {
+                    console.log('Deployment check response:', response);
+
+                    // Handle both JSON string and object responses
+                    if (typeof response === 'string') {
+                        try {
+                            response = JSON.parse(response);
+                        } catch (e) {
+                            console.error('Failed to parse deployment check response:', e);
+                            _this.handleDeploymentError('Invalid response format');
+                            return;
+                        }
+                    }
+
+                    if (response.state === 'BUILDING') {
+                        if (retryCount < maxRetries) {
+                            _this.renderLoader('Store front is deploying.. (attempt ' + (retryCount + 1) + '/' + maxRetries + ')');
+                            setTimeout(function () {
+                                _this.checkDeployment(retryCount + 1, deploymentId);
+                            }, 120000); // 2 minutes
+                        } else {
+                            _this.handleDeploymentError('Deployment timeout - maximum retry attempts reached');
+                        }
+                    } else if (response.state === 'READY') {
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.hideLoader();
+                        _this.syncInProgress = false;
+                        var successMessage = '✓ Redeploy complete.';
+                        if (response.url) {
+                            successMessage += ' <a href="' + response.url + '" target="_blank">View deployment</a>';
+                        }
+                        $(_this.syncResultsContainer).append('<div id="wooless-loader-message" style="color: green;">' + successMessage + '</div>');
+                    } else if (response.error) {
+                        _this.handleDeploymentError('Deployment error: ' + response.error);
+                    } else {
+                        _this.handleDeploymentError('Unknown deployment state: ' + (response.state || 'undefined'));
+                    }
+                })
+                .fail(function (xhr, status, error) {
+                    console.error('Deployment check AJAX failed:', status, error);
+                    _this.handleDeploymentError('Network error: ' + error);
+                });
         },
         redeployStoreFront: function (e) {
             var _this = this;
             e.preventDefault();
+
+            // Clear any previous results
+            $(_this.syncResultsContainer).empty();
+
             $(this.redeployButton).prop("disabled", true);
-            _this.renderLoader('Triggering redeploy');
+            _this.renderLoader('Triggering redeploy...');
             _this.syncInProgress = true;
+
             var data = {
                 'action': 'redeploy_store_front',
             };
-            $.post(ajaxurl, data).done(function (response) {
-                _this.renderLoader(response.message);
-                _this.checkDeployment();
-            });
+
+            $.post(ajaxurl, data)
+                .done(function (response) {
+                    console.log('Redeploy trigger response:', response);
+
+                    // Handle both JSON string and object responses
+                    if (typeof response === 'string') {
+                        try {
+                            response = JSON.parse(response);
+                        } catch (e) {
+                            console.error('Failed to parse redeploy response:', e);
+                            _this.handleDeploymentError('Invalid response format from redeploy trigger');
+                            return;
+                        }
+                    }
+
+                    if (response.error) {
+                        _this.handleDeploymentError('Redeploy failed: ' + response.error);
+                    } else {
+                        var message = response.message || 'Redeploy triggered successfully';
+                        _this.renderLoader(message);
+
+                        // Extract deployment ID for Vercel API if available
+                        var deploymentId = response.deployment_id || null;
+                        _this.checkDeployment(0, deploymentId); // Start deployment checking
+                    }
+                })
+                .fail(function (xhr, status, error) {
+                    console.error('Redeploy AJAX failed:', status, error);
+                    _this.handleDeploymentError('Network error during redeploy: ' + error);
+                });
+        },
+
+        handleDeploymentError: function (errorMessage) {
+            var _this = this;
+            console.error('Deployment error:', errorMessage);
+
+            // Re-enable the redeploy button
+            $(_this.redeployButton).prop("disabled", false);
+
+            // Hide loader and show error
+            _this.hideLoader();
+            _this.syncInProgress = false;
+
+            // Display error message
+            $(_this.syncResultsContainer).append(
+                '<div id="wooless-error-message" style="color: red; font-weight: bold;">✗ ' + errorMessage + '</div>'
+            );
         },
 
         managePaginatedRequests: function ({
@@ -780,8 +868,21 @@
                 }
 
                 $.post(ajaxurl, Object.assign({}, data, { page: page }), function (response) {
-                    response = JSON.parse(response);
+                    // Handle both JSON string and already parsed JSON object
+                    if (typeof response === 'string') {
+                        try {
+                            response = JSON.parse(response);
+                        } catch (e) {
+                            console.error('Failed to parse product response:', e);
+                            reject(e);
+                            return;
+                        }
+                    }
+                    console.log('Product sync response for page ' + page + ':', response);
                     resolve(response);
+                }).fail(function(xhr, status, error) {
+                    console.error('Product sync AJAX failed:', status, error);
+                    reject(error);
                 });
             })
         },
@@ -795,7 +896,21 @@
                 };
 
                 $.post(ajaxurl, Object.assign({}, data, { page: page }), function (response) {
+                    // Handle both JSON string and already parsed JSON object
+                    if (typeof response === 'string') {
+                        try {
+                            response = JSON.parse(response);
+                        } catch (e) {
+                            console.error('Failed to parse taxonomy response:', e);
+                            reject(e);
+                            return;
+                        }
+                    }
+                    console.log('Taxonomy sync response for page ' + page + ':', response);
                     resolve(response);
+                }).fail(function(xhr, status, error) {
+                    console.error('Taxonomy sync AJAX failed:', status, error);
+                    reject(error);
                 });
             })
         },
@@ -848,7 +963,7 @@
                 return _this.importProductData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importProductData,
-                        initialPages: [2],
+                        initialPages: [2, 3, 4, 5],
                         onApiRequestSuccess: function (result, page) {
                             _this.importedProductsCount += result.imported_products_count;
                             _this.totalProductImports += result.total_imports;
@@ -896,7 +1011,7 @@
                 return _this.importTaxonomyTermData(1).then(function () {
                     return _this.managePaginatedRequests({
                         apiRequest: _this.importTaxonomyTermData,
-                        initialPages: [2],
+                        initialPages: [2, 3, 4, 5],
                         onApiRequestSuccess: function (result, page) {
                             _this.importedTaxonomyCount += result.imported_count;
                             _this.totalTaxonomyImports += result.total_imports;
