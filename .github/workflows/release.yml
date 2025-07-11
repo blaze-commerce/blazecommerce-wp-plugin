@@ -6,79 +6,251 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  validate-release:
     runs-on: ubuntu-latest
-    
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+      is-prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
-        
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Extract and validate version from tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "📦 Release version: $VERSION"
+
+        # Validate semantic version format
+        if ! node -e "
+          const { isValidSemver } = require('./scripts/semver-utils');
+          if (!isValidSemver('$VERSION')) {
+            console.error('❌ Invalid semantic version format: $VERSION');
+            process.exit(1);
+          }
+          console.log('✅ Valid semantic version format');
+        "; then
+          exit 1
+        fi
+
+        # Check if it's a prerelease
+        if echo "$VERSION" | grep -qE "\-"; then
+          echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+          echo "🚧 Pre-release version detected"
+        else
+          echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+          echo "🚀 Stable release version"
+        fi
+
+    - name: Validate version consistency
+      run: |
+        echo "🔍 Validating version consistency across files..."
+        node scripts/validate-version.js --verbose
+        if [ $? -ne 0 ]; then
+          echo "❌ Version validation failed"
+          exit 1
+        fi
+        echo "✅ Version validation passed"
+
+  build-and-release:
+    needs: validate-release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.1'
         extensions: mbstring, intl
         tools: composer
-        
+
     - name: Install dependencies
       run: |
+        echo "📦 Installing Node.js dependencies..."
         npm install
-        composer install --no-dev --optimize-autoloader
-        
+
+        echo "📦 Installing PHP dependencies..."
+        composer install --no-dev --optimize-autoloader --no-interaction
+
     - name: Build blocks
       run: |
+        echo "🔨 Building Gutenberg blocks..."
         cd blocks
         npm install
         npm run build
-        
-    - name: Extract version from tag
-      id: version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      
+
+        echo "✅ Blocks built successfully"
+        ls -la build/
+
+    - name: Validate build artifacts
+      run: |
+        echo "🔍 Validating build artifacts..."
+
+        # Check if blocks were built
+        if [ ! -d "blocks/build" ] || [ -z "$(ls -A blocks/build)" ]; then
+          echo "❌ Blocks build directory is missing or empty"
+          exit 1
+        fi
+
+        # Check main plugin file
+        if [ ! -f "blaze-wooless.php" ]; then
+          echo "❌ Main plugin file is missing"
+          exit 1
+        fi
+
+        # Validate PHP syntax
+        echo "🔍 Validating PHP syntax..."
+        find . -name "*.php" -not -path "./vendor/*" -not -path "./node_modules/*" -exec php -l {} \; > /dev/null
+        if [ $? -ne 0 ]; then
+          echo "❌ PHP syntax validation failed"
+          exit 1
+        fi
+
+        echo "✅ Build artifacts validated successfully"
+
     - name: Create plugin ZIP
       run: |
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        ZIP_NAME="blazecommerce-wp-plugin-$VERSION.zip"
+
+        echo "📦 Creating plugin ZIP: $ZIP_NAME"
+
         # Create a temporary directory for the plugin
-        mkdir -p /tmp/blazecommerce-wp-plugin
-        
+        TEMP_DIR="/tmp/blazecommerce-wp-plugin"
+        mkdir -p "$TEMP_DIR"
+
         # Copy plugin files (exclude development files)
-        rsync -av --exclude-from='.github/workflows/.zipignore' . /tmp/blazecommerce-wp-plugin/
-        
+        echo "📋 Copying plugin files..."
+        rsync -av --exclude-from='.github/workflows/.zipignore' . "$TEMP_DIR/"
+
+        # Verify essential files are included
+        echo "🔍 Verifying essential files in ZIP..."
+        ESSENTIAL_FILES=("blaze-wooless.php" "blocks/build")
+        for file in "${ESSENTIAL_FILES[@]}"; do
+          if [ ! -e "$TEMP_DIR/$file" ]; then
+            echo "❌ Essential file/directory missing from ZIP: $file"
+            exit 1
+          fi
+        done
+
         # Create the ZIP file
         cd /tmp
-        zip -r blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip blazecommerce-wp-plugin/
-        
+        zip -r "$ZIP_NAME" blazecommerce-wp-plugin/ -q
+
+        # Verify ZIP was created and has reasonable size
+        if [ ! -f "$ZIP_NAME" ]; then
+          echo "❌ ZIP file was not created"
+          exit 1
+        fi
+
+        ZIP_SIZE=$(stat -f%z "$ZIP_NAME" 2>/dev/null || stat -c%s "$ZIP_NAME")
+        if [ "$ZIP_SIZE" -lt 10000 ]; then
+          echo "❌ ZIP file seems too small ($ZIP_SIZE bytes)"
+          exit 1
+        fi
+
+        echo "✅ ZIP file created successfully ($ZIP_SIZE bytes)"
+
         # Move ZIP back to workspace
-        mv blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
-        
-    - name: Generate release notes
+        mv "$ZIP_NAME" "$GITHUB_WORKSPACE/"
+
+    - name: Generate enhanced release notes
       id: release_notes
       run: |
-        # Extract changelog for this version
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        echo "📝 Generating release notes for version $VERSION..."
+
+        # Initialize release notes
+        RELEASE_NOTES=""
+
+        # Extract changelog for this version if it exists
         if [ -f CHANGELOG.md ]; then
+          echo "📋 Extracting changelog for version $VERSION..."
+
           # Get content between this version and next version header
-          awk '/^## \[${{ steps.version.outputs.VERSION }}\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md > release_notes.txt
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
-          cat release_notes.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-        else
-          echo "RELEASE_NOTES=Release version ${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d' | head -50)
+
+          if [ -n "$CHANGELOG_CONTENT" ]; then
+            RELEASE_NOTES="## What's Changed
+
+$CHANGELOG_CONTENT
+
+---"
+          fi
         fi
-        
+
+        # Add installation instructions
+        RELEASE_NOTES="$RELEASE_NOTES
+
+## 📦 Installation
+
+1. Download the \`blazecommerce-wp-plugin-$VERSION.zip\` file below
+2. In your WordPress admin, go to **Plugins > Add New > Upload Plugin**
+3. Choose the downloaded ZIP file and click **Install Now**
+4. Activate the plugin after installation
+
+## 🔧 Requirements
+
+- WordPress 5.0 or higher
+- PHP 7.4 or higher
+- WooCommerce plugin
+
+## 📚 Documentation
+
+For setup and configuration instructions, visit our [documentation](https://github.com/blaze-commerce/blazecommerce-wp-plugin/tree/main/docs).
+
+## 🐛 Support
+
+If you encounter any issues, please [create an issue](https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues) on GitHub."
+
+        # Save release notes to output
+        echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+        echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        echo "✅ Release notes generated successfully"
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref_name }}
-        name: Release ${{ steps.version.outputs.VERSION }}
+        name: "🚀 Release ${{ needs.validate-release.outputs.version }}"
         body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
         files: |
-          blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip
+          blazecommerce-wp-plugin-${{ needs.validate-release.outputs.version }}.zip
         draft: false
-        prerelease: false
+        prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
+        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.BC_GITHUB_TOKEN }}
+
+    - name: Release summary
+      run: |
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
+
+        echo "🎉 Release completed successfully!"
+        echo "📦 Version: $VERSION"
+        echo "🚧 Pre-release: $IS_PRERELEASE"
+        echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
+        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
