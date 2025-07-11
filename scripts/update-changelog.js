@@ -8,6 +8,7 @@
 const fs = require('fs');
 const { execSync } = require('child_process');
 const { parseConventionalCommit, getCommitsSinceLastTag, getLatestTag } = require('./semver-utils');
+const config = require('./config');
 
 // Configuration
 const CONFIG = {
@@ -111,7 +112,13 @@ const ACTION_WORDS = {
  * @returns {string[]} Array of references
  */
 function extractReferences(message) {
-  const references = [];
+  if (!message || typeof message !== 'string') {
+    return [];
+  }
+
+  // Limit message length for security and performance
+  const safeMessage = message.substring(0, config.CHANGELOG.MAX_COMMIT_MESSAGE_LENGTH);
+  const references = new Set(); // Use Set to avoid duplicates efficiently
 
   // Match patterns like (#123), (PR #123), closes #123, fixes #123, resolves #123
   const patterns = [
@@ -123,15 +130,17 @@ function extractReferences(message) {
 
   for (const pattern of patterns) {
     let match;
-    while ((match = pattern.exec(message)) !== null) {
-      const ref = `#${match[1]}`;
-      if (!references.includes(ref)) {
-        references.push(ref);
+    let matchCount = 0;
+    while ((match = pattern.exec(safeMessage)) !== null && matchCount < config.CHANGELOG.MAX_REFERENCES_PER_COMMIT) {
+      const issueNumber = parseInt(match[1], 10);
+      if (issueNumber > 0 && issueNumber < 1000000) { // Reasonable issue number range
+        references.add(`#${issueNumber}`);
+        matchCount++;
       }
     }
   }
 
-  return references;
+  return Array.from(references);
 }
 
 /**
@@ -140,11 +149,27 @@ function extractReferences(message) {
  * @returns {string} Text with expanded abbreviations
  */
 function expandAbbreviations(text) {
+  if (!text || typeof text !== 'string') {
+    return text || '';
+  }
+
+  // Limit text length for performance
+  if (text.length > config.CHANGELOG.MAX_EXPANSION_LENGTH) {
+    text = text.substring(0, config.CHANGELOG.MAX_EXPANSION_LENGTH);
+  }
+
   let expandedText = text;
 
+  // Pre-compile regexes for better performance (cache them)
+  if (!expandAbbreviations._regexCache) {
+    expandAbbreviations._regexCache = new Map();
+    for (const abbrev of Object.keys(ABBREVIATIONS)) {
+      expandAbbreviations._regexCache.set(abbrev, new RegExp(`\\b${abbrev}\\b`, 'gi'));
+    }
+  }
+
   for (const [abbrev, expansion] of Object.entries(ABBREVIATIONS)) {
-    // Match whole words only, case insensitive
-    const regex = new RegExp(`\\b${abbrev}\\b`, 'gi');
+    const regex = expandAbbreviations._regexCache.get(abbrev);
     expandedText = expandedText.replace(regex, (match) => {
       // Preserve original case for first letter
       if (match === match.toUpperCase()) {
@@ -607,8 +632,8 @@ function updateChangelog(version = null) {
   console.log(`📦 Generating changelog for version ${version}`);
 
   try {
-    // Get commits since last tag
-    const commits = getCommitsSinceLastTag(100);
+    // Get commits since last tag with configurable limit
+    const commits = getCommitsSinceLastTag(config.CHANGELOG.MAX_CHANGELOG_COMMITS);
 
     if (commits.length === 0) {
       console.log('ℹ️  No new commits found since last tag');

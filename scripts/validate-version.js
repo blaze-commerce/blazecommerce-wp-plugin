@@ -7,7 +7,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { isValidSemver, parseVersion, compareVersions, tagExists, getCurrentVersion } = require('./semver-utils');
+const { isValidSemver, parseVersion, compareVersions, tagExists, getCurrentVersion, validateTagName } = require('./semver-utils');
+const config = require('./config');
 
 // Files that contain version information
 const VERSION_FILES = [
@@ -37,8 +38,17 @@ const VERSION_FILES = [
  * @returns {object} Version information
  */
 function extractVersionFromFile(fileConfig) {
+  if (!fileConfig || !fileConfig.path) {
+    return {
+      file: 'unknown',
+      exists: false,
+      versions: [],
+      errors: ['Invalid file configuration']
+    };
+  }
+
   const filePath = fileConfig.path;
-  
+
   if (!fs.existsSync(filePath)) {
     return {
       file: filePath,
@@ -48,7 +58,28 @@ function extractVersionFromFile(fileConfig) {
     };
   }
 
-  const content = fs.readFileSync(filePath, 'utf8');
+  let content;
+  try {
+    const stats = fs.statSync(filePath);
+    if (stats.size > config.FILES.MAX_FILE_SIZE) {
+      return {
+        file: filePath,
+        exists: true,
+        versions: [],
+        errors: [`File too large: ${filePath} (${stats.size} bytes, max ${config.FILES.MAX_FILE_SIZE})`]
+      };
+    }
+
+    content = fs.readFileSync(filePath, config.FILES.DEFAULT_ENCODING);
+  } catch (error) {
+    return {
+      file: filePath,
+      exists: true,
+      versions: [],
+      errors: [`Cannot read file: ${filePath} - ${error.message}`]
+    };
+  }
+
   const result = {
     file: filePath,
     exists: true,
@@ -190,6 +221,15 @@ function validateVersion(version) {
  * @returns {object} Conflict check result
  */
 function checkVersionConflicts(version) {
+  if (!version || typeof version !== 'string') {
+    return {
+      version: version,
+      hasConflicts: true,
+      conflicts: ['Invalid version provided'],
+      suggestions: []
+    };
+  }
+
   const result = {
     version: version,
     hasConflicts: false,
@@ -197,11 +237,26 @@ function checkVersionConflicts(version) {
     suggestions: []
   };
 
-  // Check if tag already exists
-  const tagName = `v${version}`;
-  if (tagExists(tagName)) {
+  try {
+    // Validate version format first
+    if (!isValidSemver(version)) {
+      result.hasConflicts = true;
+      result.conflicts.push(`Invalid semantic version format: ${version}`);
+      return result;
+    }
+
+    // Check if tag already exists
+    const tagName = `v${version}`;
+    validateTagName(tagName); // Validate tag name for security
+
+    if (tagExists(tagName)) {
+      result.hasConflicts = true;
+      result.conflicts.push(`Git tag ${tagName} already exists`);
+    }
+  } catch (error) {
     result.hasConflicts = true;
-    result.conflicts.push(`Git tag ${tagName} already exists`);
+    result.conflicts.push(`Error checking git tags: ${error.message}`);
+    return result;
   }
 
   // Compare with current version
