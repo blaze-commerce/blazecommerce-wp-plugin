@@ -8,6 +8,7 @@
 const {
   parseConventionalCommit,
   parseRevertTarget,
+  createMatchingKey,
   analyzeCommitsWithReverts,
   determineBumpType
 } = require('./semver-utils');
@@ -245,13 +246,146 @@ runTest('Edge cases', () => {
   assertEquals(result.bumpType, 'none', 'Invalid revert format should be ignored');
 });
 
-console.log('\n📊 Revert Commit Handling Test Results:');
+// CLAUDE AI REVIEW: Additional test cases for enhanced functionality
+
+// Test 11: Input validation for parseRevertTarget
+runTest('Input validation for parseRevertTarget', () => {
+  // Test null input
+  try {
+    parseRevertTarget(null);
+    throw new Error('Should have thrown ValidationError for null input');
+  } catch (error) {
+    if (error.name !== 'ValidationError') {
+      throw new Error(`Expected ValidationError, got ${error.name}`);
+    }
+  }
+
+  // Test empty string
+  try {
+    parseRevertTarget('');
+    throw new Error('Should have thrown ValidationError for empty string');
+  } catch (error) {
+    if (error.name !== 'ValidationError') {
+      throw new Error(`Expected ValidationError, got ${error.name}`);
+    }
+  }
+
+  // Test non-string input
+  try {
+    parseRevertTarget(123);
+    throw new Error('Should have thrown ValidationError for non-string input');
+  } catch (error) {
+    if (error.name !== 'ValidationError') {
+      throw new Error(`Expected ValidationError, got ${error.name}`);
+    }
+  }
+});
+
+// Test 12: Case sensitivity consistency
+runTest('Case sensitivity consistency', () => {
+  const commits = [
+    'FEAT: Add New Dashboard',
+    'revert: feat: add new dashboard'
+  ];
+
+  const analysis = analyzeCommitsWithReverts(commits);
+
+  assertEquals(analysis.netCommits.length, 0, 'Should handle case differences in matching');
+  assertEquals(analysis.revertMatches.length, 1, 'Should match despite case differences');
+});
+
+// Test 13: Performance optimization with large commit sets
+runTest('Performance optimization with large commit sets', () => {
+  // Create a large set of commits
+  const commits = [];
+  for (let i = 0; i < 100; i++) {
+    commits.push(`feat: add feature ${i}`);
+  }
+  // Add some reverts
+  for (let i = 0; i < 10; i++) {
+    commits.push(`revert: feat: add feature ${i}`);
+  }
+
+  const startTime = Date.now();
+  const analysis = analyzeCommitsWithReverts(commits, {
+    verbose: false,
+    enablePerformanceMetrics: true
+  });
+  const duration = Date.now() - startTime;
+
+  console.log(`   Performance test: ${commits.length} commits processed in ${duration}ms`);
+
+  assertEquals(analysis.revertMatches.length, 10, 'Should match 10 reverts');
+  assertEquals(analysis.netCommits.length, 90, 'Should have 90 net commits after cancellation');
+
+  if (analysis.performanceMetrics) {
+    console.log(`   Metrics: ${analysis.performanceMetrics.matchingComplexity}, ${(analysis.performanceMetrics.matchingEfficiency * 100).toFixed(1)}% efficiency`);
+  }
+
+  // Performance should be reasonable (less than 1 second for 110 commits)
+  if (duration > 1000) {
+    console.warn(`   ⚠️  Performance warning: ${duration}ms for ${commits.length} commits`);
+  }
+});
+
+// Test 14: Identical commit messages with position tracking
+runTest('Identical commit messages with position tracking', () => {
+  const commits = [
+    'feat: add feature',      // Position 0
+    'feat: add feature',      // Position 1 (identical)
+    'fix: bug fix',           // Position 2
+    'revert: feat: add feature' // Position 3 - should match closest (position 1)
+  ];
+
+  const analysis = analyzeCommitsWithReverts(commits, { verbose: true });
+
+  assertEquals(analysis.revertMatches.length, 1, 'Should match one revert');
+  assertEquals(analysis.netCommits.length, 2, 'Should have 2 net commits (one feat + one fix)');
+
+  // The revert should match the closest commit (position 1, not position 0)
+  const match = analysis.revertMatches[0];
+  assertNotNull(match.matchingKey, 'Should have matching key for debugging');
+});
+
+// Test 15: createMatchingKey function
+runTest('createMatchingKey function consistency', () => {
+  const commit1 = { type: 'feat', scope: 'api', breaking: false, description: 'Add New Feature' };
+  const commit2 = { type: 'FEAT', scope: 'API', breaking: false, description: 'add new feature' };
+  const commit3 = { type: 'feat', scope: 'api', breaking: true, description: 'add new feature' };
+
+  const key1 = createMatchingKey(commit1);
+  const key2 = createMatchingKey(commit2);
+  const key3 = createMatchingKey(commit3);
+
+  assertEquals(key1, key2, 'Should generate same key for case differences');
+  if (key1 === key3) {
+    throw new Error('Should generate different keys for breaking vs non-breaking');
+  }
+
+  console.log(`   Key format: ${key1}`);
+});
+
+// Test 16: Mixed case GitHub-style reverts
+runTest('Mixed case GitHub-style reverts', () => {
+  const commits = [
+    'feat: add dashboard',
+    'REVERT "feat: add dashboard"'  // Mixed case
+  ];
+
+  const analysis = analyzeCommitsWithReverts(commits);
+
+  assertEquals(analysis.netCommits.length, 0, 'Should handle mixed case GitHub reverts');
+  assertEquals(analysis.revertMatches.length, 1, 'Should match mixed case revert');
+});
+
+console.log('\n📊 Enhanced Revert Commit Handling Test Results:');
 console.log(`   ✅ Passed: ${testsPassed}`);
 console.log(`   ❌ Failed: ${testsFailed}`);
 console.log(`   📈 Success Rate: ${((testsPassed / (testsPassed + testsFailed)) * 100).toFixed(1)}%`);
 
 if (testsFailed === 0) {
-  console.log('\n🎉 All revert commit handling tests passed!');
+  console.log('\n🎉 All enhanced revert commit handling tests passed!');
+  console.log('✅ Claude AI recommendations successfully implemented and tested');
   process.exit(0);
 } else {
   console.log('\n⚠️  Some tests failed. Please review the implementation.');

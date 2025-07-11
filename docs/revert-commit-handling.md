@@ -107,6 +107,24 @@ const result = determineBumpType(commits, {
 });
 ```
 
+### Performance Optimization (Claude AI Enhancement)
+
+For large commit sets, enable performance metrics and optimizations:
+
+```javascript
+const result = analyzeCommitsWithReverts(commits, {
+  enablePerformanceMetrics: true,  // Track performance data
+  verbose: true
+});
+
+// Access performance data
+if (result.performanceMetrics) {
+  console.log(`Processing time: ${result.performanceMetrics.processingTime}ms`);
+  console.log(`Matching complexity: ${result.performanceMetrics.matchingComplexity}`);
+  console.log(`Efficiency: ${(result.performanceMetrics.matchingEfficiency * 100).toFixed(1)}%`);
+}
+```
+
 ### Backward Compatibility
 
 When revert handling is disabled, the system behaves as before:
@@ -144,16 +162,40 @@ const analysis = analyzeCommitsWithReverts([
 // Returns: { netCommits: [], revertMatches: [{ ... }] }
 ```
 
-### Matching Logic
+### Enhanced Matching Logic (Claude AI Improvements)
 
-Reverts are matched with original commits based on:
+Reverts are matched with original commits using sophisticated logic:
 
-1. **Commit type** (feat, fix, etc.)
-2. **Scope** (if present)
-3. **Breaking change flag**
-4. **Description text**
+#### **Primary Matching Criteria**
+1. **Commit type** (feat, fix, etc.) - case-insensitive
+2. **Scope** (if present) - case-insensitive
+3. **Breaking change flag** (exact match)
+4. **Description text** - case-insensitive, trimmed
 
-All criteria must match exactly for successful cancellation.
+#### **Advanced Features**
+- **Case Normalization**: All text comparisons are case-insensitive for better matching
+- **Position Tracking**: When multiple identical commits exist, prefers closest revert
+- **Performance Optimization**: Uses Map-based lookups for O(n) complexity instead of O(n²)
+- **Input Validation**: Comprehensive validation prevents invalid inputs
+
+#### **Matching Algorithm**
+```javascript
+// Creates normalized matching key
+function createMatchingKey(parsed) {
+  const type = (parsed.type || '').toLowerCase();
+  const scope = (parsed.scope || '').toLowerCase();
+  const description = (parsed.description || '').trim().toLowerCase();
+  const breaking = parsed.breaking ? '!' : '';
+
+  return `${type}:${scope}:${breaking}:${description}`;
+}
+```
+
+#### **Conflict Resolution**
+When multiple reverts could match the same commit:
+1. **Exact match preferred**: Perfect type, scope, and description match
+2. **Closest position**: Prefers revert closest to original commit
+3. **First-come basis**: If positions are equal, first revert wins
 
 ### Edge Cases Handled
 
@@ -205,6 +247,43 @@ revert: feat: feature B          # ✅ Both features cancelled
 - Optional feature that can be disabled if needed
 - No breaking changes to existing APIs
 
+## Performance Considerations (Claude AI Enhancements)
+
+### Optimized Matching Algorithm
+
+The system uses intelligent performance optimizations:
+
+#### **Small Commit Sets (< 50 commits)**
+- Uses simple O(n²) matching for clarity and simplicity
+- Minimal overhead, excellent performance
+
+#### **Large Commit Sets (≥ 50 commits)**
+- Automatically switches to O(n) Map-based matching
+- Significant performance improvement for large PRs
+- Maintains same accuracy with better efficiency
+
+#### **Performance Metrics**
+```javascript
+const analysis = analyzeCommitsWithReverts(commits, {
+  enablePerformanceMetrics: true
+});
+
+console.log(analysis.performanceMetrics);
+// Output:
+// {
+//   totalCommits: 150,
+//   processingTime: 45,
+//   matchingComplexity: 'O(n) optimized',
+//   cacheHits: 12,
+//   matchingEfficiency: 0.85
+// }
+```
+
+#### **Memory Usage**
+- Efficient Map-based storage for large commit sets
+- Automatic cleanup after processing
+- Position tracking adds minimal overhead
+
 ## Testing
 
 The revert handling system includes comprehensive tests covering:
@@ -217,6 +296,9 @@ The revert handling system includes comprehensive tests covering:
 - ✅ GitHub-style revert format support
 - ✅ Complex scenarios with scopes and breaking changes
 - ✅ Edge cases and error conditions
+- ✅ **Claude AI Enhancements**: Input validation, case sensitivity, performance optimization
+- ✅ **Claude AI Enhancements**: Position tracking, identical commit handling
+- ✅ **Claude AI Enhancements**: Large commit set performance testing
 
 Run tests with:
 ```bash
@@ -262,19 +344,67 @@ const result = determineBumpType(commits, {
 **Problem**: GitHub-generated revert commits not working
 **Solution**: Verify the commit message format matches `Revert "original commit"`
 
-### Debug Mode
+### Debug Mode (Enhanced)
 
-Enable verbose logging to troubleshoot:
+Enable verbose logging and performance metrics to troubleshoot:
 
 ```javascript
-const result = determineBumpType(commits, { 
+const result = determineBumpType(commits, {
   enableRevertHandling: true,
-  verbose: true 
+  verbose: true
+});
+
+// For detailed analysis with performance data
+const analysis = analyzeCommitsWithReverts(commits, {
+  verbose: true,
+  enablePerformanceMetrics: true
 });
 ```
 
 This will show detailed revert analysis including:
 - Revert commit detection
 - Target parsing results
-- Matching process
+- Matching process with position tracking
+- Performance metrics and optimization details
 - Final net commits calculation
+
+### Claude AI Enhancement Debugging
+
+#### **Case Sensitivity Issues**
+```javascript
+// Check matching keys for debugging
+const { createMatchingKey } = require('./scripts/semver-utils');
+
+const commit1 = { type: 'FEAT', scope: 'API', description: 'Add Feature' };
+const commit2 = { type: 'feat', scope: 'api', description: 'add feature' };
+
+console.log(createMatchingKey(commit1)); // feat:api::add feature
+console.log(createMatchingKey(commit2)); // feat:api::add feature (same)
+```
+
+#### **Performance Analysis**
+```javascript
+// Monitor performance for large commit sets
+const startTime = Date.now();
+const analysis = analyzeCommitsWithReverts(largeCommitSet, {
+  enablePerformanceMetrics: true
+});
+const duration = Date.now() - startTime;
+
+console.log(`Total time: ${duration}ms`);
+console.log(`Algorithm: ${analysis.performanceMetrics.matchingComplexity}`);
+console.log(`Efficiency: ${analysis.performanceMetrics.matchingEfficiency}`);
+```
+
+#### **Position Tracking Verification**
+```javascript
+// Verify position-based matching for identical commits
+const commits = [
+  'feat: same feature',    // Position 0
+  'feat: same feature',    // Position 1
+  'revert: feat: same feature' // Should match position 1 (closest)
+];
+
+const analysis = analyzeCommitsWithReverts(commits, { verbose: true });
+console.log('Revert matches:', analysis.revertMatches);
+```
