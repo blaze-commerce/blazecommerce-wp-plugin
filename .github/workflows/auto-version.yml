@@ -7,50 +7,6 @@ on:
       - develop
       - 'feature/**'
       - 'release/**'
-    paths-ignore:
-      # Files managed by the version bump process itself
-      - 'CHANGELOG.md'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'blaze-wooless.php'
-      - 'blocks/package.json'
-
-      # CI/CD and development tooling (no user impact)
-      - '.github/**'
-      - 'scripts/**'
-      - 'tests/**'
-      - 'test/**'
-      - 'bin/**'
-
-      # Internal documentation (no user impact)
-      - 'docs/**'
-      - 'CONTRIBUTING.md'
-      - 'TODO'
-      - 'IMPLEMENTATION_SUMMARY.md'
-      - 'VERSION_BUMP_BEHAVIOR_EXPLANATION.md'
-      - 'CHANGELOG_VERSION_FIX.md'
-
-      # Development configuration files
-      - 'phpunit.xml'
-      - 'jest.config.js'
-      - 'github-workflows-tests.yml'
-      - 'test.html'
-
-      # Auto-generated files
-      - 'composer.lock'
-      - 'vendor/**'
-      - 'blocks/yarn.lock'
-      - 'blocks/package-lock.json'
-
-      # Git and editor files
-      - '.gitignore'
-      - '.editorconfig'
-      - '**/.DS_Store'
-
-      # AI assistant and editor configuration
-      - '.augment/**'
-      - '.claude/**'
-      - '.vscode/**'
 
 jobs:
   version-bump:
@@ -67,21 +23,131 @@ jobs:
         token: ${{ secrets.AUTOMATION_TOKEN || secrets.BC_GITHUB_TOKEN }}
         fetch-depth: 0
 
+    - name: Check if version bump is needed
+      id: check_files
+      run: |
+        echo "🔍 Checking if version bump is needed based on changed files..."
+
+        # Get list of changed files in this push
+        if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+          # First push to branch - check all files in the commit
+          CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null || git ls-files)
+        else
+          # Regular push - check files changed since previous commit
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..${{ github.event.after }})
+        fi
+
+        echo "📁 Changed files:"
+        echo "$CHANGED_FILES"
+        echo ""
+
+        # Define ignore patterns (same as the previous paths-ignore)
+        IGNORE_PATTERNS=(
+          # Files managed by the version bump process itself
+          "CHANGELOG.md"
+          "package.json"
+          "package-lock.json"
+          "blaze-wooless.php"
+          "blocks/package.json"
+
+          # CI/CD and development tooling (no user impact)
+          ".github/"
+          "scripts/"
+          "tests/"
+          "test/"
+          "bin/"
+
+          # Internal documentation (no user impact)
+          "docs/"
+          "CONTRIBUTING.md"
+          "TODO"
+          "IMPLEMENTATION_SUMMARY.md"
+          "VERSION_BUMP_BEHAVIOR_EXPLANATION.md"
+          "CHANGELOG_VERSION_FIX.md"
+
+          # Development configuration files
+          "phpunit.xml"
+          "jest.config.js"
+          "github-workflows-tests.yml"
+          "test.html"
+
+          # Auto-generated files
+          "composer.lock"
+          "vendor/"
+          "blocks/yarn.lock"
+          "blocks/package-lock.json"
+
+          # Git and editor files
+          ".gitignore"
+          ".editorconfig"
+          ".DS_Store"
+
+          # AI assistant and editor configuration
+          ".augment/"
+          ".claude/"
+          ".vscode/"
+        )
+
+        # Check if any changed file should trigger version bump
+        SHOULD_BUMP="false"
+
+        while IFS= read -r file; do
+          [ -z "$file" ] && continue
+
+          FILE_SHOULD_BE_IGNORED="false"
+
+          # Check against each ignore pattern
+          for pattern in "${IGNORE_PATTERNS[@]}"; do
+            # Handle directory patterns (ending with /)
+            if [[ "$pattern" == */ ]]; then
+              if [[ "$file" == "$pattern"* ]]; then
+                FILE_SHOULD_BE_IGNORED="true"
+                break
+              fi
+            # Handle exact file matches and wildcard patterns
+            elif [[ "$file" == "$pattern" ]] || [[ "$file" == *"$pattern" ]]; then
+              FILE_SHOULD_BE_IGNORED="true"
+              break
+            fi
+          done
+
+          # If this file should NOT be ignored, we need to bump version
+          if [ "$FILE_SHOULD_BE_IGNORED" = "false" ]; then
+            echo "✅ File '$file' requires version bump"
+            SHOULD_BUMP="true"
+          else
+            echo "⏭️  File '$file' is ignored for version bumping"
+          fi
+        done <<< "$CHANGED_FILES"
+
+        echo ""
+        if [ "$SHOULD_BUMP" = "true" ]; then
+          echo "🚀 Version bump needed - non-ignored files were changed"
+        else
+          echo "⏭️  Version bump skipped - only ignored files were changed"
+        fi
+
+        echo "should_bump_version=$SHOULD_BUMP" >> $GITHUB_OUTPUT
+
     - name: Setup Node.js
+      if: steps.check_files.outputs.should_bump_version == 'true'
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
 
     - name: Install dependencies
+      if: steps.check_files.outputs.should_bump_version == 'true'
       run: npm install
 
     - name: Configure Git
+      if: steps.check_files.outputs.should_bump_version == 'true'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
 
     - name: Run version system tests
+      if: steps.check_files.outputs.should_bump_version == 'true'
       run: |
         echo "🧪 Running version system tests..."
 
@@ -117,6 +183,7 @@ jobs:
         fi
 
     - name: Validate current version system
+      if: steps.check_files.outputs.should_bump_version == 'true'
       run: |
         echo "🔍 Validating current version system..."
         # Skip conflict checking since we handle version conflicts in the workflow
@@ -127,6 +194,7 @@ jobs:
         fi
 
     - name: Determine prerelease type based on branch
+      if: steps.check_files.outputs.should_bump_version == 'true'
       id: prerelease_type
       run: |
         echo "🌿 Determining prerelease type based on branch..."
@@ -152,6 +220,7 @@ jobs:
         fi
 
     - name: Determine version bump type
+      if: steps.check_files.outputs.should_bump_version == 'true'
       id: bump_type
       run: |
         echo "🔍 Analyzing commits for version bump type..."
@@ -227,7 +296,7 @@ jobs:
         fi
 
     - name: Preview version bump
-      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         CURRENT_VERSION=$(node -p "require('./package.json').version")
         echo "📦 Current version: $CURRENT_VERSION"
@@ -335,7 +404,7 @@ jobs:
         echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
     - name: Bump version
-      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         echo "🔄 Bumping version using npm scripts..."
         npm run version:${{ steps.bump_type.outputs.BUMP_TYPE }}
@@ -345,14 +414,14 @@ jobs:
         echo "📦 Updated version: $UPDATED_VERSION"
 
     - name: Update changelog
-      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         echo "📝 Updating changelog..."
         npm run changelog
         echo "✅ Changelog updated"
 
     - name: Validate post-bump version system
-      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         echo "🔍 Validating version system after bump..."
         FINAL_VERSION=$(node -p "require('./package.json').version")
@@ -379,7 +448,7 @@ jobs:
         echo "📦 All version files are consistent at version: $FINAL_VERSION"
 
     - name: Commit version bump
-      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         VERSION=$(node -p "require('./package.json').version")
         echo "📝 Committing version bump to $VERSION..."
@@ -396,3 +465,31 @@ jobs:
         git push
 
         echo "✅ Version bump completed and pushed successfully!"
+
+    - name: Workflow Summary
+      if: always()
+      run: |
+        echo "📋 Auto Version Bump Workflow Summary"
+        echo "======================================"
+
+        if [ "${{ steps.check_files.outputs.should_bump_version }}" = "true" ]; then
+          echo "✅ Version bump was processed"
+          echo "🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE || 'none' }}"
+          if [ "${{ steps.bump_type.outputs.BUMP_TYPE }}" != "none" ] && [ -n "${{ steps.bump_type.outputs.BUMP_TYPE }}" ]; then
+            FINAL_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+            echo "📦 New version: $FINAL_VERSION"
+            echo "🎉 Version bump completed successfully!"
+          else
+            echo "ℹ️  No version bump was needed (no conventional commits found)"
+          fi
+        else
+          echo "⏭️  Version bump was skipped"
+          echo "📁 Reason: Only ignored files were changed"
+          echo "ℹ️  This is normal behavior - no version bump needed for:"
+          echo "   • Documentation changes"
+          echo "   • CI/CD configuration updates"
+          echo "   • Development tooling changes"
+          echo "   • Auto-generated files"
+          echo ""
+          echo "✅ Workflow completed successfully (no action required)"
+        fi
