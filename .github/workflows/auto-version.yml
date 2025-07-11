@@ -7,11 +7,14 @@ on:
       - 'CHANGELOG.md'
       - 'package.json'
       - 'blaze-wooless.php'
+      - 'blocks/package.json'
+      - 'docs/**'
+      - '*.md'
 
 jobs:
   version-bump:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore(release)')"
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore(release)') && !contains(github.event.head_commit.message, '[no version]')"
     permissions:
       contents: write
       pull-requests: read
@@ -37,50 +40,165 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
 
+    - name: Validate current version system
+      run: |
+        echo "🔍 Validating current version system..."
+        node scripts/validate-version.js --verbose
+        if [ $? -ne 0 ]; then
+          echo "❌ Version validation failed. Aborting version bump."
+          exit 1
+        fi
+
     - name: Determine version bump type
       id: bump_type
       run: |
-        # Get all non-merge commits since last version tag or last 20 commits if no tags
+        echo "🔍 Analyzing commits for version bump type..."
+
+        # Get all non-merge commits since last version tag or last 50 commits if no tags
         LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
         if [ -n "$LAST_TAG" ]; then
+          echo "📋 Analyzing commits since tag: $LAST_TAG"
           COMMITS=$(git log --oneline --no-merges --format="%s" ${LAST_TAG}..HEAD)
         else
-          COMMITS=$(git log --oneline --no-merges --format="%s" -20)
+          echo "📋 No previous tags found, analyzing last 50 commits"
+          COMMITS=$(git log --oneline --no-merges --format="%s" -50)
         fi
 
-        echo "Analyzing commits:"
-        echo "$COMMITS"
+        if [ -z "$COMMITS" ]; then
+          echo "ℹ️  No commits found to analyze"
+          echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+          exit 0
+        fi
 
-        # Check for breaking changes (major version)
-        if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
+        echo "📊 Commits to analyze:"
+        echo "$COMMITS" | head -10
+        if [ $(echo "$COMMITS" | wc -l) -gt 10 ]; then
+          echo "... and $(( $(echo "$COMMITS" | wc -l) - 10 )) more"
+        fi
+        echo ""
+
+        # Enhanced conventional commit detection
+        HAS_BREAKING=false
+        HAS_FEATURE=false
+        HAS_FIX=false
+        HAS_PERF=false
+
+        while IFS= read -r commit; do
+          # Skip empty lines
+          [ -z "$commit" ] && continue
+
+          # Check for breaking changes (multiple patterns)
+          if echo "$commit" | grep -qE "^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\(.+\))?!:" || \
+             echo "$commit" | grep -qE "BREAKING CHANGE" || \
+             echo "$commit" | grep -qE "^(feat|fix)!(\(.+\))?:"; then
+            HAS_BREAKING=true
+            echo "💥 Breaking change detected: $commit"
+          # Check for features
+          elif echo "$commit" | grep -qE "^feat(\(.+\))?:"; then
+            HAS_FEATURE=true
+            echo "✨ Feature detected: $commit"
+          # Check for fixes and performance improvements
+          elif echo "$commit" | grep -qE "^(fix|perf)(\(.+\))?:"; then
+            if echo "$commit" | grep -qE "^fix(\(.+\))?:"; then
+              HAS_FIX=true
+              echo "🐛 Fix detected: $commit"
+            else
+              HAS_PERF=true
+              echo "⚡ Performance improvement detected: $commit"
+            fi
+          fi
+        done <<< "$COMMITS"
+
+        # Determine bump type based on priority
+        if [ "$HAS_BREAKING" = true ]; then
           echo "BUMP_TYPE=major" >> $GITHUB_OUTPUT
-          echo "Found breaking changes - major version bump"
-        # Check for features (minor version)
-        elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+          echo "🚀 Result: MAJOR version bump (breaking changes detected)"
+        elif [ "$HAS_FEATURE" = true ]; then
           echo "BUMP_TYPE=minor" >> $GITHUB_OUTPUT
-          echo "Found features - minor version bump"
-        # Check for fixes (patch version)
-        elif echo "$COMMITS" | grep -qE "^fix(\(.+\))?:|^perf(\(.+\))?:"; then
+          echo "🚀 Result: MINOR version bump (new features detected)"
+        elif [ "$HAS_FIX" = true ] || [ "$HAS_PERF" = true ]; then
           echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
-          echo "Found fixes - patch version bump"
+          echo "🚀 Result: PATCH version bump (fixes/improvements detected)"
         else
           echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
-          echo "No conventional commits found - no version bump"
+          echo "ℹ️  Result: No version bump (no conventional commits found)"
         fi
+
+    - name: Preview version bump
+      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      run: |
+        CURRENT_VERSION=$(node -p "require('./package.json').version")
+        echo "📦 Current version: $CURRENT_VERSION"
+        echo "🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
+
+        # Calculate new version
+        case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
+          "major")
+            NEW_VERSION=$(node -e "
+              const semver = require('./scripts/semver-utils');
+              console.log(semver.incrementVersion('$CURRENT_VERSION', 'major'));
+            ")
+            ;;
+          "minor")
+            NEW_VERSION=$(node -e "
+              const semver = require('./scripts/semver-utils');
+              console.log(semver.incrementVersion('$CURRENT_VERSION', 'minor'));
+            ")
+            ;;
+          "patch")
+            NEW_VERSION=$(node -e "
+              const semver = require('./scripts/semver-utils');
+              console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch'));
+            ")
+            ;;
+        esac
+
+        echo "📦 New version will be: $NEW_VERSION"
+        echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
     - name: Bump version
       if: steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
+        echo "🔄 Bumping version using npm scripts..."
         npm run version:${{ steps.bump_type.outputs.BUMP_TYPE }}
+
+        echo "✅ Version bump completed"
+        UPDATED_VERSION=$(node -p "require('./package.json').version")
+        echo "📦 Updated version: $UPDATED_VERSION"
 
     - name: Update changelog
       if: steps.bump_type.outputs.BUMP_TYPE != 'none'
-      run: npm run changelog
+      run: |
+        echo "📝 Updating changelog..."
+        npm run changelog
+        echo "✅ Changelog updated"
+
+    - name: Validate post-bump version system
+      if: steps.bump_type.outputs.BUMP_TYPE != 'none'
+      run: |
+        echo "🔍 Validating version system after bump..."
+        node scripts/validate-version.js
+        if [ $? -ne 0 ]; then
+          echo "❌ Post-bump validation failed. This indicates an issue with the version update process."
+          exit 1
+        fi
+        echo "✅ Post-bump validation passed"
 
     - name: Commit version bump
       if: steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         VERSION=$(node -p "require('./package.json').version")
+        echo "📝 Committing version bump to $VERSION..."
+
         git add .
-        git commit -m "chore(release): bump version to $VERSION [skip ci]"
+        git commit -m "chore(release): bump version to $VERSION [skip ci]
+
+        🤖 Automated version bump
+        📦 Version: $VERSION
+        🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}
+        📝 Updated files: package.json, blaze-wooless.php, blocks/package.json, CHANGELOG.md"
+
+        echo "🚀 Pushing changes..."
         git push
+
+        echo "✅ Version bump completed and pushed successfully!"
