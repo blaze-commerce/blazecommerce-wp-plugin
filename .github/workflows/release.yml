@@ -191,11 +191,14 @@ jobs:
           CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d' | head -50)
 
           if [ -n "$CHANGELOG_CONTENT" ]; then
-            RELEASE_NOTES="## What's Changed
+            RELEASE_NOTES=$(cat << EOF
+## What's Changed
 
 $CHANGELOG_CONTENT
 
----"
+---
+EOF
+)
           fi
         fi
 
