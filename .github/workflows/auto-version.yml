@@ -4,12 +4,49 @@ on:
   push:
     branches: [ main ]
     paths-ignore:
+      # Files managed by the version bump process itself
       - 'CHANGELOG.md'
       - 'package.json'
+      - 'package-lock.json'
       - 'blaze-wooless.php'
       - 'blocks/package.json'
+
+      # CI/CD and development tooling (no user impact)
+      - '.github/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'test/**'
+      - 'bin/**'
+
+      # Internal documentation (no user impact)
       - 'docs/**'
-      - '*.md'
+      - 'CONTRIBUTING.md'
+      - 'TODO'
+      - 'IMPLEMENTATION_SUMMARY.md'
+      - 'VERSION_BUMP_BEHAVIOR_EXPLANATION.md'
+      - 'CHANGELOG_VERSION_FIX.md'
+
+      # Development configuration files
+      - 'phpunit.xml'
+      - 'jest.config.js'
+      - 'github-workflows-tests.yml'
+      - 'test.html'
+
+      # Auto-generated files
+      - 'composer.lock'
+      - 'vendor/**'
+      - 'blocks/yarn.lock'
+      - 'blocks/package-lock.json'
+
+      # Git and editor files
+      - '.gitignore'
+      - '.editorconfig'
+      - '**/.DS_Store'
+
+      # AI assistant and editor configuration
+      - '.augment/**'
+      - '.claude/**'
+      - '.vscode/**'
 
 jobs:
   version-bump:
@@ -204,7 +241,50 @@ jobs:
           fi
         fi
 
-        echo "📦 New version will be: $NEW_VERSION"
+        # Enhanced auto-increment logic: Check for git tag conflicts and auto-resolve
+        echo "🔍 Checking for git tag conflicts..."
+        ORIGINAL_NEW_VERSION="$NEW_VERSION"
+
+        # Check if the calculated version's git tag already exists
+        TAG_NAME="v$NEW_VERSION"
+        if git rev-parse --verify "$TAG_NAME" >/dev/null 2>&1; then
+          echo "⚠️  Git tag conflict detected:"
+          echo "   Calculated version: $NEW_VERSION"
+          echo "   Git tag $TAG_NAME already exists"
+          echo "🔄 Auto-resolving by finding next available version..."
+
+          # Use semver-utils to find next available version
+          RESOLVED_VERSION=$(node -e "
+            try {
+              const semver = require('./scripts/semver-utils');
+              const nextVersion = semver.findNextAvailableVersion('$NEW_VERSION', 'patch', { verbose: true });
+              console.log(nextVersion);
+            } catch (error) {
+              console.error('Error finding next available version:', error.message);
+              process.exit(1);
+            }
+          ")
+
+          # Validate the resolved version was generated successfully
+          if [ $? -eq 0 ] && [ -n "$RESOLVED_VERSION" ]; then
+            echo "✅ Git tag conflict resolved:"
+            echo "   Original calculated version: $ORIGINAL_NEW_VERSION"
+            echo "   Final resolved version: $RESOLVED_VERSION"
+            echo "   Resolution: Auto-incremented patch version to avoid tag conflict"
+            NEW_VERSION="$RESOLVED_VERSION"
+
+            # Update bump type to patch since we're doing patch increments for resolution
+            echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Error: Failed to resolve git tag conflict"
+            echo "   Could not find next available version after $NEW_VERSION"
+            exit 1
+          fi
+        else
+          echo "✅ No git tag conflicts detected for $TAG_NAME"
+        fi
+
+        echo "📦 Final version will be: $NEW_VERSION"
         echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
     - name: Bump version
@@ -228,12 +308,28 @@ jobs:
       if: steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         echo "🔍 Validating version system after bump..."
-        node scripts/validate-version.js
+        FINAL_VERSION=$(node -p "require('./package.json').version")
+        echo "📦 Validating final version: $FINAL_VERSION"
+
+        # Use --no-conflicts flag since we've already resolved conflicts in the bump process
+        node scripts/validate-version.js --verbose --no-conflicts
         if [ $? -ne 0 ]; then
           echo "❌ Post-bump validation failed. This indicates an issue with the version update process."
+          echo "   Final version: $FINAL_VERSION"
+          echo "   This suggests a problem with file consistency or version format."
           exit 1
         fi
-        echo "✅ Post-bump validation passed"
+
+        # Additional verification: Ensure git tag was created successfully
+        TAG_NAME="v$FINAL_VERSION"
+        if git rev-parse --verify "$TAG_NAME" >/dev/null 2>&1; then
+          echo "✅ Git tag $TAG_NAME exists and is valid"
+        else
+          echo "⚠️  Git tag $TAG_NAME was not found (this is expected - tag will be created during commit)"
+        fi
+
+        echo "✅ Post-bump validation passed successfully"
+        echo "📦 All version files are consistent at version: $FINAL_VERSION"
 
     - name: Commit version bump
       if: steps.bump_type.outputs.BUMP_TYPE != 'none'

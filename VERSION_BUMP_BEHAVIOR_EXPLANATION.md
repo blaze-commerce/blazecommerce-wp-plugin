@@ -161,11 +161,42 @@ function determineBumpType(commits, options) {
 
 5. **Semantic Versioning Compliance**: Follows semver rules strictly (MAJOR.MINOR.PATCH)
 
+## Auto-Increment Conflict Resolution
+
+**NEW FEATURE**: The workflow now automatically resolves version conflicts by finding the next available version.
+
+### How Auto-Resolution Works
+
+If the calculated version's git tag already exists:
+
+```bash
+# Example:
+Calculated: 1.9.1 (based on fix: commits)
+Git tag v1.9.1 already exists ❌
+
+Auto-resolution:
+- Try v1.9.2 → exists ❌
+- Try v1.9.3 → exists ❌
+- Try v1.9.4 → available ✅
+
+Final version: 1.9.4
+```
+
+### Benefits
+
+1. **Never fails due to version conflicts**
+2. **Automatic resolution without manual intervention**
+3. **Maintains semantic versioning principles**
+4. **Full transparency with detailed logging**
+
+See `docs/auto-increment-version-system.md` for complete details.
+
 ## Timing
 
 The version bump happens:
 1. **After** all commits are pushed to the PR branch
 2. **When** the PR is merged to main (or the workflow is triggered)
 3. **Once** per workflow run, not per commit
+4. **With automatic conflict resolution** if needed
 
-This ensures clean version history and proper semantic versioning compliance.
+This ensures clean version history, proper semantic versioning compliance, and bulletproof CI/CD pipeline execution.
