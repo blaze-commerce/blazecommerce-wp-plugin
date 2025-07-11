@@ -346,17 +346,42 @@ console.log(`Memory delta: ${(report.memoryDelta / 1024).toFixed(1)}KB`);
 console.log(`Recommendations: ${report.recommendations.join(', ')}`);
 ```
 
-##### **Automatic Memory Optimization**
+##### **Automatic Memory Optimization (Claude AI Final Enhancement)**
 - **Large Dataset Detection**: Automatic warnings for >1000 commits
+- **Very Large Repository Support**: Special handling for >5000 commits
 - **Memory Cleanup**: Automatic garbage collection for large datasets
-- **Streaming Ready**: Foundation for streaming support in future versions
+- **Production Streaming**: Full streaming support for very large repositories
 - **Memory Thresholds**: Configurable warnings at 50MB+ usage
+- **DoS Protection**: Automatic truncation of extremely long commit descriptions (>10KB)
 
 ##### **Performance Thresholds**
 - **Memory Warning**: >50MB delta triggers optimization recommendations
 - **Time Warning**: >5 seconds processing triggers algorithm suggestions
+- **Very Large Repository**: >5000 commits triggers streaming recommendations
 - **Automatic Cleanup**: >1000 commits triggers memory cleanup
 - **Garbage Collection**: Available when Node.js `--expose-gc` flag is used
+- **Performance Ratios**: Per-commit analysis for time and memory usage
+
+##### **Streaming Mode (Claude AI Final Enhancement)**
+For repositories with 5000+ commits, use streaming mode for optimal performance:
+
+```javascript
+const { analyzeCommitsWithRevertsStreaming } = require('./scripts/semver-utils');
+
+// Automatic streaming for very large repositories
+const analysis = analyzeCommitsWithRevertsStreaming(commits, {
+  batchSize: 1000,              // Process in batches of 1000 commits
+  enablePerformanceMetrics: true,
+  verbose: true
+});
+
+// Streaming metrics available
+if (analysis.performanceMetrics.streamingMode) {
+  console.log(`Processed ${analysis.performanceMetrics.batchCount} batches`);
+  console.log(`Batch size: ${analysis.performanceMetrics.batchSize}`);
+  console.log(`Total time: ${analysis.performanceMetrics.processingTime}ms`);
+}
+```
 
 ## Testing
 
