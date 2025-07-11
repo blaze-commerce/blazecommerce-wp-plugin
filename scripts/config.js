@@ -39,8 +39,8 @@ module.exports = {
     // Maximum tag name length
     MAX_TAG_LENGTH: 100,
     
-    // Valid characters for tag names (security)
-    TAG_NAME_REGEX: /^[a-zA-Z0-9._-]+$/,
+    // Valid characters for tag names (security) - CLAUDE AI REVIEW: Updated to support semantic versioning with prerelease and build metadata
+    TAG_NAME_REGEX: /^[a-zA-Z0-9._+-]+$/,
     
     // Git command options
     DEFAULT_OPTIONS: {
