@@ -191,40 +191,12 @@ jobs:
           CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d' | head -50)
 
           if [ -n "$CHANGELOG_CONTENT" ]; then
-            RELEASE_NOTES=$(cat << EOF
-## What's Changed
-
-$CHANGELOG_CONTENT
-
----
-EOF
-)
+            RELEASE_NOTES="## What's Changed"$'\n\n'"$CHANGELOG_CONTENT"$'\n\n'"---"
           fi
         fi
 
         # Add installation instructions
-        RELEASE_NOTES="$RELEASE_NOTES
-
-## 📦 Installation
-
-1. Download the \`blazecommerce-wp-plugin-$VERSION.zip\` file below
-2. In your WordPress admin, go to **Plugins > Add New > Upload Plugin**
-3. Choose the downloaded ZIP file and click **Install Now**
-4. Activate the plugin after installation
-
-## 🔧 Requirements
-
-- WordPress 5.0 or higher
-- PHP 7.4 or higher
-- WooCommerce plugin
-
-## 📚 Documentation
-
-For setup and configuration instructions, visit our [documentation](https://github.com/blaze-commerce/blazecommerce-wp-plugin/tree/main/docs).
-
-## 🐛 Support
-
-If you encounter any issues, please [create an issue](https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues) on GitHub."
+        RELEASE_NOTES="$RELEASE_NOTES"$'\n\n'"## 📦 Installation"$'\n\n'"1. Download the \`blazecommerce-wp-plugin-$VERSION.zip\` file below"$'\n'"2. In your WordPress admin, go to **Plugins > Add New > Upload Plugin**"$'\n'"3. Choose the downloaded ZIP file and click **Install Now**"$'\n'"4. Activate the plugin after installation"$'\n\n'"## 🔧 Requirements"$'\n\n'"- WordPress 5.0 or higher"$'\n'"- PHP 7.4 or higher"$'\n'"- WooCommerce plugin"$'\n\n'"## 📚 Documentation"$'\n\n'"For setup and configuration instructions, visit our [documentation](https://github.com/blaze-commerce/blazecommerce-wp-plugin/tree/main/docs)."$'\n\n'"## 🐛 Support"$'\n\n'"If you encounter any issues, please [create an issue](https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues) on GitHub."
 
         # Save release notes to output
         echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
