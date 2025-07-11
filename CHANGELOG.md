@@ -5,6 +5,8 @@ All notable changes to the BlazeCommerce WordPress Plugin will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> **Note**: Release dates have been corrected based on actual Git commit history to ensure accuracy.
+
 ## [1.8.0] - 2025-07-10
 
 ### Features
@@ -49,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Site Info Sync**: Refactored to avoid deprecated blaze_wooless_after_site_info_sync hooks
 - **Collection Naming**: Implemented hyphenated naming convention and blue-green deployment pattern
 
-## [1.7.0] - 2025-07-09
+## [1.7.0] - 2025-07-10
 
 ### Features
 - **Navigation Management**: Enhanced WordPress navigation sync to Typesense with menu ID support
@@ -69,7 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Custom Meta Data**: Optimized custom meta data retrieval and processing
 - **Collection Settings**: Enhanced collection configuration management
 
-## [1.6.0] - 2025-07-08
+## [1.6.0] - 2025-07-10
 
 ### Features
 - **Tax Management**: Added comprehensive tax settings retrieval and table rates handling
@@ -88,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory Management**: Improved memory usage during sync operations
 - **Batch Processing**: Enhanced batch processing for better performance and reliability
 
-## [1.5.0] - 2025-07-07
+## [1.5.0] - 2025-06-27
 
 ### Features
 - **Product Variants**: Added support for syncing product variants in CLI commands
@@ -109,7 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Addon Sorting**: Optimized addon sorting based on priority
 - **Page Revalidation**: Enhanced Next.js page URL revalidation system
 
-## [1.4.0] - 2025-07-06
+## [1.4.0] - 2025-06-12
 
 ### Features
 - **Custom Post Types**: Added filter for custom post types to dynamically sync to page collections
@@ -136,7 +138,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Page Collection**: Updated page collection filter for better performance
 - **WordPress Standards**: Improved code compliance with WordPress coding standards
 
-## [1.3.0] - 2025-07-05
+## [1.3.0] - 2025-05-31
 
 ### Features
 - **Term ID Management**: Added new field for term ID to enable better filtering and querying
@@ -154,7 +156,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI Sync**: Enhanced CLI sync operations with better error handling
 - **Memory Management**: Improved memory usage during large sync operations
 
-## [1.2.0] - 2025-07-04
+## [1.2.0] - 2025-05-28
 
 ### Features
 - **Gift Cards**: Added comprehensive gift card product type support with metadata handling
@@ -177,7 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Product Filtering**: Enhanced product filtering to manually handle published status
 - **Menu Processing**: Optimized menu processing with 3rd level submenu support
 
-## [1.1.0] - 2025-07-03
+## [1.1.0] - 2025-04-15
 
 ### Features
 - **Multi-Currency**: Enhanced multi-currency support with Aelia integration
@@ -198,7 +200,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Transient Usage**: Added transient caching for general addons to improve performance
 - **Date Formatting**: Added current date and year shortcode support
 
-## [1.0.0] - 2025-07-02
+## [1.0.0] - 2023-07-27
 
 ### Features
 - **Initial Release**: First stable release of BlazeCommerce WordPress Plugin
