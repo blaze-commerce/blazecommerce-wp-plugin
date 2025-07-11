@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const { execSync } = require('child_process');
+const config = require('./config');
 
 // Semantic versioning regex pattern
 const SEMVER_REGEX = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
@@ -21,11 +22,59 @@ const BREAKING_CHANGE_PATTERNS = [
 ];
 
 /**
+ * Validate and sanitize git tag name for security
+ * @param {string} tagName - Tag name to validate
+ * @returns {string} Sanitized tag name
+ * @throws {Error} If tag name is invalid
+ */
+function validateTagName(tagName) {
+  if (!tagName || typeof tagName !== 'string') {
+    throw new Error('Tag name must be a non-empty string');
+  }
+
+  if (tagName.length > config.GIT.MAX_TAG_LENGTH) {
+    throw new Error(`Tag name too long (max ${config.GIT.MAX_TAG_LENGTH} characters)`);
+  }
+
+  if (!config.GIT.TAG_NAME_REGEX.test(tagName)) {
+    throw new Error('Tag name contains invalid characters. Only alphanumeric, dots, underscores, and hyphens are allowed');
+  }
+
+  return tagName.trim();
+}
+
+/**
+ * Execute git command safely with input validation
+ * @param {string} command - Git command to execute
+ * @param {object} options - Execution options
+ * @returns {string} Command output
+ */
+function safeGitExec(command, options = {}) {
+  const defaultOptions = {
+    ...config.GIT.DEFAULT_OPTIONS,
+    timeout: config.GIT.OPERATION_TIMEOUT,
+    ...options
+  };
+
+  try {
+    return execSync(command, defaultOptions);
+  } catch (error) {
+    // Log error but don't expose sensitive information
+    console.warn(`Git operation failed: ${error.message.substring(0, 100)}`);
+    throw error;
+  }
+}
+
+/**
  * Parse a semantic version string
  * @param {string} version - Version string to parse
  * @returns {object|null} Parsed version object or null if invalid
  */
 function parseVersion(version) {
+  if (!version || typeof version !== 'string') {
+    return null;
+  }
+
   const match = version.match(SEMVER_REGEX);
   if (!match) return null;
 
@@ -45,6 +94,15 @@ function parseVersion(version) {
  * @returns {boolean} True if valid semantic version
  */
 function isValidSemver(version) {
+  if (!version || typeof version !== 'string') {
+    return false;
+  }
+
+  // Reject overly long versions for security
+  if (version.length > 100) {
+    return false;
+  }
+
   return SEMVER_REGEX.test(version);
 }
 
@@ -188,7 +246,8 @@ function getCurrentVersion() {
  */
 function tagExists(tag) {
   try {
-    execSync(`git rev-parse --verify ${tag}`, { stdio: 'ignore' });
+    const sanitizedTag = validateTagName(tag);
+    safeGitExec(`git rev-parse --verify ${sanitizedTag}`, { stdio: 'ignore' });
     return true;
   } catch (error) {
     return false;
@@ -201,7 +260,8 @@ function tagExists(tag) {
  */
 function getLatestTag() {
   try {
-    return execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
+    const result = safeGitExec('git describe --tags --abbrev=0').trim();
+    return result || null;
   } catch (error) {
     return null;
   }
@@ -212,17 +272,20 @@ function getLatestTag() {
  * @param {number} limit - Maximum number of commits to retrieve
  * @returns {string[]} Array of commit messages
  */
-function getCommitsSinceLastTag(limit = 50) {
+function getCommitsSinceLastTag(limit = config.VERSION.MAX_COMMITS_TO_ANALYZE) {
   try {
+    // Validate limit parameter
+    const safeLimit = Math.min(Math.max(1, parseInt(limit) || config.VERSION.MAX_COMMITS_TO_ANALYZE), 1000);
+
     const lastTag = getLatestTag();
-    const gitLogCommand = lastTag 
-      ? `git log ${lastTag}..HEAD --oneline --no-merges --format="%s" -${limit}`
-      : `git log --oneline --no-merges --format="%s" -${limit}`;
-    
-    const output = execSync(gitLogCommand, { encoding: 'utf8' }).trim();
-    return output ? output.split('\n') : [];
+    const gitLogCommand = lastTag
+      ? `git log ${lastTag}..HEAD --oneline --no-merges --format="%s" -${safeLimit}`
+      : `git log --oneline --no-merges --format="%s" -${safeLimit}`;
+
+    const output = safeGitExec(gitLogCommand).trim();
+    return output ? output.split('\n').filter(line => line.trim()) : [];
   } catch (error) {
-    console.warn('Could not retrieve git commits:', error.message);
+    console.warn('Could not retrieve git commits:', error.message.substring(0, config.ERRORS.MAX_ERROR_MESSAGE_LENGTH));
     return [];
   }
 }
@@ -238,6 +301,8 @@ module.exports = {
   tagExists,
   getLatestTag,
   getCommitsSinceLastTag,
+  validateTagName,
+  safeGitExec,
   SEMVER_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
   BREAKING_CHANGE_PATTERNS

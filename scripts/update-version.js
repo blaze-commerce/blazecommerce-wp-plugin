@@ -7,8 +7,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { isValidSemver, parseVersion, tagExists } = require('./semver-utils');
+const { isValidSemver, parseVersion, tagExists, validateTagName } = require('./semver-utils');
 const { validateVersionSystem, VERSION_FILES } = require('./validate-version');
+const config = require('./config');
 
 // Configuration
 const CONFIG = {
@@ -19,14 +20,33 @@ const CONFIG = {
 };
 
 /**
- * Create backup of a file
+ * Create backup of a file with retry logic
  * @param {string} filePath - Path to file to backup
  * @returns {string} Backup file path
  */
 function createBackup(filePath) {
-  const backupPath = `${filePath}.backup.${Date.now()}`;
-  fs.copyFileSync(filePath, backupPath);
-  return backupPath;
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new Error(`Cannot create backup: file does not exist: ${filePath}`);
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = `${filePath}${config.FILES.BACKUP_EXTENSION}.${timestamp}`;
+
+  let attempts = 0;
+  while (attempts < config.ERRORS.MAX_RETRY_ATTEMPTS) {
+    try {
+      fs.copyFileSync(filePath, backupPath);
+      return backupPath;
+    } catch (error) {
+      attempts++;
+      if (attempts >= config.ERRORS.MAX_RETRY_ATTEMPTS) {
+        throw new Error(`Failed to create backup after ${attempts} attempts: ${error.message}`);
+      }
+      // Wait before retry
+      const delay = config.ERRORS.RETRY_DELAY * attempts;
+      require('child_process').execSync(`sleep ${delay / 1000}`, { stdio: 'ignore' });
+    }
+  }
 }
 
 /**

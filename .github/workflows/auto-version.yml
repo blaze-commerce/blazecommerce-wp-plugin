@@ -40,6 +40,15 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
 
+    - name: Run version system tests
+      run: |
+        echo "🧪 Running version system tests..."
+        npm run test:version-system
+        if [ $? -ne 0 ]; then
+          echo "❌ Version system tests failed. Aborting version bump."
+          exit 1
+        fi
+
     - name: Validate current version system
       run: |
         echo "🔍 Validating current version system..."
