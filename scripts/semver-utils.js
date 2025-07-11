@@ -34,8 +34,8 @@ class VersionError extends Error {
 // Semantic versioning regex pattern
 const SEMVER_REGEX = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
-// Conventional commit regex pattern
-const CONVENTIONAL_COMMIT_REGEX = /^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\(.+\))?(!)?: (.+)/;
+// Conventional commit regex pattern - Enhanced with revert support
+const CONVENTIONAL_COMMIT_REGEX = /^(feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)(\(.+\))?(!)?: (.+)/;
 
 // Breaking change patterns
 const BREAKING_CHANGE_PATTERNS = [
@@ -355,15 +355,69 @@ function incrementVersion(version, type, prerelease = null) {
 }
 
 /**
+ * Parse revert target from revert commit description
+ * @param {string} description - Revert commit description
+ * @returns {object|null} Parsed revert target or null if not parseable
+ */
+function parseRevertTarget(description) {
+  // Handle different revert formats:
+  // 1. "revert: feat: add new feature" -> "feat: add new feature"
+  // 2. "feat: add new feature" (already clean)
+  // 3. "Revert \"feat: add new feature\"" -> "feat: add new feature"
+
+  let cleanDescription = description;
+
+  // Remove quotes from GitHub-style reverts: Revert "feat: add feature"
+  const quotedMatch = cleanDescription.match(/^Revert\s+"(.+)"$/i);
+  if (quotedMatch) {
+    cleanDescription = quotedMatch[1];
+  }
+
+  // Remove revert prefix if present: "revert: feat: add feature" -> "feat: add feature"
+  const revertPrefixMatch = cleanDescription.match(/^revert:\s*(.+)$/i);
+  if (revertPrefixMatch) {
+    cleanDescription = revertPrefixMatch[1];
+  }
+
+  // Parse the target commit using conventional commit regex
+  const targetMatch = cleanDescription.match(/^(feat|fix|docs|style|refactor|perf|test|chore|build|ci)(\(.+\))?(!)?: (.+)/);
+  if (!targetMatch) return null;
+
+  return {
+    type: targetMatch[1],
+    scope: targetMatch[2] ? targetMatch[2].slice(1, -1) : null,
+    breaking: targetMatch[3] === '!' || BREAKING_CHANGE_PATTERNS.some(pattern =>
+      pattern.test(cleanDescription)
+    ),
+    description: targetMatch[4],
+    fullDescription: cleanDescription
+  };
+}
+
+/**
  * Parse conventional commit message
  * @param {string} message - Commit message
  * @returns {object|null} Parsed commit object or null if not conventional
  */
 function parseConventionalCommit(message) {
+  // First, check for GitHub-style revert format: Revert "conventional commit"
+  const githubRevertMatch = message.match(/^Revert\s+"(.+)"$/);
+  if (githubRevertMatch) {
+    // Treat as a revert commit with the quoted content as description
+    return {
+      type: 'revert',
+      scope: null,
+      breaking: false,
+      description: githubRevertMatch[1],
+      raw: message
+    };
+  }
+
+  // Standard conventional commit parsing
   const match = message.match(CONVENTIONAL_COMMIT_REGEX);
   if (!match) return null;
 
-  const isBreaking = match[3] === '!' || BREAKING_CHANGE_PATTERNS.some(pattern => 
+  const isBreaking = match[3] === '!' || BREAKING_CHANGE_PATTERNS.some(pattern =>
     pattern.test(message)
   );
 
@@ -377,7 +431,143 @@ function parseConventionalCommit(message) {
 }
 
 /**
- * Enhanced version bump type determination with detailed analysis
+ * Analyze commits with smart revert handling
+ * @param {string[]} commits - Array of commit messages
+ * @param {object} options - Analysis options
+ * @returns {object} Net changes after revert cancellation
+ */
+function analyzeCommitsWithReverts(commits, options = {}) {
+  const { verbose = false } = options;
+
+  // Track changes with unique keys for revert matching
+  const changes = new Map();
+  const reverts = [];
+  const analysis = {
+    originalCommits: [],
+    revertedCommits: [],
+    netCommits: [],
+    revertMatches: []
+  };
+
+  if (verbose) {
+    console.log('🔄 Analyzing commits with revert handling...');
+  }
+
+  // First pass: collect all commits and identify reverts
+  for (const commit of commits) {
+    const parsed = parseConventionalCommit(commit);
+    if (!parsed) {
+      analysis.originalCommits.push({ commit, parsed: null, type: 'invalid' });
+      continue;
+    }
+
+    if (parsed.type === 'revert') {
+      const revertTarget = parseRevertTarget(parsed.description);
+      if (revertTarget) {
+        reverts.push({
+          commit,
+          parsed,
+          target: revertTarget,
+          matched: false
+        });
+
+        // Also add to original commits for tracking
+        analysis.originalCommits.push({ commit, parsed, type: 'revert' });
+
+        if (verbose) {
+          console.log(`   🔄 Found revert: "${commit}" -> targets "${revertTarget.fullDescription}"`);
+        }
+      } else {
+        // Revert commit that couldn't be parsed - treat as regular commit
+        analysis.originalCommits.push({ commit, parsed, type: 'unparseable-revert' });
+      }
+    } else {
+      // Regular commit
+      analysis.originalCommits.push({ commit, parsed, type: 'regular' });
+    }
+  }
+
+  // Second pass: match reverts with their targets
+  for (const originalCommit of analysis.originalCommits) {
+    if (!originalCommit.parsed) {
+      // Keep invalid commits as-is
+      analysis.netCommits.push(originalCommit);
+      continue;
+    }
+
+    if (originalCommit.type === 'revert') {
+      // Skip revert commits in this pass - they'll be handled in the third pass
+      continue;
+    }
+
+    if (originalCommit.type === 'unparseable-revert') {
+      // Keep unparseable reverts as-is
+      analysis.netCommits.push(originalCommit);
+      continue;
+    }
+
+    // Check if this commit is reverted
+    const matchingRevert = reverts.find(revert =>
+      !revert.matched &&
+      revert.target.type === originalCommit.parsed.type &&
+      revert.target.breaking === originalCommit.parsed.breaking &&
+      revert.target.description === originalCommit.parsed.description &&
+      revert.target.scope === originalCommit.parsed.scope
+    );
+
+    if (matchingRevert) {
+      // Mark both as reverted/matched
+      matchingRevert.matched = true;
+      analysis.revertedCommits.push({
+        original: originalCommit,
+        revert: matchingRevert
+      });
+
+      analysis.revertMatches.push({
+        originalCommit: originalCommit.commit,
+        revertCommit: matchingRevert.commit,
+        cancelledType: originalCommit.parsed.type,
+        cancelledBreaking: originalCommit.parsed.breaking
+      });
+
+      if (verbose) {
+        console.log(`   ✅ Matched revert: "${originalCommit.commit}" cancelled by "${matchingRevert.commit}"`);
+      }
+    } else {
+      // Keep non-reverted commits
+      analysis.netCommits.push(originalCommit);
+    }
+  }
+
+  // Third pass: add unmatched reverts as regular commits (they revert something outside this commit range)
+  for (const revert of reverts) {
+    if (!revert.matched) {
+      analysis.netCommits.push({
+        commit: revert.commit,
+        parsed: revert.parsed,
+        type: 'unmatched-revert'
+      });
+
+      if (verbose) {
+        console.log(`   ⚠️  Unmatched revert: "${revert.commit}" (target not found in this commit range)`);
+      }
+    } else {
+      if (verbose) {
+        console.log(`   ✅ Matched revert excluded from net commits: "${revert.commit}"`);
+      }
+    }
+  }
+
+  if (verbose) {
+    console.log(`   📊 Analysis complete: ${analysis.originalCommits.length} original → ${analysis.netCommits.length} net commits`);
+    console.log(`   🔄 Reverts processed: ${analysis.revertMatches.length} matched, ${reverts.filter(r => !r.matched).length} unmatched`);
+  }
+
+  return analysis;
+}
+
+/**
+ * Enhanced version bump type determination with detailed analysis and revert handling
  * @param {string[]} commits - Array of commit messages
  * @param {object} options - Analysis options
  * @returns {object} Detailed bump analysis result
@@ -386,7 +576,8 @@ function determineBumpType(commits, options = {}) {
   const {
     verbose = false,
     forceMinimum = null,
-    allowNone = true
+    allowNone = true,
+    enableRevertHandling = true
   } = options;
 
   const analysis = {
@@ -396,20 +587,46 @@ function determineBumpType(commits, options = {}) {
       features: [],
       fixes: [],
       other: [],
-      invalid: []
+      invalid: [],
+      reverted: []
     },
     summary: {
       total: commits.length,
       conventional: 0,
       breaking: 0,
       features: 0,
-      fixes: 0
+      fixes: 0,
+      reverted: 0,
+      netCommits: 0
     },
-    reasoning: []
+    reasoning: [],
+    revertAnalysis: null
   };
 
-  // Analyze each commit
-  for (const commit of commits) {
+  let commitsToAnalyze = commits;
+
+  // Apply revert handling if enabled
+  if (enableRevertHandling) {
+    const revertAnalysis = analyzeCommitsWithReverts(commits, { verbose });
+    analysis.revertAnalysis = revertAnalysis;
+
+    // Use net commits (after revert cancellation) for version bump calculation
+    commitsToAnalyze = revertAnalysis.netCommits.map(item => item.commit);
+    analysis.summary.reverted = revertAnalysis.revertMatches.length;
+    analysis.summary.netCommits = commitsToAnalyze.length;
+
+    if (revertAnalysis.revertMatches.length > 0) {
+      analysis.reasoning.push(`Processed ${revertAnalysis.revertMatches.length} revert(s) - cancelled matching commits`);
+      analysis.commits.reverted = revertAnalysis.revertMatches;
+    }
+
+    if (verbose) {
+      console.log(`📊 Revert analysis: ${commits.length} original → ${commitsToAnalyze.length} net commits`);
+    }
+  }
+
+  // Analyze each net commit (after revert processing)
+  for (const commit of commitsToAnalyze) {
     const parsed = parseConventionalCommit(commit);
 
     if (!parsed) {
@@ -418,6 +635,13 @@ function determineBumpType(commits, options = {}) {
     }
 
     analysis.summary.conventional++;
+
+    // Handle revert commits that didn't match anything (they revert commits outside this range)
+    // These should not contribute to version bumps as they're just cleanup
+    if (parsed.type === 'revert') {
+      analysis.commits.other.push({ commit, parsed });
+      continue;
+    }
 
     if (parsed.breaking) {
       analysis.commits.breaking.push({ commit, parsed });
@@ -444,8 +668,15 @@ function determineBumpType(commits, options = {}) {
     analysis.bumpType = 'patch';
     analysis.reasoning.push(`Found ${analysis.summary.fixes} fix(es)`);
   } else if (analysis.summary.conventional > 0) {
-    analysis.bumpType = 'patch';
-    analysis.reasoning.push('Found conventional commits but no features/fixes - defaulting to patch');
+    // Check if all conventional commits are just unmatched reverts
+    const nonRevertConventionalCommits = analysis.summary.conventional - analysis.commits.other.filter(c => c.parsed && c.parsed.type === 'revert').length;
+
+    if (nonRevertConventionalCommits > 0) {
+      analysis.bumpType = 'patch';
+      analysis.reasoning.push('Found conventional commits but no features/fixes - defaulting to patch');
+    } else {
+      analysis.reasoning.push('Only unmatched revert commits found - no version bump needed');
+    }
   } else if (!allowNone) {
     analysis.bumpType = 'patch';
     analysis.reasoning.push('No conventional commits found - forcing patch bump');
@@ -904,6 +1135,8 @@ module.exports = {
   compareVersions,
   incrementVersion,
   parseConventionalCommit,
+  parseRevertTarget,
+  analyzeCommitsWithReverts,
   determineBumpType,
   getCurrentVersion,
   tagExists,
