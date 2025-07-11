@@ -11,21 +11,139 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
       is-prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
+      should_create_release: ${{ steps.check_files.outputs.should_create_release }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check if release is needed
+      id: check_files
+      run: |
+        echo "🔍 Checking if release is needed based on changed files..."
+
+        # Get the tag that triggered this workflow
+        CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+        echo "🏷️  Current tag: $CURRENT_TAG"
+
+        # Get the previous tag to compare against
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null || echo "")
+
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "📋 Comparing changes since previous tag: $PREVIOUS_TAG"
+          CHANGED_FILES=$(git diff --name-only "$PREVIOUS_TAG..$CURRENT_TAG")
+        else
+          echo "📋 No previous tags found, checking all files in current commit"
+          CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null || git ls-files)
+        fi
+
+        echo "📁 Changed files since last release:"
+        echo "$CHANGED_FILES"
+        echo ""
+
+        # Define ignore patterns (same as auto-version workflow)
+        IGNORE_PATTERNS=(
+          # Files managed by the version bump process itself
+          "CHANGELOG.md"
+          "package.json"
+          "package-lock.json"
+          "blaze-wooless.php"
+          "blocks/package.json"
+
+          # CI/CD and development tooling (no user impact)
+          ".github/"
+          "scripts/"
+          "tests/"
+          "test/"
+          "bin/"
+
+          # Internal documentation (no user impact)
+          "docs/"
+          "CONTRIBUTING.md"
+          "TODO"
+          "IMPLEMENTATION_SUMMARY.md"
+          "VERSION_BUMP_BEHAVIOR_EXPLANATION.md"
+          "CHANGELOG_VERSION_FIX.md"
+
+          # Development configuration files
+          "phpunit.xml"
+          "jest.config.js"
+          "github-workflows-tests.yml"
+          "test.html"
+
+          # Auto-generated files
+          "composer.lock"
+          "vendor/"
+          "blocks/yarn.lock"
+          "blocks/package-lock.json"
+
+          # Git and editor files
+          ".gitignore"
+          ".editorconfig"
+          ".DS_Store"
+
+          # AI assistant and editor configuration
+          ".augment/"
+          ".claude/"
+          ".vscode/"
+        )
+
+        # Check if any changed file should trigger release creation
+        SHOULD_CREATE_RELEASE="false"
+
+        while IFS= read -r file; do
+          [ -z "$file" ] && continue
+
+          FILE_SHOULD_BE_IGNORED="false"
+
+          # Check against each ignore pattern
+          for pattern in "${IGNORE_PATTERNS[@]}"; do
+            # Handle directory patterns (ending with /)
+            if [[ "$pattern" == */ ]]; then
+              if [[ "$file" == "$pattern"* ]]; then
+                FILE_SHOULD_BE_IGNORED="true"
+                break
+              fi
+            # Handle exact file matches and wildcard patterns
+            elif [[ "$file" == "$pattern" ]] || [[ "$file" == *"$pattern" ]]; then
+              FILE_SHOULD_BE_IGNORED="true"
+              break
+            fi
+          done
+
+          # If this file should NOT be ignored, we need to create release
+          if [ "$FILE_SHOULD_BE_IGNORED" = "false" ]; then
+            echo "✅ File '$file' requires release creation"
+            SHOULD_CREATE_RELEASE="true"
+          else
+            echo "⏭️  File '$file' is ignored for release creation"
+          fi
+        done <<< "$CHANGED_FILES"
+
+        echo ""
+        if [ "$SHOULD_CREATE_RELEASE" = "true" ]; then
+          echo "🚀 Release creation needed - non-ignored files were changed"
+        else
+          echo "⏭️  Release creation skipped - only ignored files were changed"
+        fi
+
+        echo "should_create_release=$SHOULD_CREATE_RELEASE" >> $GITHUB_OUTPUT
 
     - name: Setup Node.js
+      if: steps.check_files.outputs.should_create_release == 'true'
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
 
     - name: Install dependencies
+      if: steps.check_files.outputs.should_create_release == 'true'
       run: npm install
 
     - name: Extract and validate version from tag
+      if: steps.check_files.outputs.should_create_release == 'true'
       id: version
       run: |
         VERSION=${GITHUB_REF#refs/tags/v}
@@ -54,6 +172,7 @@ jobs:
         fi
 
     - name: Validate YAML syntax
+      if: steps.check_files.outputs.should_create_release == 'true'
       run: |
         echo "🔍 Validating YAML syntax in workflow files..."
         python3 -c "
@@ -69,6 +188,7 @@ jobs:
         "
 
     - name: Validate version consistency
+      if: steps.check_files.outputs.should_create_release == 'true'
       run: |
         echo "🔍 Validating version consistency across files..."
         node scripts/validate-version.js --verbose
@@ -81,6 +201,7 @@ jobs:
   build-and-release:
     needs: validate-release
     runs-on: ubuntu-latest
+    if: needs.validate-release.outputs.should_create_release == 'true'
 
     steps:
     - name: Checkout code
@@ -263,3 +384,48 @@ jobs:
         echo "🚧 Pre-release: $IS_PRERELEASE"
         echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
         echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+
+  workflow-summary:
+    needs: validate-release
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Workflow Summary
+      run: |
+        echo "📋 Create Release Workflow Summary"
+        echo "=================================="
+
+        TAG_NAME="${GITHUB_REF#refs/tags/}"
+        echo "🏷️  Triggered by tag: $TAG_NAME"
+
+        if [ "${{ needs.validate-release.outputs.should_create_release }}" = "true" ]; then
+          echo "✅ Release was processed"
+
+          # Check if build-and-release job was successful
+          if [ "${{ needs.validate-release.result }}" = "success" ]; then
+            VERSION="${{ needs.validate-release.outputs.version }}"
+            IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
+
+            echo "📦 Version: $VERSION"
+            echo "🚧 Pre-release: $IS_PRERELEASE"
+            echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
+            echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+            echo "🎉 Release created successfully!"
+          else
+            echo "❌ Release processing failed during validation"
+            echo "   Check the validate-release job logs for details"
+          fi
+        else
+          echo "⏭️  Release creation was skipped"
+          echo "📁 Reason: Only ignored files were changed since last release"
+          echo "ℹ️  This is normal behavior - no release needed for:"
+          echo "   • Documentation changes"
+          echo "   • CI/CD configuration updates"
+          echo "   • Development tooling changes"
+          echo "   • Auto-generated files"
+          echo "   • Version bump commits"
+          echo ""
+          echo "✅ Workflow completed successfully (no action required)"
+          echo "💡 The tag $TAG_NAME remains available but no GitHub release was created"
+        fi
