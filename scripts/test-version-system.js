@@ -5,14 +5,15 @@
  * Tests core functionality to ensure reliability
  */
 
-const { 
-  parseVersion, 
-  isValidSemver, 
-  compareVersions, 
+const {
+  parseVersion,
+  isValidSemver,
+  compareVersions,
   incrementVersion,
   parseConventionalCommit,
   determineBumpType,
-  validateTagName
+  validateTagName,
+  validateInput
 } = require('./semver-utils');
 
 const { validateVersionSystem } = require('./validate-version');
@@ -114,7 +115,40 @@ function runTests() {
     if (parseVersion('') !== null) throw new Error('Empty input not handled');
     if (isValidSemver(undefined)) throw new Error('Undefined input not handled');
   });
-  
+
+  // Test input validation function
+  test('Validate input function', () => {
+    // Test string validation
+    try {
+      validateInput('test', 'string', { minLength: 2, maxLength: 10 });
+    } catch (error) {
+      throw new Error('Valid string rejected');
+    }
+
+    // Test invalid string
+    try {
+      validateInput('', 'string', { allowEmpty: false });
+      throw new Error('Empty string accepted when not allowed');
+    } catch (error) {
+      // Expected to fail
+    }
+
+    // Test number validation
+    try {
+      validateInput(5, 'number', { min: 1, max: 10 });
+    } catch (error) {
+      throw new Error('Valid number rejected');
+    }
+
+    // Test invalid number
+    try {
+      validateInput(15, 'number', { min: 1, max: 10 });
+      throw new Error('Number outside range accepted');
+    } catch (error) {
+      // Expected to fail
+    }
+  });
+
   // Test error boundaries
   test('Handle edge cases', () => {
     // Test very long version strings

@@ -32,15 +32,114 @@ function validateTagName(tagName) {
     throw new Error('Tag name must be a non-empty string');
   }
 
-  if (tagName.length > config.GIT.MAX_TAG_LENGTH) {
+  // Trim and normalize
+  const trimmed = tagName.trim();
+
+  if (trimmed.length === 0) {
+    throw new Error('Tag name cannot be empty after trimming');
+  }
+
+  if (trimmed.length > config.GIT.MAX_TAG_LENGTH) {
     throw new Error(`Tag name too long (max ${config.GIT.MAX_TAG_LENGTH} characters)`);
   }
 
-  if (!config.GIT.TAG_NAME_REGEX.test(tagName)) {
+  // Check for shell metacharacters that could cause injection
+  const dangerousChars = /[;&|`$(){}[\]\\'"<>*?~]/;
+  if (dangerousChars.test(trimmed)) {
+    throw new Error('Tag name contains dangerous characters that could cause security issues');
+  }
+
+  // Check against allowed pattern
+  if (!config.GIT.TAG_NAME_REGEX.test(trimmed)) {
     throw new Error('Tag name contains invalid characters. Only alphanumeric, dots, underscores, and hyphens are allowed');
   }
 
-  return tagName.trim();
+  // Additional security checks
+  if (trimmed.startsWith('-') || trimmed.startsWith('.')) {
+    throw new Error('Tag name cannot start with dash or dot');
+  }
+
+  if (trimmed.includes('..')) {
+    throw new Error('Tag name cannot contain consecutive dots');
+  }
+
+  return trimmed;
+}
+
+/**
+ * Comprehensive input validation function
+ * @param {any} input - Input to validate
+ * @param {string} type - Expected type ('string', 'number', 'array', 'object')
+ * @param {object} constraints - Validation constraints
+ * @returns {any} Validated input
+ * @throws {Error} If validation fails
+ */
+function validateInput(input, type, constraints = {}) {
+  const {
+    required = true,
+    minLength = 0,
+    maxLength = Infinity,
+    min = -Infinity,
+    max = Infinity,
+    pattern = null,
+    allowEmpty = false
+  } = constraints;
+
+  // Check if required
+  if (required && (input === null || input === undefined)) {
+    throw new Error('Input is required but was null or undefined');
+  }
+
+  // Allow null/undefined if not required
+  if (!required && (input === null || input === undefined)) {
+    return input;
+  }
+
+  // Type validation
+  if (typeof input !== type) {
+    throw new Error(`Expected ${type} but got ${typeof input}`);
+  }
+
+  // String-specific validations
+  if (type === 'string') {
+    if (!allowEmpty && input.length === 0) {
+      throw new Error('String cannot be empty');
+    }
+    if (input.length < minLength) {
+      throw new Error(`String too short (min ${minLength} characters)`);
+    }
+    if (input.length > maxLength) {
+      throw new Error(`String too long (max ${maxLength} characters)`);
+    }
+    if (pattern && !pattern.test(input)) {
+      throw new Error('String does not match required pattern');
+    }
+  }
+
+  // Number-specific validations
+  if (type === 'number') {
+    if (isNaN(input) || !isFinite(input)) {
+      throw new Error('Number must be finite');
+    }
+    if (input < min) {
+      throw new Error(`Number too small (min ${min})`);
+    }
+    if (input > max) {
+      throw new Error(`Number too large (max ${max})`);
+    }
+  }
+
+  // Array-specific validations
+  if (type === 'object' && Array.isArray(input)) {
+    if (input.length < minLength) {
+      throw new Error(`Array too short (min ${minLength} elements)`);
+    }
+    if (input.length > maxLength) {
+      throw new Error(`Array too long (max ${maxLength} elements)`);
+    }
+  }
+
+  return input;
 }
 
 /**
@@ -50,9 +149,33 @@ function validateTagName(tagName) {
  * @returns {string} Command output
  */
 function safeGitExec(command, options = {}) {
+  if (!command || typeof command !== 'string') {
+    throw new Error('Command must be a non-empty string');
+  }
+
+  // Validate that command starts with 'git' for security
+  if (!command.trim().startsWith('git ')) {
+    throw new Error('Only git commands are allowed');
+  }
+
+  // Check for dangerous command patterns
+  const dangerousPatterns = [
+    /[;&|`$(){}[\]\\'"<>]/,  // Shell metacharacters
+    /\s(rm|del|format|mkfs|dd)\s/i,  // Dangerous commands
+    /\s--exec\s/i,  // Git exec flag
+    /\s-c\s/i,  // Git config flag that could be dangerous
+  ];
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(command)) {
+      throw new Error('Command contains potentially dangerous patterns');
+    }
+  }
+
   const defaultOptions = {
     ...config.GIT.DEFAULT_OPTIONS,
     timeout: config.GIT.OPERATION_TIMEOUT,
+    shell: false,  // Disable shell interpretation for security
     ...options
   };
 
@@ -60,8 +183,9 @@ function safeGitExec(command, options = {}) {
     return execSync(command, defaultOptions);
   } catch (error) {
     // Log error but don't expose sensitive information
-    console.warn(`Git operation failed: ${error.message.substring(0, 100)}`);
-    throw error;
+    const safeMessage = error.message.substring(0, config.ERRORS.MAX_ERROR_MESSAGE_LENGTH);
+    console.warn(`Git operation failed: ${safeMessage}`);
+    throw new Error(`Git operation failed: ${error.code || 'unknown error'}`);
   }
 }
 
@@ -71,7 +195,13 @@ function safeGitExec(command, options = {}) {
  * @returns {object|null} Parsed version object or null if invalid
  */
 function parseVersion(version) {
-  if (!version || typeof version !== 'string') {
+  try {
+    validateInput(version, 'string', {
+      required: true,
+      maxLength: config.VERSION.MAX_VERSION_LENGTH,
+      allowEmpty: false
+    });
+  } catch (error) {
     return null;
   }
 
@@ -99,7 +229,7 @@ function isValidSemver(version) {
   }
 
   // Reject overly long versions for security
-  if (version.length > 100) {
+  if (version.length > config.VERSION.MAX_VERSION_LENGTH) {
     return false;
   }
 
@@ -275,7 +405,7 @@ function getLatestTag() {
 function getCommitsSinceLastTag(limit = config.VERSION.MAX_COMMITS_TO_ANALYZE) {
   try {
     // Validate limit parameter
-    const safeLimit = Math.min(Math.max(1, parseInt(limit) || config.VERSION.MAX_COMMITS_TO_ANALYZE), 1000);
+    const safeLimit = Math.min(Math.max(1, parseInt(limit) || config.VERSION.MAX_COMMITS_TO_ANALYZE), config.VERSION.ABSOLUTE_MAX_COMMITS);
 
     const lastTag = getLatestTag();
     const gitLogCommand = lastTag
@@ -303,6 +433,7 @@ module.exports = {
   getCommitsSinceLastTag,
   validateTagName,
   safeGitExec,
+  validateInput,
   SEMVER_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
   BREAKING_CHANGE_PATTERNS
