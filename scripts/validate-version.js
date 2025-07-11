@@ -290,9 +290,8 @@ function checkVersionConflicts(version, options = {}) {
       result.hasConflicts = true;
 
       if (comparison === 0) {
-        result.conflicts.push(`Version ${version} already exists (same as current version)`);
-        result.conflicts.push(`This usually indicates the validation is running after version bump`);
-        result.conflicts.push(`Consider using --no-conflicts flag for post-bump validation`);
+        // CLAUDE AI REVIEW: Combine related error messages for consistency
+        result.conflicts.push(`Version ${version} already exists (same as current version). This usually indicates the validation is running after version bump. Consider using --no-conflicts flag for post-bump validation.`);
       } else {
         result.conflicts.push(`New version ${version} is not greater than current version ${currentVersion}`);
       }
@@ -438,7 +437,18 @@ function analyzeVersionSystem(options = {}) {
     }
 
   } catch (error) {
-    analysis.issues.push(`Analysis failed: ${error.message}`);
+    // CLAUDE AI REVIEW: More specific error handling
+    if (error.code === 'ENOENT') {
+      analysis.issues.push(`File not found during analysis: ${error.path}`);
+    } else if (error.code === 'EACCES') {
+      analysis.issues.push(`Permission denied during analysis: ${error.path}`);
+    } else if (error.name === 'SyntaxError') {
+      analysis.issues.push(`JSON parsing error during analysis: ${error.message}`);
+    } else if (error.message.includes('git')) {
+      analysis.issues.push(`Git operation failed during analysis: ${error.message}`);
+    } else {
+      analysis.issues.push(`Analysis failed: ${error.message}`);
+    }
   }
 
   return analysis;
