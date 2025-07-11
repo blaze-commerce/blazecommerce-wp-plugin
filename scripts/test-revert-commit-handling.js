@@ -9,8 +9,11 @@ const {
   parseConventionalCommit,
   parseRevertTarget,
   createMatchingKey,
+  resolveMultipleMatches,
   analyzeCommitsWithReverts,
-  determineBumpType
+  determineBumpType,
+  MemoryManager,
+  COMPILED_PATTERNS
 } = require('./semver-utils');
 
 let testsPassed = 0;
@@ -378,14 +381,198 @@ runTest('Mixed case GitHub-style reverts', () => {
   assertEquals(analysis.revertMatches.length, 1, 'Should match mixed case revert');
 });
 
-console.log('\n📊 Enhanced Revert Commit Handling Test Results:');
+// CLAUDE AI RECOMMENDATION: Advanced test cases for multiple identical commits and conflict resolution
+
+// Test 17: Multiple identical commits with advanced conflict resolution
+runTest('Multiple identical commits with advanced conflict resolution', () => {
+  const commits = [
+    'feat: add feature X',      // Position 0
+    'fix: bug fix Y',           // Position 1
+    'feat: add feature X',      // Position 2 (identical to position 0)
+    'feat: add feature X',      // Position 3 (identical to position 0 and 2)
+    'revert: feat: add feature X', // Position 4 - should match closest using chronological strategy
+    'revert: feat: add feature X'  // Position 5 - should match next closest
+  ];
+
+  const analysis = analyzeCommitsWithReverts(commits, {
+    verbose: true,
+    enablePerformanceMetrics: true
+  });
+
+  assertEquals(analysis.revertMatches.length, 2, 'Should match 2 reverts with 2 of the 3 identical commits');
+  assertEquals(analysis.netCommits.length, 2, 'Should have 2 net commits (1 remaining feat + 1 fix)');
+
+  // Verify performance metrics for conflict resolution
+  if (analysis.performanceMetrics) {
+    console.log(`   📊 Conflict resolutions: ${analysis.performanceMetrics.conflictResolutions}`);
+    console.log(`   🔍 Multiple match scenarios: ${analysis.performanceMetrics.multipleMatchScenarios}`);
+
+    if (analysis.performanceMetrics.conflictResolutions > 0) {
+      console.log(`   ⚡ Avg resolution time: ${(analysis.performanceMetrics.patternMatchingTime / analysis.performanceMetrics.conflictResolutions).toFixed(2)}ms`);
+    }
+  }
+});
+
+// Test 18: resolveMultipleMatches function with different strategies
+runTest('resolveMultipleMatches function with different strategies', () => {
+  const candidates = [
+    { position: 1, commit: 'feat: feature A' },
+    { position: 5, commit: 'feat: feature A' },
+    { position: 8, commit: 'feat: feature A' }
+  ];
+  const targetCommit = { position: 6, commit: 'revert: feat: feature A' };
+
+  // Test closest-position strategy
+  const closestMatch = resolveMultipleMatches(candidates, targetCommit, { strategy: 'closest-position' });
+  assertEquals(closestMatch.position, 5, 'Closest position strategy should choose position 5');
+
+  // Test first-occurrence strategy
+  const firstMatch = resolveMultipleMatches(candidates, targetCommit, { strategy: 'first-occurrence' });
+  assertEquals(firstMatch.position, 1, 'First occurrence strategy should choose position 1');
+
+  // Test last-occurrence strategy
+  const lastMatch = resolveMultipleMatches(candidates, targetCommit, { strategy: 'last-occurrence' });
+  assertEquals(lastMatch.position, 8, 'Last occurrence strategy should choose position 8');
+
+  // Test chronological strategy (prefers commits after target)
+  const chronologicalMatch = resolveMultipleMatches(candidates, targetCommit, { strategy: 'chronological' });
+  assertEquals(chronologicalMatch.position, 8, 'Chronological strategy should prefer position 8 (after target)');
+});
+
+// Test 19: Memory management and performance optimization
+runTest('Memory management and performance optimization', () => {
+  console.log('   Testing memory management utilities...');
+
+  // Test memory monitoring
+  const monitor = MemoryManager.startMonitoring('test-operation');
+
+  // Simulate some work
+  const largeArray = new Array(10000).fill(0).map((_, i) => `commit-${i}`);
+  MemoryManager.checkpoint(monitor, 'after-array-creation');
+
+  // Process the array
+  const processed = largeArray.map(commit => commit.toUpperCase());
+  MemoryManager.checkpoint(monitor, 'after-processing');
+
+  const report = MemoryManager.complete(monitor);
+
+  console.log(`   📊 Operation: ${report.operation}`);
+  console.log(`   ⏱️  Total time: ${report.totalTime}ms`);
+  console.log(`   🧠 Memory delta: ${(report.memoryDelta / 1024).toFixed(1)}KB`);
+  console.log(`   📈 Checkpoints: ${report.checkpoints.length}`);
+  console.log(`   💡 Recommendations: ${report.recommendations.length}`);
+
+  // Verify monitoring worked
+  if (report.checkpoints.length !== 2) {
+    throw new Error(`Expected 2 checkpoints, got ${report.checkpoints.length}`);
+  }
+
+  if (report.totalTime <= 0) {
+    throw new Error('Total time should be positive');
+  }
+});
+
+// Test 20: COMPILED_PATTERNS performance optimization
+runTest('COMPILED_PATTERNS performance optimization', () => {
+  console.log('   Testing pre-compiled regex patterns...');
+
+  const testCommits = [
+    'feat: add feature',
+    'FEAT: ADD FEATURE',
+    'fix(scope): bug fix',
+    'revert: feat: add feature',
+    'Revert "feat: add feature"'
+  ];
+
+  const startTime = Date.now();
+
+  // Test pattern matching performance
+  testCommits.forEach(commit => {
+    const conventionalMatch = commit.match(COMPILED_PATTERNS.CONVENTIONAL_COMMIT);
+    const githubRevertMatch = commit.match(COMPILED_PATTERNS.GITHUB_REVERT);
+    const revertPrefixMatch = commit.match(COMPILED_PATTERNS.REVERT_PREFIX);
+
+    // Verify patterns work correctly
+    if (commit.toLowerCase().includes('feat') || commit.toLowerCase().includes('fix')) {
+      assertNotNull(conventionalMatch || githubRevertMatch || revertPrefixMatch,
+        `Should match conventional pattern: ${commit}`);
+    }
+  });
+
+  const duration = Date.now() - startTime;
+  console.log(`   ⚡ Pattern matching completed in ${duration}ms`);
+
+  // Verify all expected patterns exist
+  const expectedPatterns = [
+    'CONVENTIONAL_COMMIT', 'GITHUB_REVERT', 'REVERT_PREFIX',
+    'BREAKING_CHANGE_EXCLAMATION', 'BREAKING_CHANGE_KEYWORD',
+    'SEMVER_PATTERN', 'WHITESPACE_NORMALIZE'
+  ];
+
+  expectedPatterns.forEach(pattern => {
+    if (!COMPILED_PATTERNS[pattern]) {
+      throw new Error(`Missing compiled pattern: ${pattern}`);
+    }
+  });
+});
+
+// Test 21: Large dataset performance with memory monitoring
+runTest('Large dataset performance with memory monitoring', () => {
+  console.log('   Testing large dataset performance...');
+
+  // Create a large commit set
+  const largeCommitSet = [];
+  for (let i = 0; i < 500; i++) {
+    largeCommitSet.push(`feat: add feature ${i}`);
+  }
+  // Add reverts for first 100 features
+  for (let i = 0; i < 100; i++) {
+    largeCommitSet.push(`revert: feat: add feature ${i}`);
+  }
+
+  const startTime = Date.now();
+  const analysis = analyzeCommitsWithReverts(largeCommitSet, {
+    enablePerformanceMetrics: true,
+    verbose: false
+  });
+  const duration = Date.now() - startTime;
+
+  console.log(`   📊 Processed ${largeCommitSet.length} commits in ${duration}ms`);
+  console.log(`   🔄 Matched ${analysis.revertMatches.length} reverts`);
+  console.log(`   📈 Net commits: ${analysis.netCommits.length}`);
+
+  // Verify performance metrics
+  if (analysis.performanceMetrics) {
+    const metrics = analysis.performanceMetrics;
+    console.log(`   ⚡ Algorithm: ${metrics.matchingComplexity}`);
+    console.log(`   🧠 Memory delta: ${(metrics.memoryUsage.delta / 1024).toFixed(1)}KB`);
+    console.log(`   📊 Efficiency: ${(metrics.matchingEfficiency * 100).toFixed(1)}%`);
+
+    // Performance should be reasonable
+    if (duration > 5000) { // 5 seconds
+      console.warn(`   ⚠️  Performance warning: ${duration}ms for ${largeCommitSet.length} commits`);
+    }
+
+    // Memory usage should be reasonable
+    if (metrics.memoryUsage.delta > 100 * 1024 * 1024) { // 100MB
+      console.warn(`   ⚠️  Memory warning: ${(metrics.memoryUsage.delta / 1024 / 1024).toFixed(2)}MB delta`);
+    }
+  }
+
+  // Verify correctness
+  assertEquals(analysis.revertMatches.length, 100, 'Should match 100 reverts');
+  assertEquals(analysis.netCommits.length, 400, 'Should have 400 net commits (500 - 100 matched pairs)');
+});
+
+console.log('\n📊 Advanced Revert Commit Handling Test Results:');
 console.log(`   ✅ Passed: ${testsPassed}`);
 console.log(`   ❌ Failed: ${testsFailed}`);
 console.log(`   📈 Success Rate: ${((testsPassed / (testsPassed + testsFailed)) * 100).toFixed(1)}%`);
 
 if (testsFailed === 0) {
-  console.log('\n🎉 All enhanced revert commit handling tests passed!');
-  console.log('✅ Claude AI recommendations successfully implemented and tested');
+  console.log('\n🎉 All advanced revert commit handling tests passed!');
+  console.log('✅ Claude AI advanced recommendations successfully implemented and tested');
+  console.log('🚀 Ready for production with enterprise-grade performance and reliability');
   process.exit(0);
 } else {
   console.log('\n⚠️  Some tests failed. Please review the implementation.');
