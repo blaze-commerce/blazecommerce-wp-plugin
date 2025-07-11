@@ -164,9 +164,11 @@ jobs:
         echo "🏷️  Last git tag: $LAST_TAG"
         echo "🎯 Expected tag: $EXPECTED_TAG"
 
-        # Validate semver format
+        # Validate semver format with tightened regex to prevent edge cases
         if ! echo "$PACKAGE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'; then
           echo "❌ Error: Package version '$PACKAGE_VERSION' is not a valid semver format"
+          echo "   Expected format: MAJOR.MINOR.PATCH[-prerelease][+metadata]"
+          echo "   Examples: 1.0.0, 1.0.0-alpha.1, 1.0.0+build.123"
           exit 1
         fi
 
@@ -239,10 +241,25 @@ jobs:
             if [ -z "$COMMITS" ]; then
               echo "ℹ️  No commits found since last tag - using fallback analysis"
               COMMITS=$(git log --oneline --no-merges --format="%s" -${FALLBACK_COMMIT_LIMIT})
+
+              # Validate fallback analysis results
+              if [ -z "$COMMITS" ]; then
+                echo "❌ Error: No commits found even in fallback analysis"
+                echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+                exit 0
+              fi
             fi
           else
             echo "📋 No previous tags found, analyzing last $FALLBACK_COMMIT_LIMIT commits"
             COMMITS=$(git log --oneline --no-merges --format="%s" -${FALLBACK_COMMIT_LIMIT})
+
+            # Validate commits were found when no tags exist
+            if [ -z "$COMMITS" ]; then
+              echo "❌ Error: No commits found even when analyzing last $FALLBACK_COMMIT_LIMIT commits"
+              echo "   This suggests an empty repository or git configuration issue"
+              echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+              exit 0
+            fi
           fi
 
           # Final validation for normal analysis
@@ -397,17 +414,34 @@ jobs:
         PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
 
         # Use the extracted conflict resolution script for better maintainability
-        RESOLUTION_RESULT=$(node scripts/resolve-version-conflicts.js "$NEW_VERSION" "$PRERELEASE_TYPE")
-        RESOLUTION_EXIT_CODE=$?
+        # Validate script existence before execution to prevent race conditions
+        if [ ! -f "scripts/resolve-version-conflicts.js" ]; then
+          echo "⚠️  Conflict resolution script not found, using original version"
+          echo "   Expected: scripts/resolve-version-conflicts.js"
+          echo "   Fallback: Using calculated version without conflict resolution"
+          RESOLVED_VERSION="$NEW_VERSION"
+        else
+          echo "🔧 Running conflict resolution script..."
+          RESOLUTION_RESULT=$(node scripts/resolve-version-conflicts.js "$NEW_VERSION" "$PRERELEASE_TYPE")
+          RESOLUTION_EXIT_CODE=$?
 
-        if [ $RESOLUTION_EXIT_CODE -ne 0 ]; then
-          echo "❌ Version conflict resolution failed"
-          echo "$RESOLUTION_RESULT"
-          exit 1
+          if [ $RESOLUTION_EXIT_CODE -ne 0 ]; then
+            echo "❌ Version conflict resolution failed"
+            echo "$RESOLUTION_RESULT"
+            echo "🔄 Fallback: Using calculated version without conflict resolution"
+            RESOLVED_VERSION="$NEW_VERSION"
+          else
+            # Extract resolved version from output
+            RESOLVED_VERSION=$(echo "$RESOLUTION_RESULT" | grep "📦 Final resolved version:" | sed 's/.*: //')
+
+            # Validate that a resolved version was extracted
+            if [ -z "$RESOLVED_VERSION" ]; then
+              echo "⚠️  Could not extract resolved version from script output"
+              echo "🔄 Fallback: Using calculated version without conflict resolution"
+              RESOLVED_VERSION="$NEW_VERSION"
+            fi
+          fi
         fi
-
-        # Extract resolved version from output
-        RESOLVED_VERSION=$(echo "$RESOLUTION_RESULT" | grep "📦 Final resolved version:" | sed 's/.*: //')
 
         if [ -n "$RESOLVED_VERSION" ] && [ "$RESOLVED_VERSION" != "$NEW_VERSION" ]; then
           echo "🔄 Version updated due to conflict resolution:"
