@@ -794,6 +794,41 @@ function calculateNextVersion(options = {}) {
 }
 
 /**
+ * Find the next available version that doesn't conflict with existing tags
+ * @param {string} baseVersion - Base version to start from
+ * @param {string} bumpType - Type of bump (patch, minor, major)
+ * @param {object} options - Options
+ * @returns {string} Next available version
+ */
+function findNextAvailableVersion(baseVersion, bumpType = 'patch', options = {}) {
+  const { verbose = false, maxAttempts = 10 } = options;
+
+  let currentVersion = baseVersion;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    const candidateVersion = incrementVersion(currentVersion, bumpType);
+    const tagName = `v${candidateVersion}`;
+
+    if (!tagExists(tagName)) {
+      if (verbose) {
+        console.log(`✅ Found available version: ${candidateVersion} (tag ${tagName} doesn't exist)`);
+      }
+      return candidateVersion;
+    }
+
+    if (verbose) {
+      console.log(`⚠️  Version ${candidateVersion} conflicts with existing tag ${tagName}, trying next...`);
+    }
+
+    currentVersion = candidateVersion;
+    attempts++;
+  }
+
+  throw new Error(`Could not find available version after ${maxAttempts} attempts starting from ${baseVersion}`);
+}
+
+/**
  * Smart version resolution with automatic conflict handling
  * @param {object} options - Resolution options
  * @returns {object} Resolution result
@@ -816,14 +851,16 @@ function resolveVersionConflicts(options = {}) {
 
   try {
     if (targetVersion) {
-      // Validate specific target version
-      const calculation = calculateNextVersion({
-        currentVersion: result.originalVersion,
-        forceOverride: strategy === 'force',
-        verbose
-      });
+      // Check if target version conflicts with existing tags
+      const tagName = `v${targetVersion}`;
+      if (tagExists(tagName)) {
+        result.warnings.push(`Target version ${targetVersion} conflicts with existing tag ${tagName}`);
 
-      if (compareVersions(targetVersion, result.originalVersion) > 0) {
+        // Find next available version based on target
+        const parsed = parseVersion(targetVersion);
+        result.resolvedVersion = findNextAvailableVersion(targetVersion, 'patch', { verbose });
+        result.actions.push(`Resolved conflict: ${targetVersion} → ${result.resolvedVersion}`);
+      } else if (compareVersions(targetVersion, result.originalVersion) > 0) {
         result.resolvedVersion = targetVersion;
         result.actions.push(`Using specified target version: ${targetVersion}`);
       } else {
@@ -837,18 +874,18 @@ function resolveVersionConflicts(options = {}) {
 
       switch (strategy) {
         case 'force-patch':
-          result.resolvedVersion = `${currentParsed.major}.${currentParsed.minor}.${currentParsed.patch + 1}`;
-          result.actions.push('Applied force-patch strategy');
+          result.resolvedVersion = findNextAvailableVersion(result.originalVersion, 'patch', { verbose });
+          result.actions.push('Applied force-patch strategy with conflict resolution');
           break;
 
         case 'force-minor':
-          result.resolvedVersion = `${currentParsed.major}.${currentParsed.minor + 1}.0`;
-          result.actions.push('Applied force-minor strategy');
+          result.resolvedVersion = findNextAvailableVersion(result.originalVersion, 'minor', { verbose });
+          result.actions.push('Applied force-minor strategy with conflict resolution');
           break;
 
         case 'force-major':
-          result.resolvedVersion = `${currentParsed.major + 1}.0.0`;
-          result.actions.push('Applied force-major strategy');
+          result.resolvedVersion = findNextAvailableVersion(result.originalVersion, 'major', { verbose });
+          result.actions.push('Applied force-major strategy with conflict resolution');
           break;
 
         case 'auto':
@@ -856,18 +893,25 @@ function resolveVersionConflicts(options = {}) {
           // Try to determine best resolution automatically
           const calculation = calculateNextVersion({
             currentVersion: result.originalVersion,
-            forceOverride: true,
+            forceOverride: false,
             verbose
           });
 
-          if (calculation.success) {
-            result.resolvedVersion = calculation.newVersion;
-            result.actions.push('Applied auto-resolution strategy');
+          if (calculation.success && calculation.newVersion) {
+            // Check if calculated version conflicts
+            const tagName = `v${calculation.newVersion}`;
+            if (tagExists(tagName)) {
+              result.resolvedVersion = findNextAvailableVersion(calculation.newVersion, 'patch', { verbose });
+              result.actions.push(`Auto-resolution with conflict handling: ${calculation.newVersion} → ${result.resolvedVersion}`);
+            } else {
+              result.resolvedVersion = calculation.newVersion;
+              result.actions.push('Applied auto-resolution strategy');
+            }
             result.actions.push(...calculation.actions);
           } else {
-            // Fallback to patch increment
-            result.resolvedVersion = `${currentParsed.major}.${currentParsed.minor}.${currentParsed.patch + 1}`;
-            result.actions.push('Fallback: applied patch increment');
+            // Fallback to patch increment with conflict resolution
+            result.resolvedVersion = findNextAvailableVersion(result.originalVersion, 'patch', { verbose });
+            result.actions.push('Fallback: applied patch increment with conflict resolution');
           }
           break;
       }
@@ -877,7 +921,14 @@ function resolveVersionConflicts(options = {}) {
     if (result.resolvedVersion && isValidSemver(result.resolvedVersion)) {
       const comparison = compareVersions(result.resolvedVersion, result.originalVersion);
       if (comparison > 0) {
-        result.success = true;
+        // Double-check that resolved version doesn't conflict
+        const tagName = `v${result.resolvedVersion}`;
+        if (tagExists(tagName)) {
+          result.warnings.push(`Resolved version ${result.resolvedVersion} still conflicts with tag ${tagName}`);
+          result.success = false;
+        } else {
+          result.success = true;
+        }
       } else {
         result.warnings.push(`Resolved version ${result.resolvedVersion} is not greater than original ${result.originalVersion}`);
       }
@@ -889,6 +940,14 @@ function resolveVersionConflicts(options = {}) {
       console.log(`   Resolved: ${result.resolvedVersion}`);
       console.log(`   Strategy: ${result.strategy}`);
       console.log(`   Success: ${result.success}`);
+      if (result.actions.length > 0) {
+        console.log('   Actions:');
+        result.actions.forEach(action => console.log(`     - ${action}`));
+      }
+      if (result.warnings.length > 0) {
+        console.log('   Warnings:');
+        result.warnings.forEach(warning => console.log(`     - ${warning}`));
+      }
     }
 
   } catch (error) {
@@ -911,6 +970,7 @@ module.exports = {
   getCommitsSinceLastTag,
   calculateNextVersion,
   resolveVersionConflicts,
+  findNextAvailableVersion,
   validateTagName,
   safeGitExec,
   validateInput,
