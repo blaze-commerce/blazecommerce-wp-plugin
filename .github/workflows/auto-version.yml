@@ -52,7 +52,8 @@ jobs:
     - name: Validate current version system
       run: |
         echo "🔍 Validating current version system..."
-        node scripts/validate-version.js --verbose
+        # Skip conflict checking since we handle version conflicts in the workflow
+        node scripts/validate-version.js --verbose --no-conflicts
         if [ $? -ne 0 ]; then
           echo "❌ Version validation failed. Aborting version bump."
           exit 1
