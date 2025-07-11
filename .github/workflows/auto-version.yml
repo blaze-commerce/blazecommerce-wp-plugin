@@ -28,13 +28,30 @@ jobs:
       run: |
         echo "🔍 Checking if version bump is needed based on changed files..."
 
-        # Get list of changed files in this push
+        # Get list of changed files in this push with better error handling
         if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
           # First push to branch - check all files in the commit
-          CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null || git ls-files)
+          echo "🔍 First push detected, analyzing all files in commit"
+          if ! CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null); then
+            echo "⚠️  Could not get diff, falling back to listing all files"
+            CHANGED_FILES=$(git ls-files)
+          fi
         else
           # Regular push - check files changed since previous commit
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }}..${{ github.event.after }})
+          echo "🔍 Regular push detected, analyzing changed files"
+          if ! CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}..${{ github.event.after }}" 2>/dev/null); then
+            echo "❌ Failed to get changed files between commits"
+            echo "   Before: ${{ github.event.before }}"
+            echo "   After: ${{ github.event.after }}"
+            exit 1
+          fi
+        fi
+
+        # Validate that we have files to analyze
+        if [ -z "$CHANGED_FILES" ]; then
+          echo "⚠️  No changed files detected, skipping version bump"
+          echo "should_bump_version=false" >> $GITHUB_OUTPUT
+          exit 0
         fi
 
         echo "📁 Changed files:"
@@ -91,21 +108,27 @@ jobs:
         # Check if any changed file should trigger version bump
         SHOULD_BUMP="false"
 
-        while IFS= read -r file; do
+        # Use null-terminated strings for better handling of filenames with spaces
+        while IFS= read -r -d '' file; do
           [ -z "$file" ] && continue
 
           FILE_SHOULD_BE_IGNORED="false"
 
-          # Check against each ignore pattern
+          # Check against each ignore pattern with improved matching logic
           for pattern in "${IGNORE_PATTERNS[@]}"; do
             # Handle directory patterns (ending with /)
             if [[ "$pattern" == */ ]]; then
-              if [[ "$file" == "$pattern"* ]]; then
+              # Use precise directory matching - file must start with pattern and have a path separator
+              if [[ "$file" == "$pattern"* ]] || [[ "$file" =~ ^${pattern//\//\/} ]]; then
                 FILE_SHOULD_BE_IGNORED="true"
                 break
               fi
-            # Handle exact file matches and wildcard patterns
-            elif [[ "$file" == "$pattern" ]] || [[ "$file" == *"$pattern" ]]; then
+            # Handle exact file matches
+            elif [[ "$file" == "$pattern" ]]; then
+              FILE_SHOULD_BE_IGNORED="true"
+              break
+            # Handle file extension patterns (like *.DS_Store)
+            elif [[ "$pattern" == *.* ]] && [[ "$file" == *"${pattern#*.}" ]]; then
               FILE_SHOULD_BE_IGNORED="true"
               break
             fi
@@ -118,7 +141,7 @@ jobs:
           else
             echo "⏭️  File '$file' is ignored for version bumping"
           fi
-        done <<< "$CHANGED_FILES"
+        done < <(printf '%s\0' $CHANGED_FILES)
 
         echo ""
         if [ "$SHOULD_BUMP" = "true" ]; then
@@ -186,12 +209,22 @@ jobs:
       if: steps.check_files.outputs.should_bump_version == 'true'
       run: |
         echo "🔍 Validating current version system..."
-        # Skip conflict checking since we handle version conflicts in the workflow
-        node scripts/validate-version.js --verbose --no-conflicts
-        if [ $? -ne 0 ]; then
-          echo "❌ Version validation failed. Aborting version bump."
+
+        # Validate that required script exists
+        if [ ! -f "scripts/validate-version.js" ]; then
+          echo "❌ Required script 'scripts/validate-version.js' not found"
+          echo "   This script is required for version validation"
           exit 1
         fi
+
+        # Skip conflict checking since we handle version conflicts in the workflow
+        if ! node scripts/validate-version.js --verbose --no-conflicts; then
+          echo "❌ Version validation failed. Aborting version bump."
+          echo "   Check the validation output above for specific issues"
+          exit 1
+        fi
+
+        echo "✅ Version validation passed"
 
     - name: Determine prerelease type based on branch
       if: steps.check_files.outputs.should_bump_version == 'true'
@@ -476,7 +509,12 @@ jobs:
           echo "✅ Version bump was processed"
           echo "🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE || 'none' }}"
           if [ "${{ steps.bump_type.outputs.BUMP_TYPE }}" != "none" ] && [ -n "${{ steps.bump_type.outputs.BUMP_TYPE }}" ]; then
-            FINAL_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+            # Safely get the final version with error handling
+            if [ -f "package.json" ]; then
+              FINAL_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+            else
+              FINAL_VERSION="unknown (package.json not found)"
+            fi
             echo "📦 New version: $FINAL_VERSION"
             echo "🎉 Version bump completed successfully!"
           else

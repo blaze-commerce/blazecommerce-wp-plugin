@@ -28,15 +28,44 @@ jobs:
         CURRENT_TAG="${GITHUB_REF#refs/tags/}"
         echo "🏷️  Current tag: $CURRENT_TAG"
 
-        # Get the previous tag to compare against
-        PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null || echo "")
+        # Validate tag format
+        if [ -z "$CURRENT_TAG" ] || [[ ! "$CURRENT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+          echo "❌ Invalid tag format: $CURRENT_TAG"
+          echo "   Expected format: v1.2.3"
+          exit 1
+        fi
 
+        # Get the previous tag to compare against with better error handling
+        echo "🔍 Looking for previous tag..."
+        if ! PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null); then
+          echo "📋 No previous tags found, this appears to be the first release"
+          PREVIOUS_TAG=""
+        else
+          echo "📋 Found previous tag: $PREVIOUS_TAG"
+        fi
+
+        # Get changed files with proper error handling
         if [ -n "$PREVIOUS_TAG" ]; then
           echo "📋 Comparing changes since previous tag: $PREVIOUS_TAG"
-          CHANGED_FILES=$(git diff --name-only "$PREVIOUS_TAG..$CURRENT_TAG")
+          if ! CHANGED_FILES=$(git diff --name-only "$PREVIOUS_TAG..$CURRENT_TAG" 2>/dev/null); then
+            echo "❌ Failed to get changed files between tags"
+            echo "   Previous: $PREVIOUS_TAG"
+            echo "   Current: $CURRENT_TAG"
+            exit 1
+          fi
         else
           echo "📋 No previous tags found, checking all files in current commit"
-          CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null || git ls-files)
+          if ! CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null); then
+            echo "⚠️  Could not get diff, falling back to listing all files"
+            CHANGED_FILES=$(git ls-files)
+          fi
+        fi
+
+        # Validate that we have files to analyze
+        if [ -z "$CHANGED_FILES" ]; then
+          echo "⚠️  No changed files detected, skipping release creation"
+          echo "should_create_release=false" >> $GITHUB_OUTPUT
+          exit 0
         fi
 
         echo "📁 Changed files since last release:"
@@ -93,21 +122,27 @@ jobs:
         # Check if any changed file should trigger release creation
         SHOULD_CREATE_RELEASE="false"
 
-        while IFS= read -r file; do
+        # Use null-terminated strings for better handling of filenames with spaces
+        while IFS= read -r -d '' file; do
           [ -z "$file" ] && continue
 
           FILE_SHOULD_BE_IGNORED="false"
 
-          # Check against each ignore pattern
+          # Check against each ignore pattern with improved matching logic
           for pattern in "${IGNORE_PATTERNS[@]}"; do
             # Handle directory patterns (ending with /)
             if [[ "$pattern" == */ ]]; then
-              if [[ "$file" == "$pattern"* ]]; then
+              # Use precise directory matching - file must start with pattern and have a path separator
+              if [[ "$file" == "$pattern"* ]] || [[ "$file" =~ ^${pattern//\//\/} ]]; then
                 FILE_SHOULD_BE_IGNORED="true"
                 break
               fi
-            # Handle exact file matches and wildcard patterns
-            elif [[ "$file" == "$pattern" ]] || [[ "$file" == *"$pattern" ]]; then
+            # Handle exact file matches
+            elif [[ "$file" == "$pattern" ]]; then
+              FILE_SHOULD_BE_IGNORED="true"
+              break
+            # Handle file extension patterns (like *.DS_Store)
+            elif [[ "$pattern" == *.* ]] && [[ "$file" == *"${pattern#*.}" ]]; then
               FILE_SHOULD_BE_IGNORED="true"
               break
             fi
@@ -120,7 +155,7 @@ jobs:
           else
             echo "⏭️  File '$file' is ignored for release creation"
           fi
-        done <<< "$CHANGED_FILES"
+        done < <(printf '%s\0' $CHANGED_FILES)
 
         echo ""
         if [ "$SHOULD_CREATE_RELEASE" = "true" ]; then
@@ -191,11 +226,20 @@ jobs:
       if: steps.check_files.outputs.should_create_release == 'true'
       run: |
         echo "🔍 Validating version consistency across files..."
-        node scripts/validate-version.js --verbose
-        if [ $? -ne 0 ]; then
-          echo "❌ Version validation failed"
+
+        # Validate that required script exists
+        if [ ! -f "scripts/validate-version.js" ]; then
+          echo "❌ Required script 'scripts/validate-version.js' not found"
+          echo "   This script is required for version validation"
           exit 1
         fi
+
+        if ! node scripts/validate-version.js --verbose; then
+          echo "❌ Version validation failed"
+          echo "   Check the validation output above for specific issues"
+          exit 1
+        fi
+
         echo "✅ Version validation passed"
 
   build-and-release:
