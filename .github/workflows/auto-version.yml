@@ -151,19 +151,58 @@ jobs:
           echo "🔧 Other branch detected → stable release"
         fi
 
+    - name: Validate version consistency
+      id: version_validation
+      run: |
+        echo "🔍 Validating version consistency between package.json and git tags..."
+
+        PACKAGE_VERSION=$(node -p "require('./package.json').version")
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+        EXPECTED_TAG="v$PACKAGE_VERSION"
+
+        echo "📦 Package version: $PACKAGE_VERSION"
+        echo "🏷️  Last git tag: $LAST_TAG"
+        echo "🎯 Expected tag: $EXPECTED_TAG"
+
+        if [ "$LAST_TAG" != "$EXPECTED_TAG" ]; then
+          echo "⚠️  Version mismatch detected!"
+          echo "   Package.json version: $PACKAGE_VERSION"
+          echo "   Last git tag: $LAST_TAG"
+          echo "   This may cause unexpected version bumps due to analyzing too many commits"
+          echo "VERSION_MISMATCH=true" >> $GITHUB_OUTPUT
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+        else
+          echo "✅ Version consistency validated"
+          echo "VERSION_MISMATCH=false" >> $GITHUB_OUTPUT
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+        fi
+
     - name: Determine version bump type
       id: bump_type
       run: |
         echo "🔍 Analyzing commits for version bump type..."
 
-        # Get all non-merge commits since last version tag or last 50 commits if no tags
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-        if [ -n "$LAST_TAG" ]; then
-          echo "📋 Analyzing commits since tag: $LAST_TAG"
-          COMMITS=$(git log --oneline --no-merges --format="%s" ${LAST_TAG}..HEAD)
+        # Check for version mismatch and adjust analysis scope accordingly
+        VERSION_MISMATCH="${{ steps.version_validation.outputs.VERSION_MISMATCH }}"
+        PACKAGE_VERSION="${{ steps.version_validation.outputs.PACKAGE_VERSION }}"
+
+        if [ "$VERSION_MISMATCH" = "true" ]; then
+          echo "⚠️  Version mismatch detected - using limited commit analysis"
+          echo "📋 Analyzing only recent commits to avoid historical feature detection"
+          # When there's a version mismatch, only analyze recent commits (last 10)
+          # to avoid picking up historical features that should not trigger version bumps
+          COMMITS=$(git log --oneline --no-merges --format="%s" -10)
+          echo "🔧 Limited analysis: analyzing last 10 commits only"
         else
-          echo "📋 No previous tags found, analyzing last 50 commits"
-          COMMITS=$(git log --oneline --no-merges --format="%s" -50)
+          # Normal analysis: get commits since last version tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            echo "📋 Analyzing commits since tag: $LAST_TAG"
+            COMMITS=$(git log --oneline --no-merges --format="%s" ${LAST_TAG}..HEAD)
+          else
+            echo "📋 No previous tags found, analyzing last 50 commits"
+            COMMITS=$(git log --oneline --no-merges --format="%s" -50)
+          fi
         fi
 
         if [ -z "$COMMITS" ]; then
