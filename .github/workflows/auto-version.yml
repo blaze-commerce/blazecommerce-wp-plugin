@@ -52,7 +52,8 @@ jobs:
     - name: Validate current version system
       run: |
         echo "🔍 Validating current version system..."
-        node scripts/validate-version.js --verbose
+        # Skip conflict checking since we handle version conflicts in the workflow
+        node scripts/validate-version.js --verbose --no-conflicts
         if [ $? -ne 0 ]; then
           echo "❌ Version validation failed. Aborting version bump."
           exit 1
@@ -161,6 +162,47 @@ jobs:
             ")
             ;;
         esac
+
+        # Validate that NEW_VERSION was calculated
+        if [ -z "$NEW_VERSION" ]; then
+          echo "❌ Error: NEW_VERSION was not calculated properly"
+          exit 1
+        fi
+
+        # Handle edge case: Version conflict resolution
+        # This occurs when conventional commits would result in the same version as current
+        # (e.g., when no conventional commits are found but BUMP_TYPE was determined)
+        # Solution: Force a patch increment to ensure version progression
+        if [ "$NEW_VERSION" = "$CURRENT_VERSION" ]; then
+          echo "⚠️  Version conflict detected:"
+          echo "   Current version: $CURRENT_VERSION"
+          echo "   Calculated version: $NEW_VERSION"
+          echo "🔄 Auto-resolving by forcing patch version increment..."
+
+          # Force patch increment using validated semver utilities
+          FORCED_VERSION=$(node -e "
+            try {
+              const semver = require('./scripts/semver-utils');
+              const newVersion = semver.incrementVersion('$CURRENT_VERSION', 'patch');
+              console.log(newVersion);
+            } catch (error) {
+              console.error('Error incrementing version:', error.message);
+              process.exit(1);
+            }
+          ")
+
+          # Validate the forced version was generated successfully
+          if [ $? -eq 0 ] && [ -n "$FORCED_VERSION" ]; then
+            NEW_VERSION="$FORCED_VERSION"
+            echo "✅ Version conflict resolved:"
+            echo "   New version: $NEW_VERSION"
+            echo "   Bump type: PATCH (auto-forced)"
+            echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Error: Failed to generate forced patch version"
+            exit 1
+          fi
+        fi
 
         echo "📦 New version will be: $NEW_VERSION"
         echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
