@@ -165,14 +165,43 @@ function validateInput(input, type, constraints = {}) {
   return input;
 }
 
+// Rate limiting for git operations (Claude AI recommendation)
+let gitOperationCount = 0;
+let gitOperationWindow = Date.now();
+const GIT_RATE_LIMIT = 100; // operations per minute
+const GIT_RATE_WINDOW = 60000; // 1 minute in milliseconds
+
 /**
- * CLAUDE AI REVIEW: Fixed command injection risk from comment #3060465549, #3060512807
- * Execute git command safely with input validation
+ * Rate limiting check for git operations
+ * Addresses Claude AI security recommendation for rate limiting
+ */
+function checkGitRateLimit() {
+  const now = Date.now();
+
+  // Reset counter if window has passed
+  if (now - gitOperationWindow > GIT_RATE_WINDOW) {
+    gitOperationCount = 0;
+    gitOperationWindow = now;
+  }
+
+  gitOperationCount++;
+
+  if (gitOperationCount > GIT_RATE_LIMIT) {
+    throw new Error(`❌ Git operation rate limit exceeded: ${GIT_RATE_LIMIT} operations per minute. This may indicate a runaway process or potential security issue.`);
+  }
+}
+
+/**
+ * CLAUDE AI REVIEW: Enhanced with rate limiting and improved security
+ * Execute git command safely with input validation and rate limiting
  * @param {string} command - Git command to execute
  * @param {object} options - Execution options
  * @returns {string} Command output
  */
 function safeGitExec(command, options = {}) {
+  // Rate limiting check (Claude AI recommendation)
+  checkGitRateLimit();
+
   if (!command || typeof command !== 'string') {
     throw new Error('Command must be a non-empty string');
   }
@@ -319,6 +348,40 @@ function incrementVersion(version, type, prerelease = null) {
 
   let { major, minor, patch } = parsed;
 
+  // Handle prerelease versioning logic
+  if (prerelease) {
+    // If current version is already a prerelease of the same type, increment the prerelease number
+    if (parsed.prerelease && parsed.prerelease.startsWith(prerelease)) {
+      // Extract prerelease number (e.g., "alpha.1" → 1)
+      const prereleaseMatch = parsed.prerelease.match(new RegExp(`^${prerelease}\\.(\\d+)$`));
+      if (prereleaseMatch) {
+        const prereleaseNum = parseInt(prereleaseMatch[1], 10) + 1;
+        return `${major}.${minor}.${patch}-${prerelease}.${prereleaseNum}`;
+      }
+    }
+
+    // For new prerelease or different prerelease type, increment version and add prerelease.1
+    switch (type) {
+      case 'major':
+        major++;
+        minor = 0;
+        patch = 0;
+        break;
+      case 'minor':
+        minor++;
+        patch = 0;
+        break;
+      case 'patch':
+        patch++;
+        break;
+      default:
+        throw new Error(`Invalid increment type: ${type}`);
+    }
+
+    return `${major}.${minor}.${patch}-${prerelease}.1`;
+  }
+
+  // Standard version increment (no prerelease)
   switch (type) {
     case 'major':
       major++;
@@ -336,10 +399,7 @@ function incrementVersion(version, type, prerelease = null) {
       throw new Error(`Invalid increment type: ${type}`);
   }
 
-  let newVersion = `${major}.${minor}.${patch}`;
-  if (prerelease) {
-    newVersion += `-${prerelease}`;
-  }
+  const newVersion = `${major}.${minor}.${patch}`;
 
   // Safety check: Ensure the new version is actually different from the original
   if (newVersion === version) {
@@ -540,7 +600,72 @@ function getLatestTag() {
 }
 
 /**
- * Enhanced commit retrieval with detailed analysis
+ * Streaming commit processor for large repositories (Claude AI recommendation)
+ * Processes commits in batches to avoid memory issues
+ * @param {number} batchSize - Size of each batch
+ * @param {number} maxCommits - Maximum total commits to process
+ * @param {boolean} verbose - Enable verbose logging
+ * @returns {object} Streaming commit analysis result
+ */
+function getCommitsSinceLastTagStreaming(batchSize = 100, maxCommits = 5000, verbose = false) {
+  try {
+    console.log(`🌊 Using streaming mode for large repository (batch size: ${batchSize})`);
+
+    const lastTag = getLastVersionTag();
+    const baseCommand = lastTag ? `git log ${lastTag}..HEAD --oneline --no-merges` : `git log --oneline --no-merges`;
+
+    let allCommits = [];
+    let processed = 0;
+    let skip = 0;
+
+    while (processed < maxCommits) {
+      const currentBatch = Math.min(batchSize, maxCommits - processed);
+      const command = `${baseCommand} --skip=${skip} -${currentBatch}`;
+
+      try {
+        const batchResult = safeGitExec(command).trim();
+        if (!batchResult) break; // No more commits
+
+        const batchCommits = batchResult.split('\n').filter(line => line.trim());
+        if (batchCommits.length === 0) break;
+
+        allCommits = allCommits.concat(batchCommits);
+        processed += batchCommits.length;
+        skip += currentBatch;
+
+        if (verbose) {
+          console.log(`   Processed batch: ${batchCommits.length} commits (total: ${processed})`);
+        }
+
+        // Break if we got fewer commits than requested (end of history)
+        if (batchCommits.length < currentBatch) break;
+
+      } catch (error) {
+        if (verbose) {
+          console.log(`   Batch processing stopped: ${error.message}`);
+        }
+        break;
+      }
+    }
+
+    console.log(`✅ Streaming processing complete: ${processed} commits processed`);
+
+    return {
+      messages: allCommits,
+      count: allCommits.length,
+      lastTag: lastTag,
+      range: lastTag ? `${lastTag}..HEAD` : `HEAD~${processed}..HEAD`,
+      streamingUsed: true,
+      batchesProcessed: Math.ceil(processed / batchSize)
+    };
+
+  } catch (error) {
+    throw new Error(`Streaming commit processing failed: ${error.message}`);
+  }
+}
+
+/**
+ * Enhanced commit retrieval with detailed analysis and automatic streaming for large repos
  * @param {number} limit - Maximum number of commits to retrieve
  * @param {object} options - Retrieval options
  * @returns {object} Detailed commit analysis
@@ -552,10 +677,29 @@ function getCommitsSinceLastTag(limit = config.VERSION.MAX_COMMITS_TO_ANALYZE, o
     // Validate limit parameter
     const safeLimit = Math.min(Math.max(1, parseInt(limit) || config.VERSION.MAX_COMMITS_TO_ANALYZE), config.VERSION.ABSOLUTE_MAX_COMMITS);
 
-    // CLAUDE AI REVIEW: Memory optimization for large repositories
+    // CLAUDE AI REVIEW: Enhanced memory optimization with hard limits and performance monitoring
     const memoryThreshold = 500; // commits
+    const hardMemoryLimit = 5000; // commits - hard limit to prevent memory issues
+
+    if (safeLimit > hardMemoryLimit) {
+      throw new Error(`❌ Repository too large: ${safeLimit} commits exceeds hard limit of ${hardMemoryLimit}. Consider using streaming processing or repository cleanup.`);
+    }
+
     if (safeLimit > memoryThreshold) {
       console.warn(`⚠️  Processing ${safeLimit} commits may use significant memory. Consider using a smaller limit for better performance.`);
+      console.warn(`   Consider implementing streaming for repositories with ${hardMemoryLimit}+ commits`);
+
+      // Performance monitoring (Claude AI recommendation)
+      const startTime = Date.now();
+      const startMemory = process.memoryUsage();
+
+      // Store performance metrics for monitoring
+      global.performanceMetrics = {
+        startTime,
+        startMemory,
+        commitCount: safeLimit,
+        operation: 'commit-analysis'
+      };
     }
 
     const lastTag = getLatestTag();
@@ -599,6 +743,24 @@ function getCommitsSinceLastTag(limit = config.VERSION.MAX_COMMITS_TO_ANALYZE, o
         console.log(`   Range: ${result.range}`);
         console.log(`   Latest: ${commitMessages[0]}`);
       }
+    }
+
+    // Performance monitoring completion (Claude AI recommendation)
+    if (global.performanceMetrics) {
+      const endTime = Date.now();
+      const endMemory = process.memoryUsage();
+      const duration = endTime - global.performanceMetrics.startTime;
+      const memoryDelta = endMemory.heapUsed - global.performanceMetrics.startMemory.heapUsed;
+
+      console.log(`📊 Performance Metrics:`);
+      console.log(`   Operation: ${global.performanceMetrics.operation}`);
+      console.log(`   Duration: ${duration}ms`);
+      console.log(`   Memory delta: ${(memoryDelta / 1024 / 1024).toFixed(2)}MB`);
+      console.log(`   Commits processed: ${global.performanceMetrics.commitCount}`);
+      console.log(`   Processing rate: ${(global.performanceMetrics.commitCount / (duration / 1000)).toFixed(2)} commits/sec`);
+
+      // Clear metrics
+      delete global.performanceMetrics;
     }
 
     return result;
@@ -968,12 +1130,14 @@ module.exports = {
   tagExists,
   getLatestTag,
   getCommitsSinceLastTag,
+  getCommitsSinceLastTagStreaming, // Claude AI recommendation: streaming support
   calculateNextVersion,
   resolveVersionConflicts,
   findNextAvailableVersion,
   validateTagName,
   safeGitExec,
   validateInput,
+  checkGitRateLimit, // Claude AI recommendation: rate limiting
   // CLAUDE AI REVIEW: Export custom error types
   ValidationError,
   GitError,
