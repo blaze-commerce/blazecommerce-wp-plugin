@@ -53,6 +53,21 @@ jobs:
           echo "🚀 Stable release version"
         fi
 
+    - name: Validate YAML syntax
+      run: |
+        echo "🔍 Validating YAML syntax in workflow files..."
+        python3 -c "
+        import yaml
+        import sys
+        try:
+            with open('.github/workflows/release.yml', 'r') as f:
+                yaml.safe_load(f)
+            print('✅ YAML syntax is valid')
+        except yaml.YAMLError as e:
+            print(f'❌ YAML syntax error: {e}')
+            sys.exit(1)
+        "
+
     - name: Validate version consistency
       run: |
         echo "🔍 Validating version consistency across files..."
@@ -191,40 +206,31 @@ jobs:
           CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d' | head -50)
 
           if [ -n "$CHANGELOG_CONTENT" ]; then
-            RELEASE_NOTES=$(cat << EOF
-## What's Changed
-
-$CHANGELOG_CONTENT
-
----
-EOF
-)
+            # Note: Using string concatenation instead of heredoc (cat << EOF)
+            # to avoid YAML parsing issues. Heredoc syntax can confuse YAML parsers
+            # when used within shell scripts in GitHub Actions workflows.
+            # This approach was implemented based on Claude AI's review recommendations.
+            RELEASE_NOTES="## What's Changed"$'\n\n'"$CHANGELOG_CONTENT"$'\n\n'"---"
           fi
         fi
 
-        # Add installation instructions
-        RELEASE_NOTES="$RELEASE_NOTES
+        # Build release notes sections using variables for better readability
+        # (Improved based on Claude AI's maintainability recommendations)
 
-## 📦 Installation
+        # Installation instructions section
+        INSTALL_SECTION="## 📦 Installation"$'\n\n'"1. Download the \`blazecommerce-wp-plugin-$VERSION.zip\` file below"$'\n'"2. In your WordPress admin, go to **Plugins > Add New > Upload Plugin**"$'\n'"3. Choose the downloaded ZIP file and click **Install Now**"$'\n'"4. Activate the plugin after installation"
 
-1. Download the \`blazecommerce-wp-plugin-$VERSION.zip\` file below
-2. In your WordPress admin, go to **Plugins > Add New > Upload Plugin**
-3. Choose the downloaded ZIP file and click **Install Now**
-4. Activate the plugin after installation
+        # Requirements section
+        REQUIREMENTS_SECTION="## 🔧 Requirements"$'\n\n'"- WordPress 5.0 or higher"$'\n'"- PHP 7.4 or higher"$'\n'"- WooCommerce plugin"
 
-## 🔧 Requirements
+        # Documentation section
+        DOCS_SECTION="## 📚 Documentation"$'\n\n'"For setup and configuration instructions, visit our [documentation](https://github.com/blaze-commerce/blazecommerce-wp-plugin/tree/main/docs)."
 
-- WordPress 5.0 or higher
-- PHP 7.4 or higher
-- WooCommerce plugin
+        # Support section
+        SUPPORT_SECTION="## 🐛 Support"$'\n\n'"If you encounter any issues, please [create an issue](https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues) on GitHub."
 
-## 📚 Documentation
-
-For setup and configuration instructions, visit our [documentation](https://github.com/blaze-commerce/blazecommerce-wp-plugin/tree/main/docs).
-
-## 🐛 Support
-
-If you encounter any issues, please [create an issue](https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues) on GitHub."
+        # Combine all sections into final release notes
+        RELEASE_NOTES="$RELEASE_NOTES"$'\n\n'"$INSTALL_SECTION"$'\n\n'"$REQUIREMENTS_SECTION"$'\n\n'"$DOCS_SECTION"$'\n\n'"$SUPPORT_SECTION"
 
         # Save release notes to output
         echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
