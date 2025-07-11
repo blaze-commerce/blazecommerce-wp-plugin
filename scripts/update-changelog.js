@@ -133,7 +133,7 @@ function extractReferences(message) {
     let matchCount = 0;
     while ((match = pattern.exec(safeMessage)) !== null && matchCount < config.CHANGELOG.MAX_REFERENCES_PER_COMMIT) {
       const issueNumber = parseInt(match[1], 10);
-      if (issueNumber > 0 && issueNumber < 1000000) { // Reasonable issue number range
+      if (issueNumber > 0 && issueNumber <= config.VERSION.MAX_ISSUE_NUMBER) {
         references.add(`#${issueNumber}`);
         matchCount++;
       }
@@ -366,6 +366,43 @@ function transformCommitMessage(commitInfo) {
 }
 
 /**
+ * Process commits in batches to manage memory usage
+ * @param {string[]} commits - Array of commit messages
+ * @param {number} batchSize - Size of each batch
+ * @returns {object} Categorized commits
+ */
+function categorizeCommitsInBatches(commits, batchSize = 20) {
+  const result = {
+    breaking: [],
+    categories: {},
+    uncategorized: []
+  };
+
+  // Initialize categories
+  for (const type of Object.keys(COMMIT_CATEGORIES)) {
+    result.categories[type] = [];
+  }
+
+  // Process commits in batches
+  for (let i = 0; i < commits.length; i += batchSize) {
+    const batch = commits.slice(i, i + batchSize);
+    const batchResult = categorizeCommits(batch);
+
+    // Merge batch results
+    result.breaking.push(...batchResult.breaking);
+    result.uncategorized.push(...batchResult.uncategorized);
+
+    for (const [type, commitList] of Object.entries(batchResult.categories)) {
+      if (result.categories[type]) {
+        result.categories[type].push(...commitList);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Categorize commits by type
  * @param {string[]} commits - Array of commit messages
  * @returns {object} Categorized commits
@@ -514,7 +551,9 @@ function generateCategorySection(categoryType, commits) {
 
   const category = COMMIT_CATEGORIES[categoryType];
   const title = CONFIG.userFriendly ? (category.userTitle || category.title) : category.title;
-  let section = `### ${title}\n\n`;
+
+  // Use array for efficient string building
+  const lines = [`### ${title}`, ''];
 
   if (CONFIG.groupByScope && commits.length > 3) {
     // Group by scope for better organization
@@ -522,7 +561,7 @@ function generateCategorySection(categoryType, commits) {
 
     // Add commits without scope first
     for (const commit of grouped.withoutScope) {
-      section += formatCommit(commit) + '\n';
+      lines.push(formatCommit(commit));
     }
 
     // Add scoped commits grouped by scope
@@ -531,21 +570,22 @@ function generateCategorySection(categoryType, commits) {
       if (grouped.withScope[scope].length > 1) {
         // Add subheading for scope if multiple commits
         const scopeTitle = scope.charAt(0).toUpperCase() + scope.slice(1);
-        section += `\n#### ${scopeTitle}\n\n`;
+        lines.push('', `#### ${scopeTitle}`, '');
       }
 
       for (const commit of grouped.withScope[scope]) {
-        section += formatCommit(commit) + '\n';
+        lines.push(formatCommit(commit));
       }
     }
   } else {
     // Standard format without grouping
     for (const commit of commits) {
-      section += formatCommit(commit) + '\n';
+      lines.push(formatCommit(commit));
     }
   }
 
-  return section + '\n';
+  lines.push(''); // Add final newline
+  return lines.join('\n');
 }
 
 /**
@@ -557,17 +597,18 @@ function generateBreakingChangesSection(breakingCommits) {
   if (breakingCommits.length === 0) return '';
 
   const title = CONFIG.userFriendly ? '💥 Important Changes' : '💥 BREAKING CHANGES';
-  let section = `### ${title}\n\n`;
+  const lines = [`### ${title}`, ''];
 
   if (CONFIG.userFriendly && breakingCommits.length > 0) {
-    section += '> ⚠️ **Note**: These changes may require updates to your existing setup.\n\n';
+    lines.push('> ⚠️ **Note**: These changes may require updates to your existing setup.', '');
   }
 
   for (const commit of breakingCommits) {
-    section += formatCommit(commit) + '\n';
+    lines.push(formatCommit(commit));
   }
 
-  return section + '\n';
+  lines.push(''); // Add final newline
+  return lines.join('\n');
 }
 
 /**
@@ -633,7 +674,8 @@ function updateChangelog(version = null) {
 
   try {
     // Get commits since last tag with configurable limit
-    const commits = getCommitsSinceLastTag(config.CHANGELOG.MAX_CHANGELOG_COMMITS);
+    const maxCommits = Math.min(config.CHANGELOG.MAX_CHANGELOG_COMMITS, 200); // Hard limit for memory safety
+    const commits = getCommitsSinceLastTag(maxCommits);
 
     if (commits.length === 0) {
       console.log('ℹ️  No new commits found since last tag');
@@ -642,8 +684,8 @@ function updateChangelog(version = null) {
 
     console.log(`📊 Found ${commits.length} commits to process`);
 
-    // Categorize commits
-    const categorizedCommits = categorizeCommits(commits);
+    // Process commits in batches for better memory management
+    const categorizedCommits = categorizeCommitsInBatches(commits, config.CHANGELOG.COMMIT_BATCH_SIZE);
 
     if (CONFIG.verbose) {
       console.log('\n📋 Commit breakdown:');

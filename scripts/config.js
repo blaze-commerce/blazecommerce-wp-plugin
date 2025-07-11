@@ -10,15 +10,24 @@ module.exports = {
   VERSION: {
     // Maximum number of commits to analyze for version determination
     MAX_COMMITS_TO_ANALYZE: 50,
-    
+
     // Maximum number of commits to process for changelog generation
     MAX_CHANGELOG_COMMITS: 100,
-    
+
+    // Hard limit for memory safety
+    ABSOLUTE_MAX_COMMITS: 1000,
+
     // Backup file timestamp format
     BACKUP_TIMESTAMP_FORMAT: 'YYYY-MM-DD-HH-mm-ss',
-    
+
     // Maximum backup files to keep
-    MAX_BACKUP_FILES: 10
+    MAX_BACKUP_FILES: 10,
+
+    // Maximum version string length
+    MAX_VERSION_LENGTH: 100,
+
+    // Maximum issue number value
+    MAX_ISSUE_NUMBER: 999999
   },
 
   // Git operation settings
