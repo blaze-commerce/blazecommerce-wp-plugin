@@ -7,7 +7,18 @@
 
 const fs = require('fs');
 const path = require('path');
-const { isValidSemver, parseVersion, compareVersions, tagExists, getCurrentVersion, validateTagName } = require('./semver-utils');
+const {
+  isValidSemver,
+  parseVersion,
+  compareVersions,
+  tagExists,
+  getCurrentVersion,
+  validateTagName,
+  calculateNextVersion,
+  resolveVersionConflicts,
+  determineBumpType,
+  getCommitsSinceLastTag
+} = require('./semver-utils');
 const config = require('./config');
 
 // Files that contain version information
@@ -216,17 +227,26 @@ function validateVersion(version) {
 }
 
 /**
- * Check for version conflicts with git tags
- * @param {string} version - Version to check
- * @returns {object} Conflict check result
+ * Enhanced version conflict checking with resolution capabilities
+ * @param {string} version - Version to check for conflicts
+ * @param {object} options - Conflict checking options
+ * @returns {object} Enhanced conflict check result
  */
-function checkVersionConflicts(version) {
+function checkVersionConflicts(version, options = {}) {
+  const {
+    enableResolution = false,
+    resolutionStrategy = 'auto',
+    verbose = false
+  } = options;
+
   if (!version || typeof version !== 'string') {
     return {
       version: version,
       hasConflicts: true,
       conflicts: ['Invalid version provided'],
-      suggestions: []
+      suggestions: [],
+      resolution: null,
+      analysis: null
     };
   }
 
@@ -234,7 +254,9 @@ function checkVersionConflicts(version) {
     version: version,
     hasConflicts: false,
     conflicts: [],
-    suggestions: []
+    suggestions: [],
+    resolution: null,
+    analysis: null
   };
 
   try {
@@ -263,16 +285,48 @@ function checkVersionConflicts(version) {
   try {
     const currentVersion = getCurrentVersion();
     const comparison = compareVersions(version, currentVersion);
-    
+
     if (comparison <= 0) {
       result.hasConflicts = true;
-      result.conflicts.push(`New version ${version} is not greater than current version ${currentVersion}`);
-      
+
+      if (comparison === 0) {
+        // CLAUDE AI REVIEW: Combine related error messages for consistency
+        result.conflicts.push(`Version ${version} already exists (same as current version). This usually indicates the validation is running after version bump. Consider using --no-conflicts flag for post-bump validation.`);
+      } else {
+        result.conflicts.push(`New version ${version} is not greater than current version ${currentVersion}`);
+      }
+
+      // Enhanced suggestions with commit analysis
+      const commits = getCommitsSinceLastTag(50);
+      const bumpAnalysis = determineBumpType(commits.messages, { verbose });
+
+      result.analysis = {
+        currentVersion,
+        targetVersion: version,
+        commitCount: commits.count,
+        recommendedBump: bumpAnalysis.bumpType,
+        reasoning: bumpAnalysis.reasoning
+      };
+
       const parsed = parseVersion(currentVersion);
       if (parsed) {
-        result.suggestions.push(`Consider using ${parsed.major}.${parsed.minor}.${parsed.patch + 1} for patch`);
-        result.suggestions.push(`Consider using ${parsed.major}.${parsed.minor + 1}.0 for minor`);
-        result.suggestions.push(`Consider using ${parsed.major + 1}.0.0 for major`);
+        result.suggestions.push(`Recommended (${bumpAnalysis.bumpType}): ${
+          bumpAnalysis.bumpType === 'major' ? `${parsed.major + 1}.0.0` :
+          bumpAnalysis.bumpType === 'minor' ? `${parsed.major}.${parsed.minor + 1}.0` :
+          `${parsed.major}.${parsed.minor}.${parsed.patch + 1}`
+        }`);
+        result.suggestions.push(`Alternative patch: ${parsed.major}.${parsed.minor}.${parsed.patch + 1}`);
+        result.suggestions.push(`Alternative minor: ${parsed.major}.${parsed.minor + 1}.0`);
+        result.suggestions.push(`Alternative major: ${parsed.major + 1}.0.0`);
+      }
+
+      // Attempt automatic resolution if enabled
+      if (enableResolution) {
+        result.resolution = resolveVersionConflicts({
+          targetVersion: version,
+          strategy: resolutionStrategy,
+          verbose
+        });
       }
     }
   } catch (error) {
@@ -280,6 +334,124 @@ function checkVersionConflicts(version) {
   }
 
   return result;
+}
+
+/**
+ * Comprehensive version system analysis
+ * @param {object} options - Analysis options
+ * @returns {object} Detailed analysis result
+ */
+function analyzeVersionSystem(options = {}) {
+  const { verbose = false } = options;
+
+  const analysis = {
+    timestamp: new Date().toISOString(),
+    currentVersion: null,
+    versionConsistency: null,
+    gitStatus: {
+      hasRepo: false,
+      latestTag: null,
+      commitsSinceTag: 0,
+      uncommittedChanges: false
+    },
+    recommendations: [],
+    issues: [],
+    nextVersions: {
+      patch: null,
+      minor: null,
+      major: null,
+      recommended: null
+    }
+  };
+
+  try {
+    // Get current version and consistency check
+    analysis.currentVersion = getCurrentVersion();
+    analysis.versionConsistency = validateAllVersions();
+
+    // Git repository analysis
+    try {
+      const { execSync } = require('child_process');
+
+      // Check if we're in a git repo
+      execSync('git rev-parse --git-dir', { stdio: 'ignore' });
+      analysis.gitStatus.hasRepo = true;
+
+      // Get latest tag
+      try {
+        analysis.gitStatus.latestTag = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
+      } catch (e) {
+        // No tags exist
+      }
+
+      // Get commits since last tag
+      const commits = getCommitsSinceLastTag(100, { verbose });
+      analysis.gitStatus.commitsSinceTag = commits.count;
+
+      // Check for uncommitted changes
+      try {
+        const status = execSync('git status --porcelain', { encoding: 'utf8' });
+        analysis.gitStatus.uncommittedChanges = status.trim().length > 0;
+      } catch (e) {
+        // Ignore status check errors
+      }
+
+      // Calculate next versions
+      const currentParsed = parseVersion(analysis.currentVersion);
+      if (currentParsed) {
+        analysis.nextVersions.patch = `${currentParsed.major}.${currentParsed.minor}.${currentParsed.patch + 1}`;
+        analysis.nextVersions.minor = `${currentParsed.major}.${currentParsed.minor + 1}.0`;
+        analysis.nextVersions.major = `${currentParsed.major + 1}.0.0`;
+
+        // Determine recommended version based on commits
+        if (commits.count > 0) {
+          const bumpAnalysis = determineBumpType(commits.messages, { verbose });
+          analysis.nextVersions.recommended = analysis.nextVersions[bumpAnalysis.bumpType];
+          analysis.recommendations.push(`Based on ${commits.count} commits, recommend ${bumpAnalysis.bumpType} bump to ${analysis.nextVersions.recommended}`);
+        } else {
+          analysis.recommendations.push('No commits since last tag - no version bump needed');
+        }
+      }
+
+    } catch (error) {
+      analysis.gitStatus.hasRepo = false;
+      analysis.issues.push(`Git repository analysis failed: ${error.message}`);
+    }
+
+    // Add consistency issues
+    if (!analysis.versionConsistency.isConsistent) {
+      analysis.issues.push('Version inconsistency detected across files');
+    }
+
+    if (analysis.versionConsistency.hasErrors) {
+      analysis.issues.push('Version validation errors found');
+    }
+
+    if (verbose) {
+      console.log('🔍 Version System Analysis:');
+      console.log(`   Current version: ${analysis.currentVersion}`);
+      console.log(`   Consistent: ${analysis.versionConsistency.isConsistent}`);
+      console.log(`   Git repo: ${analysis.gitStatus.hasRepo}`);
+      console.log(`   Commits since tag: ${analysis.gitStatus.commitsSinceTag}`);
+      console.log(`   Recommended next: ${analysis.nextVersions.recommended || 'none'}`);
+    }
+
+  } catch (error) {
+    // CLAUDE AI REVIEW: More specific error handling
+    if (error.code === 'ENOENT') {
+      analysis.issues.push(`File not found during analysis: ${error.path}`);
+    } else if (error.code === 'EACCES') {
+      analysis.issues.push(`Permission denied during analysis: ${error.path}`);
+    } else if (error.name === 'SyntaxError') {
+      analysis.issues.push(`JSON parsing error during analysis: ${error.message}`);
+    } else if (error.message.includes('git')) {
+      analysis.issues.push(`Git operation failed during analysis: ${error.message}`);
+    } else {
+      analysis.issues.push(`Analysis failed: ${error.message}`);
+    }
+  }
+
+  return analysis;
 }
 
 /**
@@ -343,60 +515,188 @@ function generateValidationReport(validationResults) {
 }
 
 /**
- * Main validation function
+ * Enhanced main validation function with comprehensive analysis
  * @param {object} options - Validation options
- * @returns {boolean} True if validation passes
+ * @returns {object} Detailed validation result
  */
 function validateVersionSystem(options = {}) {
-  const { verbose = false, checkConflicts = true } = options;
+  const {
+    verbose = false,
+    checkConflicts = true,
+    enableResolution = false,
+    resolutionStrategy = 'auto',
+    returnDetails = false
+  } = options;
 
   console.log('🔍 Validating version system...\n');
 
   const results = validateAllVersions();
-  
+  const analysis = analyzeVersionSystem({ verbose });
+
+  const validationResult = {
+    success: false,
+    hasErrors: results.hasErrors,
+    isConsistent: results.isConsistent,
+    conflicts: [],
+    resolutions: [],
+    analysis: analysis,
+    timestamp: new Date().toISOString()
+  };
+
   if (verbose) {
     console.log(generateValidationReport(results));
+
+    // Enhanced analysis output
+    if (analysis.recommendations.length > 0) {
+      console.log('\n🎯 RECOMMENDATIONS:');
+      for (const rec of analysis.recommendations) {
+        console.log(`   ${rec}`);
+      }
+    }
+
+    if (analysis.issues.length > 0) {
+      console.log('\n⚠️  ANALYSIS ISSUES:');
+      for (const issue of analysis.issues) {
+        console.log(`   ❌ ${issue}`);
+      }
+    }
   }
 
   let hasIssues = results.hasErrors || !results.isConsistent;
 
-  // Check for conflicts if requested
+  // Enhanced conflict checking with resolution
   if (checkConflicts && results.summary.uniqueVersions.size === 1) {
     const version = Array.from(results.summary.uniqueVersions)[0];
-    const conflictCheck = checkVersionConflicts(version);
-    
+    const conflictCheck = checkVersionConflicts(version, {
+      enableResolution,
+      resolutionStrategy,
+      verbose
+    });
+
+    validationResult.conflicts = conflictCheck.conflicts;
+
     if (conflictCheck.hasConflicts) {
       hasIssues = true;
       console.log('⚠️  VERSION CONFLICTS DETECTED:');
       for (const conflict of conflictCheck.conflicts) {
         console.log(`   ❌ ${conflict}`);
       }
-      
+
+      // Enhanced suggestions with commit analysis
+      if (conflictCheck.analysis) {
+        console.log('\n📊 COMMIT ANALYSIS:');
+        console.log(`   Commits since last tag: ${conflictCheck.analysis.commitCount}`);
+        console.log(`   Recommended bump type: ${conflictCheck.analysis.recommendedBump}`);
+        if (conflictCheck.analysis.reasoning.length > 0) {
+          console.log(`   Reasoning: ${conflictCheck.analysis.reasoning.join(', ')}`);
+        }
+      }
+
       if (conflictCheck.suggestions.length > 0) {
-        console.log('\n💡 SUGGESTIONS:');
+        console.log('\n💡 ENHANCED SUGGESTIONS:');
         for (const suggestion of conflictCheck.suggestions) {
           console.log(`   ${suggestion}`);
         }
       }
+
+      // Show resolution if available
+      if (conflictCheck.resolution && conflictCheck.resolution.success) {
+        console.log('\n🔧 AUTOMATIC RESOLUTION AVAILABLE:');
+        console.log(`   Resolved version: ${conflictCheck.resolution.resolvedVersion}`);
+        console.log(`   Strategy: ${conflictCheck.resolution.strategy}`);
+        for (const action of conflictCheck.resolution.actions) {
+          console.log(`   • ${action}`);
+        }
+        validationResult.resolutions.push(conflictCheck.resolution);
+      }
     }
   }
 
+  validationResult.success = !hasIssues;
+
   if (hasIssues) {
     console.log('\n❌ Version validation failed. Please fix the issues above.');
-    return false;
+    if (enableResolution && validationResult.resolutions.length > 0) {
+      console.log('\n💡 TIP: Automatic resolutions are available. Use --apply-resolution to apply them.');
+    }
   } else {
     console.log('✅ Version validation passed. All versions are consistent and valid.');
-    return true;
   }
+
+  return returnDetails ? validationResult : validationResult.success;
 }
 
-// CLI interface
+// Enhanced CLI interface
 if (require.main === module) {
   const args = process.argv.slice(2);
   const verbose = args.includes('--verbose') || args.includes('-v');
   const checkConflicts = !args.includes('--no-conflicts');
+  const enableResolution = args.includes('--enable-resolution');
+  const applyResolution = args.includes('--apply-resolution');
+  const analyze = args.includes('--analyze');
 
-  const success = validateVersionSystem({ verbose, checkConflicts });
+  // Get resolution strategy
+  const strategyIndex = args.findIndex(arg => arg === '--strategy');
+  const resolutionStrategy = strategyIndex !== -1 && args[strategyIndex + 1]
+    ? args[strategyIndex + 1]
+    : 'auto';
+
+  if (analyze) {
+    // Run comprehensive analysis
+    console.log('🔍 Running comprehensive version system analysis...\n');
+    const analysis = analyzeVersionSystem({ verbose: true });
+
+    console.log('\n📊 ANALYSIS SUMMARY:');
+    console.log(`   Current version: ${analysis.currentVersion}`);
+    console.log(`   Git repository: ${analysis.gitStatus.hasRepo ? 'Yes' : 'No'}`);
+    console.log(`   Latest tag: ${analysis.gitStatus.latestTag || 'None'}`);
+    console.log(`   Commits since tag: ${analysis.gitStatus.commitsSinceTag}`);
+    console.log(`   Recommended next version: ${analysis.nextVersions.recommended || 'None'}`);
+
+    if (analysis.issues.length > 0) {
+      console.log('\n⚠️  ISSUES FOUND:');
+      for (const issue of analysis.issues) {
+        console.log(`   ❌ ${issue}`);
+      }
+    }
+
+    process.exit(analysis.issues.length > 0 ? 1 : 0);
+  }
+
+  const result = validateVersionSystem({
+    verbose,
+    checkConflicts,
+    enableResolution: enableResolution || applyResolution,
+    resolutionStrategy,
+    returnDetails: applyResolution
+  });
+
+  if (applyResolution && typeof result === 'object' && result.resolutions.length > 0) {
+    console.log('\n🔧 Applying automatic resolution...');
+
+    const resolution = result.resolutions[0]; // Use first available resolution
+    try {
+      // Apply the resolution by updating version files
+      const { updateVersionInAllFiles } = require('./update-version');
+      const updateResult = updateVersionInAllFiles(resolution.resolvedVersion, {
+        verbose: true,
+        skipValidation: true // Skip validation since we're resolving conflicts
+      });
+
+      if (updateResult) {
+        console.log(`✅ Successfully applied resolution: version updated to ${resolution.resolvedVersion}`);
+        process.exit(0);
+      } else {
+        console.log('❌ Failed to apply resolution');
+        process.exit(1);
+      }
+    } catch (error) {
+      console.log(`❌ Error applying resolution: ${error.message}`);
+      process.exit(1);
+    }
+  }
+
+  const success = typeof result === 'object' ? result.success : result;
   process.exit(success ? 0 : 1);
 }
 
@@ -407,5 +707,6 @@ module.exports = {
   checkVersionConflicts,
   generateValidationReport,
   validateVersionSystem,
+  analyzeVersionSystem,
   VERSION_FILES
 };

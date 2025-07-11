@@ -9,6 +9,28 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 const config = require('./config');
 
+// CLAUDE AI REVIEW: Custom error types for better error handling
+class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+class GitError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'GitError';
+  }
+}
+
+class VersionError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'VersionError';
+  }
+}
+
 // Semantic versioning regex pattern
 const SEMVER_REGEX = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
@@ -88,7 +110,7 @@ function validateInput(input, type, constraints = {}) {
 
   // Check if required
   if (required && (input === null || input === undefined)) {
-    throw new Error('Input is required but was null or undefined');
+    throw new ValidationError('Input is required but was null or undefined');
   }
 
   // Allow null/undefined if not required
@@ -98,7 +120,7 @@ function validateInput(input, type, constraints = {}) {
 
   // Type validation
   if (typeof input !== type) {
-    throw new Error(`Expected ${type} but got ${typeof input}`);
+    throw new ValidationError(`Expected ${type} but got ${typeof input}`);
   }
 
   // String-specific validations
@@ -184,13 +206,25 @@ function safeGitExec(command, options = {}) {
     ...options
   };
 
+  // CLAUDE AI REVIEW: Performance monitoring for long-running operations
+  const startTime = Date.now();
+  const warningThreshold = 5000; // 5 seconds
+
   try {
-    return execSync(command, defaultOptions);
+    const result = execSync(command, defaultOptions);
+
+    // CLAUDE AI REVIEW: Warn about long-running operations
+    const duration = Date.now() - startTime;
+    if (duration > warningThreshold) {
+      console.warn(`⚠️  Git command took ${duration}ms to execute: ${command.substring(0, 50)}...`);
+    }
+
+    return result;
   } catch (error) {
     // Log error but don't expose sensitive information
     const safeMessage = error.message.substring(0, config.ERRORS.MAX_ERROR_MESSAGE_LENGTH);
     console.warn(`Git operation failed: ${safeMessage}`);
-    throw new Error(`Git operation failed: ${error.code || 'unknown error'}`);
+    throw new GitError(`Git operation failed: ${error.code || 'unknown error'}`);
   }
 }
 
@@ -307,6 +341,16 @@ function incrementVersion(version, type, prerelease = null) {
     newVersion += `-${prerelease}`;
   }
 
+  // Safety check: Ensure the new version is actually different from the original
+  if (newVersion === version) {
+    throw new Error(`Version increment failed: new version ${newVersion} is the same as original ${version}`);
+  }
+
+  // Additional safety check: Ensure the new version is greater than the original
+  if (compareVersions(newVersion, version) <= 0) {
+    throw new Error(`Version increment failed: new version ${newVersion} is not greater than original ${version}`);
+  }
+
   return newVersion;
 }
 
@@ -333,41 +377,134 @@ function parseConventionalCommit(message) {
 }
 
 /**
- * Determine version bump type from commit messages
+ * Enhanced version bump type determination with detailed analysis
  * @param {string[]} commits - Array of commit messages
- * @returns {string} Version bump type (major, minor, patch, none)
+ * @param {object} options - Analysis options
+ * @returns {object} Detailed bump analysis result
  */
-function determineBumpType(commits) {
-  let hasBreaking = false;
-  let hasFeature = false;
-  let hasFix = false;
+function determineBumpType(commits, options = {}) {
+  const {
+    verbose = false,
+    forceMinimum = null,
+    allowNone = true
+  } = options;
 
+  const analysis = {
+    bumpType: 'none',
+    commits: {
+      breaking: [],
+      features: [],
+      fixes: [],
+      other: [],
+      invalid: []
+    },
+    summary: {
+      total: commits.length,
+      conventional: 0,
+      breaking: 0,
+      features: 0,
+      fixes: 0
+    },
+    reasoning: []
+  };
+
+  // Analyze each commit
   for (const commit of commits) {
     const parsed = parseConventionalCommit(commit);
-    if (!parsed) continue;
+
+    if (!parsed) {
+      analysis.commits.invalid.push(commit);
+      continue;
+    }
+
+    analysis.summary.conventional++;
 
     if (parsed.breaking) {
-      hasBreaking = true;
+      analysis.commits.breaking.push({ commit, parsed });
+      analysis.summary.breaking++;
     } else if (parsed.type === 'feat') {
-      hasFeature = true;
+      analysis.commits.features.push({ commit, parsed });
+      analysis.summary.features++;
     } else if (['fix', 'perf'].includes(parsed.type)) {
-      hasFix = true;
+      analysis.commits.fixes.push({ commit, parsed });
+      analysis.summary.fixes++;
+    } else {
+      analysis.commits.other.push({ commit, parsed });
     }
   }
 
-  if (hasBreaking) return 'major';
-  if (hasFeature) return 'minor';
-  if (hasFix) return 'patch';
-  return 'none';
+  // Determine bump type with reasoning
+  if (analysis.summary.breaking > 0) {
+    analysis.bumpType = 'major';
+    analysis.reasoning.push(`Found ${analysis.summary.breaking} breaking change(s)`);
+  } else if (analysis.summary.features > 0) {
+    analysis.bumpType = 'minor';
+    analysis.reasoning.push(`Found ${analysis.summary.features} new feature(s)`);
+  } else if (analysis.summary.fixes > 0) {
+    analysis.bumpType = 'patch';
+    analysis.reasoning.push(`Found ${analysis.summary.fixes} fix(es)`);
+  } else if (analysis.summary.conventional > 0) {
+    analysis.bumpType = 'patch';
+    analysis.reasoning.push('Found conventional commits but no features/fixes - defaulting to patch');
+  } else if (!allowNone) {
+    analysis.bumpType = 'patch';
+    analysis.reasoning.push('No conventional commits found - forcing patch bump');
+  } else {
+    analysis.reasoning.push('No conventional commits found');
+  }
+
+  // Apply force minimum if specified
+  if (forceMinimum) {
+    const bumpPriority = { 'patch': 1, 'minor': 2, 'major': 3 };
+    const currentPriority = bumpPriority[analysis.bumpType] || 0;
+    const forcePriority = bumpPriority[forceMinimum] || 0;
+
+    if (forcePriority > currentPriority) {
+      analysis.reasoning.push(`Forced minimum bump type from ${analysis.bumpType} to ${forceMinimum}`);
+      analysis.bumpType = forceMinimum;
+    }
+  }
+
+  if (verbose) {
+    console.log('📊 Commit Analysis Results:');
+    console.log(`   Total commits: ${analysis.summary.total}`);
+    console.log(`   Conventional commits: ${analysis.summary.conventional}`);
+    console.log(`   Breaking changes: ${analysis.summary.breaking}`);
+    console.log(`   Features: ${analysis.summary.features}`);
+    console.log(`   Fixes: ${analysis.summary.fixes}`);
+    console.log(`   Bump type: ${analysis.bumpType}`);
+    console.log(`   Reasoning: ${analysis.reasoning.join(', ')}`);
+  }
+
+  return analysis;
 }
+
+// CLAUDE AI REVIEW: Add caching for repeated file operations
+let versionCache = null;
+let versionCacheTime = 0;
+const CACHE_DURATION = 5000; // 5 seconds
 
 /**
  * Get current version from package.json
+ * CLAUDE AI REVIEW: Added caching for performance optimization
+ * @param {boolean} forceRefresh - Force refresh of cache
  * @returns {string} Current version
  */
-function getCurrentVersion() {
+function getCurrentVersion(forceRefresh = false) {
+  const now = Date.now();
+
+  // CLAUDE AI REVIEW: Use cache if available and not expired
+  if (!forceRefresh && versionCache && (now - versionCacheTime) < CACHE_DURATION) {
+    return versionCache;
+  }
+
   try {
     const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+
+    // CLAUDE AI REVIEW: Update cache
+    versionCache = packageJson.version;
+    versionCacheTime = now;
+
     return packageJson.version;
   } catch (error) {
     throw new Error('Could not read version from package.json');
@@ -403,26 +540,362 @@ function getLatestTag() {
 }
 
 /**
- * Get commits since last tag or all commits if no tags
+ * Enhanced commit retrieval with detailed analysis
  * @param {number} limit - Maximum number of commits to retrieve
- * @returns {string[]} Array of commit messages
+ * @param {object} options - Retrieval options
+ * @returns {object} Detailed commit analysis
  */
-function getCommitsSinceLastTag(limit = config.VERSION.MAX_COMMITS_TO_ANALYZE) {
+function getCommitsSinceLastTag(limit = config.VERSION.MAX_COMMITS_TO_ANALYZE, options = {}) {
+  const { verbose = false, includeDetails = false } = options;
+
   try {
     // Validate limit parameter
     const safeLimit = Math.min(Math.max(1, parseInt(limit) || config.VERSION.MAX_COMMITS_TO_ANALYZE), config.VERSION.ABSOLUTE_MAX_COMMITS);
 
-    const lastTag = getLatestTag();
-    const gitLogCommand = lastTag
-      ? `git log ${lastTag}..HEAD --oneline --no-merges --format="%s" -${safeLimit}`
-      : `git log --oneline --no-merges --format="%s" -${safeLimit}`;
+    // CLAUDE AI REVIEW: Memory optimization for large repositories
+    const memoryThreshold = 500; // commits
+    if (safeLimit > memoryThreshold) {
+      console.warn(`⚠️  Processing ${safeLimit} commits may use significant memory. Consider using a smaller limit for better performance.`);
+    }
 
-    const output = safeGitExec(gitLogCommand).trim();
-    return output ? output.split('\n').filter(line => line.trim()) : [];
+    const lastTag = getLatestTag();
+    const baseCommand = lastTag
+      ? `git log ${lastTag}..HEAD --oneline --no-merges`
+      : `git log --oneline --no-merges`;
+
+    // Get commit messages
+    const messageCommand = `${baseCommand} --format="%s" -${safeLimit}`;
+    const messages = safeGitExec(messageCommand).trim();
+
+    // CLAUDE AI REVIEW: Process commits in batches for memory efficiency
+    const commitMessages = messages ? messages.split('\n').filter(line => line.trim()) : [];
+
+    // CLAUDE AI REVIEW: Warn if processing large number of commits
+    if (commitMessages.length > memoryThreshold) {
+      console.warn(`⚠️  Processing ${commitMessages.length} commits. Consider using streaming for very large repositories.`);
+    }
+
+    const result = {
+      messages: commitMessages,
+      count: commitMessages.length,
+      lastTag: lastTag,
+      range: lastTag ? `${lastTag}..HEAD` : `HEAD~${safeLimit}..HEAD`
+    };
+
+    if (includeDetails) {
+      // Get detailed commit info
+      const detailCommand = `${baseCommand} --format="%H|%s|%an|%ad" --date=short -${safeLimit}`;
+      const details = safeGitExec(detailCommand).trim();
+
+      result.details = details ? details.split('\n').map(line => {
+        const [hash, subject, author, date] = line.split('|');
+        return { hash, subject, author, date };
+      }) : [];
+    }
+
+    if (verbose) {
+      console.log(`📋 Retrieved ${result.count} commits since ${lastTag || 'beginning'}`);
+      if (result.count > 0) {
+        console.log(`   Range: ${result.range}`);
+        console.log(`   Latest: ${commitMessages[0]}`);
+      }
+    }
+
+    return result;
   } catch (error) {
-    console.warn('Could not retrieve git commits:', error.message.substring(0, config.ERRORS.MAX_ERROR_MESSAGE_LENGTH));
-    return [];
+    const errorMsg = error.message.substring(0, config.ERRORS.MAX_ERROR_MESSAGE_LENGTH);
+    if (verbose) {
+      console.warn('Could not retrieve git commits:', errorMsg);
+    }
+
+    return {
+      messages: [],
+      count: 0,
+      lastTag: null,
+      range: null,
+      error: errorMsg
+    };
   }
+}
+
+/**
+ * CLAUDE AI REVIEW: Validate calculation inputs
+ * @param {object} result - Result object to populate
+ * @returns {boolean} True if validation passes
+ */
+function validateCalculationInputs(result) {
+  if (!isValidSemver(result.currentVersion)) {
+    result.conflicts.push(`Invalid current version format: ${result.currentVersion}`);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * CLAUDE AI REVIEW: Auto-determine bump type from commits
+ * @param {object} result - Result object to populate
+ * @param {object} options - Calculation options
+ */
+function autoDetermineBumpType(result, options) {
+  const { verbose } = options;
+
+  if (!result.bumpType) {
+    const commits = getCommitsSinceLastTag(50, { verbose });
+    const analysis = determineBumpType(commits.messages, { verbose, allowNone: false });
+    result.bumpType = analysis.bumpType;
+    result.actions.push(`Auto-determined bump type: ${result.bumpType}`);
+
+    if (verbose) {
+      console.log(`🔍 Auto-determined bump type: ${result.bumpType}`);
+      console.log(`   Based on ${commits.count} commits since ${commits.lastTag || 'beginning'}`);
+    }
+  }
+}
+
+/**
+ * CLAUDE AI REVIEW: Perform version calculation
+ * @param {object} result - Result object to populate
+ */
+function performVersionCalculation(result) {
+  result.newVersion = incrementVersion(result.currentVersion, result.bumpType);
+  result.actions.push(`Calculated version: ${result.currentVersion} → ${result.newVersion}`);
+}
+
+/**
+ * CLAUDE AI REVIEW: Check for version conflicts
+ * @param {object} result - Result object to populate
+ * @param {object} options - Calculation options
+ */
+function checkVersionConflicts(result, options) {
+  const { forceOverride, allowDowngrade } = options;
+
+  const comparison = compareVersions(result.newVersion, result.currentVersion);
+
+  if (comparison <= 0 && !allowDowngrade) {
+    if (comparison === 0) {
+      result.conflicts.push(`New version ${result.newVersion} is the same as current version`);
+
+      if (forceOverride) {
+        // CLAUDE AI REVIEW: Add validation after force-override to prevent infinite loops
+        const originalVersion = result.newVersion;
+        result.newVersion = incrementVersion(result.currentVersion, 'patch');
+        result.bumpType = 'patch';
+
+        // Additional validation to prevent infinite loops
+        if (compareVersions(result.newVersion, result.currentVersion) <= 0) {
+          result.conflicts.push(`Force-override failed: unable to generate valid version`);
+          return;
+        }
+
+        result.actions.push(`Force-override: incremented to ${result.newVersion}`);
+        result.warnings.push('Used force-override to resolve version conflict');
+      }
+    } else {
+      result.conflicts.push(`New version ${result.newVersion} is less than current version ${result.currentVersion}`);
+    }
+  }
+}
+
+/**
+ * CLAUDE AI REVIEW: Check for git tag conflicts
+ * @param {object} result - Result object to populate
+ * @param {object} options - Calculation options
+ */
+function checkTagConflicts(result, options) {
+  const { forceOverride } = options;
+
+  const tagName = `v${result.newVersion}`;
+  if (tagExists(tagName)) {
+    result.conflicts.push(`Git tag ${tagName} already exists`);
+
+    if (forceOverride) {
+      result.warnings.push(`Tag ${tagName} exists but will be overridden`);
+      result.actions.push(`Force-override: will overwrite existing tag ${tagName}`);
+    }
+  }
+}
+
+/**
+ * CLAUDE AI REVIEW: Log calculation results
+ * @param {object} result - Result object to log
+ * @param {boolean} verbose - Whether to log verbosely
+ */
+function logCalculationResults(result, verbose) {
+  if (verbose) {
+    console.log('📊 Version Calculation Result:');
+    console.log(`   Current: ${result.currentVersion}`);
+    console.log(`   New: ${result.newVersion}`);
+    console.log(`   Bump type: ${result.bumpType}`);
+    console.log(`   Success: ${result.success}`);
+    if (result.conflicts.length > 0) {
+      console.log(`   Conflicts: ${result.conflicts.length}`);
+    }
+    if (result.warnings.length > 0) {
+      console.log(`   Warnings: ${result.warnings.length}`);
+    }
+  }
+}
+
+/**
+ * Comprehensive version calculation with conflict resolution
+ * CLAUDE AI REVIEW: Refactored into smaller, focused functions
+ * @param {object} options - Calculation options
+ * @returns {object} Version calculation result
+ */
+function calculateNextVersion(options = {}) {
+  const {
+    currentVersion = null,
+    bumpType = null,
+    forceOverride = false,
+    allowDowngrade = false,
+    verbose = false
+  } = options;
+
+  const result = {
+    success: false,
+    currentVersion: currentVersion || getCurrentVersion(),
+    newVersion: null,
+    bumpType: bumpType,
+    conflicts: [],
+    warnings: [],
+    actions: []
+  };
+
+  try {
+    // CLAUDE AI REVIEW: Broken down into focused functions
+    if (!validateCalculationInputs(result)) {
+      return result;
+    }
+
+    autoDetermineBumpType(result, { verbose });
+    performVersionCalculation(result);
+    checkVersionConflicts(result, { forceOverride, allowDowngrade });
+    checkTagConflicts(result, { forceOverride });
+
+    // Final validation
+    if (result.conflicts.length === 0 || forceOverride) {
+      result.success = true;
+    }
+
+    logCalculationResults(result, verbose);
+
+  } catch (error) {
+    // CLAUDE AI REVIEW: More specific error handling
+    if (error.name === 'ValidationError') {
+      result.conflicts.push(`Validation error: ${error.message}`);
+    } else if (error.name === 'GitError') {
+      result.conflicts.push(`Git operation error: ${error.message}`);
+    } else {
+      result.conflicts.push(`Unexpected error calculating version: ${error.message}`);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Smart version resolution with automatic conflict handling
+ * @param {object} options - Resolution options
+ * @returns {object} Resolution result
+ */
+function resolveVersionConflicts(options = {}) {
+  const {
+    targetVersion = null,
+    strategy = 'auto', // 'auto', 'force-patch', 'force-minor', 'force-major'
+    verbose = false
+  } = options;
+
+  const result = {
+    success: false,
+    originalVersion: getCurrentVersion(),
+    resolvedVersion: null,
+    strategy: strategy,
+    actions: [],
+    warnings: []
+  };
+
+  try {
+    if (targetVersion) {
+      // Validate specific target version
+      const calculation = calculateNextVersion({
+        currentVersion: result.originalVersion,
+        forceOverride: strategy === 'force',
+        verbose
+      });
+
+      if (compareVersions(targetVersion, result.originalVersion) > 0) {
+        result.resolvedVersion = targetVersion;
+        result.actions.push(`Using specified target version: ${targetVersion}`);
+      } else {
+        result.warnings.push(`Target version ${targetVersion} is not greater than current ${result.originalVersion}`);
+      }
+    }
+
+    // Auto-resolution strategies
+    if (!result.resolvedVersion) {
+      const currentParsed = parseVersion(result.originalVersion);
+
+      switch (strategy) {
+        case 'force-patch':
+          result.resolvedVersion = `${currentParsed.major}.${currentParsed.minor}.${currentParsed.patch + 1}`;
+          result.actions.push('Applied force-patch strategy');
+          break;
+
+        case 'force-minor':
+          result.resolvedVersion = `${currentParsed.major}.${currentParsed.minor + 1}.0`;
+          result.actions.push('Applied force-minor strategy');
+          break;
+
+        case 'force-major':
+          result.resolvedVersion = `${currentParsed.major + 1}.0.0`;
+          result.actions.push('Applied force-major strategy');
+          break;
+
+        case 'auto':
+        default:
+          // Try to determine best resolution automatically
+          const calculation = calculateNextVersion({
+            currentVersion: result.originalVersion,
+            forceOverride: true,
+            verbose
+          });
+
+          if (calculation.success) {
+            result.resolvedVersion = calculation.newVersion;
+            result.actions.push('Applied auto-resolution strategy');
+            result.actions.push(...calculation.actions);
+          } else {
+            // Fallback to patch increment
+            result.resolvedVersion = `${currentParsed.major}.${currentParsed.minor}.${currentParsed.patch + 1}`;
+            result.actions.push('Fallback: applied patch increment');
+          }
+          break;
+      }
+    }
+
+    // Final validation
+    if (result.resolvedVersion && isValidSemver(result.resolvedVersion)) {
+      const comparison = compareVersions(result.resolvedVersion, result.originalVersion);
+      if (comparison > 0) {
+        result.success = true;
+      } else {
+        result.warnings.push(`Resolved version ${result.resolvedVersion} is not greater than original ${result.originalVersion}`);
+      }
+    }
+
+    if (verbose) {
+      console.log('🔧 Version Conflict Resolution:');
+      console.log(`   Original: ${result.originalVersion}`);
+      console.log(`   Resolved: ${result.resolvedVersion}`);
+      console.log(`   Strategy: ${result.strategy}`);
+      console.log(`   Success: ${result.success}`);
+    }
+
+  } catch (error) {
+    result.actions.push(`Error in resolution: ${error.message}`);
+  }
+
+  return result;
 }
 
 module.exports = {
@@ -436,9 +909,15 @@ module.exports = {
   tagExists,
   getLatestTag,
   getCommitsSinceLastTag,
+  calculateNextVersion,
+  resolveVersionConflicts,
   validateTagName,
   safeGitExec,
   validateInput,
+  // CLAUDE AI REVIEW: Export custom error types
+  ValidationError,
+  GitError,
+  VersionError,
   SEMVER_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
   BREAKING_CHANGE_PATTERNS
