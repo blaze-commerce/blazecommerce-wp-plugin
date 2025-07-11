@@ -2,7 +2,15 @@
 
 ## Overview
 
-The BlazeCommerce WordPress plugin now features a **bulletproof auto-increment version system** that automatically resolves version conflicts by finding the next available version. This eliminates CI/CD failures due to version conflicts and ensures the workflow always succeeds.
+The BlazeCommerce WordPress plugin now features a **bulletproof auto-increment version system** with **prerelease support** that automatically resolves version conflicts by finding the next available version. This eliminates CI/CD failures due to version conflicts and ensures the workflow always succeeds.
+
+### **Key Features**
+- ✅ **Auto-increment conflict resolution** - Never fails due to version conflicts
+- ✅ **Branch-based prerelease versioning** - Automatic alpha/beta/rc versions
+- ✅ **Semantic versioning compliance** - Proper version precedence and formatting
+- ✅ **WordPress plugin best practices** - Optimized for plugin directory standards
+
+> **New**: See [Prerelease Versioning Strategy](prerelease-versioning-strategy.md) for detailed information about alpha/beta/rc versioning.
 
 ## How It Works
 

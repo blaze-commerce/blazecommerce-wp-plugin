@@ -319,6 +319,40 @@ function incrementVersion(version, type, prerelease = null) {
 
   let { major, minor, patch } = parsed;
 
+  // Handle prerelease versioning logic
+  if (prerelease) {
+    // If current version is already a prerelease of the same type, increment the prerelease number
+    if (parsed.prerelease && parsed.prerelease.startsWith(prerelease)) {
+      // Extract prerelease number (e.g., "alpha.1" → 1)
+      const prereleaseMatch = parsed.prerelease.match(new RegExp(`^${prerelease}\\.(\\d+)$`));
+      if (prereleaseMatch) {
+        const prereleaseNum = parseInt(prereleaseMatch[1], 10) + 1;
+        return `${major}.${minor}.${patch}-${prerelease}.${prereleaseNum}`;
+      }
+    }
+
+    // For new prerelease or different prerelease type, increment version and add prerelease.1
+    switch (type) {
+      case 'major':
+        major++;
+        minor = 0;
+        patch = 0;
+        break;
+      case 'minor':
+        minor++;
+        patch = 0;
+        break;
+      case 'patch':
+        patch++;
+        break;
+      default:
+        throw new Error(`Invalid increment type: ${type}`);
+    }
+
+    return `${major}.${minor}.${patch}-${prerelease}.1`;
+  }
+
+  // Standard version increment (no prerelease)
   switch (type) {
     case 'major':
       major++;
@@ -336,10 +370,7 @@ function incrementVersion(version, type, prerelease = null) {
       throw new Error(`Invalid increment type: ${type}`);
   }
 
-  let newVersion = `${major}.${minor}.${patch}`;
-  if (prerelease) {
-    newVersion += `-${prerelease}`;
-  }
+  const newVersion = `${major}.${minor}.${patch}`;
 
   // Safety check: Ensure the new version is actually different from the original
   if (newVersion === version) {

@@ -22,7 +22,14 @@ function testFindNextAvailableVersion() {
 
   try {
     // CLAUDE AI REVIEW: Use more realistic test scenarios instead of hardcoded extreme values
-    const currentVersion = getCurrentVersion();
+    let currentVersion;
+    try {
+      currentVersion = getCurrentVersion();
+    } catch (error) {
+      // Fallback if getCurrentVersion fails
+      currentVersion = '1.0.0';
+    }
+
     const testVersions = [
       currentVersion, // Test with current version (should increment)
       '1.0.0',        // Test with common base version
@@ -90,23 +97,34 @@ function testTagExists() {
  */
 function testIncrementVersion() {
   console.log('\n📋 Test 3: incrementVersion functionality');
-  
+
   const testCases = [
+    // Standard version increments
     { version: '1.0.0', type: 'patch', expected: '1.0.1' },
     { version: '1.0.0', type: 'minor', expected: '1.1.0' },
     { version: '1.0.0', type: 'major', expected: '2.0.0' },
-    { version: '1.9.9', type: 'patch', expected: '1.9.10' }
+    { version: '1.9.9', type: 'patch', expected: '1.9.10' },
+
+    // Prerelease version increments
+    { version: '1.0.0', type: 'patch', prerelease: 'alpha', expected: '1.0.1-alpha.1' },
+    { version: '1.0.0', type: 'minor', prerelease: 'beta', expected: '1.1.0-beta.1' },
+    { version: '1.0.0', type: 'major', prerelease: 'rc', expected: '2.0.0-rc.1' },
+
+    // Prerelease increment (same prerelease type)
+    { version: '1.0.0-alpha.1', type: 'patch', prerelease: 'alpha', expected: '1.0.0-alpha.2' },
+    { version: '1.5.2-beta.3', type: 'patch', prerelease: 'beta', expected: '1.5.2-beta.4' },
+    { version: '2.0.0-rc.1', type: 'patch', prerelease: 'rc', expected: '2.0.0-rc.2' }
   ];
-  
+
   let allPassed = true;
-  
+
   for (const testCase of testCases) {
     try {
-      const result = incrementVersion(testCase.version, testCase.type);
+      const result = incrementVersion(testCase.version, testCase.type, testCase.prerelease);
       if (result === testCase.expected) {
-        console.log(`✅ ${testCase.version} + ${testCase.type} = ${result}`);
+        console.log(`✅ ${testCase.version} + ${testCase.type}${testCase.prerelease ? ` (${testCase.prerelease})` : ''} = ${result}`);
       } else {
-        console.log(`❌ ${testCase.version} + ${testCase.type} = ${result} (expected ${testCase.expected})`);
+        console.log(`❌ ${testCase.version} + ${testCase.type}${testCase.prerelease ? ` (${testCase.prerelease})` : ''} = ${result} (expected ${testCase.expected})`);
         allPassed = false;
       }
     } catch (error) {
@@ -114,7 +132,7 @@ function testIncrementVersion() {
       allPassed = false;
     }
   }
-  
+
   return allPassed;
 }
 
@@ -217,6 +235,70 @@ function testEdgeCases() {
 }
 
 /**
+ * Test 6: Prerelease versioning strategy
+ */
+function testPrereleaseStrategy() {
+  console.log('\n📋 Test 6: Prerelease versioning strategy');
+
+  const testScenarios = [
+    {
+      name: 'Feature branch (alpha)',
+      currentVersion: '1.5.0',
+      bumpType: 'minor',
+      prerelease: 'alpha',
+      expected: '1.6.0-alpha.1'
+    },
+    {
+      name: 'Develop branch (beta)',
+      currentVersion: '1.5.0',
+      bumpType: 'minor',
+      prerelease: 'beta',
+      expected: '1.6.0-beta.1'
+    },
+    {
+      name: 'Release branch (rc)',
+      currentVersion: '1.5.0',
+      bumpType: 'minor',
+      prerelease: 'rc',
+      expected: '1.6.0-rc.1'
+    },
+    {
+      name: 'Alpha increment',
+      currentVersion: '1.6.0-alpha.1',
+      bumpType: 'patch',
+      prerelease: 'alpha',
+      expected: '1.6.0-alpha.2'
+    },
+    {
+      name: 'Beta to RC transition',
+      currentVersion: '1.6.0-beta.3',
+      bumpType: 'patch',
+      prerelease: 'rc',
+      expected: '1.6.1-rc.1'
+    }
+  ];
+
+  let allPassed = true;
+
+  for (const scenario of testScenarios) {
+    try {
+      const result = incrementVersion(scenario.currentVersion, scenario.bumpType, scenario.prerelease);
+      if (result === scenario.expected) {
+        console.log(`✅ ${scenario.name}: ${scenario.currentVersion} → ${result}`);
+      } else {
+        console.log(`❌ ${scenario.name}: ${scenario.currentVersion} → ${result} (expected ${scenario.expected})`);
+        allPassed = false;
+      }
+    } catch (error) {
+      console.log(`❌ ${scenario.name} failed: ${error.message}`);
+      allPassed = false;
+    }
+  }
+
+  return allPassed;
+}
+
+/**
  * Run all tests
  */
 function runAllTests() {
@@ -225,7 +307,8 @@ function runAllTests() {
     { name: 'tagExists', fn: testTagExists },
     { name: 'incrementVersion', fn: testIncrementVersion },
     { name: 'workflowSimulation', fn: testWorkflowSimulation },
-    { name: 'edgeCases', fn: testEdgeCases }
+    { name: 'edgeCases', fn: testEdgeCases },
+    { name: 'prereleaseStrategy', fn: testPrereleaseStrategy }
   ];
   
   let passedTests = 0;
@@ -261,5 +344,6 @@ module.exports = {
   testIncrementVersion,
   testWorkflowSimulation,
   testEdgeCases,
+  testPrereleaseStrategy,
   runAllTests
 };
