@@ -2,7 +2,11 @@ name: Auto Version Bump
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'release/**'
     paths-ignore:
       # Files managed by the version bump process itself
       - 'CHANGELOG.md'
@@ -122,6 +126,31 @@ jobs:
           exit 1
         fi
 
+    - name: Determine prerelease type based on branch
+      id: prerelease_type
+      run: |
+        echo "🌿 Determining prerelease type based on branch..."
+        BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+        echo "📋 Current branch: $BRANCH_NAME"
+
+        # Branch-based prerelease strategy
+        if [[ "$BRANCH_NAME" == feature/* ]]; then
+          echo "PRERELEASE=alpha" >> $GITHUB_OUTPUT
+          echo "🔬 Feature branch detected → alpha prerelease"
+        elif [[ "$BRANCH_NAME" == "develop" ]]; then
+          echo "PRERELEASE=beta" >> $GITHUB_OUTPUT
+          echo "🧪 Develop branch detected → beta prerelease"
+        elif [[ "$BRANCH_NAME" == release/* ]]; then
+          echo "PRERELEASE=rc" >> $GITHUB_OUTPUT
+          echo "🚀 Release branch detected → release candidate"
+        elif [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "master" ]]; then
+          echo "PRERELEASE=" >> $GITHUB_OUTPUT
+          echo "📦 Main branch detected → stable release"
+        else
+          echo "PRERELEASE=" >> $GITHUB_OUTPUT
+          echo "🔧 Other branch detected → stable release"
+        fi
+
     - name: Determine version bump type
       id: bump_type
       run: |
@@ -204,24 +233,30 @@ jobs:
         echo "📦 Current version: $CURRENT_VERSION"
         echo "🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
 
-        # Calculate new version
+        # Calculate new version with prerelease support
+        PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
+        echo "🏷️  Prerelease type: ${PRERELEASE_TYPE:-'none (stable release)'}"
+
         case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
           "major")
             NEW_VERSION=$(node -e "
               const semver = require('./scripts/semver-utils');
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'major'));
+              const prerelease = '$PRERELEASE_TYPE' || null;
+              console.log(semver.incrementVersion('$CURRENT_VERSION', 'major', prerelease));
             ")
             ;;
           "minor")
             NEW_VERSION=$(node -e "
               const semver = require('./scripts/semver-utils');
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'minor'));
+              const prerelease = '$PRERELEASE_TYPE' || null;
+              console.log(semver.incrementVersion('$CURRENT_VERSION', 'minor', prerelease));
             ")
             ;;
           "patch")
             NEW_VERSION=$(node -e "
               const semver = require('./scripts/semver-utils');
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch'));
+              const prerelease = '$PRERELEASE_TYPE' || null;
+              console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch', prerelease));
             ")
             ;;
         esac
@@ -306,15 +341,36 @@ jobs:
           echo "   Tag creation date: $(git log -1 --format=%ci "$TAG_NAME" 2>/dev/null || echo 'unknown')"
           echo "🔄 Auto-resolving by finding next available version..."
 
-          # Enhanced error handling for findNextAvailableVersion
+          # Enhanced error handling for findNextAvailableVersion with prerelease support
           RESOLVED_VERSION=$(node -e "
             try {
               const semver = require('./scripts/semver-utils');
               console.error('🔍 Starting conflict resolution process...');
               console.error('   Base version: $NEW_VERSION');
-              console.error('   Strategy: patch increment');
+              console.error('   Prerelease type: $PRERELEASE_TYPE');
+              console.error('   Strategy: prerelease increment or patch increment');
 
-              const nextVersion = semver.findNextAvailableVersion('$NEW_VERSION', 'patch', {
+              // For prerelease versions, try prerelease increment first, then patch
+              let nextVersion;
+              const parsed = semver.parseVersion('$NEW_VERSION');
+
+              if ('$PRERELEASE_TYPE' && parsed && parsed.prerelease) {
+                // Try incrementing prerelease number first
+                try {
+                  nextVersion = semver.incrementVersion('$NEW_VERSION', 'patch', '$PRERELEASE_TYPE');
+                  const tagName = 'v' + nextVersion;
+                  if (!semver.tagExists(tagName)) {
+                    console.error('✅ Prerelease increment successful: ' + nextVersion);
+                    console.log(nextVersion);
+                    process.exit(0);
+                  }
+                } catch (e) {
+                  console.error('⚠️  Prerelease increment failed, falling back to findNextAvailableVersion');
+                }
+              }
+
+              // Fallback to standard conflict resolution
+              nextVersion = semver.findNextAvailableVersion('$NEW_VERSION', 'patch', {
                 verbose: true,
                 maxAttempts: 50
               });
