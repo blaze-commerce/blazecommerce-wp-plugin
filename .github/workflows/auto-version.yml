@@ -162,6 +162,21 @@ jobs:
             ;;
         esac
 
+        # Check if new version equals current version and force patch bump if needed
+        if [ "$NEW_VERSION" = "$CURRENT_VERSION" ]; then
+          echo "⚠️  New version ($NEW_VERSION) equals current version ($CURRENT_VERSION)"
+          echo "🔄 Forcing patch version bump to resolve conflict..."
+
+          NEW_VERSION=$(node -e "
+            const semver = require('./scripts/semver-utils');
+            console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch'));
+          ")
+
+          echo "📦 Forced new version: $NEW_VERSION"
+          echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
+          echo "🚀 Updated bump type to: PATCH (forced due to version conflict)"
+        fi
+
         echo "📦 New version will be: $NEW_VERSION"
         echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
 
