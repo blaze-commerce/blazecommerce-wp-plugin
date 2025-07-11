@@ -28,6 +28,7 @@
     "test:validation-flags": "node scripts/test-validation-flags.js",
     "test:version-fix": "node scripts/test-version-fix.js",
     "test:comprehensive-version": "node scripts/test-comprehensive-version-system.js",
+    "test:auto-increment": "node scripts/test-auto-increment.js",
     "test:integration-version": "node scripts/test-integration-version-system.js",
     "test:version-complete": "npm run test:version-system && npm run test:workflow-scenarios && npm run test:validation-flags && npm run test:version-fix && npm run test:comprehensive-version && npm run test:integration-version",
     "_comment": "CLAUDE AI REVIEW: Fixed duplicate prepare-release script from comment #3060465549",
