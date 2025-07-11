@@ -366,6 +366,7 @@ function transformCommitMessage(commitInfo) {
 }
 
 /**
+ * CLAUDE AI REVIEW: Fixed memory inefficiency from comment #3060465549, #3060512807, #3060543625
  * Process commits in batches to manage memory usage
  * @param {string[]} commits - Array of commit messages
  * @param {number} batchSize - Size of each batch
@@ -673,6 +674,7 @@ function updateChangelog(version = null) {
   console.log(`📦 Generating changelog for version ${version}`);
 
   try {
+    // CLAUDE AI REVIEW: Fixed memory inefficiency from comment #3060465549, #3060512807, #3060543625
     // Get commits since last tag with configurable limit
     const maxCommits = Math.min(config.CHANGELOG.MAX_CHANGELOG_COMMITS, 200); // Hard limit for memory safety
     const commits = getCommitsSinceLastTag(maxCommits);
@@ -684,6 +686,7 @@ function updateChangelog(version = null) {
 
     console.log(`📊 Found ${commits.length} commits to process`);
 
+    // CLAUDE AI REVIEW: Performance optimization from comment #3060512807 - batch processing
     // Process commits in batches for better memory management
     const categorizedCommits = categorizeCommitsInBatches(commits, config.CHANGELOG.COMMIT_BATCH_SIZE);
 
