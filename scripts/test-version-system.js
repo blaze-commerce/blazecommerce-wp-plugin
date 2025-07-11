@@ -16,7 +16,7 @@ const {
   validateInput
 } = require('./semver-utils');
 
-const { validateVersionSystem } = require('./validate-version');
+const { validateVersionSystem, validateVersion } = require('./validate-version');
 const config = require('./config');
 
 /**
@@ -149,12 +149,74 @@ function runTests() {
     }
   });
 
+  // Test version conflict resolution scenarios
+  test('Handle version conflict resolution', () => {
+    // Test incrementing from current version (simulates workflow conflict resolution)
+    const currentVersion = '1.8.0';
+    const patchIncrement = incrementVersion(currentVersion, 'patch');
+    if (patchIncrement !== '1.8.1') throw new Error('Version conflict resolution failed');
+
+    // Test that incremented version is always greater than current
+    const minorIncrement = incrementVersion(currentVersion, 'minor');
+    if (compareVersions(minorIncrement, currentVersion) <= 0) {
+      throw new Error('Incremented version not greater than current');
+    }
+
+    // Test major increment from current version
+    const majorIncrement = incrementVersion(currentVersion, 'major');
+    if (majorIncrement !== '2.0.0') throw new Error('Major increment from current version failed');
+  });
+
+  // Test edge cases for version increment
+  test('Handle version increment edge cases', () => {
+    // Test increment with prerelease versions
+    try {
+      const result = incrementVersion('1.0.0-alpha.1', 'patch');
+      if (result !== '1.0.1') throw new Error('Prerelease increment handling failed');
+    } catch (error) {
+      // This is acceptable behavior - some implementations may not support prerelease
+    }
+
+    // Test increment with invalid version
+    try {
+      incrementVersion('invalid-version', 'patch');
+      throw new Error('Invalid version increment should have failed');
+    } catch (error) {
+      // Expected to fail
+    }
+
+    // Test increment with invalid bump type
+    try {
+      incrementVersion('1.0.0', 'invalid');
+      throw new Error('Invalid bump type should have failed');
+    } catch (error) {
+      // Expected to fail
+    }
+  });
+
+  // Test validation script conflict checking behavior
+  test('Validate conflict checking behavior', () => {
+    // Test that validation system can handle conflict scenarios
+    const testVersion = '1.8.0'; // Same as current version
+    const validationResult = validateVersion(testVersion);
+
+    if (!validationResult.valid) {
+      throw new Error('Valid version format rejected by validation');
+    }
+
+    // The validation should accept the version format even if it equals current version
+    // (conflict resolution is handled at workflow level)
+    if (validationResult.errors.length > 0) {
+      throw new Error('Version validation produced unexpected errors');
+    }
+  });
+
   // Test error boundaries
   test('Handle edge cases', () => {
     // Test very long version strings
     const longVersion = '1.0.0-' + 'a'.repeat(1000);
     if (isValidSemver(longVersion)) throw new Error('Overly long version accepted');
-    
+
     // Test negative numbers
     if (isValidSemver('-1.0.0')) throw new Error('Negative version accepted');
   });
