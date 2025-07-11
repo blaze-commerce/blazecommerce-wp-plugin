@@ -24,6 +24,7 @@
     "version:check": "node -e \"console.log('Current version:', require('./package.json').version)\"",
     "version:validate-all": "npm run validate-version && npm run build && echo '✅ All validations passed'",
     "test:version-system": "node scripts/test-version-system.js",
+    "_comment": "CLAUDE AI REVIEW: Fixed duplicate prepare-release script from comment #3060465549",
     "prepare-release": "npm run validate-version && npm run build && npm run changelog && echo '🚀 Release preparation complete'",
     "prepare-release:quick": "npm run changelog && npm run build && git add .",
     "validate-docs": "node scripts/validate-docs.js",

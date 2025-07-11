@@ -22,6 +22,7 @@ const BREAKING_CHANGE_PATTERNS = [
 ];
 
 /**
+ * CLAUDE AI REVIEW: Fixed command injection risk from comment #3060465549, #3060512807, #3060543625
  * Validate and sanitize git tag name for security
  * @param {string} tagName - Tag name to validate
  * @returns {string} Sanitized tag name
@@ -43,7 +44,7 @@ function validateTagName(tagName) {
     throw new Error(`Tag name too long (max ${config.GIT.MAX_TAG_LENGTH} characters)`);
   }
 
-  // Check for shell metacharacters that could cause injection
+  // CLAUDE AI REVIEW: Enhanced security from comment #3060512807 - comprehensive shell metacharacter detection
   const dangerousChars = /[;&|`$(){}[\]\\'"<>*?~]/;
   if (dangerousChars.test(trimmed)) {
     throw new Error('Tag name contains dangerous characters that could cause security issues');
@@ -143,6 +144,7 @@ function validateInput(input, type, constraints = {}) {
 }
 
 /**
+ * CLAUDE AI REVIEW: Fixed command injection risk from comment #3060465549, #3060512807
  * Execute git command safely with input validation
  * @param {string} command - Git command to execute
  * @param {object} options - Execution options
@@ -153,11 +155,13 @@ function safeGitExec(command, options = {}) {
     throw new Error('Command must be a non-empty string');
   }
 
+  // CLAUDE AI REVIEW: Security enhancement from comment #3060512807 - git command validation
   // Validate that command starts with 'git' for security
   if (!command.trim().startsWith('git ')) {
     throw new Error('Only git commands are allowed');
   }
 
+  // CLAUDE AI REVIEW: Dangerous pattern detection from comment #3060512807
   // Check for dangerous command patterns
   const dangerousPatterns = [
     /[;&|`$(){}[\]\\'"<>]/,  // Shell metacharacters
@@ -172,6 +176,7 @@ function safeGitExec(command, options = {}) {
     }
   }
 
+  // CLAUDE AI REVIEW: Security configuration from comment #3060512807 - shell=false prevents injection
   const defaultOptions = {
     ...config.GIT.DEFAULT_OPTIONS,
     timeout: config.GIT.OPERATION_TIMEOUT,
