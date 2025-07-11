@@ -164,17 +164,33 @@ jobs:
         echo "🏷️  Last git tag: $LAST_TAG"
         echo "🎯 Expected tag: $EXPECTED_TAG"
 
-        if [ "$LAST_TAG" != "$EXPECTED_TAG" ]; then
-          echo "⚠️  Version mismatch detected!"
-          echo "   Package.json version: $PACKAGE_VERSION"
-          echo "   Last git tag: $LAST_TAG"
-          echo "   This may cause unexpected version bumps due to analyzing too many commits"
+        # Validate semver format
+        if ! echo "$PACKAGE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'; then
+          echo "❌ Error: Package version '$PACKAGE_VERSION' is not a valid semver format"
+          exit 1
+        fi
+
+        # Enhanced version mismatch detection with explicit "none" handling
+        if [ "$LAST_TAG" = "none" ] || [ "$LAST_TAG" != "$EXPECTED_TAG" ]; then
+          if [ "$LAST_TAG" = "none" ]; then
+            echo "⚠️  No git tags found - this is the first versioned release"
+            echo "   Package.json version: $PACKAGE_VERSION"
+            echo "   Recommendation: Create initial tag after this release"
+          else
+            echo "⚠️  Version mismatch detected!"
+            echo "   Package.json version: $PACKAGE_VERSION"
+            echo "   Last git tag: $LAST_TAG"
+            echo "   Expected tag: $EXPECTED_TAG"
+            echo "   This may cause unexpected version bumps due to analyzing too many commits"
+          fi
           echo "VERSION_MISMATCH=true" >> $GITHUB_OUTPUT
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
         else
           echo "✅ Version consistency validated"
           echo "VERSION_MISMATCH=false" >> $GITHUB_OUTPUT
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
         fi
 
     - name: Determine version bump type
@@ -185,28 +201,61 @@ jobs:
         # Check for version mismatch and adjust analysis scope accordingly
         VERSION_MISMATCH="${{ steps.version_validation.outputs.VERSION_MISMATCH }}"
         PACKAGE_VERSION="${{ steps.version_validation.outputs.PACKAGE_VERSION }}"
+        LAST_TAG="${{ steps.version_validation.outputs.LAST_TAG }}"
+
+        # Configurable commit analysis limits
+        LIMITED_COMMIT_LIMIT=${LIMITED_COMMIT_LIMIT:-25}
+        FALLBACK_COMMIT_LIMIT=${FALLBACK_COMMIT_LIMIT:-50}
+
+        echo "🔧 Configuration: Limited analysis limit = $LIMITED_COMMIT_LIMIT commits"
+        echo "🔧 Configuration: Fallback analysis limit = $FALLBACK_COMMIT_LIMIT commits"
 
         if [ "$VERSION_MISMATCH" = "true" ]; then
           echo "⚠️  Version mismatch detected - using limited commit analysis"
           echo "📋 Analyzing only recent commits to avoid historical feature detection"
-          # When there's a version mismatch, only analyze recent commits (last 10)
+          # When there's a version mismatch, only analyze recent commits
           # to avoid picking up historical features that should not trigger version bumps
-          COMMITS=$(git log --oneline --no-merges --format="%s" -10)
-          echo "🔧 Limited analysis: analyzing last 10 commits only"
+          COMMITS=$(git log --oneline --no-merges --format="%s" -${LIMITED_COMMIT_LIMIT})
+          echo "🔧 Limited analysis: analyzing last $LIMITED_COMMIT_LIMIT commits only"
+
+          # Validate commits were found in limited analysis
+          if [ -z "$COMMITS" ]; then
+            echo "❌ Error: No commits found in limited analysis"
+            echo "🔄 Attempting fallback analysis..."
+            COMMITS=$(git log --oneline --no-merges --format="%s" -${FALLBACK_COMMIT_LIMIT})
+            if [ -z "$COMMITS" ]; then
+              echo "❌ Error: No commits found even in fallback analysis"
+              echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
         else
           # Normal analysis: get commits since last version tag
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
+          if [ "$LAST_TAG" != "none" ] && [ -n "$LAST_TAG" ]; then
             echo "📋 Analyzing commits since tag: $LAST_TAG"
             COMMITS=$(git log --oneline --no-merges --format="%s" ${LAST_TAG}..HEAD)
+
+            # Validate commits were found in normal analysis
+            if [ -z "$COMMITS" ]; then
+              echo "ℹ️  No commits found since last tag - using fallback analysis"
+              COMMITS=$(git log --oneline --no-merges --format="%s" -${FALLBACK_COMMIT_LIMIT})
+            fi
           else
-            echo "📋 No previous tags found, analyzing last 50 commits"
-            COMMITS=$(git log --oneline --no-merges --format="%s" -50)
+            echo "📋 No previous tags found, analyzing last $FALLBACK_COMMIT_LIMIT commits"
+            COMMITS=$(git log --oneline --no-merges --format="%s" -${FALLBACK_COMMIT_LIMIT})
+          fi
+
+          # Final validation for normal analysis
+          if [ -z "$COMMITS" ]; then
+            echo "❌ Error: No commits found in normal analysis"
+            echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+            exit 0
           fi
         fi
 
+        # Final safety check
         if [ -z "$COMMITS" ]; then
-          echo "ℹ️  No commits found to analyze"
+          echo "ℹ️  No commits found to analyze after all attempts"
           echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
           exit 0
         fi
