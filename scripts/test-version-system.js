@@ -76,9 +76,20 @@ function runTests() {
   
   // Test breaking change detection
   test('Detect breaking changes', () => {
-    const commits = ['feat!: breaking change', 'fix: normal fix'];
-    const bumpType = determineBumpType(commits);
-    if (bumpType !== 'major') throw new Error('Failed to detect breaking change');
+    // Test exclamation mark format
+    const commits1 = ['feat!: breaking change', 'fix: normal fix'];
+    const result1 = determineBumpType(commits1);
+    if (result1.bumpType !== 'major') throw new Error('Failed to detect breaking change with exclamation mark');
+
+    // Test BREAKING CHANGE in body format
+    const commits2 = ['feat: add new feature\n\nBREAKING CHANGE: This breaks the API'];
+    const result2 = determineBumpType(commits2);
+    if (result2.bumpType !== 'major') throw new Error('Failed to detect breaking change in commit body');
+
+    // Test with scope and exclamation mark
+    const commits3 = ['feat(api)!: breaking change with scope'];
+    const result3 = determineBumpType(commits3);
+    if (result3.bumpType !== 'major') throw new Error('Failed to detect breaking change with scope');
   });
   
   // Test tag name validation
