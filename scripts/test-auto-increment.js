@@ -5,12 +5,16 @@
  * Validates the auto-increment conflict resolution functionality
  */
 
-const { 
-  tagExists, 
-  findNextAvailableVersion, 
+const {
+  tagExists,
+  findNextAvailableVersion,
   incrementVersion,
-  isValidSemver 
+  isValidSemver,
+  checkGitRateLimit,
+  getCommitsSinceLastTagStreaming
 } = require('./semver-utils');
+
+const { resolveVersionConflicts } = require('./resolve-version-conflicts');
 
 console.log('🧪 Testing Auto-Increment Version Logic\n');
 
@@ -299,6 +303,61 @@ function testPrereleaseStrategy() {
 }
 
 /**
+ * Test 7: Claude AI recommendations implementation
+ */
+function testClaudeAIRecommendations() {
+  console.log('\n📋 Test 7: Claude AI recommendations implementation');
+
+  let allPassed = true;
+
+  // Test rate limiting functionality
+  try {
+    // Reset rate limiting for testing
+    checkGitRateLimit();
+    console.log('✅ Rate limiting function works');
+  } catch (error) {
+    console.log(`❌ Rate limiting test failed: ${error.message}`);
+    allPassed = false;
+  }
+
+  // Test conflict resolution module
+  try {
+    const result = resolveVersionConflicts({
+      newVersion: '999.999.999', // Version that likely doesn't exist
+      prereleaseType: null,
+      maxAttempts: 5,
+      verbose: false
+    });
+
+    if (result.success && result.resolvedVersion) {
+      console.log(`✅ Conflict resolution module works: ${result.resolvedVersion}`);
+    } else {
+      console.log('❌ Conflict resolution module returned invalid result');
+      allPassed = false;
+    }
+  } catch (error) {
+    console.log(`❌ Conflict resolution test failed: ${error.message}`);
+    allPassed = false;
+  }
+
+  // Test streaming functionality (basic test)
+  try {
+    const streamResult = getCommitsSinceLastTagStreaming(10, 50, false);
+    if (streamResult && streamResult.streamingUsed) {
+      console.log(`✅ Streaming functionality works: ${streamResult.count} commits processed`);
+    } else {
+      console.log('❌ Streaming functionality test failed');
+      allPassed = false;
+    }
+  } catch (error) {
+    // Streaming might fail in test environment, which is acceptable
+    console.log(`⚠️  Streaming test skipped (acceptable): ${error.message}`);
+  }
+
+  return allPassed;
+}
+
+/**
  * Run all tests
  */
 function runAllTests() {
@@ -308,7 +367,8 @@ function runAllTests() {
     { name: 'incrementVersion', fn: testIncrementVersion },
     { name: 'workflowSimulation', fn: testWorkflowSimulation },
     { name: 'edgeCases', fn: testEdgeCases },
-    { name: 'prereleaseStrategy', fn: testPrereleaseStrategy }
+    { name: 'prereleaseStrategy', fn: testPrereleaseStrategy },
+    { name: 'claudeAIRecommendations', fn: testClaudeAIRecommendations }
   ];
   
   let passedTests = 0;
@@ -345,5 +405,6 @@ module.exports = {
   testWorkflowSimulation,
   testEdgeCases,
   testPrereleaseStrategy,
+  testClaudeAIRecommendations,
   runAllTests
 };

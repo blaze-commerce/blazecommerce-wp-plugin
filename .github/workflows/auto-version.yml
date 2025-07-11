@@ -302,151 +302,33 @@ jobs:
           fi
         fi
 
-        # Enhanced auto-increment logic: Check for git tag conflicts and auto-resolve
-        echo "🔍 Checking for git tag conflicts..."
-        echo "📊 Conflict Resolution Details:"
-        echo "   Repository: $(git remote get-url origin 2>/dev/null || echo 'local')"
-        echo "   Current branch: $(git branch --show-current)"
-        echo "   Total existing tags: $(git tag | wc -l)"
+        # Enhanced auto-increment logic using extracted conflict resolution module
+        # Addresses Claude AI recommendation to extract complex workflow logic
+        echo "🔍 Starting version conflict resolution..."
 
-        ORIGINAL_NEW_VERSION="$NEW_VERSION"
+        PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
 
-        # Function to validate version format
-        validate_version_format() {
-          local version="$1"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
-            echo "❌ Invalid version format: $version"
-            echo "   Expected format: X.Y.Z or X.Y.Z-prerelease+build"
-            return 1
-          fi
-          return 0
-        }
+        # Use the extracted conflict resolution script for better maintainability
+        RESOLUTION_RESULT=$(node scripts/resolve-version-conflicts.js "$NEW_VERSION" "$PRERELEASE_TYPE")
+        RESOLUTION_EXIT_CODE=$?
 
-        # Validate calculated version format
-        if ! validate_version_format "$NEW_VERSION"; then
-          echo "❌ Error: Calculated version has invalid format"
-          echo "   Version: $NEW_VERSION"
-          echo "   Please check conventional commit analysis logic"
+        if [ $RESOLUTION_EXIT_CODE -ne 0 ]; then
+          echo "❌ Version conflict resolution failed"
+          echo "$RESOLUTION_RESULT"
           exit 1
         fi
 
-        # Check if the calculated version's git tag already exists
-        TAG_NAME="v$NEW_VERSION"
-        echo "🏷️  Checking tag: $TAG_NAME"
+        # Extract resolved version from output
+        RESOLVED_VERSION=$(echo "$RESOLUTION_RESULT" | grep "📦 Final resolved version:" | sed 's/.*: //')
 
-        if git rev-parse --verify "$TAG_NAME" >/dev/null 2>&1; then
-          echo "⚠️  Git tag conflict detected:"
-          echo "   Calculated version: $NEW_VERSION"
-          echo "   Git tag $TAG_NAME already exists"
-          echo "   Tag creation date: $(git log -1 --format=%ci "$TAG_NAME" 2>/dev/null || echo 'unknown')"
-          echo "🔄 Auto-resolving by finding next available version..."
-
-          # Enhanced error handling for findNextAvailableVersion with prerelease support
-          RESOLVED_VERSION=$(node -e "
-            try {
-              const semver = require('./scripts/semver-utils');
-              console.error('🔍 Starting conflict resolution process...');
-              console.error('   Base version: $NEW_VERSION');
-              console.error('   Prerelease type: $PRERELEASE_TYPE');
-              console.error('   Strategy: prerelease increment or patch increment');
-
-              // For prerelease versions, try prerelease increment first, then patch
-              let nextVersion;
-              const parsed = semver.parseVersion('$NEW_VERSION');
-
-              if ('$PRERELEASE_TYPE' && parsed && parsed.prerelease) {
-                // Try incrementing prerelease number first
-                try {
-                  nextVersion = semver.incrementVersion('$NEW_VERSION', 'patch', '$PRERELEASE_TYPE');
-                  const tagName = 'v' + nextVersion;
-                  if (!semver.tagExists(tagName)) {
-                    console.error('✅ Prerelease increment successful: ' + nextVersion);
-                    console.log(nextVersion);
-                    process.exit(0);
-                  }
-                } catch (e) {
-                  console.error('⚠️  Prerelease increment failed, falling back to findNextAvailableVersion');
-                }
-              }
-
-              // Fallback to standard conflict resolution
-              nextVersion = semver.findNextAvailableVersion('$NEW_VERSION', 'patch', {
-                verbose: true,
-                maxAttempts: 50
-              });
-
-              if (!nextVersion) {
-                console.error('❌ No available version found within reasonable range');
-                process.exit(1);
-              }
-
-              console.error('✅ Resolution successful: ' + nextVersion);
-              console.log(nextVersion);
-            } catch (error) {
-              console.error('❌ Error in findNextAvailableVersion:');
-              console.error('   Message: ' + error.message);
-              console.error('   Stack: ' + (error.stack || 'No stack trace'));
-              console.error('   Possible causes:');
-              console.error('   - Git repository access issues');
-              console.error('   - Network connectivity problems');
-              console.error('   - Corrupted git tags');
-              console.error('   - Insufficient permissions');
-              process.exit(1);
-            }
-          ")
-
-          # Enhanced validation of resolved version
-          RESOLUTION_EXIT_CODE=$?
-          if [ $RESOLUTION_EXIT_CODE -ne 0 ]; then
-            echo "❌ Error: Version conflict resolution failed (exit code: $RESOLUTION_EXIT_CODE)"
-            echo "   Original version: $NEW_VERSION"
-            echo "   Troubleshooting steps:"
-            echo "   1. Check git repository integrity: git fsck"
-            echo "   2. Verify tag permissions: git tag --list | head -5"
-            echo "   3. Check network connectivity if using remote repository"
-            echo "   4. Review semver-utils.js for potential issues"
-            exit 1
-          fi
-
-          if [ -z "$RESOLVED_VERSION" ]; then
-            echo "❌ Error: Empty resolved version returned"
-            echo "   This indicates a logic error in findNextAvailableVersion"
-            echo "   Please check the semver-utils.js implementation"
-            exit 1
-          fi
-
-          # Validate resolved version format
-          if ! validate_version_format "$RESOLVED_VERSION"; then
-            echo "❌ Error: Resolved version has invalid format"
-            echo "   Resolved version: $RESOLVED_VERSION"
-            echo "   This indicates a bug in findNextAvailableVersion"
-            exit 1
-          fi
-
-          # Final verification that resolved version is actually available
-          RESOLVED_TAG_NAME="v$RESOLVED_VERSION"
-          if git rev-parse --verify "$RESOLVED_TAG_NAME" >/dev/null 2>&1; then
-            echo "❌ Error: Resolved version tag already exists"
-            echo "   Resolved version: $RESOLVED_VERSION"
-            echo "   Tag: $RESOLVED_TAG_NAME"
-            echo "   This indicates a race condition or logic error"
-            exit 1
-          fi
-
-          echo "✅ Git tag conflict resolved successfully:"
-          echo "   Original calculated version: $ORIGINAL_NEW_VERSION"
-          echo "   Final resolved version: $RESOLVED_VERSION"
-          echo "   Resolution method: Auto-incremented patch version"
-          echo "   Attempts made: $(node -e "console.log(require('semver').diff('$NEW_VERSION', '$RESOLVED_VERSION') === 'patch' ? require('semver').patch('$RESOLVED_VERSION') - require('semver').patch('$NEW_VERSION') : 'unknown')" 2>/dev/null || echo 'calculated')"
-          echo "   Verified tag availability: ✅"
-
+        if [ -n "$RESOLVED_VERSION" ] && [ "$RESOLVED_VERSION" != "$NEW_VERSION" ]; then
+          echo "🔄 Version updated due to conflict resolution:"
+          echo "   Original: $NEW_VERSION"
+          echo "   Resolved: $RESOLVED_VERSION"
           NEW_VERSION="$RESOLVED_VERSION"
 
           # Update bump type to patch since we're doing patch increments for resolution
           echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
-        else
-          echo "✅ No git tag conflicts detected for $TAG_NAME"
-          echo "   Tag is available for use"
         fi
 
         echo "📦 Final version will be: $NEW_VERSION"
