@@ -184,7 +184,98 @@ jobs:
           script: |
             const fs = require('fs');
 
+            // Enhanced input validation
             const repoType = '${{ steps.claude-context.outputs.repo_type }}';
+            if (!repoType || repoType === 'undefined' || repoType === '') {
+              throw new Error('Missing or invalid repository type');
+            }
+
+            // Validate required environment variables
+            const requiredVars = {
+              'GITHUB_TOKEN': process.env.GITHUB_TOKEN,
+              'GITHUB_REPOSITORY': process.env.GITHUB_REPOSITORY,
+              'GITHUB_EVENT_NUMBER': context.issue.number
+            };
+
+            for (const [name, value] of Object.entries(requiredVars)) {
+              if (!value || value === 'undefined' || value === '') {
+                throw new Error(`Missing or invalid required variable: ${name}`);
+              }
+            }
+
+            /**
+             * Structured logging helper for consistent log formatting
+             * @namespace logger
+             */
+            const logger = {
+              /**
+               * Log informational messages with structured context
+               * @param {string} msg - The log message
+               * @param {Object} context - Additional context data
+               */
+              info: (msg, context = {}) => console.log(JSON.stringify({
+                level: 'info',
+                message: msg,
+                context: { ...context, timestamp: new Date().toISOString() }
+              })),
+              /**
+               * Log error messages with structured context and error details
+               * @param {string} msg - The error message
+               * @param {Error|string} error - The error object or message
+               * @param {Object} context - Additional context data
+               */
+              error: (msg, error, context = {}) => console.error(JSON.stringify({
+                level: 'error',
+                message: msg,
+                error: error?.message || error,
+                context: { ...context, timestamp: new Date().toISOString() }
+              })),
+              /**
+               * Log warning messages with structured context
+               * @param {string} msg - The warning message
+               * @param {Object} context - Additional context data
+               */
+              warn: (msg, context = {}) => console.warn(JSON.stringify({
+                level: 'warn',
+                message: msg,
+                context: { ...context, timestamp: new Date().toISOString() }
+              }))
+            };
+
+            logger.info('Input validation passed', { repoType, prNumber: context.issue.number });
+
+            // Configuration validation
+            const config = {
+              MAX_FILES: 100,
+              MAX_FILE_SIZE: 1048576, // 1MB
+              MAX_OUTPUT_SIZE: 1000000, // 1MB
+              MAX_MEMORY_MB: 1024, // 1GB
+              PAGINATION_SIZE: 30,
+              RETRY_ATTEMPTS: 3
+            };
+
+            /**
+             * Validates configuration schema to ensure all required values are present and valid
+             * @param {Object} cfg - Configuration object to validate
+             * @param {number} cfg.MAX_FILES - Maximum number of files to process
+             * @param {number} cfg.MAX_FILE_SIZE - Maximum file size in bytes
+             * @param {number} cfg.MAX_OUTPUT_SIZE - Maximum output size in bytes
+             * @param {number} cfg.MAX_MEMORY_MB - Maximum memory usage in MB
+             * @returns {boolean} True if configuration is valid
+             * @throws {Error} If configuration is invalid
+             */
+            const validateConfig = (cfg) => {
+              const required = ['MAX_FILES', 'MAX_FILE_SIZE', 'MAX_OUTPUT_SIZE', 'MAX_MEMORY_MB'];
+              for (const key of required) {
+                if (typeof cfg[key] !== 'number' || cfg[key] <= 0) {
+                  throw new Error(`Invalid configuration: ${key} must be a positive number`);
+                }
+              }
+              return true;
+            };
+
+            validateConfig(config);
+            logger.info('Configuration validation passed', { config });
 
             // Read large data from temporary files to avoid argument length limits
             let changedFiles = [];
@@ -192,17 +283,17 @@ jobs:
 
             try {
               changedFiles = JSON.parse(fs.readFileSync('/tmp/changed_files.json', 'utf8'));
-              console.log(`📁 Loaded ${changedFiles.length} changed files from temporary file`);
+              logger.info('Loaded changed files from temporary file', { fileCount: changedFiles.length });
             } catch (error) {
-              console.log('⚠️ Could not read changed files from temporary file:', error.message);
+              logger.warn('Could not read changed files from temporary file', { error: error.message });
               changedFiles = [];
             }
 
             try {
               existingReviews = JSON.parse(fs.readFileSync('/tmp/existing_reviews.json', 'utf8'));
-              console.log(`💬 Loaded ${existingReviews.length} existing reviews from temporary file`);
+              logger.info('Loaded existing reviews from temporary file', { reviewCount: existingReviews.length });
             } catch (error) {
-              console.log('⚠️ Could not read existing reviews from temporary file:', error.message);
+              logger.warn('Could not read existing reviews from temporary file', { error: error.message });
               existingReviews = [];
             }
             
@@ -290,13 +381,36 @@ jobs:
 
             Focus on actionable, specific recommendations with examples.`;
 
+            // Memory and size monitoring
+            const memoryUsage = process.memoryUsage();
+            const memoryMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
+            console.log(`📊 Memory usage: ${memoryMB}MB (heap: ${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB, external: ${Math.round(memoryUsage.external / 1024 / 1024)}MB)`);
+
+            // Memory threshold monitoring using validated config
+            if (memoryMB > config.MAX_MEMORY_MB) {
+              logger.warn('High memory usage detected, triggering garbage collection', {
+                currentMemoryMB: memoryMB,
+                thresholdMB: config.MAX_MEMORY_MB
+              });
+              if (global.gc) {
+                global.gc();
+                const newMemory = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+                logger.info('Garbage collection completed', {
+                  previousMemoryMB: memoryMB,
+                  newMemoryMB: newMemory
+                });
+              }
+            }
+
             // GitHub Actions has output size limits, so we need to handle large prompts carefully
-            const maxOutputSize = 1000000; // 1MB limit for GitHub Actions outputs
             let finalPrompt = fullPrompt;
 
-            if (fullPrompt.length > maxOutputSize) {
-              console.log(`⚠️ Prompt too large (${fullPrompt.length} chars), truncating to ${maxOutputSize} chars`);
-              finalPrompt = fullPrompt.substring(0, maxOutputSize - 100) + '\n\n[Prompt truncated due to size limits]';
+            if (fullPrompt.length > config.MAX_OUTPUT_SIZE) {
+              logger.warn('Prompt too large, truncating', {
+                originalLength: fullPrompt.length,
+                maxSize: config.MAX_OUTPUT_SIZE
+              });
+              finalPrompt = fullPrompt.substring(0, config.MAX_OUTPUT_SIZE - 100) + '\n\n[Prompt truncated due to size limits]';
             }
 
             // Set output for the next step
@@ -304,48 +418,104 @@ jobs:
             core.setOutput('prompt_length', fullPrompt.length);
             core.setOutput('review_prompt', finalPrompt);
 
-            console.log(`✅ Prompt prepared successfully for official Claude action (${finalPrompt.length} characters)`);
+            logger.info('Prompt prepared successfully for official Claude action', {
+              promptLength: finalPrompt.length,
+              originalLength: fullPrompt.length,
+              truncated: finalPrompt.length !== fullPrompt.length
+            });
             return { success: true, promptLength: finalPrompt.length };
 
       - name: Claude AI Review with Official Action (Attempt 1)
         id: claude-review-1
         if: steps.prepare-prompt.outputs.prompt_ready == 'true'
         continue-on-error: true
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1.0.0  # Pinned version for security
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-prompt.outputs.review_prompt }}
 
       - name: Wait Before Retry (30s + jitter)
         if: steps.claude-review-1.outcome == 'failure'
-        run: |
-          # Add jitter to prevent thundering herd
-          jitter=$((RANDOM % 10 + 25))  # 25-35 seconds
-          echo "⏳ Waiting ${jitter}s before retry..."
-          sleep $jitter
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Enhanced retry logic with rate limit awareness
+            let waitTime = 30; // Base wait time
+
+            // Check if we have rate limit information from previous API calls
+            try {
+              const rateLimit = await github.rest.rateLimit.get();
+              const remaining = rateLimit.data.rate.remaining;
+              const resetTime = new Date(rateLimit.data.rate.reset * 1000);
+              const now = new Date();
+
+              console.log(`📊 GitHub API Rate Limit: ${remaining} requests remaining`);
+
+              // If rate limit is low, wait longer
+              if (remaining < 100) {
+                const timeUntilReset = Math.max(0, resetTime - now) / 1000;
+                waitTime = Math.min(timeUntilReset + 10, 120); // Max 2 minutes
+                console.log(`⚠️ Low rate limit detected, extending wait to ${waitTime}s`);
+              }
+            } catch (error) {
+              console.log('⚠️ Could not check rate limit, using default wait time');
+            }
+
+            // Add jitter to prevent thundering herd (±25%)
+            const jitter = Math.random() * 0.5 + 0.75; // 0.75 to 1.25
+            const finalWaitTime = Math.round(waitTime * jitter);
+
+            console.log(`⏳ Waiting ${finalWaitTime}s before retry (base: ${waitTime}s, jitter: ${jitter.toFixed(2)})`);
+            await new Promise(resolve => setTimeout(resolve, finalWaitTime * 1000));
 
       - name: Claude AI Review with Official Action (Attempt 2)
         id: claude-review-2
         if: steps.claude-review-1.outcome == 'failure'
         continue-on-error: true
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1.0.0  # Pinned version for security
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-prompt.outputs.review_prompt }}
 
       - name: Wait Before Final Retry (60s + jitter)
         if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
-        run: |
-          # Add jitter to prevent thundering herd
-          jitter=$((RANDOM % 20 + 50))  # 50-70 seconds
-          echo "⏳ Waiting ${jitter}s before final retry..."
-          sleep $jitter
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Enhanced final retry logic with intelligent backoff
+            let waitTime = 60; // Base wait time for final retry
+
+            // Check rate limit status for final attempt
+            try {
+              const rateLimit = await github.rest.rateLimit.get();
+              const remaining = rateLimit.data.rate.remaining;
+              const resetTime = new Date(rateLimit.data.rate.reset * 1000);
+              const now = new Date();
+
+              console.log(`📊 GitHub API Rate Limit: ${remaining} requests remaining`);
+
+              // If rate limit is very low, wait until reset
+              if (remaining < 50) {
+                const timeUntilReset = Math.max(0, resetTime - now) / 1000;
+                waitTime = Math.min(timeUntilReset + 30, 300); // Max 5 minutes
+                console.log(`🚨 Very low rate limit detected, waiting until reset: ${waitTime}s`);
+              }
+            } catch (error) {
+              console.log('⚠️ Could not check rate limit for final retry, using default wait time');
+            }
+
+            // Add jitter for final retry (±30%)
+            const jitter = Math.random() * 0.6 + 0.7; // 0.7 to 1.3
+            const finalWaitTime = Math.round(waitTime * jitter);
+
+            console.log(`⏳ Final retry wait: ${finalWaitTime}s (base: ${waitTime}s, jitter: ${jitter.toFixed(2)})`);
+            await new Promise(resolve => setTimeout(resolve, finalWaitTime * 1000));
 
       - name: Claude AI Review with Official Action (Attempt 3)
         id: claude-review-3
         if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         continue-on-error: true
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1.0.0  # Pinned version for security
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-prompt.outputs.review_prompt }}
@@ -376,6 +546,27 @@ jobs:
               console.log('❌ All Claude AI review attempts failed');
               core.setOutput('success', 'false');
               core.setOutput('error', 'All attempts failed after 3 retries');
+
+              // Emit error event for monitoring
+              const errorEvent = {
+                operation: 'claude-ai-review',
+                error: 'All attempts failed after 3 retries',
+                context: {
+                  repository: context.repo.full_name,
+                  pr_number: context.issue.number,
+                  attempt_outcomes: {
+                    attempt1: attempt1,
+                    attempt2: attempt2,
+                    attempt3: attempt3
+                  },
+                  timestamp: new Date().toISOString()
+                }
+              };
+
+              console.log('📊 Error event emitted:', JSON.stringify(errorEvent));
+
+              // Set error details for potential external monitoring
+              core.setOutput('error_details', JSON.stringify(errorEvent));
             }
 
       - name: Generate Review Comment
@@ -425,10 +616,17 @@ jobs:
 
             *Powered by BlazeCommerce Claude AI Review Bot v2.0 with official Anthropic integration*`;
 
-            // Save the comment content
-            fs.writeFileSync('review-comment.md', summaryComment);
-
-            console.log('✅ BlazeCommerce review summary generated successfully');
+            // Atomic file operation to prevent corruption
+            const tempFile = 'review-comment.md.tmp';
+            try {
+              fs.writeFileSync(tempFile, summaryComment);
+              fs.renameSync(tempFile, 'review-comment.md');
+              console.log('✅ BlazeCommerce review summary generated successfully (atomic write)');
+            } catch (error) {
+              // Cleanup temp file if it exists
+              try { fs.unlinkSync(tempFile); } catch {}
+              throw error;
+            }
           
           ---
           *Powered by Claude AI | Response time: < 2 minutes average*
