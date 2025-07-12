@@ -6,79 +6,412 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  validate-release:
     runs-on: ubuntu-latest
-    
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+      is-prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
+      should_create_release: ${{ steps.check_files.outputs.should_create_release }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+      with:
+        fetch-depth: 0
+
+    - name: Check if release is needed
+      id: check_files
+      run: |
+        echo "🔍 Checking if release is needed based on changed files..."
+
+        # Get the tag that triggered this workflow
+        CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+        echo "🏷️  Current tag: $CURRENT_TAG"
+
+        # Validate tag format
+        if [ -z "$CURRENT_TAG" ] || [[ ! "$CURRENT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+          echo "❌ Invalid tag format: $CURRENT_TAG"
+          echo "   Expected format: v1.2.3"
+          exit 1
+        fi
+
+        # Get the previous tag to compare against with better error handling
+        echo "🔍 Looking for previous tag..."
+        if ! PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null); then
+          echo "📋 No previous tags found, this appears to be the first release"
+          PREVIOUS_TAG=""
+        else
+          echo "📋 Found previous tag: $PREVIOUS_TAG"
+        fi
+
+        # Get changed files with proper error handling
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "📋 Comparing changes since previous tag: $PREVIOUS_TAG"
+          if ! CHANGED_FILES=$(git diff --name-only "$PREVIOUS_TAG..$CURRENT_TAG" 2>/dev/null); then
+            echo "❌ Failed to get changed files between tags"
+            echo "   Previous: $PREVIOUS_TAG"
+            echo "   Current: $CURRENT_TAG"
+            exit 1
+          fi
+        else
+          echo "📋 No previous tags found, checking all files in current commit"
+          if ! CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null); then
+            echo "⚠️  Could not get diff, falling back to listing all files"
+            CHANGED_FILES=$(git ls-files)
+          fi
+        fi
+
+        # Validate that we have files to analyze
+        if [ -z "$CHANGED_FILES" ]; then
+          echo "⚠️  No changed files detected, skipping release creation"
+          echo "should_create_release=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "📁 Changed files since last release:"
+        echo "$CHANGED_FILES"
+        echo ""
+
+        # Use extracted file detection script for better maintainability and testability
+        echo "🔍 Analyzing changed files using dedicated detection script..."
+
+        # Validate that required scripts exist
+        if [ ! -f "scripts/check-file-changes.sh" ]; then
+          echo "❌ Required script 'scripts/check-file-changes.sh' not found"
+          echo "   This script is required for file change analysis"
+          exit 1
+        fi
+
+        # Determine if we should use performance mode for large changesets
+        FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
+        PERFORMANCE_ARGS=""
+        if [ "$FILE_COUNT" -gt 50 ]; then
+          echo "📊 Large changeset detected ($FILE_COUNT files) - enabling performance mode"
+          PERFORMANCE_ARGS="--performance-mode"
+        fi
+
+        # Run file detection script and capture result
+        SHOULD_CREATE_RELEASE="false"
+        if echo "$CHANGED_FILES" | bash scripts/check-file-changes.sh /dev/stdin $PERFORMANCE_ARGS; then
+          SHOULD_CREATE_RELEASE="true"
+          echo "🚀 File analysis complete - release creation needed"
+        else
+          echo "⏭️  File analysis complete - release creation skipped"
+        fi
+
+        echo ""
+        if [ "$SHOULD_CREATE_RELEASE" = "true" ]; then
+          echo "🚀 Release creation needed - non-ignored files were changed"
+        else
+          echo "⏭️  Release creation skipped - only ignored files were changed"
+        fi
+
+        echo "should_create_release=$SHOULD_CREATE_RELEASE" >> $GITHUB_OUTPUT
+
+    - name: Setup Node.js
+      if: steps.check_files.outputs.should_create_release == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      if: steps.check_files.outputs.should_create_release == 'true'
+      run: npm install
+
+    - name: Extract and validate version from tag
+      if: steps.check_files.outputs.should_create_release == 'true'
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "📦 Release version: $VERSION"
+
+        # Validate semantic version format
+        if ! node -e "
+          const { isValidSemver } = require('./scripts/semver-utils');
+          if (!isValidSemver('$VERSION')) {
+            console.error('❌ Invalid semantic version format: $VERSION');
+            process.exit(1);
+          }
+          console.log('✅ Valid semantic version format');
+        "; then
+          exit 1
+        fi
+
+        # Check if it's a prerelease
+        if echo "$VERSION" | grep -qE "\-"; then
+          echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+          echo "🚧 Pre-release version detected"
+        else
+          echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+          echo "🚀 Stable release version"
+        fi
+
+    - name: Validate YAML syntax
+      if: steps.check_files.outputs.should_create_release == 'true'
+      run: |
+        echo "🔍 Validating YAML syntax in workflow files..."
+        python3 -c "
+        import yaml
+        import sys
+        try:
+            with open('.github/workflows/release.yml', 'r') as f:
+                yaml.safe_load(f)
+            print('✅ YAML syntax is valid')
+        except yaml.YAMLError as e:
+            print(f'❌ YAML syntax error: {e}')
+            sys.exit(1)
+        "
+
+    - name: Validate version consistency
+      if: steps.check_files.outputs.should_create_release == 'true'
+      run: |
+        echo "🔍 Validating version consistency across files..."
+
+        # Validate that required script exists
+        if [ ! -f "scripts/validate-version.js" ]; then
+          echo "❌ Required script 'scripts/validate-version.js' not found"
+          echo "   This script is required for version validation"
+          exit 1
+        fi
+
+        if ! node scripts/validate-version.js --verbose; then
+          echo "❌ Version validation failed"
+          echo "   Check the validation output above for specific issues"
+          exit 1
+        fi
+
+        echo "✅ Version validation passed"
+
+  build-and-release:
+    needs: validate-release
+    runs-on: ubuntu-latest
+    if: needs.validate-release.outputs.should_create_release == 'true'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
-        
+
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.1'
         extensions: mbstring, intl
         tools: composer
-        
+
     - name: Install dependencies
       run: |
+        echo "📦 Installing Node.js dependencies..."
         npm install
-        composer install --no-dev --optimize-autoloader
-        
+
+        echo "📦 Installing PHP dependencies..."
+        composer install --no-dev --optimize-autoloader --no-interaction
+
     - name: Build blocks
       run: |
+        echo "🔨 Building Gutenberg blocks..."
         cd blocks
         npm install
         npm run build
-        
-    - name: Extract version from tag
-      id: version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      
+
+        echo "✅ Blocks built successfully"
+        ls -la build/
+
+    - name: Validate build artifacts
+      run: |
+        echo "🔍 Validating build artifacts..."
+
+        # Check if blocks were built
+        if [ ! -d "blocks/build" ] || [ -z "$(ls -A blocks/build)" ]; then
+          echo "❌ Blocks build directory is missing or empty"
+          exit 1
+        fi
+
+        # Check main plugin file
+        if [ ! -f "blaze-wooless.php" ]; then
+          echo "❌ Main plugin file is missing"
+          exit 1
+        fi
+
+        # Validate PHP syntax
+        echo "🔍 Validating PHP syntax..."
+        find . -name "*.php" -not -path "./vendor/*" -not -path "./node_modules/*" -exec php -l {} \; > /dev/null
+        if [ $? -ne 0 ]; then
+          echo "❌ PHP syntax validation failed"
+          exit 1
+        fi
+
+        echo "✅ Build artifacts validated successfully"
+
     - name: Create plugin ZIP
       run: |
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        ZIP_NAME="blazecommerce-wp-plugin-$VERSION.zip"
+
+        echo "📦 Creating plugin ZIP: $ZIP_NAME"
+
         # Create a temporary directory for the plugin
-        mkdir -p /tmp/blazecommerce-wp-plugin
-        
+        TEMP_DIR="/tmp/blazecommerce-wp-plugin"
+        mkdir -p "$TEMP_DIR"
+
         # Copy plugin files (exclude development files)
-        rsync -av --exclude-from='.github/workflows/.zipignore' . /tmp/blazecommerce-wp-plugin/
-        
+        echo "📋 Copying plugin files..."
+        rsync -av --exclude-from='.github/workflows/.zipignore' . "$TEMP_DIR/"
+
+        # Verify essential files are included
+        echo "🔍 Verifying essential files in ZIP..."
+        ESSENTIAL_FILES=("blaze-wooless.php" "blocks/build")
+        for file in "${ESSENTIAL_FILES[@]}"; do
+          if [ ! -e "$TEMP_DIR/$file" ]; then
+            echo "❌ Essential file/directory missing from ZIP: $file"
+            exit 1
+          fi
+        done
+
         # Create the ZIP file
         cd /tmp
-        zip -r blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip blazecommerce-wp-plugin/
-        
+        zip -r "$ZIP_NAME" blazecommerce-wp-plugin/ -q
+
+        # Verify ZIP was created and has reasonable size
+        if [ ! -f "$ZIP_NAME" ]; then
+          echo "❌ ZIP file was not created"
+          exit 1
+        fi
+
+        ZIP_SIZE=$(stat -f%z "$ZIP_NAME" 2>/dev/null || stat -c%s "$ZIP_NAME")
+        if [ "$ZIP_SIZE" -lt 10000 ]; then
+          echo "❌ ZIP file seems too small ($ZIP_SIZE bytes)"
+          exit 1
+        fi
+
+        echo "✅ ZIP file created successfully ($ZIP_SIZE bytes)"
+
         # Move ZIP back to workspace
-        mv blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
-        
-    - name: Generate release notes
+        mv "$ZIP_NAME" "$GITHUB_WORKSPACE/"
+
+    - name: Generate enhanced release notes
       id: release_notes
       run: |
-        # Extract changelog for this version
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        echo "📝 Generating release notes for version $VERSION..."
+
+        # Initialize release notes
+        RELEASE_NOTES=""
+
+        # Extract changelog for this version if it exists
         if [ -f CHANGELOG.md ]; then
+          echo "📋 Extracting changelog for version $VERSION..."
+
           # Get content between this version and next version header
-          awk '/^## \[${{ steps.version.outputs.VERSION }}\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md > release_notes.txt
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
-          cat release_notes.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-        else
-          echo "RELEASE_NOTES=Release version ${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+          CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d' | head -50)
+
+          if [ -n "$CHANGELOG_CONTENT" ]; then
+            # Note: Using string concatenation instead of heredoc (cat << EOF)
+            # to avoid YAML parsing issues. Heredoc syntax can confuse YAML parsers
+            # when used within shell scripts in GitHub Actions workflows.
+            # This approach was implemented based on Claude AI's review recommendations.
+            RELEASE_NOTES="## What's Changed"$'\n\n'"$CHANGELOG_CONTENT"$'\n\n'"---"
+          fi
         fi
-        
+
+        # Build release notes sections using variables for better readability
+        # (Improved based on Claude AI's maintainability recommendations)
+
+        # Installation instructions section
+        INSTALL_SECTION="## 📦 Installation"$'\n\n'"1. Download the \`blazecommerce-wp-plugin-$VERSION.zip\` file below"$'\n'"2. In your WordPress admin, go to **Plugins > Add New > Upload Plugin**"$'\n'"3. Choose the downloaded ZIP file and click **Install Now**"$'\n'"4. Activate the plugin after installation"
+
+        # Requirements section
+        REQUIREMENTS_SECTION="## 🔧 Requirements"$'\n\n'"- WordPress 5.0 or higher"$'\n'"- PHP 7.4 or higher"$'\n'"- WooCommerce plugin"
+
+        # Documentation section
+        DOCS_SECTION="## 📚 Documentation"$'\n\n'"For setup and configuration instructions, visit our [documentation](https://github.com/blaze-commerce/blazecommerce-wp-plugin/tree/main/docs)."
+
+        # Support section
+        SUPPORT_SECTION="## 🐛 Support"$'\n\n'"If you encounter any issues, please [create an issue](https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues) on GitHub."
+
+        # Combine all sections into final release notes
+        RELEASE_NOTES="$RELEASE_NOTES"$'\n\n'"$INSTALL_SECTION"$'\n\n'"$REQUIREMENTS_SECTION"$'\n\n'"$DOCS_SECTION"$'\n\n'"$SUPPORT_SECTION"
+
+        # Save release notes to output
+        echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+        echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        echo "✅ Release notes generated successfully"
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref_name }}
-        name: Release ${{ steps.version.outputs.VERSION }}
+        name: "🚀 Release ${{ needs.validate-release.outputs.version }}"
         body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
         files: |
-          blazecommerce-wp-plugin-${{ steps.version.outputs.VERSION }}.zip
+          blazecommerce-wp-plugin-${{ needs.validate-release.outputs.version }}.zip
         draft: false
-        prerelease: false
+        prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
+        generate_release_notes: true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.BC_GITHUB_TOKEN }}
+
+    - name: Release summary
+      run: |
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
+
+        echo "🎉 Release completed successfully!"
+        echo "📦 Version: $VERSION"
+        echo "🚧 Pre-release: $IS_PRERELEASE"
+        echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
+        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+
+  workflow-summary:
+    needs: validate-release
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Workflow Summary
+      run: |
+        echo "📋 Create Release Workflow Summary"
+        echo "=================================="
+
+        TAG_NAME="${GITHUB_REF#refs/tags/}"
+        echo "🏷️  Triggered by tag: $TAG_NAME"
+
+        if [ "${{ needs.validate-release.outputs.should_create_release }}" = "true" ]; then
+          echo "✅ Release was processed"
+
+          # Check if build-and-release job was successful
+          if [ "${{ needs.validate-release.result }}" = "success" ]; then
+            VERSION="${{ needs.validate-release.outputs.version }}"
+            IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
+
+            echo "📦 Version: $VERSION"
+            echo "🚧 Pre-release: $IS_PRERELEASE"
+            echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
+            echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+            echo "🎉 Release created successfully!"
+          else
+            echo "❌ Release processing failed during validation"
+            echo "   Check the validate-release job logs for details"
+          fi
+        else
+          echo "⏭️  Release creation was skipped"
+          echo "📁 Reason: Only ignored files were changed since last release"
+          echo "ℹ️  This is normal behavior - no release needed for:"
+          echo "   • Documentation changes"
+          echo "   • CI/CD configuration updates"
+          echo "   • Development tooling changes"
+          echo "   • Auto-generated files"
+          echo "   • Version bump commits"
+          echo ""
+          echo "✅ Workflow completed successfully (no action required)"
+          echo "💡 The tag $TAG_NAME remains available but no GitHub release was created"
+        fi
