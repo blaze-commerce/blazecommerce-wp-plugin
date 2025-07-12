@@ -311,7 +311,7 @@ jobs:
         if: steps.skip-check.outputs.should_skip != 'true'
         id: claude-review-1
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1.0.0
+        uses: anthropics/claude-code-action@v0.0.32
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
@@ -326,7 +326,7 @@ jobs:
         id: claude-review-2
         if: steps.skip-check.outputs.should_skip != 'true' && steps.claude-review-1.outcome == 'failure'
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1.0.0
+        uses: anthropics/claude-code-action@v0.0.32
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
@@ -341,7 +341,7 @@ jobs:
         id: claude-review-3
         if: steps.skip-check.outputs.should_skip != 'true' && steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1.0.0
+        uses: anthropics/claude-code-action@v0.0.32
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
@@ -432,12 +432,12 @@ jobs:
             3. **Service Status**: Check [Anthropic Status](https://status.anthropic.com/) for service updates
 
             ### 📊 Attempt Details
-            - **All 3 attempts failed** using official Anthropic GitHub Action (v1.0.0)
+            - **All 3 attempts failed** using official Anthropic GitHub Action (v0.0.32)
             - **Authentication**: Using official action (most reliable method)
             - **Timestamp**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
             - **Duplicate Prevention**: Active (prevents multiple error comments)
 
-            *BlazeCommerce Claude AI Review Bot v3.1 - Enhanced Error Handling*`;
+            *BlazeCommerce Claude AI Review Bot v3.2 - Version Fix Applied*`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
