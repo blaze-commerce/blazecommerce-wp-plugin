@@ -2,8 +2,6 @@
 # the repo. Unless a later match takes precedence,
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
-*       @blaze-commerce/qa
-
-# BlazeCommerce Claude AI Review Bot Code Ownership
-# This ensures the bot is automatically requested for review on all PRs
-* @blazecommerce-claude-ai
+#
+# Both QA team AND Claude AI bot will be automatically assigned as reviewers
+*       @blaze-commerce/qa @blazecommerce-claude-ai
