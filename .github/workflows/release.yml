@@ -72,64 +72,32 @@ jobs:
         echo "$CHANGED_FILES"
         echo ""
 
-        # Load ignore patterns from shared script to eliminate duplication
-        echo "📋 Loading ignore patterns from shared configuration..."
-        if [ ! -f "scripts/get-ignore-patterns.sh" ]; then
-          echo "❌ Required script 'scripts/get-ignore-patterns.sh' not found"
-          echo "   This script is required for ignore pattern configuration"
+        # Use extracted file detection script for better maintainability and testability
+        echo "🔍 Analyzing changed files using dedicated detection script..."
+
+        # Validate that required scripts exist
+        if [ ! -f "scripts/check-file-changes.sh" ]; then
+          echo "❌ Required script 'scripts/check-file-changes.sh' not found"
+          echo "   This script is required for file change analysis"
           exit 1
         fi
 
-        # Load patterns into array with proper error handling
-        if ! IGNORE_PATTERNS=($(bash scripts/get-ignore-patterns.sh)); then
-          echo "❌ Failed to load ignore patterns from script"
-          exit 1
+        # Determine if we should use performance mode for large changesets
+        FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
+        PERFORMANCE_ARGS=""
+        if [ "$FILE_COUNT" -gt 50 ]; then
+          echo "📊 Large changeset detected ($FILE_COUNT files) - enabling performance mode"
+          PERFORMANCE_ARGS="--performance-mode"
         fi
 
-        echo "✅ Loaded ${#IGNORE_PATTERNS[@]} ignore patterns"
-
-        # Check if any changed file should trigger release creation
+        # Run file detection script and capture result
         SHOULD_CREATE_RELEASE="false"
-
-        # Use null-terminated strings for better handling of filenames with spaces
-        while IFS= read -r -d '' file; do
-          [ -z "$file" ] && continue
-
-          FILE_SHOULD_BE_IGNORED="false"
-
-          # Check against each ignore pattern with secure and precise matching logic
-          for pattern in "${IGNORE_PATTERNS[@]}"; do
-            # Handle directory patterns (ending with /)
-            if [[ "$pattern" == */ ]]; then
-              # Use safe prefix matching for directories - no regex vulnerabilities
-              if [[ "$file" == "$pattern"* ]]; then
-                FILE_SHOULD_BE_IGNORED="true"
-                break
-              fi
-            # Handle exact file matches (most common case)
-            elif [[ "$file" == "$pattern" ]]; then
-              FILE_SHOULD_BE_IGNORED="true"
-              break
-            # Handle file basename matches (file in any directory)
-            elif [[ "$file" == */"$pattern" ]]; then
-              FILE_SHOULD_BE_IGNORED="true"
-              break
-            # Handle file extension patterns with precise matching
-            elif [[ "$pattern" == .* ]] && [[ "${file##*/}" == "$pattern" ]]; then
-              # Only match exact filename, not as substring (fixes .DS_Store issue)
-              FILE_SHOULD_BE_IGNORED="true"
-              break
-            fi
-          done
-
-          # If this file should NOT be ignored, we need to create release
-          if [ "$FILE_SHOULD_BE_IGNORED" = "false" ]; then
-            echo "✅ File '$file' requires release creation"
-            SHOULD_CREATE_RELEASE="true"
-          else
-            echo "⏭️  File '$file' is ignored for release creation"
-          fi
-        done < <(printf '%s\0' $CHANGED_FILES)
+        if echo "$CHANGED_FILES" | bash scripts/check-file-changes.sh /dev/stdin $PERFORMANCE_ARGS; then
+          SHOULD_CREATE_RELEASE="true"
+          echo "🚀 File analysis complete - release creation needed"
+        else
+          echo "⏭️  File analysis complete - release creation skipped"
+        fi
 
         echo ""
         if [ "$SHOULD_CREATE_RELEASE" = "true" ]; then
