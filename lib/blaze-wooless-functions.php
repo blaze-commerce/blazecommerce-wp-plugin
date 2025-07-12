@@ -111,25 +111,27 @@ if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'klaviyo/klaviyo
 }
 
 function klaviyo_script() {
-	$klaviyo_api_key = "W7A7kP";
+	$klaviyo_api_key = bw_get_klaviyo_api_key();
 	if( ! is_klaviyo_connected() ) {
 		if( $klaviyo_api_key ) {
-			$src_url = 'https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=' . $klaviyo_api_key;
+			$src_url = 'https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=' . esc_attr( $klaviyo_api_key );
 			?>
-			<script id="klaviyo-staging-script" src="<?php echo $src_url; ?>" async="true"></script>
+			<script id="klaviyo-staging-script" src="<?php echo esc_url( $src_url ); ?>" async="true"></script>
 			<?php
 		}
 	}
 }
 
 function is_klaviyo_connected() {
-	$klaviyo_api_key = "W7A7kP";
+	$klaviyo_api_key = bw_get_klaviyo_api_key();
 	if ( ! empty( $klaviyo_api_key ) ) {
-		$url = 'https://a.klaviyo.com/api/v1/metrics?api_key=' . $klaviyo_api_key;
+		$url = 'https://a.klaviyo.com/api/v1/metrics?api_key=' . urlencode( $klaviyo_api_key );
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL, $url);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'BlazeCommerce-WordPress-Plugin/1.0');
 		$response = curl_exec($ch);
 		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);

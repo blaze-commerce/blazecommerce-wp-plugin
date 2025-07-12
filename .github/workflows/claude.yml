@@ -20,40 +20,138 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: Run Claude Code
-        id: claude
-        uses: anthropics/claude-code-action@beta
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
-          
-          # Optional: Customize the trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
-          
-          # Optional: Trigger when specific user is assigned to an issue
-          # assignee_trigger: "claude-bot"
-          
-          # Optional: Allow Claude to run specific commands
-          # allowed_tools: "Bash(npm install),Bash(npm run build),Bash(npm run test:*),Bash(npm run lint:*)"
-          
-          # Optional: Add custom instructions for Claude to customize its behavior for your project
-          # custom_instructions: |
-          #   Follow our coding standards
-          #   Ensure all new code has tests
-          #   Use TypeScript for new files
-          
-          # Optional: Custom environment variables for Claude
-          # claude_env: |
-          #   NODE_ENV: test
+          node-version: '18'
 
+      - name: Install dependencies
+        run: |
+          npm install axios
+
+      - name: Claude Direct API Call
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const axios = require('axios');
+            
+            console.log('🤖 Starting Claude direct API call...');
+            
+            // Get the comment content
+            let commentBody = '';
+            if (context.eventName === 'issue_comment') {
+              commentBody = context.payload.comment.body;
+            } else if (context.eventName === 'pull_request_review_comment') {
+              commentBody = context.payload.comment.body;
+            } else if (context.eventName === 'pull_request_review') {
+              commentBody = context.payload.review.body;
+            } else if (context.eventName === 'issues') {
+              commentBody = context.payload.issue.body || context.payload.issue.title;
+            }
+            
+            console.log('Comment body:', commentBody);
+            
+            // Prepare the prompt
+            const prompt = `You are Claude, an AI assistant helping with code review and development tasks.
+            
+            User request: ${commentBody}
+            
+            Please provide a helpful response. If this is a code review request, analyze the PR and provide specific feedback.
+            
+            Repository: ${context.repo.owner}/${context.repo.repo}
+            Event: ${context.eventName}
+            `;
+            
+            try {
+              console.log('🔑 Making API call to Anthropic...');
+              
+              const response = await axios.post('https://api.anthropic.com/v1/messages', {
+                model: 'claude-3-5-sonnet-20241022',
+                max_tokens: 4000,
+                messages: [
+                  {
+                    role: 'user',
+                    content: prompt
+                  }
+                ]
+              }, {
+                headers: {
+                  'Authorization': `Bearer ${{ secrets.TEST_API_KEY }}`,
+                  'Content-Type': 'application/json',
+                  'anthropic-version': '2023-06-01'
+                }
+              });
+              
+              console.log('✅ API call successful');
+              
+              const claudeResponse = response.data.content[0].text;
+              
+              // Post the response as a comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `${claudeResponse}
+
+---
+*Claude AI Assistant - Direct API Implementation*`
+              });
+              
+              console.log('✅ Response posted successfully');
+              
+            } catch (error) {
+              console.error('❌ Error:', error.message);
+              
+              let errorMessage = 'Unknown error occurred';
+              if (error.response) {
+                console.error('Response status:', error.response.status);
+                console.error('Response data:', error.response.data);
+                
+                if (error.response.status === 401) {
+                  errorMessage = 'Invalid API key - please check ANTHROPIC_API_KEY secret';
+                } else if (error.response.status === 429) {
+                  errorMessage = 'Rate limit exceeded - please try again later';
+                } else if (error.response.status === 400) {
+                  errorMessage = 'Bad request - check API parameters';
+                } else {
+                  errorMessage = `API error: ${error.response.status} - ${error.response.data?.error?.message || 'Unknown error'}`;
+                }
+              } else if (error.code === 'ENOTFOUND') {
+                errorMessage = 'Network error - cannot reach Anthropic API';
+              }
+              
+              // Post error message
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `## ❌ Claude API Error
+
+**Error**: ${errorMessage}
+
+### 🔍 Troubleshooting
+- Check that ANTHROPIC_API_KEY secret is configured
+- Verify API key has sufficient credits
+- Check [Anthropic Status](https://status.anthropic.com/) for service issues
+
+### 📊 Technical Details
+- **Error Type**: ${error.name || 'Unknown'}
+- **Status Code**: ${error.response?.status || 'N/A'}
+- **Timestamp**: ${new Date().toISOString()}
+
+---
+*Claude AI Assistant - Direct API Implementation*`
+              });
+              
+              throw error;
+            }

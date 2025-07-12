@@ -1,5 +1,213 @@
-# These owners will be the default owners for everything in
-# the repo. Unless a later match takes precedence,
-# @global-owner1 and @global-owner2 will be requested for
-# review when someone opens a pull request.
-*       @blaze-commerce/qa
+# ========================================================================
+# BlazeCommerce WordPress Plugin - Code Ownership & Review Requirements
+# ========================================================================
+#
+# This file defines code ownership and review requirements for the
+# BlazeCommerce WordPress Plugin repository. It ensures appropriate
+# security review, quality assurance, and expertise-based code review.
+#
+# OWNERSHIP HIERARCHY:
+# 1. Security-sensitive files require security team review
+# 2. API integrations require both security and QA team review
+# 3. Documentation requires QA team review
+# 4. Workflow files require security team review
+# 5. All other files default to QA team review
+#
+# TEAM ASSIGNMENTS:
+# - @blaze-commerce/qa: Quality assurance and general code review
+# - @blaze-commerce/dev: Development team for technical and security review
+# - Combined teams provide comprehensive security oversight
+#
+# For more information about code ownership, see:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# ========================================================================
+
+# ========================================================================
+# DEFAULT OWNERSHIP
+# ========================================================================
+# Default owners for all files unless more specific rules apply
+*                                   @blaze-commerce/qa
+
+# ========================================================================
+# SECURITY-SENSITIVE FILES & DIRECTORIES
+# ========================================================================
+# Files containing API keys, authentication, or security configurations
+# require security team review to prevent credential exposure and
+# security vulnerabilities
+
+# API Integration Files (High Security Priority)
+lib/blaze-wooless-functions.php    @lanz-2024 @blaze-commerce/qa
+lib/setting-helper.php              @lanz-2024 @blaze-commerce/qa
+app/Settings/                       @lanz-2024 @blaze-commerce/qa
+
+# Security Scanner and Related Scripts
+scripts/security-scan.js            @blaze-commerce/dev @blaze-commerce/qa
+scripts/test-security-*.js          @blaze-commerce/dev @blaze-commerce/qa
+scripts/validate-all-fixes.js       @blaze-commerce/dev @blaze-commerce/qa
+
+# Authentication and JWT Handling
+lib/jwt-auth.php                    @lanz-2024 @blaze-commerce/qa
+lib/auth-*.php                      @lanz-2024 @blaze-commerce/qa
+
+# Database and Migration Files
+migrations/                         @lanz-2024 @blaze-commerce/qa
+database/                           @lanz-2024 @blaze-commerce/qa
+
+# ========================================================================
+# API INTEGRATIONS & THIRD-PARTY SERVICES
+# ========================================================================
+# Files handling external API integrations require both security
+# and QA review due to data handling and credential management
+
+# Klaviyo Integration (Critical - handles customer data)
+*klaviyo*                          @lanz-2024 @blaze-commerce/qa
+*Klaviyo*                          @lanz-2024 @blaze-commerce/qa
+
+# Payment and E-commerce Integrations
+*payment*                          @lanz-2024 @blaze-commerce/qa
+*woocommerce*                      @lanz-2024 @blaze-commerce/qa
+*stripe*                           @lanz-2024 @blaze-commerce/qa
+*paypal*                           @lanz-2024 @blaze-commerce/qa
+
+# Analytics and Tracking
+*analytics*                        @lanz-2024 @blaze-commerce/qa
+*tracking*                         @lanz-2024 @blaze-commerce/qa
+*gtm*                             @lanz-2024 @blaze-commerce/qa
+*google*                          @lanz-2024 @blaze-commerce/qa
+
+# Review and Rating Integrations
+*judgeme*                         @lanz-2024 @blaze-commerce/qa
+*yotpo*                           @lanz-2024 @blaze-commerce/qa
+*review*                          @lanz-2024 @blaze-commerce/qa
+
+# ========================================================================
+# GITHUB WORKFLOWS & AUTOMATION
+# ========================================================================
+# Workflow files require security review due to potential for
+# credential exposure and CI/CD security implications
+
+.github/workflows/                 @lanz-2024 @blaze-commerce/dev
+.github/CODEOWNERS                 @lanz-2024 @blaze-commerce/qa
+.github/ISSUE_TEMPLATE/            @blaze-commerce/qa
+.github/PULL_REQUEST_TEMPLATE.md   @blaze-commerce/qa
+
+# Claude AI Bot Configuration (Security Critical)
+.github/workflows/claude*.yml      @lanz-2024 @blaze-commerce/dev
+scripts/claude-bot-*.js            @lanz-2024 @blaze-commerce/dev
+scripts/test-claude-bot.js         @lanz-2024 @blaze-commerce/dev
+scripts/verification-engine.js    @lanz-2024 @blaze-commerce/dev
+
+# ========================================================================
+# DOCUMENTATION & GUIDES
+# ========================================================================
+# Documentation requires QA review to ensure accuracy and completeness
+
+docs/                              @blaze-commerce/qa
+*.md                               @blaze-commerce/qa
+README*                            @blaze-commerce/qa
+
+# Security Documentation (Additional Security Review)
+docs/development/security*.md      @lanz-2024 @blaze-commerce/qa
+docs/development/klaviyo*.md       @lanz-2024 @blaze-commerce/qa
+docs/security/                     @lanz-2024 @blaze-commerce/qa
+
+# Claude AI Bot Documentation
+docs/development/claude-ai-bot/    @lanz-2024 @blaze-commerce/qa
+docs/claude*/                      @lanz-2024 @blaze-commerce/qa
+
+# ========================================================================
+# CONFIGURATION FILES
+# ========================================================================
+# Configuration files may contain sensitive settings or affect
+# application security and require appropriate review
+
+# Environment and Configuration
+.env*                              @lanz-2024 @blaze-commerce/qa
+config/                            @lanz-2024 @blaze-commerce/qa
+*.config.js                        @lanz-2024 @blaze-commerce/qa
+*.config.php                       @lanz-2024 @blaze-commerce/qa
+
+# Package Management (Dependency Security)
+composer.json                      @lanz-2024 @blaze-commerce/qa
+composer.lock                      @lanz-2024 @blaze-commerce/qa
+package.json                       @blaze-commerce/qa @blaze-commerce/dev
+package-lock.json                  @blaze-commerce/qa @blaze-commerce/dev
+
+# WordPress Plugin Configuration
+*.php                              @blaze-commerce/qa
+plugin.php                         @lanz-2024 @blaze-commerce/qa
+blazecommerce-wp-plugin.php        @lanz-2024 @blaze-commerce/qa
+
+# ========================================================================
+# TESTING & QUALITY ASSURANCE
+# ========================================================================
+# Test files require QA review to ensure comprehensive coverage
+
+tests/                             @blaze-commerce/qa @blaze-commerce/dev
+*test*.php                         @blaze-commerce/qa @blaze-commerce/dev
+*test*.js                          @blaze-commerce/qa @blaze-commerce/dev
+phpunit.xml                        @blaze-commerce/qa @blaze-commerce/dev
+
+# Security Testing (Additional Security Review)
+scripts/test-security*.js         @lanz-2024 @blaze-commerce/dev
+scripts/test-klaviyo*.js           @lanz-2024 @blaze-commerce/dev
+
+# ========================================================================
+# FRONTEND ASSETS & TEMPLATES
+# ========================================================================
+# Frontend files require QA review for user experience and security
+
+assets/                            @blaze-commerce/qa
+templates/                         @blaze-commerce/qa
+views/                             @blaze-commerce/qa
+*.css                              @blaze-commerce/qa
+*.js                               @blaze-commerce/qa
+*.scss                             @blaze-commerce/qa
+
+# ========================================================================
+# SPECIAL CASES & OVERRIDES
+# ========================================================================
+# Specific files that require special attention or different ownership
+
+# Export/Import Functionality (Data Security Critical)
+app/Settings/ExportImportSettings.php  @lanz-2024 @blaze-commerce/qa
+*export*                               @lanz-2024 @blaze-commerce/qa
+*import*                               @lanz-2024 @blaze-commerce/qa
+
+# Setup and Installation Scripts
+setup*/                                @lanz-2024 @blaze-commerce/qa
+install*/                              @lanz-2024 @blaze-commerce/qa
+migration*/                            @lanz-2024 @blaze-commerce/qa
+
+# ========================================================================
+# EMERGENCY OVERRIDES
+# ========================================================================
+# Critical security files that always require enhanced team security review
+# regardless of other patterns
+
+# Security Scanner (Always requires team security review)
+scripts/security-scan.js               @blaze-commerce/dev @blaze-commerce/qa
+
+# Main plugin file (Always requires security review)
+blazecommerce-wp-plugin.php            @lanz-2024 @blaze-commerce/qa
+
+# ========================================================================
+# END OF CODEOWNERS CONFIGURATION
+# ========================================================================
+#
+# REVIEW REQUIREMENTS SUMMARY:
+# - Security-sensitive files: Dev team + QA team (dual review)
+# - API integrations: Individual security lead + QA team
+# - Workflows: Individual security lead + Dev team
+# - Documentation: QA team (+ Individual security lead for security docs)
+# - General code: QA team
+# - Tests: QA team + Dev team
+# - Security scanner: Dev team + QA team (enhanced team review)
+#
+# For questions about code ownership or to request changes to this file,
+# please create an issue in this repository or contact the development team.
+#
+# Last updated: 2025-01-12
+# Version: 2.1 (Team-Based Security Review)
+# ========================================================================
