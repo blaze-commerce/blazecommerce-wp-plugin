@@ -18,6 +18,7 @@ jobs:
       pull-requests: write
       issues: write
       checks: read
+      id-token: write  # Required for anthropics/claude-code-action OIDC token
 
     steps:
       - name: Validate Organization
@@ -28,10 +29,107 @@ jobs:
           fi
           echo "✅ Organization validation passed"
 
+      - name: Check if PR Already Approved and Skip if Minimal Changes
+        id: skip-check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              // Get PR details
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number
+              });
+
+              // Check if PR is already approved
+              const { data: reviews } = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number
+              });
+
+              const approvedReviews = reviews.filter(review => review.state === 'APPROVED');
+              const isApproved = approvedReviews.length > 0;
+
+              console.log(`PR approval status: ${isApproved ? 'APPROVED' : 'NOT APPROVED'}`);
+
+              if (isApproved) {
+                // Check if recent changes are only workflow/config files
+                const { data: files } = await github.rest.pulls.listFiles({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.issue.number
+                });
+
+                const recentCommits = await github.rest.pulls.listCommits({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.issue.number,
+                  per_page: 5
+                });
+
+                // Get the latest commit
+                const latestCommit = recentCommits.data[recentCommits.data.length - 1];
+                const commitMessage = latestCommit.commit.message.toLowerCase();
+
+                // Check if this is a workflow/config fix
+                const isWorkflowFix = commitMessage.includes('workflow') ||
+                                    commitMessage.includes('fix:') ||
+                                    commitMessage.includes('claude') ||
+                                    files.some(file => file.filename.startsWith('.github/workflows/'));
+
+                if (isWorkflowFix) {
+                  console.log('🔄 Detected workflow/config fix on approved PR - skipping review');
+                  core.setOutput('should_skip', 'true');
+                  core.setOutput('skip_reason', 'workflow_fix_on_approved_pr');
+                  return;
+                }
+              }
+
+              console.log('✅ Proceeding with normal review process');
+              core.setOutput('should_skip', 'false');
+            } catch (error) {
+              console.log(`⚠️ Error checking PR status: ${error.message}`);
+              console.log('✅ Proceeding with normal review process due to error');
+              core.setOutput('should_skip', 'false');
+            }
+
+      - name: Post Skip Notification
+        if: steps.skip-check.outputs.should_skip == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const skipReason = '${{ steps.skip-check.outputs.skip_reason }}';
+
+            const skipMessage = `## 🔄 Claude AI Review Skipped
+
+            **Reason**: Workflow/configuration fix detected on already approved PR
+
+            ### ✅ Status
+            - PR is already approved by reviewers
+            - Recent changes appear to be workflow/configuration fixes
+            - Skipping redundant review to avoid unnecessary processing
+
+            ### 🎯 Next Steps
+            - PR can be merged when ready
+            - If substantial code changes are made, the review will automatically trigger
+
+            *BlazeCommerce Claude AI Review Bot v3.0 - Smart Skip Logic*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: skipMessage
+            });
+
       - name: Checkout Repository
+        if: steps.skip-check.outputs.should_skip != 'true'
         uses: actions/checkout@v4
 
       - name: Determine Repository Type
+        if: steps.skip-check.outputs.should_skip != 'true'
         id: repo-context
         run: |
           repo_name="${{ github.repository }}"
@@ -51,6 +149,7 @@ jobs:
           fi
 
       - name: Prepare BlazeCommerce Context
+        if: steps.skip-check.outputs.should_skip != 'true'
         id: prepare-context
         uses: actions/github-script@v7
         with:
@@ -173,6 +272,7 @@ jobs:
             console.log(`✅ BlazeCommerce context prepared for ${repoType} repository`);
 
       - name: Claude AI Review (Official Action - Attempt 1)
+        if: steps.skip-check.outputs.should_skip != 'true'
         id: claude-review-1
         continue-on-error: true
         uses: anthropics/claude-code-action@beta
@@ -181,14 +281,14 @@ jobs:
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
 
       - name: Wait Before Retry (30s)
-        if: steps.claude-review-1.outcome == 'failure'
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.claude-review-1.outcome == 'failure'
         run: |
           echo "⏳ Waiting 30s before retry..."
           sleep 30
 
       - name: Claude AI Review (Official Action - Attempt 2)
         id: claude-review-2
-        if: steps.claude-review-1.outcome == 'failure'
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.claude-review-1.outcome == 'failure'
         continue-on-error: true
         uses: anthropics/claude-code-action@beta
         with:
@@ -196,14 +296,14 @@ jobs:
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
 
       - name: Wait Before Final Retry (60s)
-        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         run: |
           echo "⏳ Waiting 60s before final retry..."
           sleep 60
 
       - name: Claude AI Review (Official Action - Attempt 3)
         id: claude-review-3
-        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         continue-on-error: true
         uses: anthropics/claude-code-action@beta
         with:
@@ -211,6 +311,7 @@ jobs:
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
 
       - name: Determine Review Success
+        if: steps.skip-check.outputs.should_skip != 'true'
         id: review-status
         uses: actions/github-script@v7
         with:
@@ -238,7 +339,7 @@ jobs:
             }
 
       - name: Post BlazeCommerce Summary
-        if: steps.review-status.outputs.success == 'true'
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.review-status.outputs.success == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -274,7 +375,7 @@ jobs:
             });
 
       - name: Handle Review Failure
-        if: steps.review-status.outputs.success == 'false'
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.review-status.outputs.success == 'false'
         uses: actions/github-script@v7
         with:
           script: |
