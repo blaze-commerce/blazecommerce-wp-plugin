@@ -86,7 +86,7 @@ jobs:
                 ]
               }, {
                 headers: {
-                  'Authorization': `Bearer ${{ secrets.ANTHROPIC_API_KEY }}`,
+                  'Authorization': `Bearer ${{ secrets.TEST_API_KEY }}`,
                   'Content-Type': 'application/json',
                   'anthropic-version': '2023-06-01'
                 }
