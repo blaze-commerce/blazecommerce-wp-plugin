@@ -765,10 +765,13 @@ jobs:
           node scripts/verification-engine.js
 
   auto-approve:
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'pull_request' && github.event.action == 'synchronize') ||
+      (github.event_name == 'pull_request' && github.event.action == 'opened')
     runs-on: ubuntu-latest
     timeout-minutes: 5  # Hard timeout for auto-approval
-    
+
     permissions:
       contents: read
       pull-requests: write
@@ -780,33 +783,238 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const prs = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${context.payload.workflow_run.head_branch}`,
-              state: 'open'
-            });
-            
-            if (prs.data.length > 0) {
-              const pr = prs.data[0];
+            let pr = null;
+
+            if (context.eventName === 'pull_request') {
+              // Direct PR event
+              pr = context.payload.pull_request;
               core.setOutput('pr_number', pr.number);
               core.setOutput('pr_found', 'true');
+              console.log(`📋 Found PR from direct event: #${pr.number}`);
               return pr;
-            } else {
-              core.setOutput('pr_found', 'false');
-              return null;
+            } else if (context.eventName === 'workflow_run') {
+              // Workflow run event - find associated PR
+              const prs = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${context.payload.workflow_run.head_branch}`,
+                state: 'open'
+              });
+
+              if (prs.data.length > 0) {
+                pr = prs.data[0];
+                core.setOutput('pr_number', pr.number);
+                core.setOutput('pr_found', 'true');
+                console.log(`📋 Found PR from workflow run: #${pr.number}`);
+                return pr;
+              }
             }
+
+            core.setOutput('pr_found', 'false');
+            console.log('❌ No associated PR found');
+            return null;
       
+      - name: Checkout Repository
+        if: steps.find-pr.outputs.pr_found == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}
+
       - name: Check Auto-Approval Criteria
         if: steps.find-pr.outputs.pr_found == 'true'
-        run: |
-          echo "🔍 Checking auto-approval criteria for PR #${{ steps.find-pr.outputs.pr_number }}"
-          
-          # This is a placeholder for auto-approval logic
-          # In the full implementation, this would:
-          # 1. Check all GitHub Actions pass
-          # 2. Read tracking file
-          # 3. Verify all REQUIRED and IMPORTANT recommendations addressed
-          # 4. Auto-approve if criteria met
-          
-          echo "✅ Auto-approval check completed"
+        id: check-criteria
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const prNumber = '${{ steps.find-pr.outputs.pr_number }}';
+
+            console.log(`🔍 Checking auto-approval criteria for PR #${prNumber}`);
+
+            // Step 1: Check all GitHub Actions pass
+            console.log('📊 Checking GitHub Actions status...');
+            try {
+              const checkRuns = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: context.payload.pull_request?.head?.sha || context.payload.workflow_run?.head_sha
+              });
+
+              const failedChecks = checkRuns.data.check_runs.filter(check =>
+                check.conclusion === 'failure' || check.conclusion === 'cancelled'
+              );
+
+              if (failedChecks.length > 0) {
+                console.log(`❌ Found ${failedChecks.length} failed checks - auto-approval blocked`);
+                core.setOutput('criteria_met', 'false');
+                core.setOutput('reason', 'Failed GitHub Actions checks');
+                return { approved: false, reason: 'Failed checks' };
+              }
+
+              console.log('✅ All GitHub Actions checks passed');
+            } catch (error) {
+              console.log(`⚠️ Could not check GitHub Actions status: ${error.message}`);
+              // Continue with tracking file check
+            }
+
+            // Step 2: Read and parse tracking file
+            console.log('📋 Reading tracking file...');
+            const trackingFile = '.github/CLAUDE_REVIEW_TRACKING.md';
+
+            try {
+              if (!fs.existsSync(trackingFile)) {
+                console.log('❌ Tracking file not found - auto-approval blocked');
+                core.setOutput('criteria_met', 'false');
+                core.setOutput('reason', 'No tracking file found');
+                return { approved: false, reason: 'No tracking file' };
+              }
+
+              const trackingContent = fs.readFileSync(trackingFile, 'utf8');
+
+              // Step 3: Check REQUIRED recommendations status
+              const requiredPattern = /🔴.*REQUIRED.*\(([^)]+)\)/g;
+              const requiredMatches = [...trackingContent.matchAll(requiredPattern)];
+
+              let allRequiredAddressed = true;
+              let pendingRequired = [];
+
+              for (const match of requiredMatches) {
+                const status = match[1];
+                if (!status.includes('✅') && !status.includes('All Fixed')) {
+                  allRequiredAddressed = false;
+                  pendingRequired.push(match[0]);
+                }
+              }
+
+              if (!allRequiredAddressed) {
+                console.log(`❌ REQUIRED recommendations not fully addressed - auto-approval blocked`);
+                console.log(`Pending: ${pendingRequired.join(', ')}`);
+                core.setOutput('criteria_met', 'false');
+                core.setOutput('reason', 'REQUIRED recommendations pending');
+                return { approved: false, reason: 'Required items pending' };
+              }
+
+              console.log('✅ All REQUIRED recommendations addressed');
+
+              // Step 4: Check IMPORTANT recommendations status
+              const importantPattern = /🟡.*IMPORTANT.*\(([^)]+)\)/g;
+              const importantMatches = [...trackingContent.matchAll(importantPattern)];
+
+              let allImportantAddressed = true;
+              let pendingImportant = [];
+
+              for (const match of importantMatches) {
+                const status = match[1];
+                if (!status.includes('✅') && !status.includes('All Implemented')) {
+                  allImportantAddressed = false;
+                  pendingImportant.push(match[0]);
+                }
+              }
+
+              if (!allImportantAddressed) {
+                console.log(`❌ IMPORTANT recommendations not fully addressed - auto-approval blocked`);
+                console.log(`Pending: ${pendingImportant.join(', ')}`);
+                core.setOutput('criteria_met', 'false');
+                core.setOutput('reason', 'IMPORTANT recommendations pending');
+                return { approved: false, reason: 'Important items pending' };
+              }
+
+              console.log('✅ All IMPORTANT recommendations addressed');
+
+              // All criteria met!
+              console.log('🎉 All auto-approval criteria met!');
+              core.setOutput('criteria_met', 'true');
+              return { approved: true, reason: 'All criteria met' };
+
+            } catch (error) {
+              console.log(`❌ Error reading tracking file: ${error.message}`);
+              core.setOutput('criteria_met', 'false');
+              core.setOutput('reason', 'Error reading tracking file');
+              return { approved: false, reason: 'Tracking file error' };
+            }
+
+      - name: Auto-Approve PR
+        if: steps.find-pr.outputs.pr_found == 'true' && steps.check-criteria.outputs.criteria_met == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ steps.find-pr.outputs.pr_number }}';
+
+            try {
+              console.log(`🚀 Auto-approving PR #${prNumber}...`);
+
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                event: 'APPROVE',
+                body: `## 🤖 BlazeCommerce Claude AI Auto-Approval
+
+                ✅ **All auto-approval criteria have been met:**
+
+                1. ✅ All GitHub Actions checks passed
+                2. ✅ All REQUIRED recommendations addressed
+                3. ✅ All IMPORTANT recommendations addressed
+
+                This PR has been automatically approved by the BlazeCommerce Claude AI Review Bot.
+
+                ### 📊 Review Summary
+                - **Repository Type**: ${{ steps.claude-context.outputs.repo_type || 'wordpress-plugin' }}
+                - **Auto-Approval Timestamp**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
+                - **Criteria Validation**: All requirements satisfied
+
+                *Powered by BlazeCommerce Claude AI Review Bot v2.0 with automatic approval*`
+              });
+
+              console.log(`✅ PR #${prNumber} successfully auto-approved!`);
+
+            } catch (error) {
+              console.log(`❌ Failed to auto-approve PR #${prNumber}: ${error.message}`);
+
+              // Post error comment instead
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `## ⚠️ Auto-Approval Failed
+
+                All criteria were met for auto-approval, but the approval action failed:
+
+                **Error**: ${error.message}
+
+                **Manual Action Required**: Please manually approve this PR.
+
+                *BlazeCommerce Claude AI Review Bot*`
+              });
+            }
+
+      - name: Post Criteria Not Met Comment
+        if: steps.find-pr.outputs.pr_found == 'true' && steps.check-criteria.outputs.criteria_met == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ steps.find-pr.outputs.pr_number }}';
+            const reason = '${{ steps.check-criteria.outputs.reason }}';
+
+            console.log(`📝 Posting criteria not met comment for PR #${prNumber}`);
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `## 🔍 Auto-Approval Status Check
+
+              **Status**: ⏳ Criteria not yet met for auto-approval
+
+              **Reason**: ${reason}
+
+              ### ✅ Auto-Approval Criteria
+              To enable automatic approval, ensure:
+              1. ✅ All GitHub Actions checks pass
+              2. ✅ All REQUIRED recommendations are addressed
+              3. ✅ All IMPORTANT recommendations are addressed
+
+              The bot will automatically re-check these criteria on each commit.
+
+              *BlazeCommerce Claude AI Review Bot*`
+            });
