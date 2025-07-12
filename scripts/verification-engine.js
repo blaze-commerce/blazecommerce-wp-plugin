@@ -8,89 +8,148 @@
 const { Octokit } = require('@octokit/rest');
 const fs = require('fs');
 const path = require('path');
+const ErrorHandler = require('./error-handling-utils');
+const config = require('./claude-bot-config');
 
 class VerificationEngine {
   constructor(options = {}) {
+    // Validate required configuration parameters
+    const githubToken = options.githubToken || process.env.BOT_GITHUB_TOKEN;
+    const owner = options.owner || process.env.GITHUB_REPOSITORY_OWNER;
+    const repo = options.repo || process.env.GITHUB_REPOSITORY_NAME;
+    const prNumber = options.prNumber || process.env.PR_NUMBER;
+
+    if (!githubToken) {
+      throw new Error('Missing required GitHub token (BOT_GITHUB_TOKEN)');
+    }
+    if (!owner) {
+      throw new Error('Missing required repository owner (GITHUB_REPOSITORY_OWNER)');
+    }
+    if (!repo) {
+      throw new Error('Missing required repository name (GITHUB_REPOSITORY_NAME)');
+    }
+    if (!prNumber) {
+      throw new Error('Missing required PR number (PR_NUMBER)');
+    }
+
     this.github = new Octokit({
-      auth: options.githubToken || process.env.BOT_GITHUB_TOKEN
+      auth: githubToken
     });
-    
-    this.owner = options.owner || process.env.GITHUB_REPOSITORY_OWNER;
-    this.repo = options.repo || process.env.GITHUB_REPOSITORY_NAME;
-    this.prNumber = options.prNumber || process.env.PR_NUMBER;
-    
-    this.trackingFile = '.github/CLAUDE_REVIEW_TRACKING.md';
-    this.confidenceThreshold = 0.7; // Minimum confidence for "addressed" status
+
+    this.owner = owner;
+    this.repo = repo;
+    this.prNumber = parseInt(prNumber);
+
+    this.trackingFile = config.PATHS.TRACKING_FILE;
+    this.confidenceThreshold = config.VERIFICATION.CONFIDENCE_THRESHOLD;
+
+    // Initialize error handler for consistent error handling
+    this.errorHandler = new ErrorHandler({
+      maxRetries: config.ERROR_HANDLING.MAX_RETRY_ATTEMPTS,
+      baseDelay: config.ERROR_HANDLING.EXPONENTIAL_BACKOFF_BASE,
+      circuitBreakerThreshold: config.ERROR_HANDLING.CIRCUIT_BREAKER_THRESHOLD
+    });
   }
 
   /**
    * Main verification process
    */
   async runVerification() {
-    try {
-      console.log('🔍 Starting recommendation verification...');
-      
-      // Get PR details and changed files
-      const prData = await this.getPRData();
-      const changedFiles = await this.getChangedFiles();
-      
-      // Get existing Claude reviews
-      const claudeReviews = await this.getClaudeReviews();
-      
-      if (claudeReviews.length === 0) {
-        console.log('ℹ️ No Claude reviews found, skipping verification');
-        return { success: true, message: 'No reviews to verify' };
-      }
-      
-      // Parse recommendations from reviews
-      const recommendations = this.parseRecommendations(claudeReviews);
-      
-      // Analyze file changes against recommendations
-      const verificationResults = await this.analyzeImplementation(
-        recommendations, 
-        changedFiles
-      );
-      
-      // Update tracking file
-      await this.updateTrackingFile(verificationResults);
-      
-      // Post verification comment
-      await this.postVerificationComment(verificationResults);
-      
-      console.log('✅ Verification completed successfully');
-      return { success: true, results: verificationResults };
-      
-    } catch (error) {
-      console.error('❌ Verification failed:', error.message);
+    return await this.errorHandler.executeWithRetry(
+      async () => {
+        console.log('🔍 Starting recommendation verification...');
+
+        // Get PR details and changed files
+        const prData = await this.getPRData();
+        const changedFiles = await this.getChangedFiles();
+
+        // Get existing Claude reviews
+        const claudeReviews = await this.getClaudeReviews();
+
+        if (claudeReviews.length === 0) {
+          console.log('ℹ️ No Claude reviews found, skipping verification');
+          return { success: true, message: 'No reviews to verify' };
+        }
+
+        // Parse recommendations from reviews
+        const recommendations = this.parseRecommendations(claudeReviews);
+
+        // Analyze file changes against recommendations
+        const verificationResults = await this.analyzeImplementation(
+          recommendations,
+          changedFiles
+        );
+
+        // Update tracking file
+        await this.updateTrackingFile(verificationResults);
+
+        // Post verification comment
+        await this.postVerificationComment(verificationResults);
+
+        console.log('✅ Verification completed successfully');
+        return { success: true, results: verificationResults };
+      },
+      'verification-process',
+      { timeout: 300000 } // 5 minute timeout
+    ).catch(async (error) => {
+      console.error('❌ Verification failed after retries:', error.message);
       await this.handleVerificationError(error);
       return { success: false, error: error.message };
-    }
+    });
   }
 
   /**
    * Get PR data from GitHub API
    */
   async getPRData() {
+    await this.checkRateLimit();
+
     const response = await this.github.rest.pulls.get({
       owner: this.owner,
       repo: this.repo,
       pull_number: this.prNumber
     });
-    
+
     return response.data;
   }
 
   /**
-   * Get changed files in the PR
+   * Check GitHub API rate limit and wait if necessary
+   */
+  async checkRateLimit() {
+    try {
+      const rateLimit = await this.github.rest.rateLimit.get();
+      const remaining = rateLimit.data.rate.remaining;
+
+      if (remaining < config.API.RATE_LIMIT_THRESHOLD) {
+        const resetTime = new Date(rateLimit.data.rate.reset * 1000);
+        const waitTime = resetTime.getTime() - Date.now();
+
+        if (waitTime > 0) {
+          console.log(`⏳ Rate limit low (${remaining} remaining). Waiting ${Math.ceil(waitTime / 1000)}s...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not check rate limit:', error.message);
+    }
+  }
+
+  /**
+   * Get changed files in the PR with pagination for large PRs
    */
   async getChangedFiles() {
-    const response = await this.github.rest.pulls.listFiles({
+    await this.checkRateLimit();
+
+    // Use pagination to handle large PRs efficiently
+    const files = await this.github.paginate(this.github.rest.pulls.listFiles, {
       owner: this.owner,
       repo: this.repo,
-      pull_number: this.prNumber
+      pull_number: this.prNumber,
+      per_page: config.GITHUB.PER_PAGE // Limit per page to manage memory usage
     });
-    
-    return response.data.map(file => ({
+
+    return files.map(file => ({
       filename: file.filename,
       status: file.status,
       additions: file.additions,
@@ -104,6 +163,8 @@ class VerificationEngine {
    * Get Claude AI review comments
    */
   async getClaudeReviews() {
+    await this.checkRateLimit();
+
     const response = await this.github.rest.issues.listComments({
       owner: this.owner,
       repo: this.repo,
@@ -369,9 +430,10 @@ class VerificationEngine {
       let trackingContent = '';
       
       // Try to read existing tracking file
-      if (fs.existsSync(this.trackingFile)) {
-        trackingContent = fs.readFileSync(this.trackingFile, 'utf8');
-      } else {
+      try {
+        await fs.promises.access(this.trackingFile);
+        trackingContent = await fs.promises.readFile(this.trackingFile, 'utf8');
+      } catch (accessError) {
         // Create new tracking file
         trackingContent = `# Claude AI Review Tracking for PR #${this.prNumber}\n\n`;
         trackingContent += 'This file tracks all Claude AI recommendations and their implementation status.\n\n';
@@ -404,7 +466,7 @@ class VerificationEngine {
       });
       
       // Write updated tracking file
-      fs.writeFileSync(this.trackingFile, trackingContent);
+      await fs.promises.writeFile(this.trackingFile, trackingContent);
       console.log('✅ Tracking file updated');
       
     } catch (error) {

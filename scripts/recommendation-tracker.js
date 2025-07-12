@@ -7,25 +7,36 @@
 
 const fs = require('fs');
 const path = require('path');
+const config = require('./claude-bot-config');
 
 class RecommendationTracker {
   constructor(options = {}) {
     this.prNumber = options.prNumber || process.env.PR_NUMBER;
-    this.trackingFile = options.trackingFile || '.github/CLAUDE_REVIEW_TRACKING.md';
-    this.stateFile = options.stateFile || '.github/claude-review-state.json';
-    
-    this.categories = {
-      REQUIRED: { icon: '🔴', priority: 1 },
-      IMPORTANT: { icon: '🟡', priority: 2 },
-      SUGGESTION: { icon: '🔵', priority: 3 }
-    };
-    
-    this.statuses = {
-      pending: { icon: '⏳', description: 'Not yet addressed' },
-      partial: { icon: '🔄', description: 'Partially implemented' },
-      addressed: { icon: '✅', description: 'Fully addressed' },
-      verified: { icon: '✅', description: 'Verified and confirmed' }
-    };
+
+    // Validate and sanitize file paths to prevent path traversal
+    const trackingFile = options.trackingFile || config.PATHS.TRACKING_FILE;
+    const stateFile = options.stateFile || config.PATHS.STATE_FILE;
+
+    this.trackingFile = this.validateFilePath(trackingFile);
+    this.stateFile = this.validateFilePath(stateFile);
+
+    this.categories = config.CATEGORIES;
+    this.statuses = config.STATUSES;
+  }
+
+  /**
+   * Validate and sanitize file paths to prevent path traversal attacks
+   */
+  validateFilePath(filePath) {
+    // Ensure the path is within the .github directory
+    const safePath = path.resolve(config.PATHS.GITHUB_DIR, path.basename(filePath));
+
+    // Additional validation to ensure it's within the expected directory
+    if (!safePath.startsWith(path.resolve(config.PATHS.GITHUB_DIR))) {
+      throw new Error(`Invalid file path: ${filePath}. Must be within ${config.PATHS.GITHUB_DIR} directory.`);
+    }
+
+    return safePath;
   }
 
   /**
@@ -290,11 +301,14 @@ class RecommendationTracker {
    */
   async loadTrackingData() {
     try {
-      if (fs.existsSync(this.stateFile)) {
-        const content = fs.readFileSync(this.stateFile, 'utf8');
+      try {
+        await fs.promises.access(this.stateFile);
+        const content = await fs.promises.readFile(this.stateFile, 'utf8');
         return JSON.parse(content);
+      } catch (accessError) {
+        // File doesn't exist, return null
+        return null;
       }
-      return null;
     } catch (error) {
       console.error('❌ Failed to load tracking data:', error.message);
       return null;
@@ -307,7 +321,7 @@ class RecommendationTracker {
   async saveTrackingFile(trackingData) {
     try {
       const report = await this.generateTrackingReport();
-      fs.writeFileSync(this.trackingFile, report);
+      await fs.promises.writeFile(this.trackingFile, report);
       console.log('✅ Tracking file saved');
     } catch (error) {
       console.error('❌ Failed to save tracking file:', error.message);
@@ -319,7 +333,7 @@ class RecommendationTracker {
    */
   async saveStateFile(trackingData) {
     try {
-      fs.writeFileSync(this.stateFile, JSON.stringify(trackingData, null, 2));
+      await fs.promises.writeFile(this.stateFile, JSON.stringify(trackingData, null, 2));
       console.log('✅ State file saved');
     } catch (error) {
       console.error('❌ Failed to save state file:', error.message);

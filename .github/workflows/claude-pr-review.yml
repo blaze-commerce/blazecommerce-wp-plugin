@@ -154,6 +154,8 @@ jobs:
       
       - name: Claude AI Review with Retry
         id: claude-review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -264,7 +266,7 @@ jobs:
                   }]
                 }, {
                   headers: {
-                    'Authorization': `Bearer ${{ secrets.ANTHROPIC_API_KEY }}`,
+                    'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`,
                     'Content-Type': 'application/json',
                     'anthropic-version': '2023-06-01'
                   },
