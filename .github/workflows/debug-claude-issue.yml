@@ -1,0 +1,143 @@
+name: Debug Claude Issue
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ security/klaviyo-api-key-fix-and-codeowners-update ]
+
+jobs:
+  debug-claude:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Debug Environment
+        run: |
+          echo "🔍 Debugging Claude Issue..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+          
+      - name: Check Secrets
+        run: |
+          echo "🔍 Checking secrets configuration..."
+          
+          # Check if ANTHROPIC_API_KEY exists
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "❌ ANTHROPIC_API_KEY secret is NOT configured"
+            echo "This is likely the root cause of the Claude bot failures"
+          else
+            echo "✅ ANTHROPIC_API_KEY secret is configured"
+            echo "Key length: ${#ANTHROPIC_API_KEY}"
+            echo "Key starts with: ${ANTHROPIC_API_KEY:0:8}..."
+          fi
+          
+          # Check other secrets
+          if [ -z "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "⚠️ BOT_GITHUB_TOKEN secret is not configured"
+          else
+            echo "✅ BOT_GITHUB_TOKEN secret is configured"
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          
+      - name: Test Anthropic API Direct
+        run: |
+          echo "🔍 Testing direct Anthropic API call..."
+          
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "❌ Cannot test API - ANTHROPIC_API_KEY not available"
+            exit 1
+          fi
+          
+          # Make a minimal API call
+          response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -X POST "https://api.anthropic.com/v1/messages" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d '{
+              "model": "claude-3-haiku-20240307",
+              "max_tokens": 5,
+              "messages": [{"role": "user", "content": "test"}]
+            }')
+          
+          # Extract HTTP status
+          http_code=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+          response_body=$(echo $response | sed -e 's/HTTPSTATUS:.*//g')
+          
+          echo "HTTP Status: $http_code"
+          echo "Response: $response_body"
+          
+          case $http_code in
+            200)
+              echo "✅ Anthropic API is working correctly"
+              ;;
+            401)
+              echo "❌ API key is invalid or expired"
+              echo "This is the root cause of Claude bot failures"
+              ;;
+            429)
+              echo "⚠️ Rate limited - API key is valid but hitting limits"
+              ;;
+            *)
+              echo "❌ Unexpected API response: $http_code"
+              ;;
+          esac
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          
+      - name: Test Claude Action Minimal
+        id: test-claude
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v0.0.32
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: "Respond with 'TEST SUCCESS' if you can read this."
+          
+      - name: Report Results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const claudeOutcome = '${{ steps.test-claude.outcome }}';
+            
+            let report = `## 🔍 Claude Debug Report
+            
+            ### Test Results
+            - **Claude Action Outcome**: ${claudeOutcome}
+            - **Workflow Run**: [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - **Timestamp**: ${new Date().toISOString()}
+            
+            ### Next Steps
+            `;
+            
+            if (claudeOutcome === 'success') {
+              report += `✅ **Claude action succeeded** - The issue may be intermittent or resolved.`;
+            } else {
+              report += `❌ **Claude action failed** - Check the workflow logs for specific error details.
+              
+              **Likely causes:**
+              1. ANTHROPIC_API_KEY secret is missing or invalid
+              2. API rate limits exceeded
+              3. Anthropic service issues
+              4. Action version compatibility problems`;
+            }
+            
+            // Only post to PR if this is running on the security branch
+            if ('${{ github.ref }}' === 'refs/heads/security/klaviyo-api-key-fix-and-codeowners-update') {
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: 326,
+                  body: report
+                });
+              } catch (error) {
+                console.log('Could not post to PR:', error.message);
+              }
+            }
+            
+            console.log(report);
