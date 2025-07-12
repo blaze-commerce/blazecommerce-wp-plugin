@@ -1,3 +1,14 @@
+---
+title: "Automation Guide"
+description: "Automated workflows for version management, releases, and plugin packaging in the BlazeCommerce WordPress Plugin"
+category: "development"
+version: "1.0.0"
+last_updated: "2025-01-09"
+author: "Blaze Commerce Team"
+tags: ["automation", "version-management", "releases", "workflows", "ci-cd"]
+related_docs: ["usage.md", "claude.md"]
+---
+
 # BlazeCommerce WordPress Plugin - Automation Guide
 
 ## Overview
@@ -123,7 +134,7 @@ npm run update-plugin-version
 
 If a release fails, check:
 1. All changes are committed
-2. GitHub token has proper permissions
+2. BC_GITHUB_TOKEN secret has proper permissions (contents: write)
 3. Tag doesn't already exist
 
 ### Build Issues

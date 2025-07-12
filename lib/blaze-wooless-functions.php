@@ -145,6 +145,19 @@ function is_string_in_current_url( $string ) {
 	if ( strpos($current_url, $string) !== false ) {
 		return true;
 	}
-	
+
 	return false;
+}
+
+/**
+ * Test function for automated version bump workflow verification
+ *
+ * This function is added to test the automated version bumping system.
+ * It provides a simple utility for version testing purposes.
+ *
+ * @since 1.8.1
+ * @return string Test message for version bump verification
+ */
+function blaze_wooless_test_version_bump_feature() {
+	return 'Version bump test feature - automated workflow verification';
 }
