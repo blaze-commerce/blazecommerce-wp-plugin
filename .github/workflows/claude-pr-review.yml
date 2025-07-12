@@ -290,15 +290,22 @@ jobs:
 
             Focus on actionable, specific recommendations with examples.`;
 
-            // Save prompt to temporary file for the official action
-            fs.writeFileSync('/tmp/claude_prompt.txt', fullPrompt);
+            // GitHub Actions has output size limits, so we need to handle large prompts carefully
+            const maxOutputSize = 1000000; // 1MB limit for GitHub Actions outputs
+            let finalPrompt = fullPrompt;
+
+            if (fullPrompt.length > maxOutputSize) {
+              console.log(`⚠️ Prompt too large (${fullPrompt.length} chars), truncating to ${maxOutputSize} chars`);
+              finalPrompt = fullPrompt.substring(0, maxOutputSize - 100) + '\n\n[Prompt truncated due to size limits]';
+            }
 
             // Set output for the next step
             core.setOutput('prompt_ready', 'true');
             core.setOutput('prompt_length', fullPrompt.length);
+            core.setOutput('review_prompt', finalPrompt);
 
-            console.log(`✅ Prompt prepared successfully for official Claude action (${fullPrompt.length} characters)`);
-            return { success: true, promptLength: fullPrompt.length };
+            console.log(`✅ Prompt prepared successfully for official Claude action (${finalPrompt.length} characters)`);
+            return { success: true, promptLength: finalPrompt.length };
 
       - name: Claude AI Review with Official Action (Attempt 1)
         id: claude-review-1
@@ -307,7 +314,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt_file: /tmp/claude_prompt.txt
+          direct_prompt: ${{ steps.prepare-prompt.outputs.review_prompt }}
 
       - name: Wait Before Retry (30s + jitter)
         if: steps.claude-review-1.outcome == 'failure'
@@ -324,7 +331,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt_file: /tmp/claude_prompt.txt
+          direct_prompt: ${{ steps.prepare-prompt.outputs.review_prompt }}
 
       - name: Wait Before Final Retry (60s + jitter)
         if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
@@ -341,7 +348,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          direct_prompt_file: /tmp/claude_prompt.txt
+          direct_prompt: ${{ steps.prepare-prompt.outputs.review_prompt }}
 
       - name: Set Review Success Status
         id: claude-review
