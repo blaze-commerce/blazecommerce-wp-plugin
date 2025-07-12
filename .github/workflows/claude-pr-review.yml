@@ -297,7 +297,7 @@ jobs:
                 attempt++;
               }
             }
-      
+
       - name: Generate Review Comment
         if: steps.claude-review.outputs.success == 'true'
         id: generate-comment
