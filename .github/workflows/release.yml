@@ -11,21 +11,116 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
       is-prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
+      should_create_release: ${{ steps.check_files.outputs.should_create_release }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check if release is needed
+      id: check_files
+      run: |
+        echo "🔍 Checking if release is needed based on changed files..."
+
+        # Get the tag that triggered this workflow
+        CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+        echo "🏷️  Current tag: $CURRENT_TAG"
+
+        # Validate tag format
+        if [ -z "$CURRENT_TAG" ] || [[ ! "$CURRENT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+          echo "❌ Invalid tag format: $CURRENT_TAG"
+          echo "   Expected format: v1.2.3"
+          exit 1
+        fi
+
+        # Get the previous tag to compare against with better error handling
+        echo "🔍 Looking for previous tag..."
+        if ! PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null); then
+          echo "📋 No previous tags found, this appears to be the first release"
+          PREVIOUS_TAG=""
+        else
+          echo "📋 Found previous tag: $PREVIOUS_TAG"
+        fi
+
+        # Get changed files with proper error handling
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "📋 Comparing changes since previous tag: $PREVIOUS_TAG"
+          if ! CHANGED_FILES=$(git diff --name-only "$PREVIOUS_TAG..$CURRENT_TAG" 2>/dev/null); then
+            echo "❌ Failed to get changed files between tags"
+            echo "   Previous: $PREVIOUS_TAG"
+            echo "   Current: $CURRENT_TAG"
+            exit 1
+          fi
+        else
+          echo "📋 No previous tags found, checking all files in current commit"
+          if ! CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null); then
+            echo "⚠️  Could not get diff, falling back to listing all files"
+            CHANGED_FILES=$(git ls-files)
+          fi
+        fi
+
+        # Validate that we have files to analyze
+        if [ -z "$CHANGED_FILES" ]; then
+          echo "⚠️  No changed files detected, skipping release creation"
+          echo "should_create_release=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        echo "📁 Changed files since last release:"
+        echo "$CHANGED_FILES"
+        echo ""
+
+        # Use extracted file detection script for better maintainability and testability
+        echo "🔍 Analyzing changed files using dedicated detection script..."
+
+        # Validate that required scripts exist
+        if [ ! -f "scripts/check-file-changes.sh" ]; then
+          echo "❌ Required script 'scripts/check-file-changes.sh' not found"
+          echo "   This script is required for file change analysis"
+          exit 1
+        fi
+
+        # Determine if we should use performance mode for large changesets
+        FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
+        PERFORMANCE_ARGS=""
+        if [ "$FILE_COUNT" -gt 50 ]; then
+          echo "📊 Large changeset detected ($FILE_COUNT files) - enabling performance mode"
+          PERFORMANCE_ARGS="--performance-mode"
+        fi
+
+        # Run file detection script and capture result
+        SHOULD_CREATE_RELEASE="false"
+        if echo "$CHANGED_FILES" | bash scripts/check-file-changes.sh /dev/stdin $PERFORMANCE_ARGS; then
+          SHOULD_CREATE_RELEASE="true"
+          echo "🚀 File analysis complete - release creation needed"
+        else
+          echo "⏭️  File analysis complete - release creation skipped"
+        fi
+
+        echo ""
+        if [ "$SHOULD_CREATE_RELEASE" = "true" ]; then
+          echo "🚀 Release creation needed - non-ignored files were changed"
+        else
+          echo "⏭️  Release creation skipped - only ignored files were changed"
+        fi
+
+        echo "should_create_release=$SHOULD_CREATE_RELEASE" >> $GITHUB_OUTPUT
 
     - name: Setup Node.js
+      if: steps.check_files.outputs.should_create_release == 'true'
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
 
     - name: Install dependencies
+      if: steps.check_files.outputs.should_create_release == 'true'
       run: npm install
 
     - name: Extract and validate version from tag
+      if: steps.check_files.outputs.should_create_release == 'true'
       id: version
       run: |
         VERSION=${GITHUB_REF#refs/tags/v}
@@ -54,6 +149,7 @@ jobs:
         fi
 
     - name: Validate YAML syntax
+      if: steps.check_files.outputs.should_create_release == 'true'
       run: |
         echo "🔍 Validating YAML syntax in workflow files..."
         python3 -c "
@@ -69,18 +165,29 @@ jobs:
         "
 
     - name: Validate version consistency
+      if: steps.check_files.outputs.should_create_release == 'true'
       run: |
         echo "🔍 Validating version consistency across files..."
-        node scripts/validate-version.js --verbose
-        if [ $? -ne 0 ]; then
-          echo "❌ Version validation failed"
+
+        # Validate that required script exists
+        if [ ! -f "scripts/validate-version.js" ]; then
+          echo "❌ Required script 'scripts/validate-version.js' not found"
+          echo "   This script is required for version validation"
           exit 1
         fi
+
+        if ! node scripts/validate-version.js --verbose; then
+          echo "❌ Version validation failed"
+          echo "   Check the validation output above for specific issues"
+          exit 1
+        fi
+
         echo "✅ Version validation passed"
 
   build-and-release:
     needs: validate-release
     runs-on: ubuntu-latest
+    if: needs.validate-release.outputs.should_create_release == 'true'
 
     steps:
     - name: Checkout code
@@ -263,3 +370,48 @@ jobs:
         echo "🚧 Pre-release: $IS_PRERELEASE"
         echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
         echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+
+  workflow-summary:
+    needs: validate-release
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Workflow Summary
+      run: |
+        echo "📋 Create Release Workflow Summary"
+        echo "=================================="
+
+        TAG_NAME="${GITHUB_REF#refs/tags/}"
+        echo "🏷️  Triggered by tag: $TAG_NAME"
+
+        if [ "${{ needs.validate-release.outputs.should_create_release }}" = "true" ]; then
+          echo "✅ Release was processed"
+
+          # Check if build-and-release job was successful
+          if [ "${{ needs.validate-release.result }}" = "success" ]; then
+            VERSION="${{ needs.validate-release.outputs.version }}"
+            IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
+
+            echo "📦 Version: $VERSION"
+            echo "🚧 Pre-release: $IS_PRERELEASE"
+            echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
+            echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+            echo "🎉 Release created successfully!"
+          else
+            echo "❌ Release processing failed during validation"
+            echo "   Check the validate-release job logs for details"
+          fi
+        else
+          echo "⏭️  Release creation was skipped"
+          echo "📁 Reason: Only ignored files were changed since last release"
+          echo "ℹ️  This is normal behavior - no release needed for:"
+          echo "   • Documentation changes"
+          echo "   • CI/CD configuration updates"
+          echo "   • Development tooling changes"
+          echo "   • Auto-generated files"
+          echo "   • Version bump commits"
+          echo ""
+          echo "✅ Workflow completed successfully (no action required)"
+          echo "💡 The tag $TAG_NAME remains available but no GitHub release was created"
+        fi
