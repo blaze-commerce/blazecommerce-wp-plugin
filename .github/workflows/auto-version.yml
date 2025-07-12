@@ -155,14 +155,30 @@ jobs:
       id: version_validation
       run: |
         echo "🔍 Validating version consistency between package.json and git tags..."
+        echo "   This step prevents unexpected version bumps by detecting mismatches"
+        echo "   between the current package.json version and the latest git tag."
 
+        # Extract current version from package.json
+        # This is the source of truth for the current version state
         PACKAGE_VERSION=$(node -p "require('./package.json').version")
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+
+        # Get the latest version tag using optimized git command
+        # Using --sort=-version:refname for more reliable version ordering (Claude's recommendation)
+        # Fallback to git describe if no tags exist to maintain compatibility
+        LATEST_VERSION_TAG=$(git tag --list 'v*' --sort=-version:refname | head -n1 2>/dev/null || echo "")
+        if [ -z "$LATEST_VERSION_TAG" ]; then
+          # Fallback to git describe for repositories with non-standard tag formats
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+        else
+          LAST_TAG="$LATEST_VERSION_TAG"
+        fi
+
         EXPECTED_TAG="v$PACKAGE_VERSION"
 
         echo "📦 Package version: $PACKAGE_VERSION"
         echo "🏷️  Last git tag: $LAST_TAG"
         echo "🎯 Expected tag: $EXPECTED_TAG"
+        echo "🔧 Tag retrieval method: $([ -n "$LATEST_VERSION_TAG" ] && echo "optimized version sort" || echo "git describe fallback")"
 
         # Validate semver format with tightened regex to prevent edge cases
         if ! echo "$PACKAGE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'; then
@@ -199,15 +215,25 @@ jobs:
       id: bump_type
       run: |
         echo "🔍 Analyzing commits for version bump type..."
+        echo "   This step determines whether to perform a MAJOR, MINOR, or PATCH version bump"
+        echo "   based on conventional commit patterns in the commit history."
+        echo ""
+        echo "📋 Commit Analysis Strategy:"
+        echo "   • Normal operation: Analyze commits since last matching git tag"
+        echo "   • Version mismatch: Use limited analysis to avoid historical features"
+        echo "   • No tags found: Analyze recent commits with fallback limits"
+        echo ""
 
         # Check for version mismatch and adjust analysis scope accordingly
+        # This prevents analyzing hundreds of historical commits when git tags are outdated
         VERSION_MISMATCH="${{ steps.version_validation.outputs.VERSION_MISMATCH }}"
         PACKAGE_VERSION="${{ steps.version_validation.outputs.PACKAGE_VERSION }}"
         LAST_TAG="${{ steps.version_validation.outputs.LAST_TAG }}"
 
-        # Configurable commit analysis limits
-        LIMITED_COMMIT_LIMIT=${LIMITED_COMMIT_LIMIT:-25}
-        FALLBACK_COMMIT_LIMIT=${FALLBACK_COMMIT_LIMIT:-50}
+        # Configurable commit analysis limits (Claude's recommendation to avoid magic numbers)
+        # These can be overridden via environment variables for different repository needs
+        LIMITED_COMMIT_LIMIT=${LIMITED_COMMIT_LIMIT:-25}  # For version mismatch scenarios
+        FALLBACK_COMMIT_LIMIT=${FALLBACK_COMMIT_LIMIT:-50}  # For normal analysis fallback
 
         echo "🔧 Configuration: Limited analysis limit = $LIMITED_COMMIT_LIMIT commits"
         echo "🔧 Configuration: Fallback analysis limit = $FALLBACK_COMMIT_LIMIT commits"
@@ -277,14 +303,24 @@ jobs:
           exit 0
         fi
 
-        echo "📊 Commits to analyze:"
+        # Display commit analysis summary for debugging
+        COMMIT_COUNT=$(echo "$COMMITS" | wc -l)
+        echo "📊 Commits to analyze (total: $COMMIT_COUNT):"
         echo "$COMMITS" | head -10
-        if [ $(echo "$COMMITS" | wc -l) -gt 10 ]; then
-          echo "... and $(( $(echo "$COMMITS" | wc -l) - 10 )) more"
+        if [ $COMMIT_COUNT -gt 10 ]; then
+          echo "... and $(( $COMMIT_COUNT - 10 )) more"
         fi
         echo ""
 
-        # Enhanced conventional commit detection
+        # Validate commit count is reasonable (edge case handling)
+        if [ $COMMIT_COUNT -gt 1000 ]; then
+          echo "⚠️  Warning: Analyzing $COMMIT_COUNT commits - this may indicate a configuration issue"
+          echo "   Consider checking your git tag synchronization or commit analysis limits"
+        fi
+
+        # Enhanced conventional commit detection with comprehensive pattern matching
+        # This follows the Conventional Commits specification (https://conventionalcommits.org/)
+        echo "🔍 Scanning commits for conventional commit patterns..."
         HAS_BREAKING=false
         HAS_FEATURE=false
         HAS_FIX=false
@@ -316,31 +352,56 @@ jobs:
           fi
         done <<< "$COMMITS"
 
-        # Determine bump type based on priority
+        # Determine bump type based on priority (BREAKING > FEATURE > FIX/PERF > NONE)
+        echo "📋 Commit pattern analysis results:"
+        echo "   Breaking changes: $HAS_BREAKING"
+        echo "   New features: $HAS_FEATURE"
+        echo "   Bug fixes: $HAS_FIX"
+        echo "   Performance improvements: $HAS_PERF"
+        echo ""
+
         if [ "$HAS_BREAKING" = true ]; then
           echo "BUMP_TYPE=major" >> $GITHUB_OUTPUT
           echo "🚀 Result: MAJOR version bump (breaking changes detected)"
+          echo "   ⚠️  This will increment the major version and reset minor/patch to 0"
         elif [ "$HAS_FEATURE" = true ]; then
           echo "BUMP_TYPE=minor" >> $GITHUB_OUTPUT
           echo "🚀 Result: MINOR version bump (new features detected)"
+          echo "   ✨ This will increment the minor version and reset patch to 0"
         elif [ "$HAS_FIX" = true ] || [ "$HAS_PERF" = true ]; then
           echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
           echo "🚀 Result: PATCH version bump (fixes/improvements detected)"
+          echo "   🐛 This will increment only the patch version"
         else
           echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
           echo "ℹ️  Result: No version bump (no conventional commits found)"
+          echo "   📝 Consider using conventional commit format: feat:, fix:, etc."
         fi
 
     - name: Preview version bump
       if: steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
-        CURRENT_VERSION=$(node -p "require('./package.json').version")
+        echo "🔍 Calculating new version based on bump type and current version..."
+
+        # Validate current version extraction
+        CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+        if [ $? -ne 0 ] || [ -z "$CURRENT_VERSION" ]; then
+          echo "❌ Error: Could not extract current version from package.json"
+          exit 1
+        fi
+
         echo "📦 Current version: $CURRENT_VERSION"
         echo "🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
 
-        # Calculate new version with prerelease support
+        # Calculate new version with prerelease support and error handling
         PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
         echo "🏷️  Prerelease type: ${PRERELEASE_TYPE:-'none (stable release)'}"
+
+        # Validate semver-utils script exists before using it
+        if [ ! -f "scripts/semver-utils.js" ]; then
+          echo "⚠️  Warning: semver-utils.js not found, using fallback version calculation"
+          echo "   Expected: scripts/semver-utils.js"
+        fi
 
         case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
           "major")
