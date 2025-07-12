@@ -55,9 +55,12 @@ class ClaudeBotTestSuite {
       assert(error.message.includes('GitHub token'), 'Should validate GitHub token');
     }
 
+    // Use environment variable or placeholder for test token
+    const testToken = process.env.TEST_GITHUB_TOKEN || '[REPLACE_WITH_ACTUAL_VALUE_FROM_USER_CREDENTIALS]';
+
     // Test missing owner
     try {
-      new VerificationEngine({ githubToken: 'test-token' });
+      new VerificationEngine({ githubToken: testToken });
       throw new Error('Should have thrown error for missing owner');
     } catch (error) {
       assert(error.message.includes('repository owner'), 'Should validate repository owner');
@@ -65,9 +68,9 @@ class ClaudeBotTestSuite {
 
     // Test missing repo
     try {
-      new VerificationEngine({ 
-        githubToken: 'test-token', 
-        owner: 'test-owner' 
+      new VerificationEngine({
+        githubToken: testToken,
+        owner: 'test-owner'
       });
       throw new Error('Should have thrown error for missing repo');
     } catch (error) {
@@ -76,8 +79,8 @@ class ClaudeBotTestSuite {
 
     // Test missing PR number
     try {
-      new VerificationEngine({ 
-        githubToken: 'test-token', 
+      new VerificationEngine({
+        githubToken: testToken,
         owner: 'test-owner',
         repo: 'test-repo'
       });
@@ -88,7 +91,7 @@ class ClaudeBotTestSuite {
 
     // Test valid configuration
     const engine = new VerificationEngine({
-      githubToken: 'test-token',
+      githubToken: testToken,
       owner: 'test-owner',
       repo: 'test-repo',
       prNumber: '123'

@@ -233,6 +233,14 @@ class GeneralSettings extends BaseSettings {
 							'description' => 'Live site domain. (e.g. website.com.au)'
 						),
 					),
+					array(
+						'id' => 'klaviyo_api_key',
+						'label' => 'Klaviyo API Key',
+						'type' => 'password',
+						'args' => array(
+							'description' => 'Klaviyo API key for analytics and tracking integration. Leave empty to disable Klaviyo integration.'
+						),
+					),
 				)
 			),
 		);

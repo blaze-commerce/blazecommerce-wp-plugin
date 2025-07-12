@@ -70,6 +70,9 @@ class ExportImportSettings extends BaseSettings {
 			'yotpo_settings',
 			'nipv_setting_option',
 			'wcact_settings',
+
+			// Note: Klaviyo API key is included in wooless_general_settings_options
+			// but should be handled with extra security considerations during export/import
 		);
 	}
 

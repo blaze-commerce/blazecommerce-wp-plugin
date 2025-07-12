@@ -271,11 +271,47 @@ jobs:
 
             console.log(`✅ BlazeCommerce context prepared for ${repoType} repository`);
 
+      - name: Check for Existing Error Comments
+        if: steps.skip-check.outputs.should_skip != 'true'
+        id: check-existing-errors
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              // Get existing comments to prevent duplicates
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number
+              });
+
+              // Check for recent error comments (within last 10 minutes)
+              const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+              const recentErrorComments = comments.filter(comment => {
+                const commentDate = new Date(comment.created_at);
+                return commentDate > tenMinutesAgo &&
+                       (comment.body.includes('Claude encountered an error') ||
+                        comment.body.includes('BlazeCommerce Claude AI Review Failed'));
+              });
+
+              if (recentErrorComments.length > 0) {
+                console.log(`⚠️ Found ${recentErrorComments.length} recent error comment(s), will prevent duplicates`);
+                core.setOutput('has_recent_errors', 'true');
+                core.setOutput('recent_error_count', recentErrorComments.length.toString());
+              } else {
+                console.log('✅ No recent error comments found');
+                core.setOutput('has_recent_errors', 'false');
+              }
+            } catch (error) {
+              console.log(`⚠️ Error checking existing comments: ${error.message}`);
+              core.setOutput('has_recent_errors', 'false');
+            }
+
       - name: Claude AI Review (Official Action - Attempt 1)
         if: steps.skip-check.outputs.should_skip != 'true'
         id: claude-review-1
         continue-on-error: true
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1.0.0
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
@@ -290,7 +326,7 @@ jobs:
         id: claude-review-2
         if: steps.skip-check.outputs.should_skip != 'true' && steps.claude-review-1.outcome == 'failure'
         continue-on-error: true
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1.0.0
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
@@ -305,7 +341,7 @@ jobs:
         id: claude-review-3
         if: steps.skip-check.outputs.should_skip != 'true' && steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         continue-on-error: true
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1.0.0
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
@@ -375,10 +411,12 @@ jobs:
             });
 
       - name: Handle Review Failure
-        if: steps.skip-check.outputs.should_skip != 'true' && steps.review-status.outputs.success == 'false'
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.review-status.outputs.success == 'false' && steps.check-existing-errors.outputs.has_recent_errors != 'true'
         uses: actions/github-script@v7
         with:
           script: |
+            console.log('🚫 Posting single failure comment (duplicate prevention active)...');
+
             const errorComment = `## ⚠️ BlazeCommerce Claude AI Review Failed
 
             The automated code review failed after 3 attempts using the official Anthropic action.
@@ -394,11 +432,12 @@ jobs:
             3. **Service Status**: Check [Anthropic Status](https://status.anthropic.com/) for service updates
 
             ### 📊 Attempt Details
-            - **All 3 attempts failed** using official Anthropic GitHub Action
+            - **All 3 attempts failed** using official Anthropic GitHub Action (v1.0.0)
             - **Authentication**: Using official action (most reliable method)
             - **Timestamp**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
+            - **Duplicate Prevention**: Active (prevents multiple error comments)
 
-            *BlazeCommerce Claude AI Review Bot v3.0 - Official Action Only*`;
+            *BlazeCommerce Claude AI Review Bot v3.1 - Enhanced Error Handling*`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -406,6 +445,13 @@ jobs:
               issue_number: context.issue.number,
               body: errorComment
             });
+
+      - name: Log Duplicate Prevention
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.review-status.outputs.success == 'false' && steps.check-existing-errors.outputs.has_recent_errors == 'true'
+        run: |
+          echo "🔄 Duplicate error comment prevented"
+          echo "Recent error comments found: ${{ steps.check-existing-errors.outputs.recent_error_count }}"
+          echo "Skipping additional error comment to prevent spam"
 
   auto-approve:
     needs: claude-review-official
