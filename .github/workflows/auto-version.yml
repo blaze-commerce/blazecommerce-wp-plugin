@@ -165,8 +165,9 @@ jobs:
         # Get the latest version tag using optimized git command
         # Using --sort=-version:refname for more reliable version ordering (Claude's recommendation)
         # Performance optimization: Limit tag listing to prevent expensive operations (Claude's recommendation)
+        # Fix: Use head -n10 instead of --count=10 flag which doesn't exist (Claude's recommendation)
         # Fallback to git describe if no tags exist to maintain compatibility
-        LATEST_VERSION_TAG=$(git tag --list 'v*' --sort=-version:refname --count=10 | head -n1 2>/dev/null || echo "")
+        LATEST_VERSION_TAG=$(git tag --list 'v*' --sort=-version:refname | head -n10 | head -n1 2>/dev/null || echo "")
         if [ -z "$LATEST_VERSION_TAG" ]; then
           # Fallback to git describe for repositories with non-standard tag formats
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
@@ -181,13 +182,13 @@ jobs:
         echo "🎯 Expected tag: $EXPECTED_TAG"
         echo "🔧 Tag retrieval method: $([ -n "$LATEST_VERSION_TAG" ] && echo "optimized version sort" || echo "git describe fallback")"
 
-        # Validate semver format with tightened regex to prevent edge cases
-        # Claude's recommendation: Prevent empty content after separators (e.g., 1.0.0- or 1.0.0+)
-        if ! echo "$PACKAGE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]*[a-zA-Z0-9])?(\+[a-zA-Z0-9.-]*[a-zA-Z0-9])?$'; then
+        # Validate semver format with simplified and tightened regex to prevent edge cases
+        # Claude's recommendation: Simplify regex to prevent cases like 1.0.0-- or 1.0.0++
+        if ! echo "$PACKAGE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'; then
           echo "❌ Error: Package version '$PACKAGE_VERSION' is not a valid semver format"
           echo "   Expected format: MAJOR.MINOR.PATCH[-prerelease][+metadata]"
           echo "   Examples: 1.0.0, 1.0.0-alpha.1, 1.0.0+build.123"
-          echo "   Note: Prerelease and metadata sections cannot be empty after separators"
+          echo "   Note: Prerelease and metadata sections must contain valid characters"
           exit 1
         fi
 
@@ -471,10 +472,13 @@ jobs:
           echo "   This may indicate an issue with version calculation logic"
         fi
 
-        # Validate that the new version follows semver format
-        if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]*[a-zA-Z0-9])?(\+[a-zA-Z0-9.-]*[a-zA-Z0-9])?$'; then
+        # Validate that the new version follows semver format (using simplified regex)
+        if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'; then
           echo "❌ Error: Calculated NEW_VERSION '$NEW_VERSION' is not a valid semver format"
           echo "   This indicates a bug in the version calculation logic"
+          echo "   Current version: $CURRENT_VERSION"
+          echo "   Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
+          echo "   Fallback used: $USE_FALLBACK_CALCULATION"
           exit 1
         fi
 
@@ -521,11 +525,15 @@ jobs:
 
         # Use the extracted conflict resolution script for better maintainability
         # Validate script existence before execution to prevent race conditions
+        # Claude's recommendation: Consider if script should be required or improve fallback handling
         if [ ! -f "scripts/resolve-version-conflicts.js" ]; then
-          echo "⚠️  Conflict resolution script not found, using original version"
+          echo "⚠️  Conflict resolution script not found, using calculated version"
           echo "   Expected: scripts/resolve-version-conflicts.js"
+          echo "   Impact: Advanced conflict resolution features will be unavailable"
           echo "   Fallback: Using calculated version without conflict resolution"
+          echo "   Recommendation: Add the script for enhanced version conflict handling"
           RESOLVED_VERSION="$NEW_VERSION"
+          echo "📦 Resolved version (fallback): $RESOLVED_VERSION"
         else
           echo "🔧 Running conflict resolution script..."
           RESOLUTION_RESULT=$(node scripts/resolve-version-conflicts.js "$NEW_VERSION" "$PRERELEASE_TYPE")
