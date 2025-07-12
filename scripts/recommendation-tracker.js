@@ -31,8 +31,16 @@ class RecommendationTracker {
     // Normalize the path to handle different path separators
     const normalizedPath = path.normalize(filePath);
 
-    // Check for path traversal attempts
-    if (normalizedPath.includes('..')) {
+    // Enhanced path traversal protection - check for multiple attack patterns
+    if (normalizedPath.includes('..') ||
+        normalizedPath.includes('\\0') ||
+        normalizedPath.includes('\0') ||
+        normalizedPath.match(/[<>:"|?*]/) ||
+        normalizedPath.includes('~') ||
+        normalizedPath.match(/\.\.[\/\\]/) ||
+        normalizedPath.match(/[\/\\]\.\.[\/\\]/) ||
+        normalizedPath.match(/^\.\./) ||
+        normalizedPath.endsWith('..')) {
       throw new Error(`Path traversal attempt detected: ${filePath}`);
     }
 
@@ -41,13 +49,16 @@ class RecommendationTracker {
       throw new Error(`Absolute path outside allowed directory: ${filePath}`);
     }
 
-    // Ensure the path is within the .github directory
-    const safePath = path.resolve(config.PATHS.GITHUB_DIR, path.basename(filePath));
+    // More robust path resolution (not just basename to prevent bypass)
+    const allowedDir = path.resolve(config.PATHS.GITHUB_DIR);
+    const requestedPath = path.resolve(allowedDir, path.relative(allowedDir, normalizedPath));
 
-    // Additional validation to ensure it's within the expected directory
-    if (!safePath.startsWith(path.resolve(config.PATHS.GITHUB_DIR))) {
+    // Ensure the resolved path is still within the allowed directory
+    if (!requestedPath.startsWith(allowedDir + path.sep) && requestedPath !== allowedDir) {
       throw new Error(`Invalid file path: ${filePath}. Must be within ${config.PATHS.GITHUB_DIR} directory.`);
     }
+
+    const safePath = requestedPath;
 
     // Check for null bytes (security measure)
     if (safePath.includes('\0')) {

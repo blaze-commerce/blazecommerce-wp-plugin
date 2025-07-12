@@ -616,15 +616,15 @@ jobs:
 
             *Powered by BlazeCommerce Claude AI Review Bot v2.0 with official Anthropic integration*`;
 
-            // Atomic file operation to prevent corruption
+            // Atomic file operation to prevent corruption (async)
             const tempFile = 'review-comment.md.tmp';
             try {
-              fs.writeFileSync(tempFile, summaryComment);
-              fs.renameSync(tempFile, 'review-comment.md');
+              await fs.promises.writeFile(tempFile, summaryComment);
+              await fs.promises.rename(tempFile, 'review-comment.md');
               console.log('✅ BlazeCommerce review summary generated successfully (atomic write)');
             } catch (error) {
               // Cleanup temp file if it exists
-              try { fs.unlinkSync(tempFile); } catch {}
+              try { await fs.promises.unlink(tempFile); } catch {}
               throw error;
             }
           
