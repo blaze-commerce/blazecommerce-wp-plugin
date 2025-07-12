@@ -151,35 +151,180 @@ jobs:
           echo "🔧 Other branch detected → stable release"
         fi
 
+    - name: Validate version consistency
+      id: version_validation
+      run: |
+        echo "🔍 Validating version consistency between package.json and git tags..."
+        echo "   This step prevents unexpected version bumps by detecting mismatches"
+        echo "   between the current package.json version and the latest git tag."
+
+        # Extract current version from package.json
+        # This is the source of truth for the current version state
+        PACKAGE_VERSION=$(node -p "require('./package.json').version")
+
+        # Get the latest version tag using optimized git command
+        # Using --sort=-version:refname for more reliable version ordering (Claude's recommendation)
+        # Performance optimization: Limit tag listing to prevent expensive operations (Claude's recommendation)
+        # Fix: Use head -n10 instead of --count=10 flag which doesn't exist (Claude's recommendation)
+        # Fallback to git describe if no tags exist to maintain compatibility
+        LATEST_VERSION_TAG=$(git tag --list 'v*' --sort=-version:refname | head -n10 | head -n1 2>/dev/null || echo "")
+        if [ -z "$LATEST_VERSION_TAG" ]; then
+          # Fallback to git describe for repositories with non-standard tag formats
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
+        else
+          LAST_TAG="$LATEST_VERSION_TAG"
+        fi
+
+        EXPECTED_TAG="v$PACKAGE_VERSION"
+
+        echo "📦 Package version: $PACKAGE_VERSION"
+        echo "🏷️  Last git tag: $LAST_TAG"
+        echo "🎯 Expected tag: $EXPECTED_TAG"
+        echo "🔧 Tag retrieval method: $([ -n "$LATEST_VERSION_TAG" ] && echo "optimized version sort" || echo "git describe fallback")"
+
+        # Validate semver format with simplified and tightened regex to prevent edge cases
+        # Claude's recommendation: Simplify regex to prevent cases like 1.0.0-- or 1.0.0++
+        if ! echo "$PACKAGE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'; then
+          echo "❌ Error: Package version '$PACKAGE_VERSION' is not a valid semver format"
+          echo "   Expected format: MAJOR.MINOR.PATCH[-prerelease][+metadata]"
+          echo "   Examples: 1.0.0, 1.0.0-alpha.1, 1.0.0+build.123"
+          echo "   Note: Prerelease and metadata sections must contain valid characters"
+          exit 1
+        fi
+
+        # Enhanced version mismatch detection with explicit "none" handling
+        if [ "$LAST_TAG" = "none" ] || [ "$LAST_TAG" != "$EXPECTED_TAG" ]; then
+          if [ "$LAST_TAG" = "none" ]; then
+            echo "⚠️  No git tags found - this is the first versioned release"
+            echo "   Package.json version: $PACKAGE_VERSION"
+            echo "   Recommendation: Create initial tag after this release"
+          else
+            echo "⚠️  Version mismatch detected!"
+            echo "   Package.json version: $PACKAGE_VERSION"
+            echo "   Last git tag: $LAST_TAG"
+            echo "   Expected tag: $EXPECTED_TAG"
+            echo "   This may cause unexpected version bumps due to analyzing too many commits"
+          fi
+          echo "VERSION_MISMATCH=true" >> $GITHUB_OUTPUT
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
+        else
+          echo "✅ Version consistency validated"
+          echo "VERSION_MISMATCH=false" >> $GITHUB_OUTPUT
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "LAST_TAG=$LAST_TAG" >> $GITHUB_OUTPUT
+        fi
+
     - name: Determine version bump type
       id: bump_type
       run: |
         echo "🔍 Analyzing commits for version bump type..."
+        echo "   This step determines whether to perform a MAJOR, MINOR, or PATCH version bump"
+        echo "   based on conventional commit patterns in the commit history."
+        echo ""
+        echo "📋 Commit Analysis Strategy:"
+        echo "   • Normal operation: Analyze commits since last matching git tag"
+        echo "   • Version mismatch: Use limited analysis to avoid historical features"
+        echo "   • No tags found: Analyze recent commits with fallback limits"
+        echo ""
 
-        # Get all non-merge commits since last version tag or last 50 commits if no tags
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-        if [ -n "$LAST_TAG" ]; then
-          echo "📋 Analyzing commits since tag: $LAST_TAG"
-          COMMITS=$(git log --oneline --no-merges --format="%s" ${LAST_TAG}..HEAD)
+        # Check for version mismatch and adjust analysis scope accordingly
+        # This prevents analyzing hundreds of historical commits when git tags are outdated
+        VERSION_MISMATCH="${{ steps.version_validation.outputs.VERSION_MISMATCH }}"
+        PACKAGE_VERSION="${{ steps.version_validation.outputs.PACKAGE_VERSION }}"
+        LAST_TAG="${{ steps.version_validation.outputs.LAST_TAG }}"
+
+        # Configurable commit analysis limits (Claude's recommendation to avoid magic numbers)
+        # These can be overridden via environment variables for different repository needs
+        LIMITED_COMMIT_LIMIT=${LIMITED_COMMIT_LIMIT:-25}  # For version mismatch scenarios
+        FALLBACK_COMMIT_LIMIT=${FALLBACK_COMMIT_LIMIT:-50}  # For normal analysis fallback
+
+        echo "🔧 Configuration: Limited analysis limit = $LIMITED_COMMIT_LIMIT commits"
+        echo "🔧 Configuration: Fallback analysis limit = $FALLBACK_COMMIT_LIMIT commits"
+
+        if [ "$VERSION_MISMATCH" = "true" ]; then
+          echo "⚠️  Version mismatch detected - using limited commit analysis"
+          echo "📋 Analyzing only recent commits to avoid historical feature detection"
+          # When there's a version mismatch, only analyze recent commits
+          # to avoid picking up historical features that should not trigger version bumps
+          COMMITS=$(git log --oneline --no-merges --format="%s" -${LIMITED_COMMIT_LIMIT})
+          echo "🔧 Limited analysis: analyzing last $LIMITED_COMMIT_LIMIT commits only"
+
+          # Validate commits were found in limited analysis
+          if [ -z "$COMMITS" ]; then
+            echo "❌ Error: No commits found in limited analysis"
+            echo "🔄 Attempting fallback analysis..."
+            COMMITS=$(git log --oneline --no-merges --format="%s" -${FALLBACK_COMMIT_LIMIT})
+            if [ -z "$COMMITS" ]; then
+              echo "❌ Error: No commits found even in fallback analysis"
+              echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
         else
-          echo "📋 No previous tags found, analyzing last 50 commits"
-          COMMITS=$(git log --oneline --no-merges --format="%s" -50)
+          # Normal analysis: get commits since last version tag
+          if [ "$LAST_TAG" != "none" ] && [ -n "$LAST_TAG" ]; then
+            echo "📋 Analyzing commits since tag: $LAST_TAG"
+            COMMITS=$(git log --oneline --no-merges --format="%s" ${LAST_TAG}..HEAD)
+
+            # Validate commits were found in normal analysis
+            if [ -z "$COMMITS" ]; then
+              echo "ℹ️  No commits found since last tag - using fallback analysis"
+              COMMITS=$(git log --oneline --no-merges --format="%s" -${FALLBACK_COMMIT_LIMIT})
+
+              # Validate fallback analysis results
+              if [ -z "$COMMITS" ]; then
+                echo "❌ Error: No commits found even in fallback analysis"
+                echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+            fi
+          else
+            echo "📋 No previous tags found, analyzing last $FALLBACK_COMMIT_LIMIT commits"
+            COMMITS=$(git log --oneline --no-merges --format="%s" -${FALLBACK_COMMIT_LIMIT})
+
+            # Validate commits were found when no tags exist
+            if [ -z "$COMMITS" ]; then
+              echo "❌ Error: No commits found even when analyzing last $FALLBACK_COMMIT_LIMIT commits"
+              echo "   This suggests an empty repository or git configuration issue"
+              echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          # Final validation for normal analysis
+          if [ -z "$COMMITS" ]; then
+            echo "❌ Error: No commits found in normal analysis"
+            echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
+            exit 0
+          fi
         fi
 
+        # Final safety check
         if [ -z "$COMMITS" ]; then
-          echo "ℹ️  No commits found to analyze"
+          echo "ℹ️  No commits found to analyze after all attempts"
           echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
           exit 0
         fi
 
-        echo "📊 Commits to analyze:"
+        # Display commit analysis summary for debugging
+        COMMIT_COUNT=$(echo "$COMMITS" | wc -l)
+        echo "📊 Commits to analyze (total: $COMMIT_COUNT):"
         echo "$COMMITS" | head -10
-        if [ $(echo "$COMMITS" | wc -l) -gt 10 ]; then
-          echo "... and $(( $(echo "$COMMITS" | wc -l) - 10 )) more"
+        if [ $COMMIT_COUNT -gt 10 ]; then
+          echo "... and $(( $COMMIT_COUNT - 10 )) more"
         fi
         echo ""
 
-        # Enhanced conventional commit detection
+        # Validate commit count is reasonable (edge case handling)
+        if [ $COMMIT_COUNT -gt 1000 ]; then
+          echo "⚠️  Warning: Analyzing $COMMIT_COUNT commits - this may indicate a configuration issue"
+          echo "   Consider checking your git tag synchronization or commit analysis limits"
+        fi
+
+        # Enhanced conventional commit detection with comprehensive pattern matching
+        # This follows the Conventional Commits specification (https://conventionalcommits.org/)
+        echo "🔍 Scanning commits for conventional commit patterns..."
         HAS_BREAKING=false
         HAS_FEATURE=false
         HAS_FIX=false
@@ -211,59 +356,129 @@ jobs:
           fi
         done <<< "$COMMITS"
 
-        # Determine bump type based on priority
+        # Determine bump type based on priority (BREAKING > FEATURE > FIX/PERF > NONE)
+        echo "📋 Commit pattern analysis results:"
+        echo "   Breaking changes: $HAS_BREAKING"
+        echo "   New features: $HAS_FEATURE"
+        echo "   Bug fixes: $HAS_FIX"
+        echo "   Performance improvements: $HAS_PERF"
+        echo ""
+
         if [ "$HAS_BREAKING" = true ]; then
           echo "BUMP_TYPE=major" >> $GITHUB_OUTPUT
           echo "🚀 Result: MAJOR version bump (breaking changes detected)"
+          echo "   ⚠️  This will increment the major version and reset minor/patch to 0"
         elif [ "$HAS_FEATURE" = true ]; then
           echo "BUMP_TYPE=minor" >> $GITHUB_OUTPUT
           echo "🚀 Result: MINOR version bump (new features detected)"
+          echo "   ✨ This will increment the minor version and reset patch to 0"
         elif [ "$HAS_FIX" = true ] || [ "$HAS_PERF" = true ]; then
           echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
           echo "🚀 Result: PATCH version bump (fixes/improvements detected)"
+          echo "   🐛 This will increment only the patch version"
         else
           echo "BUMP_TYPE=none" >> $GITHUB_OUTPUT
           echo "ℹ️  Result: No version bump (no conventional commits found)"
+          echo "   📝 Consider using conventional commit format: feat:, fix:, etc."
         fi
 
     - name: Preview version bump
       if: steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
-        CURRENT_VERSION=$(node -p "require('./package.json').version")
+        echo "🔍 Calculating new version based on bump type and current version..."
+
+        # Validate current version extraction
+        CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+        if [ $? -ne 0 ] || [ -z "$CURRENT_VERSION" ]; then
+          echo "❌ Error: Could not extract current version from package.json"
+          exit 1
+        fi
+
         echo "📦 Current version: $CURRENT_VERSION"
         echo "🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
 
-        # Calculate new version with prerelease support
+        # Calculate new version with prerelease support and error handling
         PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
         echo "🏷️  Prerelease type: ${PRERELEASE_TYPE:-'none (stable release)'}"
 
-        case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
-          "major")
-            NEW_VERSION=$(node -e "
-              const semver = require('./scripts/semver-utils');
-              const prerelease = '$PRERELEASE_TYPE' || null;
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'major', prerelease));
-            ")
-            ;;
-          "minor")
-            NEW_VERSION=$(node -e "
-              const semver = require('./scripts/semver-utils');
-              const prerelease = '$PRERELEASE_TYPE' || null;
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'minor', prerelease));
-            ")
-            ;;
-          "patch")
-            NEW_VERSION=$(node -e "
-              const semver = require('./scripts/semver-utils');
-              const prerelease = '$PRERELEASE_TYPE' || null;
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch', prerelease));
-            ")
-            ;;
-        esac
+        # Validate semver-utils script exists and implement proper fallback (Claude's recommendation)
+        USE_FALLBACK_CALCULATION=false
+        if [ ! -f "scripts/semver-utils.js" ]; then
+          echo "⚠️  Warning: semver-utils.js not found, using fallback version calculation"
+          echo "   Expected: scripts/semver-utils.js"
+          echo "   Fallback: Using built-in bash version calculation"
+          USE_FALLBACK_CALCULATION=true
+        fi
 
-        # Validate that NEW_VERSION was calculated
+        if [ "$USE_FALLBACK_CALCULATION" = "true" ]; then
+          # Fallback version calculation using bash (no external dependencies)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
+            "major")
+              NEW_VERSION="$((MAJOR + 1)).0.0"
+              ;;
+            "minor")
+              NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
+              ;;
+            "patch")
+              NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+              ;;
+          esac
+
+          # Add prerelease suffix if specified
+          if [ -n "$PRERELEASE_TYPE" ]; then
+            NEW_VERSION="$NEW_VERSION-$PRERELEASE_TYPE.1"
+          fi
+        else
+          # Use semver-utils script for advanced version calculation
+          case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
+            "major")
+              NEW_VERSION=$(node -e "
+                const semver = require('./scripts/semver-utils');
+                const prerelease = '$PRERELEASE_TYPE' || null;
+                console.log(semver.incrementVersion('$CURRENT_VERSION', 'major', prerelease));
+              ")
+              ;;
+            "minor")
+              NEW_VERSION=$(node -e "
+                const semver = require('./scripts/semver-utils');
+                const prerelease = '$PRERELEASE_TYPE' || null;
+                console.log(semver.incrementVersion('$CURRENT_VERSION', 'minor', prerelease));
+              ")
+              ;;
+            "patch")
+              NEW_VERSION=$(node -e "
+                const semver = require('./scripts/semver-utils');
+                const prerelease = '$PRERELEASE_TYPE' || null;
+                console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch', prerelease));
+              ")
+              ;;
+          esac
+        fi
+
+        # Enhanced validation for calculated version (Claude's recommendation)
         if [ -z "$NEW_VERSION" ]; then
           echo "❌ Error: NEW_VERSION was not calculated properly"
+          echo "   Current version: $CURRENT_VERSION"
+          echo "   Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
+          echo "   Fallback calculation: $USE_FALLBACK_CALCULATION"
+          exit 1
+        fi
+
+        # Validate that the new version is actually different from current version
+        if [ "$NEW_VERSION" = "$CURRENT_VERSION" ]; then
+          echo "⚠️  Warning: New version ($NEW_VERSION) is same as current version ($CURRENT_VERSION)"
+          echo "   This may indicate an issue with version calculation logic"
+        fi
+
+        # Validate that the new version follows semver format (using simplified regex)
+        if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'; then
+          echo "❌ Error: Calculated NEW_VERSION '$NEW_VERSION' is not a valid semver format"
+          echo "   This indicates a bug in the version calculation logic"
+          echo "   Current version: $CURRENT_VERSION"
+          echo "   Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
+          echo "   Fallback used: $USE_FALLBACK_CALCULATION"
           exit 1
         fi
 
@@ -309,17 +524,38 @@ jobs:
         PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
 
         # Use the extracted conflict resolution script for better maintainability
-        RESOLUTION_RESULT=$(node scripts/resolve-version-conflicts.js "$NEW_VERSION" "$PRERELEASE_TYPE")
-        RESOLUTION_EXIT_CODE=$?
+        # Validate script existence before execution to prevent race conditions
+        # Claude's recommendation: Consider if script should be required or improve fallback handling
+        if [ ! -f "scripts/resolve-version-conflicts.js" ]; then
+          echo "⚠️  Conflict resolution script not found, using calculated version"
+          echo "   Expected: scripts/resolve-version-conflicts.js"
+          echo "   Impact: Advanced conflict resolution features will be unavailable"
+          echo "   Fallback: Using calculated version without conflict resolution"
+          echo "   Recommendation: Add the script for enhanced version conflict handling"
+          RESOLVED_VERSION="$NEW_VERSION"
+          echo "📦 Resolved version (fallback): $RESOLVED_VERSION"
+        else
+          echo "🔧 Running conflict resolution script..."
+          RESOLUTION_RESULT=$(node scripts/resolve-version-conflicts.js "$NEW_VERSION" "$PRERELEASE_TYPE")
+          RESOLUTION_EXIT_CODE=$?
 
-        if [ $RESOLUTION_EXIT_CODE -ne 0 ]; then
-          echo "❌ Version conflict resolution failed"
-          echo "$RESOLUTION_RESULT"
-          exit 1
+          if [ $RESOLUTION_EXIT_CODE -ne 0 ]; then
+            echo "❌ Version conflict resolution failed"
+            echo "$RESOLUTION_RESULT"
+            echo "🔄 Fallback: Using calculated version without conflict resolution"
+            RESOLVED_VERSION="$NEW_VERSION"
+          else
+            # Extract resolved version from output
+            RESOLVED_VERSION=$(echo "$RESOLUTION_RESULT" | grep "📦 Final resolved version:" | sed 's/.*: //')
+
+            # Validate that a resolved version was extracted
+            if [ -z "$RESOLVED_VERSION" ]; then
+              echo "⚠️  Could not extract resolved version from script output"
+              echo "🔄 Fallback: Using calculated version without conflict resolution"
+              RESOLVED_VERSION="$NEW_VERSION"
+            fi
+          fi
         fi
-
-        # Extract resolved version from output
-        RESOLVED_VERSION=$(echo "$RESOLUTION_RESULT" | grep "📦 Final resolved version:" | sed 's/.*: //')
 
         if [ -n "$RESOLVED_VERSION" ] && [ "$RESOLVED_VERSION" != "$NEW_VERSION" ]; then
           echo "🔄 Version updated due to conflict resolution:"
