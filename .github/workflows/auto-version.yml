@@ -28,22 +28,29 @@ jobs:
       run: |
         echo "🔍 Checking if version bump is needed based on changed files..."
 
-        # Get list of changed files in this push with better error handling
+        # Get list of changed files in this push with optimized git operations
         if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
           # First push to branch - check all files in the commit
           echo "🔍 First push detected, analyzing all files in commit"
-          if ! CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null); then
-            echo "⚠️  Could not get diff, falling back to listing all files"
-            CHANGED_FILES=$(git ls-files)
+          if ! CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT HEAD~1 2>/dev/null); then
+            echo "⚠️  Could not get diff, falling back to listing all tracked files"
+            CHANGED_FILES=$(git ls-files --cached --exclude-standard)
           fi
         else
-          # Regular push - check files changed since previous commit
+          # Regular push - check files changed since previous commit with optimized filters
           echo "🔍 Regular push detected, analyzing changed files"
-          if ! CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}..${{ github.event.after }}" 2>/dev/null); then
+          # Use --diff-filter to only include Added, Copied, Modified, Renamed, Type-changed files
+          # This excludes deleted files which don't need version bump consideration
+          if ! CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT "${{ github.event.before }}..${{ github.event.after }}" 2>/dev/null); then
             echo "❌ Failed to get changed files between commits"
             echo "   Before: ${{ github.event.before }}"
             echo "   After: ${{ github.event.after }}"
-            exit 1
+            echo "   Attempting alternative method..."
+            # Fallback: try getting files from the current commit only
+            if ! CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT HEAD~1 2>/dev/null); then
+              echo "❌ All git diff methods failed"
+              exit 1
+            fi
           fi
         fi
 
@@ -58,52 +65,21 @@ jobs:
         echo "$CHANGED_FILES"
         echo ""
 
-        # Define ignore patterns (same as the previous paths-ignore)
-        IGNORE_PATTERNS=(
-          # Files managed by the version bump process itself
-          "CHANGELOG.md"
-          "package.json"
-          "package-lock.json"
-          "blaze-wooless.php"
-          "blocks/package.json"
+        # Load ignore patterns from shared script to eliminate duplication
+        echo "📋 Loading ignore patterns from shared configuration..."
+        if [ ! -f "scripts/get-ignore-patterns.sh" ]; then
+          echo "❌ Required script 'scripts/get-ignore-patterns.sh' not found"
+          echo "   This script is required for ignore pattern configuration"
+          exit 1
+        fi
 
-          # CI/CD and development tooling (no user impact)
-          ".github/"
-          "scripts/"
-          "tests/"
-          "test/"
-          "bin/"
+        # Load patterns into array with proper error handling
+        if ! IGNORE_PATTERNS=($(bash scripts/get-ignore-patterns.sh)); then
+          echo "❌ Failed to load ignore patterns from script"
+          exit 1
+        fi
 
-          # Internal documentation (no user impact)
-          "docs/"
-          "CONTRIBUTING.md"
-          "TODO"
-          "IMPLEMENTATION_SUMMARY.md"
-          "VERSION_BUMP_BEHAVIOR_EXPLANATION.md"
-          "CHANGELOG_VERSION_FIX.md"
-
-          # Development configuration files
-          "phpunit.xml"
-          "jest.config.js"
-          "github-workflows-tests.yml"
-          "test.html"
-
-          # Auto-generated files
-          "composer.lock"
-          "vendor/"
-          "blocks/yarn.lock"
-          "blocks/package-lock.json"
-
-          # Git and editor files
-          ".gitignore"
-          ".editorconfig"
-          ".DS_Store"
-
-          # AI assistant and editor configuration
-          ".augment/"
-          ".claude/"
-          ".vscode/"
-        )
+        echo "✅ Loaded ${#IGNORE_PATTERNS[@]} ignore patterns"
 
         # Check if any changed file should trigger version bump
         SHOULD_BUMP="false"
@@ -114,21 +90,26 @@ jobs:
 
           FILE_SHOULD_BE_IGNORED="false"
 
-          # Check against each ignore pattern with improved matching logic
+          # Check against each ignore pattern with secure and precise matching logic
           for pattern in "${IGNORE_PATTERNS[@]}"; do
             # Handle directory patterns (ending with /)
             if [[ "$pattern" == */ ]]; then
-              # Use precise directory matching - file must start with pattern and have a path separator
-              if [[ "$file" == "$pattern"* ]] || [[ "$file" =~ ^${pattern//\//\/} ]]; then
+              # Use safe prefix matching for directories - no regex vulnerabilities
+              if [[ "$file" == "$pattern"* ]]; then
                 FILE_SHOULD_BE_IGNORED="true"
                 break
               fi
-            # Handle exact file matches
+            # Handle exact file matches (most common case)
             elif [[ "$file" == "$pattern" ]]; then
               FILE_SHOULD_BE_IGNORED="true"
               break
-            # Handle file extension patterns (like *.DS_Store)
-            elif [[ "$pattern" == *.* ]] && [[ "$file" == *"${pattern#*.}" ]]; then
+            # Handle file basename matches (file in any directory)
+            elif [[ "$file" == */"$pattern" ]]; then
+              FILE_SHOULD_BE_IGNORED="true"
+              break
+            # Handle file extension patterns with precise matching
+            elif [[ "$pattern" == .* ]] && [[ "${file##*/}" == "$pattern" ]]; then
+              # Only match exact filename, not as substring (fixes .DS_Store issue)
               FILE_SHOULD_BE_IGNORED="true"
               break
             fi
