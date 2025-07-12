@@ -94,23 +94,43 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const files = await github.rest.pulls.listFiles({
+            const fs = require('fs');
+
+            // Use pagination to handle large PRs
+            const files = await github.paginate(github.rest.pulls.listFiles, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.issue.number
+              pull_number: context.issue.number,
+              per_page: 30
             });
-            
-            const changedFiles = files.data.map(file => ({
-              filename: file.filename,
-              status: file.status,
-              additions: file.additions,
-              deletions: file.deletions,
-              patch: file.patch || ''
-            }));
-            
-            core.setOutput('files', JSON.stringify(changedFiles));
+
+            // Limit file processing to prevent memory issues
+            const maxFiles = 100;
+            const maxFileSize = 1048576; // 1MB
+
+            const changedFiles = files.slice(0, maxFiles).map(file => {
+              const patch = file.patch || '';
+              return {
+                filename: file.filename,
+                status: file.status,
+                additions: file.additions,
+                deletions: file.deletions,
+                patch: patch.length > maxFileSize ? `[File too large: ${Math.round(patch.length / 1024)}KB]` : patch
+              };
+            });
+
+            // Write large data to temporary file to avoid argument length limits
+            fs.writeFileSync('/tmp/changed_files.json', JSON.stringify(changedFiles, null, 2));
+
+            // Only output summary data, not the full content
             core.setOutput('file_count', changedFiles.length);
-            
+            core.setOutput('has_files', changedFiles.length > 0 ? 'true' : 'false');
+            core.setOutput('total_files', files.length);
+
+            if (files.length > maxFiles) {
+              console.log(`⚠️ Large PR detected: ${files.length} files. Processing first ${maxFiles} files.`);
+            }
+
             return changedFiles;
       
       - name: Get Existing Reviews
@@ -118,20 +138,25 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number
             });
-            
-            const claudeComments = comments.data.filter(comment => 
+
+            const claudeComments = comments.data.filter(comment =>
               comment.user.login === 'blazecommerce-claude-ai' ||
               comment.body.includes('🤖 BlazeCommerce Claude AI')
             );
-            
-            core.setOutput('existing_reviews', JSON.stringify(claudeComments));
+
+            // Write large data to temporary file to avoid argument length limits
+            fs.writeFileSync('/tmp/existing_reviews.json', JSON.stringify(claudeComments, null, 2));
+
+            // Only output summary data, not the full content
             core.setOutput('review_count', claudeComments.length);
-            
+            core.setOutput('has_reviews', claudeComments.length > 0 ? 'true' : 'false');
+
             return claudeComments;
       
       - name: Prepare Claude Context
@@ -160,10 +185,29 @@ jobs:
         with:
           script: |
             const axios = require('axios');
-            
+            const fs = require('fs');
+
             const repoType = '${{ steps.claude-context.outputs.repo_type }}';
-            const changedFiles = JSON.parse('${{ steps.changed-files.outputs.files }}');
-            const existingReviews = JSON.parse('${{ steps.existing-reviews.outputs.existing_reviews }}');
+
+            // Read large data from temporary files to avoid argument length limits
+            let changedFiles = [];
+            let existingReviews = [];
+
+            try {
+              changedFiles = JSON.parse(fs.readFileSync('/tmp/changed_files.json', 'utf8'));
+              console.log(`📁 Loaded ${changedFiles.length} changed files from temporary file`);
+            } catch (error) {
+              console.log('⚠️ Could not read changed files from temporary file:', error.message);
+              changedFiles = [];
+            }
+
+            try {
+              existingReviews = JSON.parse(fs.readFileSync('/tmp/existing_reviews.json', 'utf8'));
+              console.log(`💬 Loaded ${existingReviews.length} existing reviews from temporary file`);
+            } catch (error) {
+              console.log('⚠️ Could not read existing reviews from temporary file:', error.message);
+              existingReviews = [];
+            }
             
             // Repository-specific prompts
             const prompts = {
@@ -401,6 +445,14 @@ jobs:
               issue_number: context.issue.number,
               body: errorMessage
             });
+
+      - name: Cleanup Temporary Files
+        if: always()
+        run: |
+          echo "🧹 Cleaning up temporary files..."
+          rm -f /tmp/changed_files.json
+          rm -f /tmp/existing_reviews.json
+          echo "✅ Cleanup completed"
 
   recommendation-verification:
     if: github.event_name == 'pull_request' && github.event.action == 'synchronize'
