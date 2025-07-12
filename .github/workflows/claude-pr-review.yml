@@ -177,14 +177,11 @@ jobs:
           echo "repo_type=$REPO_TYPE" >> $GITHUB_OUTPUT
           echo "✅ Repository type: $REPO_TYPE"
       
-      - name: Claude AI Review with Retry
-        id: claude-review
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - name: Prepare Claude Review Prompt
+        id: prepare-prompt
         uses: actions/github-script@v7
         with:
           script: |
-            const axios = require('axios');
             const fs = require('fs');
 
             const repoType = '${{ steps.claude-context.outputs.repo_type }}';
@@ -274,101 +271,157 @@ jobs:
             const prompt = prompts[repoType] || prompts['unknown'];
             
             // Prepare file context
-            const fileContext = changedFiles.map(file => 
+            const fileContext = changedFiles.map(file =>
               `File: ${file.filename} (${file.status})\n${file.patch || 'Binary file'}`
             ).join('\n\n');
-            
+
             const fullPrompt = `${prompt}
-            
+
             PR Title: ${{ steps.pr-info.outputs.pr_title }}
             PR Author: ${{ steps.pr-info.outputs.pr_author }}
-            
+
             Changed Files (${changedFiles.length}):
             ${fileContext}
-            
+
             Please provide categorized feedback:
             🔴 REQUIRED - Critical issues that must be fixed
             🟡 IMPORTANT - Significant improvements recommended
             🔵 SUGGESTION - Optional enhancements
-            
+
             Focus on actionable, specific recommendations with examples.`;
-            
-            // Retry logic for Claude AI API
-            let attempt = 1;
-            const maxAttempts = 3;
-            
-            while (attempt <= maxAttempts) {
-              try {
-                console.log(`🤖 Claude AI Review Attempt ${attempt}/${maxAttempts}`);
-                
-                const response = await axios.post('https://api.anthropic.com/v1/messages', {
-                  model: 'claude-3-5-sonnet-20241022',
-                  max_tokens: 4000,
-                  messages: [{
-                    role: 'user',
-                    content: fullPrompt
-                  }]
-                }, {
-                  headers: {
-                    'Authorization': `Bearer ${process.env.ANTHROPIC_API_KEY}`,
-                    'Content-Type': 'application/json',
-                    'anthropic-version': '2023-06-01'
-                  },
-                  timeout: 60000
-                });
-                
-                const review = response.data.content[0].text;
-                core.setOutput('review_content', review);
-                core.setOutput('success', 'true');
-                
-                console.log('✅ Claude AI review completed successfully');
-                return { success: true, review, attempt };
-                
-              } catch (error) {
-                console.log(`❌ Attempt ${attempt} failed:`, error.message);
-                
-                if (attempt === maxAttempts) {
-                  core.setOutput('success', 'false');
-                  core.setOutput('error', error.message);
-                  return { success: false, error: error.message, attempt };
-                }
-                
-                // Exponential backoff: 1s, 2s, 4s
-                const delay = Math.pow(2, attempt - 1) * 1000;
-                console.log(`⏳ Waiting ${delay}ms before retry...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                
-                attempt++;
-              }
+
+            // Save prompt to temporary file for the official action
+            fs.writeFileSync('/tmp/claude_prompt.txt', fullPrompt);
+
+            // Set output for the next step
+            core.setOutput('prompt_ready', 'true');
+            core.setOutput('prompt_length', fullPrompt.length);
+
+            console.log(`✅ Prompt prepared successfully for official Claude action (${fullPrompt.length} characters)`);
+            return { success: true, promptLength: fullPrompt.length };
+
+      - name: Claude AI Review with Official Action (Attempt 1)
+        id: claude-review-1
+        if: steps.prepare-prompt.outputs.prompt_ready == 'true'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt_file: /tmp/claude_prompt.txt
+
+      - name: Wait Before Retry (30s + jitter)
+        if: steps.claude-review-1.outcome == 'failure'
+        run: |
+          # Add jitter to prevent thundering herd
+          jitter=$((RANDOM % 10 + 25))  # 25-35 seconds
+          echo "⏳ Waiting ${jitter}s before retry..."
+          sleep $jitter
+
+      - name: Claude AI Review with Official Action (Attempt 2)
+        id: claude-review-2
+        if: steps.claude-review-1.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt_file: /tmp/claude_prompt.txt
+
+      - name: Wait Before Final Retry (60s + jitter)
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        run: |
+          # Add jitter to prevent thundering herd
+          jitter=$((RANDOM % 20 + 50))  # 50-70 seconds
+          echo "⏳ Waiting ${jitter}s before final retry..."
+          sleep $jitter
+
+      - name: Claude AI Review with Official Action (Attempt 3)
+        id: claude-review-3
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt_file: /tmp/claude_prompt.txt
+
+      - name: Set Review Success Status
+        id: claude-review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Check which attempt succeeded
+            const attempt1 = '${{ steps.claude-review-1.outcome }}';
+            const attempt2 = '${{ steps.claude-review-2.outcome }}';
+            const attempt3 = '${{ steps.claude-review-3.outcome }}';
+
+            if (attempt1 === 'success') {
+              console.log('✅ Claude AI review completed successfully on attempt 1');
+              core.setOutput('success', 'true');
+              core.setOutput('attempt', '1');
+            } else if (attempt2 === 'success') {
+              console.log('✅ Claude AI review completed successfully on attempt 2');
+              core.setOutput('success', 'true');
+              core.setOutput('attempt', '2');
+            } else if (attempt3 === 'success') {
+              console.log('✅ Claude AI review completed successfully on attempt 3');
+              core.setOutput('success', 'true');
+              core.setOutput('attempt', '3');
+            } else {
+              console.log('❌ All Claude AI review attempts failed');
+              core.setOutput('success', 'false');
+              core.setOutput('error', 'All attempts failed after 3 retries');
             }
 
       - name: Generate Review Comment
         if: steps.claude-review.outputs.success == 'true'
         id: generate-comment
-        run: |
-          echo "📝 Generating review comment..."
-          
-          cat > review-comment.md << 'EOF'
-          ## 🤖 BlazeCommerce Claude AI Review
-          
-          **Repository Type**: ${{ steps.claude-context.outputs.repo_type }}
-          **Files Analyzed**: ${{ steps.changed-files.outputs.file_count }}
-          **Review Timestamp**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          
-          ### 📋 Automated Analysis
-          
-          ${{ steps.claude-review.outputs.review_content }}
-          
-          ### 🔄 Continuous Verification
-          
-          This review will be automatically updated as you make changes. The bot will:
-          - ✅ Track implementation of recommendations
-          - 🔍 Verify fixes on each commit
-          - 🚀 Auto-approve when all REQUIRED and IMPORTANT items are addressed
-          
-          ### 📊 Progress Tracking
-          
-          See `.github/CLAUDE_REVIEW_TRACKING.md` for detailed progress tracking.
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // The official Claude action posts the review directly to the PR
+            // We'll create a summary comment with BlazeCommerce-specific information
+
+            const repoType = '${{ steps.claude-context.outputs.repo_type }}';
+            const fileCount = '${{ steps.changed-files.outputs.file_count }}';
+            const attempt = '${{ steps.claude-review.outputs.attempt }}';
+
+            const summaryComment = `## 🤖 BlazeCommerce Claude AI Review Completed
+
+            **Repository Type**: ${repoType}
+            **Files Analyzed**: ${fileCount}
+            **Review Timestamp**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
+            **Completed on Attempt**: ${attempt}
+
+            ### ✅ Review Status
+
+            The Claude AI review has been successfully completed using the official Anthropic action. The detailed review has been posted above by \`claude[bot]\`.
+
+            ### 🔄 Continuous Verification
+
+            This review system will:
+            - ✅ Track implementation of recommendations
+            - 🔍 Verify fixes on each commit
+            - 🚀 Auto-approve when all REQUIRED and IMPORTANT items are addressed
+
+            ### 📊 Progress Tracking
+
+            See \`.github/CLAUDE_REVIEW_TRACKING.md\` for detailed progress tracking.
+
+            ### 🛠️ BlazeCommerce Standards Applied
+
+            This review follows BlazeCommerce-specific standards for ${repoType} repositories, including:
+            - Security best practices
+            - Performance optimization guidelines
+            - Code quality standards
+            - E-commerce integration patterns
+
+            *Powered by BlazeCommerce Claude AI Review Bot v2.0 with official Anthropic integration*`;
+
+            // Save the comment content
+            fs.writeFileSync('review-comment.md', summaryComment);
+
+            console.log('✅ BlazeCommerce review summary generated successfully');
           
           ---
           *Powered by Claude AI | Response time: < 2 minutes average*
