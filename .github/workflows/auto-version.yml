@@ -164,8 +164,9 @@ jobs:
 
         # Get the latest version tag using optimized git command
         # Using --sort=-version:refname for more reliable version ordering (Claude's recommendation)
+        # Performance optimization: Limit tag listing to prevent expensive operations (Claude's recommendation)
         # Fallback to git describe if no tags exist to maintain compatibility
-        LATEST_VERSION_TAG=$(git tag --list 'v*' --sort=-version:refname | head -n1 2>/dev/null || echo "")
+        LATEST_VERSION_TAG=$(git tag --list 'v*' --sort=-version:refname --count=10 | head -n1 2>/dev/null || echo "")
         if [ -z "$LATEST_VERSION_TAG" ]; then
           # Fallback to git describe for repositories with non-standard tag formats
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "none")
@@ -181,10 +182,12 @@ jobs:
         echo "🔧 Tag retrieval method: $([ -n "$LATEST_VERSION_TAG" ] && echo "optimized version sort" || echo "git describe fallback")"
 
         # Validate semver format with tightened regex to prevent edge cases
-        if ! echo "$PACKAGE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$'; then
+        # Claude's recommendation: Prevent empty content after separators (e.g., 1.0.0- or 1.0.0+)
+        if ! echo "$PACKAGE_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]*[a-zA-Z0-9])?(\+[a-zA-Z0-9.-]*[a-zA-Z0-9])?$'; then
           echo "❌ Error: Package version '$PACKAGE_VERSION' is not a valid semver format"
           echo "   Expected format: MAJOR.MINOR.PATCH[-prerelease][+metadata]"
           echo "   Examples: 1.0.0, 1.0.0-alpha.1, 1.0.0+build.123"
+          echo "   Note: Prerelease and metadata sections cannot be empty after separators"
           exit 1
         fi
 
@@ -397,39 +400,81 @@ jobs:
         PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
         echo "🏷️  Prerelease type: ${PRERELEASE_TYPE:-'none (stable release)'}"
 
-        # Validate semver-utils script exists before using it
+        # Validate semver-utils script exists and implement proper fallback (Claude's recommendation)
+        USE_FALLBACK_CALCULATION=false
         if [ ! -f "scripts/semver-utils.js" ]; then
           echo "⚠️  Warning: semver-utils.js not found, using fallback version calculation"
           echo "   Expected: scripts/semver-utils.js"
+          echo "   Fallback: Using built-in bash version calculation"
+          USE_FALLBACK_CALCULATION=true
         fi
 
-        case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
-          "major")
-            NEW_VERSION=$(node -e "
-              const semver = require('./scripts/semver-utils');
-              const prerelease = '$PRERELEASE_TYPE' || null;
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'major', prerelease));
-            ")
-            ;;
-          "minor")
-            NEW_VERSION=$(node -e "
-              const semver = require('./scripts/semver-utils');
-              const prerelease = '$PRERELEASE_TYPE' || null;
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'minor', prerelease));
-            ")
-            ;;
-          "patch")
-            NEW_VERSION=$(node -e "
-              const semver = require('./scripts/semver-utils');
-              const prerelease = '$PRERELEASE_TYPE' || null;
-              console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch', prerelease));
-            ")
-            ;;
-        esac
+        if [ "$USE_FALLBACK_CALCULATION" = "true" ]; then
+          # Fallback version calculation using bash (no external dependencies)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
-        # Validate that NEW_VERSION was calculated
+          case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
+            "major")
+              NEW_VERSION="$((MAJOR + 1)).0.0"
+              ;;
+            "minor")
+              NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
+              ;;
+            "patch")
+              NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+              ;;
+          esac
+
+          # Add prerelease suffix if specified
+          if [ -n "$PRERELEASE_TYPE" ]; then
+            NEW_VERSION="$NEW_VERSION-$PRERELEASE_TYPE.1"
+          fi
+        else
+          # Use semver-utils script for advanced version calculation
+          case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
+            "major")
+              NEW_VERSION=$(node -e "
+                const semver = require('./scripts/semver-utils');
+                const prerelease = '$PRERELEASE_TYPE' || null;
+                console.log(semver.incrementVersion('$CURRENT_VERSION', 'major', prerelease));
+              ")
+              ;;
+            "minor")
+              NEW_VERSION=$(node -e "
+                const semver = require('./scripts/semver-utils');
+                const prerelease = '$PRERELEASE_TYPE' || null;
+                console.log(semver.incrementVersion('$CURRENT_VERSION', 'minor', prerelease));
+              ")
+              ;;
+            "patch")
+              NEW_VERSION=$(node -e "
+                const semver = require('./scripts/semver-utils');
+                const prerelease = '$PRERELEASE_TYPE' || null;
+                console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch', prerelease));
+              ")
+              ;;
+          esac
+        fi
+
+        # Enhanced validation for calculated version (Claude's recommendation)
         if [ -z "$NEW_VERSION" ]; then
           echo "❌ Error: NEW_VERSION was not calculated properly"
+          echo "   Current version: $CURRENT_VERSION"
+          echo "   Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
+          echo "   Fallback calculation: $USE_FALLBACK_CALCULATION"
+          exit 1
+        fi
+
+        # Validate that the new version is actually different from current version
+        if [ "$NEW_VERSION" = "$CURRENT_VERSION" ]; then
+          echo "⚠️  Warning: New version ($NEW_VERSION) is same as current version ($CURRENT_VERSION)"
+          echo "   This may indicate an issue with version calculation logic"
+        fi
+
+        # Validate that the new version follows semver format
+        if ! echo "$NEW_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]*[a-zA-Z0-9])?(\+[a-zA-Z0-9.-]*[a-zA-Z0-9])?$'; then
+          echo "❌ Error: Calculated NEW_VERSION '$NEW_VERSION' is not a valid semver format"
+          echo "   This indicates a bug in the version calculation logic"
           exit 1
         fi
 
