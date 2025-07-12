@@ -3,3 +3,7 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 *       @blaze-commerce/qa
+
+# BlazeCommerce Claude AI Review Bot Code Ownership
+# This ensures the bot is automatically requested for review on all PRs
+* @blazecommerce-claude-ai
