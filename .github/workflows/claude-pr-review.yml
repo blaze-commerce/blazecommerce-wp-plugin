@@ -175,7 +175,7 @@ jobs:
       - name: Claude AI Review (Official Action - Attempt 1)
         id: claude-review-1
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1.0.0
+        uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
@@ -190,7 +190,7 @@ jobs:
         id: claude-review-2
         if: steps.claude-review-1.outcome == 'failure'
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1.0.0
+        uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
@@ -205,7 +205,7 @@ jobs:
         id: claude-review-3
         if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         continue-on-error: true
-        uses: anthropics/claude-code-action@v1.0.0
+        uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
