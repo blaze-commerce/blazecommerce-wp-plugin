@@ -28,12 +28,30 @@ class RecommendationTracker {
    * Validate and sanitize file paths to prevent path traversal attacks
    */
   validateFilePath(filePath) {
+    // Normalize the path to handle different path separators
+    const normalizedPath = path.normalize(filePath);
+
+    // Check for path traversal attempts
+    if (normalizedPath.includes('..')) {
+      throw new Error(`Path traversal attempt detected: ${filePath}`);
+    }
+
+    // Check for absolute paths outside allowed directory
+    if (path.isAbsolute(normalizedPath) && !normalizedPath.startsWith(path.resolve(config.PATHS.GITHUB_DIR))) {
+      throw new Error(`Absolute path outside allowed directory: ${filePath}`);
+    }
+
     // Ensure the path is within the .github directory
     const safePath = path.resolve(config.PATHS.GITHUB_DIR, path.basename(filePath));
 
     // Additional validation to ensure it's within the expected directory
     if (!safePath.startsWith(path.resolve(config.PATHS.GITHUB_DIR))) {
       throw new Error(`Invalid file path: ${filePath}. Must be within ${config.PATHS.GITHUB_DIR} directory.`);
+    }
+
+    // Check for null bytes (security measure)
+    if (safePath.includes('\0')) {
+      throw new Error(`Null byte detected in path: ${filePath}`);
     }
 
     return safePath;

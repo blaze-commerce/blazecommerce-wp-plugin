@@ -6,15 +6,18 @@
  */
 
 const fs = require('fs');
+const EventEmitter = require('events');
 
-class ErrorHandler {
+class ErrorHandler extends EventEmitter {
   constructor(options = {}) {
+    super();
+
     this.maxRetries = options.maxRetries || 3;
     this.baseDelay = options.baseDelay || 1000; // 1 second
     this.maxDelay = options.maxDelay || 30000; // 30 seconds
     this.circuitBreakerThreshold = options.circuitBreakerThreshold || 5;
     this.circuitBreakerTimeout = options.circuitBreakerTimeout || 300000; // 5 minutes
-    
+
     this.errorCounts = new Map();
     this.circuitBreakers = new Map();
     
@@ -205,11 +208,20 @@ class ErrorHandler {
    * Open circuit breaker
    */
   openCircuitBreaker(operationName) {
+    const circuitBreakerData = {
+      operation: operationName,
+      openedAt: Date.now(),
+      timestamp: new Date().toISOString()
+    };
+
     console.log(`🔴 Circuit breaker opened for ${operationName}`);
     this.circuitBreakers.set(operationName, {
       isOpen: true,
       openedAt: Date.now()
     });
+
+    // Emit circuit breaker event for monitoring
+    this.emit('circuit-breaker-opened', circuitBreakerData);
   }
 
   /**
@@ -246,13 +258,23 @@ class ErrorHandler {
    */
   handleFinalFailure(operationName, error) {
     const errorType = this.classifyError(error);
-    
-    console.error(`💥 Final failure for ${operationName}:`, {
+    const errorCount = this.errorCounts.get(operationName) || 0;
+
+    const errorData = {
+      operation: operationName,
       error: error.message,
       type: errorType,
-      errorCount: this.errorCounts.get(operationName) || 0
-    });
-    
+      errorCount,
+      timestamp: new Date().toISOString(),
+      stack: error.stack
+    };
+
+    console.error(`💥 Final failure for ${operationName}:`, errorData);
+
+    // Emit error event for monitoring
+    this.emit('error', errorData);
+    this.emit('final-failure', errorData);
+
     // Log to file for debugging
     this.logError(operationName, error, errorType);
   }
