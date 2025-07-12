@@ -1,11 +1,27 @@
 /**
  * BlazeCommerce Claude AI Review Bot - Centralized Configuration
- * 
+ *
  * This file contains all configuration constants and settings used across
  * the Claude AI review bot system to avoid scattered hardcoded values.
  */
 
-module.exports = {
+// Load environment-specific configuration if available
+function loadConfig() {
+  const env = process.env.NODE_ENV || 'production';
+  const baseConfig = getBaseConfig();
+
+  try {
+    const envConfig = require(`./claude-bot-config.${env}.js`);
+    console.log(`📋 Loaded ${env} configuration`);
+    return envConfig;
+  } catch (error) {
+    console.log(`📋 Using base configuration (${env} config not found)`);
+    return baseConfig;
+  }
+}
+
+function getBaseConfig() {
+  return {
   // API Configuration
   API: {
     ANTHROPIC_TIMEOUT: 60000, // 60 seconds
@@ -110,6 +126,8 @@ module.exports = {
     MAX_PAGES: 10,                   // Maximum pages to fetch
     RATE_LIMIT_BUFFER: 50,           // Buffer for rate limit checks
     RETRY_AFTER_HEADER: 'retry-after',
+    MAX_FILE_SIZE: 1048576,          // 1MB maximum file size for analysis
+    MAX_TOTAL_FILES: 100,            // Maximum total files to process
   },
 
   // Security Settings
@@ -119,4 +137,8 @@ module.exports = {
     SANITIZE_LOGS: true,             // Remove sensitive data from logs
     VALIDATE_PATHS: true,            // Enable path traversal protection
   }
-};
+  };
+}
+
+// Export the configuration with environment-specific overrides
+module.exports = loadConfig();

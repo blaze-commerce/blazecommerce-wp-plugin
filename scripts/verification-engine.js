@@ -114,29 +114,44 @@ class VerificationEngine {
   }
 
   /**
-   * Check GitHub API rate limit and wait if necessary
+   * Check GitHub API rate limit and wait if necessary with exponential backoff
    */
-  async checkRateLimit() {
+  async checkRateLimit(attempt = 1) {
     try {
       const rateLimit = await this.github.rest.rateLimit.get();
       const remaining = rateLimit.data.rate.remaining;
 
       if (remaining < config.API.RATE_LIMIT_THRESHOLD) {
         const resetTime = new Date(rateLimit.data.rate.reset * 1000);
-        const waitTime = resetTime.getTime() - Date.now();
+        let waitTime = resetTime.getTime() - Date.now();
+
+        // Add exponential backoff for repeated rate limit hits
+        if (attempt > 1) {
+          const backoffDelay = Math.min(30000, Math.pow(2, attempt - 1) * 1000);
+          waitTime = Math.max(waitTime, backoffDelay);
+          console.log(`⏳ Rate limit hit (attempt ${attempt}). Using exponential backoff: ${Math.ceil(waitTime / 1000)}s...`);
+        } else {
+          console.log(`⏳ Rate limit low (${remaining} remaining). Waiting ${Math.ceil(waitTime / 1000)}s...`);
+        }
 
         if (waitTime > 0) {
-          console.log(`⏳ Rate limit low (${remaining} remaining). Waiting ${Math.ceil(waitTime / 1000)}s...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
     } catch (error) {
       console.warn('⚠️ Could not check rate limit:', error.message);
+
+      // If rate limit check fails, apply conservative backoff
+      if (attempt > 1) {
+        const conservativeDelay = Math.min(10000, Math.pow(2, attempt - 1) * 1000);
+        console.log(`⏳ Applying conservative backoff: ${Math.ceil(conservativeDelay / 1000)}s...`);
+        await new Promise(resolve => setTimeout(resolve, conservativeDelay));
+      }
     }
   }
 
   /**
-   * Get changed files in the PR with pagination for large PRs
+   * Get changed files in the PR with pagination and size limits for large PRs
    */
   async getChangedFiles() {
     await this.checkRateLimit();
@@ -149,14 +164,49 @@ class VerificationEngine {
       per_page: config.GITHUB.PER_PAGE // Limit per page to manage memory usage
     });
 
-    return files.map(file => ({
-      filename: file.filename,
-      status: file.status,
-      additions: file.additions,
-      deletions: file.deletions,
-      patch: file.patch || '',
-      changes: file.changes
-    }));
+    // Filter and process files with size and count limits
+    const processedFiles = [];
+    let totalProcessed = 0;
+
+    for (const file of files) {
+      // Skip if we've reached the maximum file limit
+      if (totalProcessed >= config.GITHUB.MAX_TOTAL_FILES) {
+        console.log(`⚠️ Reached maximum file limit (${config.GITHUB.MAX_TOTAL_FILES}). Skipping remaining files.`);
+        break;
+      }
+
+      // Check file size and skip very large files
+      const fileSize = file.patch ? file.patch.length : 0;
+      if (fileSize > config.GITHUB.MAX_FILE_SIZE) {
+        console.log(`⚠️ Skipping large file: ${file.filename} (${Math.round(fileSize / 1024)}KB > ${Math.round(config.GITHUB.MAX_FILE_SIZE / 1024)}KB)`);
+        processedFiles.push({
+          filename: file.filename,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+          patch: `[File too large for analysis: ${Math.round(fileSize / 1024)}KB]`,
+          changes: file.changes,
+          skipped: true,
+          reason: 'File size exceeds limit'
+        });
+      } else {
+        processedFiles.push({
+          filename: file.filename,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+          patch: file.patch || '',
+          changes: file.changes,
+          skipped: false
+        });
+      }
+
+      totalProcessed++;
+    }
+
+    console.log(`📊 Processed ${processedFiles.length} files (${processedFiles.filter(f => !f.skipped).length} analyzed, ${processedFiles.filter(f => f.skipped).length} skipped)`);
+
+    return processedFiles;
   }
 
   /**
