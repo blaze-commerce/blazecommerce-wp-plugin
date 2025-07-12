@@ -251,7 +251,7 @@ jobs:
 
             const selectedPrompt = prompts[repoType] || prompts['general'];
 
-            // Add PR context
+            // Add PR context with enhanced requirements
             const prContext = `
 
             ## Pull Request Context
@@ -260,7 +260,22 @@ jobs:
             - Author: ${context.payload.pull_request?.user?.login || 'N/A'}
             - Type: ${repoType}
 
-            Please provide a comprehensive code review with specific, actionable recommendations.
+            ## CRITICAL REQUIREMENTS FOR REVIEW:
+            You MUST provide a comprehensive code review with:
+            1. **Specific, actionable recommendations** (not generic advice)
+            2. **Security analysis** for any security-related changes
+            3. **Code quality assessment** with concrete suggestions
+            4. **Performance considerations** where applicable
+            5. **Clear categorization** using 🔴 (Required), 🟡 (Important), or 🔵 (Suggestion)
+
+            ## IMPORTANT:
+            - Do NOT post generic error messages or "I'll analyze this" responses
+            - Do NOT post empty or placeholder comments
+            - Your response MUST contain substantive technical analysis
+            - If you cannot analyze the code, explain specifically why and what information you need
+            - Include specific line numbers and code examples in your feedback
+
+            Please provide a detailed, substantive code review now.
             `;
 
             const fullPrompt = selectedPrompt + prContext;
@@ -346,7 +361,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
 
-      - name: Determine Review Success
+      - name: Determine Review Success and Validate Content
         if: steps.skip-check.outputs.should_skip != 'true'
         id: review-status
         uses: actions/github-script@v7
@@ -356,22 +371,102 @@ jobs:
             const attempt2 = '${{ steps.claude-review-2.outcome }}';
             const attempt3 = '${{ steps.claude-review-3.outcome }}';
 
+            let technicalSuccess = false;
+            let successfulAttempt = '0';
+
             if (attempt1 === 'success') {
               console.log('✅ Claude AI review completed successfully on attempt 1');
-              core.setOutput('success', 'true');
-              core.setOutput('attempt', '1');
+              technicalSuccess = true;
+              successfulAttempt = '1';
             } else if (attempt2 === 'success') {
               console.log('✅ Claude AI review completed successfully on attempt 2');
-              core.setOutput('success', 'true');
-              core.setOutput('attempt', '2');
+              technicalSuccess = true;
+              successfulAttempt = '2';
             } else if (attempt3 === 'success') {
               console.log('✅ Claude AI review completed successfully on attempt 3');
-              core.setOutput('success', 'true');
-              core.setOutput('attempt', '3');
+              technicalSuccess = true;
+              successfulAttempt = '3';
             } else {
               console.log('❌ All Claude AI review attempts failed');
-              core.setOutput('success', 'false');
-              core.setOutput('error', 'All attempts failed after 3 retries');
+              technicalSuccess = false;
+            }
+
+            // Validate that Claude actually posted substantive review content
+            let hasSubstantiveReview = false;
+
+            if (technicalSuccess) {
+              try {
+                console.log('🔍 Validating Claude review content...');
+
+                // Get recent comments to check Claude's actual review content
+                const { data: comments } = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number
+                });
+
+                // Look for recent Claude comments (within last 10 minutes)
+                const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+                const recentClaudeComments = comments.filter(comment => {
+                  const commentDate = new Date(comment.created_at);
+                  return commentDate > tenMinutesAgo &&
+                         comment.user.login === 'claude[bot]';
+                });
+
+                console.log(`Found ${recentClaudeComments.length} recent Claude comments`);
+
+                // Check if any recent Claude comment contains substantive review content
+                for (const comment of recentClaudeComments) {
+                  const body = comment.body.toLowerCase();
+
+                  // Look for indicators of substantive review content
+                  const hasReviewIndicators =
+                    body.includes('🔴') || body.includes('🟡') || body.includes('🔵') || // Category indicators
+                    body.includes('required') || body.includes('important') || body.includes('suggestion') || // Review categories
+                    body.includes('recommendation') || body.includes('improve') || // Review language
+                    body.includes('security') || body.includes('performance') || // Technical topics
+                    (body.includes('review') && body.length > 200); // Substantial review content
+
+                  const isErrorMessage =
+                    body.includes('claude encountered an error') ||
+                    body.includes('i\'ll analyze this and get back to you') ||
+                    body.includes('error occurred') ||
+                    body.length < 100; // Very short messages are likely errors
+
+                  if (hasReviewIndicators && !isErrorMessage) {
+                    hasSubstantiveReview = true;
+                    console.log(`✅ Found substantive review content in comment: ${comment.id}`);
+                    break;
+                  } else {
+                    console.log(`❌ Comment ${comment.id} appears to be error/placeholder (${body.length} chars)`);
+                  }
+                }
+
+                if (!hasSubstantiveReview) {
+                  console.log('❌ No substantive review content found in recent Claude comments');
+                }
+
+              } catch (error) {
+                console.log(`⚠️ Error validating review content: ${error.message}`);
+                hasSubstantiveReview = false;
+              }
+            }
+
+            const actualSuccess = technicalSuccess && hasSubstantiveReview;
+
+            console.log(`Final review status: technical=${technicalSuccess}, substantive=${hasSubstantiveReview}, actual=${actualSuccess}`);
+
+            core.setOutput('success', actualSuccess.toString());
+            core.setOutput('technical_success', technicalSuccess.toString());
+            core.setOutput('has_substantive_review', hasSubstantiveReview.toString());
+            core.setOutput('attempt', successfulAttempt);
+
+            if (!actualSuccess) {
+              if (!technicalSuccess) {
+                core.setOutput('error', 'All attempts failed after 3 retries');
+              } else {
+                core.setOutput('error', 'Technical success but no substantive review content found');
+              }
             }
 
       - name: Post BlazeCommerce Summary
@@ -417,27 +512,62 @@ jobs:
           script: |
             console.log('🚫 Posting single failure comment (duplicate prevention active)...');
 
-            const errorComment = `## ⚠️ BlazeCommerce Claude AI Review Failed
+            const technicalSuccess = '${{ steps.review-status.outputs.technical_success }}' === 'true';
+            const hasSubstantiveReview = '${{ steps.review-status.outputs.has_substantive_review }}' === 'true';
+            const errorType = '${{ steps.review-status.outputs.error }}';
 
-            The automated code review failed after 3 attempts using the official Anthropic action.
+            let errorComment;
 
-            ### 🔍 Possible Causes
-            - Temporary API service overload (Error 529)
-            - Network connectivity issues
-            - Large PR size exceeding processing limits
+            if (technicalSuccess && !hasSubstantiveReview) {
+              // Claude action succeeded but didn't provide substantive review
+              errorComment = `## ⚠️ BlazeCommerce Claude AI Review - Content Validation Failed
 
-            ### 🛠️ Next Steps
-            1. **Wait and Retry**: Push a new commit to trigger another review attempt
-            2. **Manual Review**: Request manual code review from team members
-            3. **Service Status**: Check [Anthropic Status](https://status.anthropic.com/) for service updates
+              The Claude AI action executed successfully but did not provide substantive review content.
 
-            ### 📊 Attempt Details
-            - **All 3 attempts failed** using official Anthropic GitHub Action (v0.0.32)
-            - **Authentication**: Using official action (most reliable method)
-            - **Timestamp**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
-            - **Duplicate Prevention**: Active (prevents multiple error comments)
+              ### 🔍 Issue Detected
+              - **Technical Status**: ✅ Action executed successfully
+              - **Content Status**: ❌ No substantive review content found
+              - **Likely Cause**: Claude posted error messages instead of actual code review
 
-            *BlazeCommerce Claude AI Review Bot v3.2 - Version Fix Applied*`;
+              ### 🛠️ Next Steps
+              1. **Push New Commit**: Trigger a fresh review attempt
+              2. **Check PR Size**: Large PRs may cause processing issues
+              3. **Manual Review**: Request manual code review from team members
+              4. **Service Status**: Check [Anthropic Status](https://status.anthropic.com/) for service updates
+
+              ### 📊 Validation Details
+              - **Action Version**: v0.0.32 (Latest stable)
+              - **Content Check**: Failed (no review indicators found)
+              - **Error Prevention**: Active (prevents duplicate comments)
+              - **Timestamp**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
+
+              *BlazeCommerce Claude AI Review Bot v3.3 - Enhanced Content Validation*`;
+            } else {
+              // Traditional failure (all attempts failed)
+              errorComment = `## ⚠️ BlazeCommerce Claude AI Review Failed
+
+              The automated code review failed after 3 attempts using the official Anthropic action.
+
+              ### 🔍 Possible Causes
+              - Temporary API service overload (Error 529)
+              - Network connectivity issues
+              - Large PR size exceeding processing limits
+              - Authentication or configuration issues
+
+              ### 🛠️ Next Steps
+              1. **Wait and Retry**: Push a new commit to trigger another review attempt
+              2. **Manual Review**: Request manual code review from team members
+              3. **Service Status**: Check [Anthropic Status](https://status.anthropic.com/) for service updates
+
+              ### 📊 Attempt Details
+              - **All 3 attempts failed** using official Anthropic GitHub Action (v0.0.32)
+              - **Authentication**: Using official action (most reliable method)
+              - **Error Type**: ${errorType}
+              - **Timestamp**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
+              - **Duplicate Prevention**: Active (prevents multiple error comments)
+
+              *BlazeCommerce Claude AI Review Bot v3.3 - Enhanced Content Validation*`;
+            }
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -477,9 +607,14 @@ jobs:
 
             console.log('🔍 Checking auto-approval criteria...');
 
-            // Step 1: Check if Claude review succeeded
+            // Step 1: Check if Claude review succeeded with substantive content
             const claudeReviewSuccess = '${{ needs.claude-review-official.outputs.success }}' === 'true';
+            const claudeTechnicalSuccess = '${{ needs.claude-review-official.outputs.technical_success }}' === 'true';
+            const claudeHasSubstantiveReview = '${{ needs.claude-review-official.outputs.has_substantive_review }}' === 'true';
+
             console.log(`Claude Review Success: ${claudeReviewSuccess}`);
+            console.log(`Claude Technical Success: ${claudeTechnicalSuccess}`);
+            console.log(`Claude Has Substantive Review: ${claudeHasSubstantiveReview}`);
 
             // Step 2: Check GitHub Actions status
             try {
@@ -613,27 +748,48 @@ jobs:
               return { action: 'skip_approval', reason: 'Important items pending', pendingItems: importantRecommendationsStatus.pendingItems };
             }
 
-            // Auto-approve if Claude review succeeded OR tracking shows completion OR all recommendations addressed
+            // Auto-approve if Claude review succeeded with substantive content OR tracking shows completion OR all recommendations addressed
             if (claudeReviewSuccess || trackingStatus === 'complete' ||
                 (requiredRecommendationsStatus.allAddressed && importantRecommendationsStatus.allAddressed)) {
+
+              // Additional validation for Claude review success
+              if (claudeReviewSuccess && claudeTechnicalSuccess && !claudeHasSubstantiveReview) {
+                console.log('❌ Claude technical success but no substantive review content - auto-approval blocked');
+                core.setOutput('action_type', 'skip_approval');
+                core.setOutput('reason', 'Claude succeeded technically but provided no substantive review content');
+                core.setOutput('claude_technical_success', claudeTechnicalSuccess.toString());
+                core.setOutput('claude_has_substantive_review', claudeHasSubstantiveReview.toString());
+                return { action: 'skip_approval', reason: 'No substantive Claude review content' };
+              }
+
               console.log('🎉 Auto-approval criteria met!');
               core.setOutput('action_type', 'approve');
               core.setOutput('claude_success', claudeReviewSuccess.toString());
+              core.setOutput('claude_technical_success', claudeTechnicalSuccess.toString());
+              core.setOutput('claude_has_substantive_review', claudeHasSubstantiveReview.toString());
               core.setOutput('tracking_complete', (trackingStatus === 'complete').toString());
               core.setOutput('all_required_addressed', requiredRecommendationsStatus.allAddressed.toString());
               core.setOutput('all_important_addressed', importantRecommendationsStatus.allAddressed.toString());
 
               let approvalBasis = [];
-              if (claudeReviewSuccess) approvalBasis.push('claude_success');
+              if (claudeReviewSuccess && claudeHasSubstantiveReview) approvalBasis.push('claude_substantive_review');
               if (trackingStatus === 'complete') approvalBasis.push('tracking_complete');
               if (requiredRecommendationsStatus.allAddressed && importantRecommendationsStatus.allAddressed) approvalBasis.push('recommendations_addressed');
               core.setOutput('approval_basis', approvalBasis.join(','));
 
-              return { action: 'approve', reason: 'All criteria met' };
+              return { action: 'approve', reason: 'All criteria met with substantive review' };
             } else {
               console.log('❌ Auto-approval criteria not met - general failure');
               core.setOutput('action_type', 'skip_approval');
-              core.setOutput('reason', 'Claude review failed and tracking incomplete');
+              core.setOutput('claude_technical_success', claudeTechnicalSuccess.toString());
+              core.setOutput('claude_has_substantive_review', claudeHasSubstantiveReview.toString());
+
+              if (claudeTechnicalSuccess && !claudeHasSubstantiveReview) {
+                core.setOutput('reason', 'Claude succeeded technically but no substantive review content found');
+              } else {
+                core.setOutput('reason', 'Claude review failed and tracking incomplete');
+              }
+
               return { action: 'skip_approval', reason: 'General criteria not met' };
             }
 
@@ -959,7 +1115,7 @@ jobs:
             - **Failed Checks**: ${failedChecksCount > 0 ? `❌ ${failedChecksCount} failed` : '✅ All passed'}
             - **REQUIRED Items**: ✅ All addressed (or none found)
             - **IMPORTANT Items**: ${pendingImportantCount > 0 ? `⏳ ${pendingImportantCount} pending` : '✅ All addressed'}
-            - **Claude Review**: ${'${{ needs.claude-review-official.outputs.success }}' === 'true' ? '✅ Completed' : '❌ Failed'}
+            - **Claude Review**: ${'${{ needs.claude-review-official.outputs.success }}' === 'true' ? '✅ Completed with substantive content' : ('${{ needs.claude-review-official.outputs.technical_success }}' === 'true' ? '⚠️ Technical success but no substantive content' : '❌ Failed')}
 
             ---
             *BlazeCommerce Claude AI Review Bot v3.0 - Enhanced Auto-Approval with Detailed Status Tracking*`;
