@@ -41,7 +41,7 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	/**
-	 * Helper method to remove "cart." in url 
+	 * Helper method to remove "cart." in url
 	 * @param mixed $url
 	 * @return string
 	 */
@@ -50,9 +50,9 @@ class GeneralSettings extends BaseSettings {
 	}
 
 	/**
-	 * Removes all "cart." in all links when the user is not on admin pages. 
+	 * Removes all "cart." in all links when the user is not on admin pages.
 	 * This function dynamically changes the wordpress site address url in general settings via option_home filter
-	 * 
+	 *
 	 * @param mixed $value
 	 * @param mixed $option
 	 * @return mixed
@@ -70,7 +70,7 @@ class GeneralSettings extends BaseSettings {
 	/**
 	 * Redirect non admin user to non cart.* url
 	 * Hooked into template_redirect, priority -1
-	 * 
+	 *
 	 * @since   1.5.0
 	 * @return  void
 	 */
@@ -95,7 +95,7 @@ class GeneralSettings extends BaseSettings {
 		}
 
 
-		// Redirect to home page if the user is not logged in and the page is cart 
+		// Redirect to home page if the user is not logged in and the page is cart
 		$restricted_pages = apply_filters( 'blaze_wooless_restricted_pages', is_cart() );
 		if ( $restricted_pages ) {
 			wp_redirect( $this->remove_cart_from_url( home_url() ) );
@@ -231,6 +231,33 @@ class GeneralSettings extends BaseSettings {
 						'type' => 'text',
 						'args' => array(
 							'description' => 'Live site domain. (e.g. website.com.au)'
+						),
+					),
+					array(
+						'id' => 'vercel_access_token',
+						'label' => 'Vercel Access Token',
+						'type' => 'password',
+						'args' => array(
+							'description' => 'Vercel access token for API authentication. Generate from your Vercel dashboard.',
+							'placeholder' => 'vercel_token_...'
+						),
+					),
+					array(
+						'id' => 'vercel_team_id',
+						'label' => 'Vercel Team ID',
+						'type' => 'text',
+						'args' => array(
+							'description' => 'Vercel team ID for team-scoped operations.',
+							'placeholder' => 'team_abc123...'
+						),
+					),
+					array(
+						'id' => 'vercel_project_id',
+						'label' => 'Vercel Project ID',
+						'type' => 'text',
+						'args' => array(
+							'description' => 'Vercel project ID for deployment.',
+							'placeholder' => 'prj_abc123...'
 						),
 					),
 				)

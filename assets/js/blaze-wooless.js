@@ -649,6 +649,20 @@
             $(this.syncResultsContainer).html('');
         },
 
+        showDeploymentFailure: function (message) {
+            // Remove any existing failure message
+            $('#deployment-failure-message').remove();
+
+            // Create and show the failure message below the redeploy button with contact info
+            var fullMessage = message + '<br><br><strong>Need assistance?</strong> Contact us at <a href="mailto:hello@blazecommerce.io" style="color: #0073aa;">hello@blazecommerce.io</a>';
+            var failureMessage = $('<div id="deployment-failure-message" style="color: red; font-weight: bold; margin-top: 10px; padding: 10px; background-color: #ffeaea; border: 1px solid #ff6b6b; border-radius: 4px;">' + fullMessage + '</div>');
+            $(this.redeployButton).after(failureMessage);
+        },
+
+        hideDeploymentFailure: function () {
+            $('#deployment-failure-message').remove();
+        },
+
         registerEvents: function () {
             $(document.body).on('click', this.syncProductLink, this.importProducts.bind(this));
             $(document.body).on('click', this.syncTaxonomiesLink, this.importTaxonomies.bind(this));
@@ -657,6 +671,22 @@
             $(document.body).on('click', this.syncSiteInfoLink, this.importSiteInfo.bind(this));
             $(document.body).on('click', this.syncAllLink, this.importAll.bind(this));
             $(document.body).on('click', this.redeployButton, this.redeployStoreFront.bind(this));
+
+            // Add page leave warning when sync operations are in progress
+            this.setupPageLeaveWarning();
+        },
+
+        setupPageLeaveWarning: function () {
+            var _this = this;
+
+            // Add beforeunload event listener to warn users about leaving during sync
+            $(window).on('beforeunload', function (e) {
+                if (_this.syncInProgress) {
+                    var message = 'A sync operation is currently in progress. Leaving this page may interrupt the process. Are you sure you want to leave?';
+                    e.returnValue = message; // For older browsers
+                    return message; // For modern browsers
+                }
+            });
         },
 
         checkDeployment: function () {
@@ -666,18 +696,55 @@
             var data = {
                 'action': 'check_deployment',
             };
-            $.post(ajaxurl, data).done(function (response) {
-                if (response.state === 'BUILDING') {
-                    _this.renderLoader('Store front is deploying..');
-                    setTimeout(function () {
-                        _this.checkDeployment();
-                    }, 120000);
-                } else if (response.state === 'READY') {
+            $.post(ajaxurl, data)
+                .done(function (response) {
+                    console.log('Check deployment response:', response);
+                    if (response.error) {
+                        _this.renderLoader('Error checking deployment: ' + response.message);
+                        _this.showDeploymentFailure('Deployment check failed: ' + response.message);
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.syncInProgress = false;
+                    } else if (response.state === 'BUILDING') {
+                        _this.renderLoader('Store front is deploying..');
+                        setTimeout(function () {
+                            _this.checkDeployment();
+                        }, 120000);
+                    } else if (response.state === 'READY') {
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.hideLoader();
+                        _this.syncInProgress = false;
+                        _this.hideDeploymentFailure(); // Hide any previous failure messages
+                        $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
+                    } else if (response.state === 'ERROR' || response.state === 'FAILED') {
+                        _this.renderLoader('Deployment failed');
+                        _this.showDeploymentFailure('Deployment failed with status: ' + response.state);
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.syncInProgress = false;
+                    } else {
+                        _this.renderLoader('Deployment status: ' + (response.state || 'Unknown'));
+                        $(_this.syncResultsContainer).append('<div>Deployment status: ' + (response.state || 'Unknown') + '</div>');
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.syncInProgress = false;
+                    }
+                })
+                .fail(function (xhr, status, error) {
+                    console.error('Check deployment request failed:', xhr, status, error);
+                    var errorMessage = 'Failed to check deployment status';
+                    
+                    // Provide more specific error messages based on status
+                    if (xhr.status === 0) {
+                        errorMessage = 'Network connection failed. Please check your internet connection.';
+                    } else if (xhr.status >= 500) {
+                        errorMessage = 'Server error occurred. Please try again later.';
+                    } else if (xhr.status === 401 || xhr.status === 403) {
+                        errorMessage = 'Authentication failed. Please check your Vercel credentials.';
+                    }
+                    
+                    _this.renderLoader(errorMessage);
+                    _this.showDeploymentFailure(errorMessage + ' Please try again.');
                     $(_this.redeployButton).prop("disabled", false);
-                    _this.hideLoader();
-                    $(_this.syncResultsContainer).append('<div id="wooless-loader-message">Redeploy complete.</div>')
-                }
-            });
+                    _this.syncInProgress = false;
+                });
         },
         redeployStoreFront: function (e) {
             var _this = this;
@@ -688,10 +755,40 @@
             var data = {
                 'action': 'redeploy_store_front',
             };
-            $.post(ajaxurl, data).done(function (response) {
-                _this.renderLoader(response.message);
-                _this.checkDeployment();
-            });
+            $.post(ajaxurl, data)
+                .done(function (response) {
+                    console.log('Redeploy response:', response);
+                    if (response.error) {
+                        _this.renderLoader('Error: ' + response.message);
+                        _this.showDeploymentFailure('Deployment failed: ' + response.message);
+                        $(_this.redeployButton).prop("disabled", false);
+                        _this.syncInProgress = false;
+                    } else {
+                        _this.hideDeploymentFailure(); // Hide any previous failure messages
+                        _this.renderLoader(response.message || 'Deployment triggered successfully');
+                        _this.checkDeployment();
+                    }
+                })
+                .fail(function (xhr, status, error) {
+                    console.error('Redeploy request failed:', xhr, status, error);
+                    var errorMessage = 'Connection failed';
+                    
+                    // Provide more specific error messages based on status
+                    if (xhr.status === 0) {
+                        errorMessage = 'Network connection failed. Please check your internet connection.';
+                    } else if (xhr.status >= 500) {
+                        errorMessage = 'Server error occurred. Please try again later.';
+                    } else if (xhr.status === 401 || xhr.status === 403) {
+                        errorMessage = 'Authentication failed. Please check your Vercel credentials.';
+                    } else if (xhr.status === 400) {
+                        errorMessage = 'Invalid request. Please check your configuration.';
+                    }
+                    
+                    _this.renderLoader(errorMessage);
+                    _this.showDeploymentFailure(errorMessage + ' Please try again.');
+                    $(_this.redeployButton).prop("disabled", false);
+                    _this.syncInProgress = false;
+                });
         },
 
         managePaginatedRequests: function ({
