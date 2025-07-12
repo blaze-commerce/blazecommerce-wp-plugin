@@ -137,19 +137,39 @@ class ErrorHandler extends EventEmitter {
    * Determine if error should trigger a retry
    */
   shouldRetry(error, errorType) {
+    // Enhanced non-retryable error detection
+
     // Don't retry validation errors or authentication errors
     if (errorType === this.errorTypes.VALIDATION_ERROR) {
       return false;
     }
-    
+
+    // Non-retryable billing/payment errors
+    if (error.message && (
+        error.message.includes('402') ||
+        error.message.includes('billing') ||
+        error.message.includes('payment') ||
+        error.message.includes('quota exceeded') ||
+        error.message.includes('subscription')
+    )) {
+      return false;
+    }
+
+    // Authentication/authorization errors
     if (error.message.includes('401') || error.message.includes('403')) {
-      return false; // Authentication/authorization errors
+      return false;
     }
-    
+
+    // Not found errors
     if (error.message.includes('404')) {
-      return false; // Not found errors
+      return false;
     }
-    
+
+    // Bad request errors (client-side issues)
+    if (error.message.includes('400') || error.message.includes('422')) {
+      return false;
+    }
+
     // Retry for temporary issues
     return [
       this.errorTypes.ANTHROPIC_API_ERROR,
@@ -280,9 +300,9 @@ class ErrorHandler extends EventEmitter {
   }
 
   /**
-   * Log error to file for debugging
+   * Log error to file for debugging (async)
    */
-  logError(operationName, error, errorType) {
+  async logError(operationName, error, errorType) {
     try {
       const logEntry = {
         timestamp: new Date().toISOString(),
@@ -292,11 +312,11 @@ class ErrorHandler extends EventEmitter {
         type: errorType,
         errorCount: this.errorCounts.get(operationName) || 0
       };
-      
+
       const logFile = '.github/claude-bot-errors.log';
       const logLine = JSON.stringify(logEntry) + '\n';
-      
-      fs.appendFileSync(logFile, logLine);
+
+      await fs.promises.appendFile(logFile, logLine);
     } catch (logError) {
       console.error('Failed to log error:', logError.message);
     }
