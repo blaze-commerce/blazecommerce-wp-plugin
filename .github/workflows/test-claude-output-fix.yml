@@ -14,7 +14,7 @@ on:
     paths:
       - '.github/scripts/claude-review-enhancer.js'
       - '.github/scripts/test-github-actions-output.js'
-      - '.github/workflows/claude-pr-review.yml'
+      - '.github/workflows/claude-code-review.yml'
 
 jobs:
   test-output-formatting:

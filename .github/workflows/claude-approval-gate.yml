@@ -12,10 +12,10 @@ on:
   issue_comment:
     types: [created]
   workflow_run:
-    workflows: ["Priority 1: Claude AI Code Review Trigger"]
+    workflows: ["Priority 1: Claude AI Code Review"]
     types: [completed]
 
-# Priority 2: Wait for Priority 1 (Claude Review Trigger) to complete before running
+# Priority 2: Wait for Priority 1 (Claude AI Code Review) to complete before running
 concurrency:
   group: priority-2-claude-approval-pr-${{ github.event.pull_request.number || github.event.number }}
   cancel-in-progress: false  # Don't cancel to ensure approval gate completion
@@ -128,7 +128,7 @@ jobs:
 
                 // Find the most recent Claude review run for this PR
                 const claudeReviewRun = workflowRuns.workflow_runs.find(run =>
-                  run.name === 'Priority 1: Claude AI PR Review' &&
+                  run.name === 'Priority 1: Claude AI Code Review' &&
                   (run.head_branch?.includes(`pr-${prNumber}`) ||
                    run.display_title?.includes(`#${prNumber}`) ||
                    run.pull_requests?.some(pr => pr.number == prNumber))
@@ -271,19 +271,52 @@ jobs:
 
                 console.log(`Found ${claudeAppComments.length} Claude App comment(s)`);
 
-                // Step 2: Analyze Claude's feedback for REQUIRED issues
+                // Step 2: Analyze Claude's feedback using standardized format from CLAUDE.md
                 let hasRequiredIssues = false;
                 let claudeReviewFound = false;
+                let claudeApprovalStatus = 'unknown';
 
                 for (const comment of claudeAppComments) {
                   claudeReviewFound = true;
                   console.log(`Analyzing Claude comment from ${comment.user.login}`);
 
-                  // Check for CRITICAL: REQUIRED or similar patterns
-                  if (comment.body.match(/CRITICAL:\s*REQUIRED|REQUIRED.*issues?|must\s+be\s+fixed|critical\s+bugs?/i)) {
-                    hasRequiredIssues = true;
-                    console.log('Found REQUIRED issues in Claude review');
-                    break;
+                  // Check for standardized Final Verdict section
+                  const finalVerdictMatch = comment.body.match(/### 🎯 \*\*Final Verdict\*\*[\s\S]*?\*\*Status\*\*:\s*([^*\n]+)/i);
+                  if (finalVerdictMatch) {
+                    const status = finalVerdictMatch[1].trim();
+                    console.log(`Found Final Verdict status: ${status}`);
+
+                    if (status.includes('✅ APPROVED')) {
+                      claudeApprovalStatus = 'approved';
+                      console.log('Claude approved the PR');
+                    } else if (status.includes('❌ BLOCKED')) {
+                      claudeApprovalStatus = 'blocked';
+                      hasRequiredIssues = true;
+                      console.log('Claude blocked the PR');
+                    } else if (status.includes('🟡 CONDITIONAL APPROVAL')) {
+                      claudeApprovalStatus = 'conditional';
+                      console.log('Claude conditionally approved the PR');
+                    }
+                  }
+
+                  // Also check for Critical Issues section content
+                  const criticalIssuesMatch = comment.body.match(/🔴 \*\*Critical Issues\*\*([\s\S]*?)(?=🟢|🟡|⚡|🔒|###|$)/i);
+                  if (criticalIssuesMatch) {
+                    const criticalContent = criticalIssuesMatch[1].trim();
+                    // Check if there's actual content (not just empty lines or dashes)
+                    if (criticalContent && criticalContent.length > 10 && !criticalContent.match(/^[\s\-_]*$/)) {
+                      hasRequiredIssues = true;
+                      console.log('Found content in Critical Issues section');
+                    }
+                  }
+
+                  // Fallback: Check for legacy patterns if standardized format not found
+                  if (claudeApprovalStatus === 'unknown') {
+                    if (comment.body.match(/CRITICAL:\s*REQUIRED|REQUIRED.*issues?|must\s+be\s+fixed|critical\s+bugs?/i)) {
+                      hasRequiredIssues = true;
+                      claudeApprovalStatus = 'blocked';
+                      console.log('Found REQUIRED issues using legacy pattern matching');
+                    }
                   }
                 }
 
@@ -299,25 +332,37 @@ jobs:
                   review.user.login === 'blazecommerce-claude-ai' && review.state === 'APPROVED'
                 );
 
-                // Step 4: Determine approval status based on new architecture
+                // Step 4: Determine approval status based on standardized Claude review format
                 if (blazeClaudeApproval) {
                   approved = true;
                   statusState = 'success';
                   statusDescription = 'Approved by @blazecommerce-claude-ai after Claude review';
                   reason = '@blazecommerce-claude-ai approval found';
                   console.log('SUCCESS: Found @blazecommerce-claude-ai approval');
+                } else if (claudeReviewFound && claudeApprovalStatus === 'approved') {
+                  approved = false;
+                  statusState = 'pending';
+                  statusDescription = 'Claude approved - waiting for @blazecommerce-claude-ai to approve';
+                  reason = 'Claude approved with ✅ APPROVED status - awaiting @blazecommerce-claude-ai approval';
+                  console.log('INFO: Claude approved - awaiting @blazecommerce-claude-ai approval');
+                } else if (claudeReviewFound && claudeApprovalStatus === 'conditional') {
+                  approved = false;
+                  statusState = 'pending';
+                  statusDescription = 'Claude conditionally approved - waiting for @blazecommerce-claude-ai to approve';
+                  reason = 'Claude conditionally approved with 🟡 CONDITIONAL APPROVAL - awaiting @blazecommerce-claude-ai approval';
+                  console.log('INFO: Claude conditionally approved - awaiting @blazecommerce-claude-ai approval');
+                } else if (claudeReviewFound && (claudeApprovalStatus === 'blocked' || hasRequiredIssues)) {
+                  approved = false;
+                  statusState = 'failure';
+                  statusDescription = 'Blocked by critical issues from Claude review';
+                  reason = 'Claude found critical issues that must be addressed (❌ BLOCKED status)';
+                  console.log('BLOCKED: Claude found critical issues');
                 } else if (claudeReviewFound && !hasRequiredIssues) {
                   approved = false;
                   statusState = 'pending';
-                  statusDescription = 'Waiting for @blazecommerce-claude-ai to approve (no REQUIRED issues found)';
-                  reason = 'Claude reviewed with no REQUIRED issues - awaiting @blazecommerce-claude-ai approval';
-                  console.log('INFO: Claude review complete with no REQUIRED issues - awaiting @blazecommerce-claude-ai approval');
-                } else if (claudeReviewFound && hasRequiredIssues) {
-                  approved = false;
-                  statusState = 'failure';
-                  statusDescription = 'Blocked by REQUIRED issues from Claude review';
-                  reason = 'Claude found REQUIRED issues that must be addressed';
-                  console.log('BLOCKED: Claude found REQUIRED issues');
+                  statusDescription = 'Waiting for @blazecommerce-claude-ai to approve (no critical issues found)';
+                  reason = 'Claude reviewed with no critical issues - awaiting @blazecommerce-claude-ai approval';
+                  console.log('INFO: Claude review complete with no critical issues - awaiting @blazecommerce-claude-ai approval');
                 } else {
                   approved = false;
                   statusState = 'pending';
@@ -504,18 +549,51 @@ jobs:
 
               console.log(`Found ${claudeAppComments.length} Claude App comment(s)`);
 
-              // Analyze Claude's feedback for REQUIRED issues
+              // Analyze Claude's feedback using standardized format from CLAUDE.md
               let hasRequiredIssues = false;
               let claudeReviewContent = '';
+              let claudeApprovalStatus = 'unknown';
 
               for (const comment of claudeAppComments) {
                 claudeReviewContent += comment.body + '\n\n';
 
-                // Check for CRITICAL: REQUIRED or similar patterns
-                if (comment.body.match(/CRITICAL:\s*REQUIRED|REQUIRED.*issues?|must\s+be\s+fixed|critical\s+bugs?/i)) {
-                  hasRequiredIssues = true;
-                  console.log('Found REQUIRED issues in Claude review');
-                  break;
+                // Check for standardized Final Verdict section
+                const finalVerdictMatch = comment.body.match(/### 🎯 \*\*Final Verdict\*\*[\s\S]*?\*\*Status\*\*:\s*([^*\n]+)/i);
+                if (finalVerdictMatch) {
+                  const status = finalVerdictMatch[1].trim();
+                  console.log(`Found Final Verdict status: ${status}`);
+
+                  if (status.includes('✅ APPROVED')) {
+                    claudeApprovalStatus = 'approved';
+                    console.log('Claude approved the PR');
+                  } else if (status.includes('❌ BLOCKED')) {
+                    claudeApprovalStatus = 'blocked';
+                    hasRequiredIssues = true;
+                    console.log('Claude blocked the PR');
+                  } else if (status.includes('🟡 CONDITIONAL APPROVAL')) {
+                    claudeApprovalStatus = 'conditional';
+                    console.log('Claude conditionally approved the PR');
+                  }
+                }
+
+                // Also check for Critical Issues section content
+                const criticalIssuesMatch = comment.body.match(/🔴 \*\*Critical Issues\*\*([\s\S]*?)(?=🟢|🟡|⚡|🔒|###|$)/i);
+                if (criticalIssuesMatch) {
+                  const criticalContent = criticalIssuesMatch[1].trim();
+                  // Check if there's actual content (not just empty lines or dashes)
+                  if (criticalContent && criticalContent.length > 10 && !criticalContent.match(/^[\s\-_]*$/)) {
+                    hasRequiredIssues = true;
+                    console.log('Found content in Critical Issues section');
+                  }
+                }
+
+                // Fallback: Check for legacy patterns if standardized format not found
+                if (claudeApprovalStatus === 'unknown') {
+                  if (comment.body.match(/CRITICAL:\s*REQUIRED|REQUIRED.*issues?|must\s+be\s+fixed|critical\s+bugs?/i)) {
+                    hasRequiredIssues = true;
+                    claudeApprovalStatus = 'blocked';
+                    console.log('Found REQUIRED issues using legacy pattern matching');
+                  }
                 }
               }
 
@@ -538,16 +616,30 @@ jobs:
                 return;
               }
 
-              // Decision logic
-              if (!hasRequiredIssues) {
-                console.log('SUCCESS: No REQUIRED issues found - eligible for auto-approval');
+              // Decision logic based on standardized Claude review format
+              if (claudeApprovalStatus === 'approved' && !hasRequiredIssues) {
+                console.log('SUCCESS: Claude approved with ✅ APPROVED status - eligible for auto-approval');
                 core.setOutput('should_approve', 'true');
-                core.setOutput('reason', 'No REQUIRED issues found in Claude review');
+                core.setOutput('reason', 'Claude approved with ✅ APPROVED status and no critical issues');
+                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
+              } else if (claudeApprovalStatus === 'conditional' && !hasRequiredIssues) {
+                console.log('SUCCESS: Claude conditionally approved with 🟡 CONDITIONAL APPROVAL - eligible for auto-approval');
+                core.setOutput('should_approve', 'true');
+                core.setOutput('reason', 'Claude conditionally approved with 🟡 CONDITIONAL APPROVAL and no critical issues');
+                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
+              } else if (claudeApprovalStatus === 'blocked' || hasRequiredIssues) {
+                console.log('BLOCKED: Claude blocked with ❌ BLOCKED status or critical issues found - cannot auto-approve');
+                core.setOutput('should_approve', 'false');
+                core.setOutput('reason', 'Claude blocked with ❌ BLOCKED status or critical issues found');
+              } else if (!hasRequiredIssues) {
+                console.log('SUCCESS: No critical issues found - eligible for auto-approval');
+                core.setOutput('should_approve', 'true');
+                core.setOutput('reason', 'No critical issues found in Claude review');
                 core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
               } else {
-                console.log('BLOCKED: REQUIRED issues found - cannot auto-approve');
+                console.log('BLOCKED: Critical issues found - cannot auto-approve');
                 core.setOutput('should_approve', 'false');
-                core.setOutput('reason', 'REQUIRED issues found in Claude review');
+                core.setOutput('reason', 'Critical issues found in Claude review');
               }
 
             } catch (error) {
