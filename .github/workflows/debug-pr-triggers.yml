@@ -10,6 +10,7 @@ jobs:
   debug-trigger:
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    continue-on-error: true
     
     permissions:
       contents: read
