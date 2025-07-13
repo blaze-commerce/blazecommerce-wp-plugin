@@ -1,0 +1,190 @@
+name: 🚀 Claude Direct Auto-Approval
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-direct-approval:
+    name: Direct Claude Approval Action
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+
+    steps:
+      - name: Get PR Number
+        id: get-pr
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR_NUMBER=${{ github.event.number }}
+          elif [ "${{ github.event_name }}" = "issue_comment" ]; then
+            PR_NUMBER=${{ github.event.issue.number }}
+          else
+            echo "❌ Unsupported event type: ${{ github.event_name }}"
+            exit 1
+          fi
+          
+          echo "🎯 PR Number: $PR_NUMBER"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Direct Claude Approval Check and Action
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ steps.get-pr.outputs.pr_number }};
+            
+            console.log('🚀 DIRECT CLAUDE APPROVAL: Starting for PR #' + prNumber);
+            
+            try {
+              // Step 1: Get all comments for the PR
+              console.log('📥 Fetching all comments for PR #' + prNumber);
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                per_page: 100
+              });
+              
+              console.log(`📊 Total comments found: ${comments.data.length}`);
+              
+              // Step 2: Find Claude's latest comment with "Status: APPROVED"
+              let claudeApprovalFound = false;
+              let latestClaudeComment = null;
+              
+              for (const comment of comments.data.reverse()) { // Start from latest
+                console.log(`🔍 Checking comment by ${comment.user.login} (${comment.created_at})`);
+                
+                // Check if comment contains "Status: APPROVED"
+                if (comment.body.includes('Status: APPROVED') || 
+                    comment.body.includes('Status**: APPROVED') ||
+                    comment.body.includes('**Status**: APPROVED')) {
+                  
+                  console.log('✅ FOUND APPROVED STATUS in comment!');
+                  console.log(`📄 Comment preview: ${comment.body.substring(0, 200)}...`);
+                  
+                  claudeApprovalFound = true;
+                  latestClaudeComment = comment;
+                  break;
+                }
+              }
+              
+              if (!claudeApprovalFound) {
+                console.log('❌ No Claude approval found - Status: APPROVED not detected in any comment');
+                return;
+              }
+              
+              console.log('🎉 Claude approval detected! Proceeding with auto-approval...');
+              
+              // Step 3: Check if @blazecommerce-claude-ai has already approved
+              console.log('🔍 Checking for existing @blazecommerce-claude-ai approval...');
+              const reviews = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              
+              const existingApproval = reviews.data.find(review => 
+                review.user.login === 'blazecommerce-claude-ai' && 
+                review.state === 'APPROVED'
+              );
+              
+              if (existingApproval) {
+                console.log('✅ @blazecommerce-claude-ai has already approved this PR');
+                console.log(`📅 Approval date: ${existingApproval.submitted_at}`);
+                return;
+              }
+              
+              // Step 4: Create the approval review
+              console.log('🚀 EXECUTING APPROVAL API CALL...');
+              console.log(`📡 API Call: POST /repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNumber}/reviews`);
+              console.log('📋 Request body: { event: "APPROVE", body: "Auto-approved based on Claude AI review showing Status: APPROVED" }');
+              
+              const approvalResponse = await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                event: 'APPROVE',
+                body: `🤖 **Auto-approved by Claude AI Approval Gate**
+
+This PR has been automatically approved based on Claude AI's review showing **Status: APPROVED**.
+
+**Claude Review Reference:**
+- Comment ID: ${latestClaudeComment.id}
+- Comment Date: ${latestClaudeComment.created_at}
+- Comment Author: ${latestClaudeComment.user.login}
+
+**Approval Details:**
+- Auto-approval triggered by: ${context.actor}
+- Workflow run: ${context.runId}
+- Commit SHA: ${context.sha}
+
+✅ This PR is ready for merge (subject to other branch protection rules).`
+              });
+              
+              console.log('✅ SUCCESS: Approval review created!');
+              console.log(`📋 Review ID: ${approvalResponse.data.id}`);
+              console.log(`📋 Review State: ${approvalResponse.data.state}`);
+              console.log(`📋 Review URL: ${approvalResponse.data.html_url}`);
+              
+              // Step 5: Add a comment to confirm the approval
+              console.log('💬 Adding confirmation comment...');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `🎉 **Claude AI Auto-Approval Successful!**
+
+@blazecommerce-claude-ai has automatically approved this PR based on Claude's review showing **Status: APPROVED**.
+
+**Next Steps:**
+- ✅ PR is now approved by Claude AI
+- 🔄 Other required checks (if any) must still pass
+- 🚀 PR is ready for merge once all requirements are met
+
+*This is an automated action by the Claude AI Approval Gate workflow.*`
+              });
+              
+              console.log('🎉 DIRECT APPROVAL PROCESS COMPLETED SUCCESSFULLY!');
+              
+            } catch (error) {
+              console.error('❌ ERROR in direct approval process:', error);
+              console.error('📋 Error details:', {
+                message: error.message,
+                status: error.status,
+                response: error.response?.data
+              });
+              
+              // Add error comment
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: `❌ **Claude AI Auto-Approval Failed**
+
+There was an error during the auto-approval process:
+
+\`\`\`
+${error.message}
+\`\`\`
+
+**Troubleshooting:**
+- Check that BOT_GITHUB_TOKEN has sufficient permissions
+- Verify the PR is in a valid state for approval
+- Check workflow logs for detailed error information
+
+*This is an automated error report by the Claude AI Approval Gate workflow.*`
+                });
+              } catch (commentError) {
+                console.error('❌ Failed to create error comment:', commentError.message);
+              }
+              
+              throw error;
+            }
