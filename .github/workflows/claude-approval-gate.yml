@@ -95,23 +95,38 @@ jobs:
               
               console.log(`Found ${reviews.data.length} reviews to analyze`);
               
-              // Look for Claude AI approval
-              const claudeApproval = reviews.data.find(review => 
-                review.state === 'APPROVED' && 
-                (review.user.login === 'blazecommerce-claude-ai' || 
+              // Look for Claude AI approval (including dismissed approvals)
+              // GitHub dismisses reviews when new commits are pushed, so we need to check for recent Claude reviews
+              const claudeReviews = reviews.data.filter(review =>
+                (review.user.login === 'blazecommerce-claude-ai' ||
                  review.user.login === 'github-actions[bot]' ||
+                 review.user.login === 'claude[bot]' ||
                  (review.body && review.body.includes('BlazeCommerce Claude AI Review Bot')))
               );
+
+              // Sort by submission date (most recent first)
+              claudeReviews.sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+              // Check for active approval or recent dismissed approval
+              const claudeApproval = claudeReviews.find(review => review.state === 'APPROVED') ||
+                                   claudeReviews.find(review =>
+                                     review.state === 'DISMISSED' &&
+                                     review.body &&
+                                     review.body.includes('Auto-Approved')
+                                   );
               
               if (claudeApproval) {
-                console.log(`✅ Found Claude AI approval by ${claudeApproval.user.login} at ${claudeApproval.submitted_at}`);
+                const status = claudeApproval.state === 'APPROVED' ? 'active approval' : 'recent approval (dismissed by new commits)';
+                console.log(`✅ Found Claude AI ${status} by ${claudeApproval.user.login} at ${claudeApproval.submitted_at}`);
                 core.setOutput('approved', 'true');
                 core.setOutput('approver', claudeApproval.user.login);
                 core.setOutput('approved_at', claudeApproval.submitted_at);
-                return { 
-                  approved: true, 
+                core.setOutput('review_state', claudeApproval.state);
+                return {
+                  approved: true,
                   approver: claudeApproval.user.login,
-                  approvedAt: claudeApproval.submitted_at
+                  approvedAt: claudeApproval.submitted_at,
+                  reviewState: claudeApproval.state
                 };
               } else {
                 console.log('❌ No Claude AI approval found');
@@ -134,18 +149,23 @@ jobs:
           script: |
             const approver = '${{ steps.check-approval.outputs.approver }}';
             const approvedAt = '${{ steps.check-approval.outputs.approved_at }}';
-            
+            const reviewState = '${{ steps.check-approval.outputs.review_state }}';
+
+            const statusMessage = reviewState === 'APPROVED'
+              ? `Approved by ${approver}`
+              : `Approved by ${approver} (auto-revalidated after new commits)`;
+
             await github.rest.repos.createCommitStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
               sha: context.payload.pull_request?.head?.sha || context.sha,
               state: 'success',
               target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${context.payload.pull_request?.number || context.payload.number}`,
-              description: `Approved by ${approver} at ${new Date(approvedAt).toLocaleString()}`,
+              description: statusMessage,
               context: 'claude-ai/approval-required'
             });
-            
-            console.log(`✅ Set success status - Claude AI approval confirmed`);
+
+            console.log(`✅ Set success status - Claude AI approval confirmed (${reviewState})`);
 
       - name: Set Pending Status
         if: steps.check-approval.outputs.approved == 'false'
