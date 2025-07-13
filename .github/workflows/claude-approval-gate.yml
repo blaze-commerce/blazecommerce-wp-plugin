@@ -279,6 +279,12 @@ jobs:
 
                 console.log(`Found ${claudeAppComments.length} Claude App comment(s)`);
 
+                // Debug: Log comment details for troubleshooting
+                claudeAppComments.forEach((comment, index) => {
+                  console.log(`Comment ${index + 1}: User=${comment.user.login}, Created=${comment.created_at}`);
+                  console.log(`Comment ${index + 1} preview:`, comment.body.substring(0, 200) + '...');
+                });
+
                 // Step 2: Analyze Claude's feedback using standardized format from CLAUDE.md
                 let hasRequiredIssues = false;
                 let claudeReviewFound = false;
@@ -288,32 +294,46 @@ jobs:
                   claudeReviewFound = true;
                   console.log(`Analyzing Claude comment from ${comment.user.login}`);
 
-                  // Check for standardized Final Verdict section with enhanced bracketed format detection
-                  let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+                  // Check for standardized Final Verdict section with enhanced detection
+                  console.log('Searching for FINAL VERDICT section...');
 
-                  // Fallback to old format if new bracketed format not found
+                  // Primary detection for bracketed format [APPROVED]
+                  let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+                  let detectionMethod = 'bracketed';
+
+                  // Fallback to plain text format APPROVED
                   if (!finalVerdictMatch) {
-                    finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([^*\n\[]+)/i);
+                    finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([A-Z\s]+)(?:\*\*|\n)/i);
+                    detectionMethod = 'plain-text';
+                  }
+
+                  // Additional fallback for any status after "Status:"
+                  if (!finalVerdictMatch) {
+                    finalVerdictMatch = comment.body.match(/\*\*Status\*\*:\s*([A-Z\s]+?)(?:\s*\*\*|\s*\n)/i);
+                    detectionMethod = 'loose-match';
                   }
 
                   if (finalVerdictMatch) {
                     const status = finalVerdictMatch[1].trim();
-                    console.log(`Found Final Verdict status: ${status}`);
+                    console.log(`Found Final Verdict status: "${status}" using ${detectionMethod} detection`);
 
-                    // Handle bracketed format [APPROVED] or plain text APPROVED
+                    // Handle both bracketed format [APPROVED] and plain text APPROVED
                     if (status === 'APPROVED' || (status.includes('APPROVED') && !status.includes('CONDITIONAL'))) {
                       claudeApprovalStatus = 'approved';
-                      console.log('Claude approved the PR');
+                      console.log('✅ Claude approved the PR');
                     } else if (status === 'BLOCKED' || status.includes('BLOCKED')) {
                       claudeApprovalStatus = 'blocked';
                       hasRequiredIssues = true;
-                      console.log('Claude blocked the PR');
-                    } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL APPROVAL')) {
+                      console.log('❌ Claude blocked the PR');
+                    } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL')) {
                       claudeApprovalStatus = 'conditional';
-                      console.log('Claude conditionally approved the PR');
+                      console.log('⚠️ Claude conditionally approved the PR');
                     } else {
-                      console.log(`Unknown status format: ${status}`);
+                      console.log(`❓ Unknown status format: "${status}"`);
                     }
+                  } else {
+                    console.log('❌ No FINAL VERDICT status found in comment');
+                    console.log('Comment preview:', comment.body.substring(0, 500) + '...');
                   }
 
                   // Also check for Critical Issues section content
@@ -586,32 +606,46 @@ jobs:
               for (const comment of claudeAppComments) {
                 claudeReviewContent += comment.body + '\n\n';
 
-                // Check for standardized Final Verdict section with enhanced bracketed format detection
-                let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+                // Check for standardized Final Verdict section with enhanced detection
+                console.log('Searching for FINAL VERDICT section...');
 
-                // Fallback to old format if new bracketed format not found
+                // Primary detection for bracketed format [APPROVED]
+                let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+                let detectionMethod = 'bracketed';
+
+                // Fallback to plain text format APPROVED
                 if (!finalVerdictMatch) {
-                  finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([^*\n\[]+)/i);
+                  finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([A-Z\s]+)(?:\*\*|\n)/i);
+                  detectionMethod = 'plain-text';
+                }
+
+                // Additional fallback for any status after "Status:"
+                if (!finalVerdictMatch) {
+                  finalVerdictMatch = comment.body.match(/\*\*Status\*\*:\s*([A-Z\s]+?)(?:\s*\*\*|\s*\n)/i);
+                  detectionMethod = 'loose-match';
                 }
 
                 if (finalVerdictMatch) {
                   const status = finalVerdictMatch[1].trim();
-                  console.log(`Found Final Verdict status: ${status}`);
+                  console.log(`Found Final Verdict status: "${status}" using ${detectionMethod} detection`);
 
-                  // Handle bracketed format [APPROVED] or plain text APPROVED
+                  // Handle both bracketed format [APPROVED] and plain text APPROVED
                   if (status === 'APPROVED' || (status.includes('APPROVED') && !status.includes('CONDITIONAL'))) {
                     claudeApprovalStatus = 'approved';
-                    console.log('Claude approved the PR');
+                    console.log('✅ Claude approved the PR');
                   } else if (status === 'BLOCKED' || status.includes('BLOCKED')) {
                     claudeApprovalStatus = 'blocked';
                     hasRequiredIssues = true;
-                    console.log('Claude blocked the PR');
-                  } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL APPROVAL')) {
+                    console.log('❌ Claude blocked the PR');
+                  } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL')) {
                     claudeApprovalStatus = 'conditional';
-                    console.log('Claude conditionally approved the PR');
+                    console.log('⚠️ Claude conditionally approved the PR');
                   } else {
-                    console.log(`Unknown status format: ${status}`);
+                    console.log(`❓ Unknown status format: "${status}"`);
                   }
+                } else {
+                  console.log('❌ No FINAL VERDICT status found in comment');
+                  console.log('Comment preview:', comment.body.substring(0, 500) + '...');
                 }
 
                 // Also check for Critical Issues section content
