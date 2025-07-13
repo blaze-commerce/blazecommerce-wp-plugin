@@ -508,14 +508,24 @@ jobs:
               commit_history: []
             };
 
-            // Load existing tracking data if file exists
+            // Load existing tracking data if file exists with comprehensive error handling
             if (fs.existsSync(trackingFile)) {
               try {
-                trackingData = JSON.parse(fs.readFileSync(trackingFile, 'utf8'));
-                trackingData.last_updated = new Date().toISOString();
+                const fileContent = fs.readFileSync(trackingFile, 'utf8');
+                if (fileContent.trim()) {
+                  trackingData = JSON.parse(fileContent);
+                  trackingData.last_updated = new Date().toISOString();
+                  console.log(`📋 Loaded existing tracking data successfully`);
+                } else {
+                  console.log(`⚠️ Tracking file is empty, using default data structure`);
+                }
               } catch (error) {
-                console.log(`⚠️ Error loading tracking data: ${error.message}`);
+                console.error(`❌ Error loading tracking data: ${error.message}`);
+                console.log(`⚠️ Using default tracking data structure due to file corruption`);
+                // trackingData already has default structure, so we continue
               }
+            } else {
+              console.log(`📋 No existing tracking file found, starting with fresh data`);
             }
 
             // Parse the latest Claude review comment to identify current recommendations
@@ -547,33 +557,87 @@ jobs:
                 return { currentRequired: [], currentImportant: [] };
               }
 
-              const commentBody = claudeComment.body;
+              let commentBody = claudeComment.body;
 
-              // Parse current recommendations
-              const requiredPattern = /🔴\s*(?:.*?)?REQUIRED[\s\S]*?(?=🟡\s*(?:.*?)?(?:IMPORTANT|SUGGESTIONS)|🔵\s*SUGGESTIONS|$)/gi;
-              const importantPattern = /🟡\s*(?:.*?)?IMPORTANT[\s\S]*?(?=🔴\s*(?:.*?)?REQUIRED|🔵\s*SUGGESTIONS|$)/gi;
+              // Input validation and sanitization to prevent ReDoS attacks
+              if (!commentBody || typeof commentBody !== 'string') {
+                console.log('⚠️ Invalid comment body, using empty string');
+                commentBody = '';
+              }
 
-              const currentRequired = (commentBody.match(requiredPattern) || []).map(match => ({
-                id: Buffer.from(match.substring(0, 100)).toString('base64').substring(0, 16),
-                description: match.trim(),
-                identified_at: new Date().toISOString(),
-                status: 'pending'
-              }));
+              // Limit content size to prevent performance issues
+              const MAX_CONTENT_SIZE = 50000; // 50KB limit
+              if (commentBody.length > MAX_CONTENT_SIZE) {
+                console.log(`⚠️ Large content detected (${commentBody.length} chars), truncating to prevent performance issues`);
+                commentBody = commentBody.substring(0, MAX_CONTENT_SIZE);
+              }
 
-              const currentImportant = (commentBody.match(importantPattern) || []).map(match => ({
-                id: Buffer.from(match.substring(0, 100)).toString('base64').substring(0, 16),
-                description: match.trim(),
-                identified_at: new Date().toISOString(),
-                status: 'pending'
-              }));
+              // Enhanced input sanitization for security
+              commentBody = commentBody
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/javascript\s*:/gi, '')
+                .replace(/data\s*:/gi, '')
+                .replace(/vbscript\s*:/gi, '')
+                .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+                .replace(/&#x[0-9a-f]+;/gi, '')
+                .replace(/&#\d+;/gi, '')
+                .replace(/[\x00-\x1f\x7f]/g, ''); // Remove control characters
+
+              // Use safer regex patterns with character limits to prevent ReDoS
+              const requiredPattern = /🔴\s*[^\n]{0,200}?REQUIRED[\s\S]{0,2000}?(?=🟡|🔵|$)/gi;
+              const importantPattern = /🟡\s*[^\n]{0,200}?IMPORTANT[\s\S]{0,2000}?(?=🔴|🔵|$)/gi;
+
+              // Safe regex matching with error handling and limits
+              let currentRequired = [];
+              let currentImportant = [];
+
+              try {
+                const requiredMatches = commentBody.match(requiredPattern) || [];
+                const importantMatches = commentBody.match(importantPattern) || [];
+
+                // Limit number of matches to prevent performance issues
+                const MAX_RECOMMENDATIONS = 50;
+
+                currentRequired = requiredMatches.slice(0, MAX_RECOMMENDATIONS).map((match, index) => ({
+                  id: `req_${Date.now()}_${index}`,
+                  description: match.trim().substring(0, 1000), // Limit description length
+                  identified_at: new Date().toISOString(),
+                  status: 'pending'
+                }));
+
+                currentImportant = importantMatches.slice(0, MAX_RECOMMENDATIONS).map((match, index) => ({
+                  id: `imp_${Date.now()}_${index}`,
+                  description: match.trim().substring(0, 1000), // Limit description length
+                  identified_at: new Date().toISOString(),
+                  status: 'pending'
+                }));
+              } catch (error) {
+                console.error(`❌ Error parsing recommendations: ${error.message}`);
+                console.log('⚠️ Using empty recommendation lists due to parsing error');
+                currentRequired = [];
+                currentImportant = [];
+              }
 
               console.log(`📋 Found ${currentRequired.length} current REQUIRED and ${currentImportant.length} current IMPORTANT recommendations`);
 
               return { currentRequired, currentImportant };
             }
 
-            // Update tracking data
-            const { currentRequired, currentImportant } = await parseLatestClaudeReview();
+            // Update tracking data with comprehensive error handling
+            let currentRequired = [];
+            let currentImportant = [];
+
+            try {
+              const result = await parseLatestClaudeReview();
+              currentRequired = result.currentRequired;
+              currentImportant = result.currentImportant;
+            } catch (error) {
+              console.error(`❌ Error parsing Claude review: ${error.message}`);
+              console.log('⚠️ Continuing with empty recommendation lists due to parsing error');
+              // Set default empty arrays to prevent undefined errors
+              currentRequired = [];
+              currentImportant = [];
+            }
 
             // Identify resolved items (previously pending but not in current review)
             const previouslyPendingRequired = trackingData.pending_recommendations?.required || [];
@@ -615,8 +679,20 @@ jobs:
             trackingData.last_updated = new Date().toISOString();
             trackingData.last_review_at = new Date().toISOString();
 
-            // Save updated tracking data
-            fs.writeFileSync(trackingFile, JSON.stringify(trackingData, null, 2));
+            // Ensure tracking directory exists before writing with error handling
+            try {
+              if (!fs.existsSync(trackingDir)) {
+                fs.mkdirSync(trackingDir, { recursive: true });
+                console.log(`📁 Created tracking directory: ${trackingDir}`);
+              }
+
+              // Save updated tracking data with error handling
+              fs.writeFileSync(trackingFile, JSON.stringify(trackingData, null, 2));
+              console.log(`✅ Tracking data saved successfully to ${trackingFile}`);
+            } catch (error) {
+              console.error(`❌ Error saving tracking data: ${error.message}`);
+              console.log('⚠️ Continuing without saving tracking data - this will not affect workflow functionality');
+            }
 
             console.log(`✅ Tracking updated: ${newlyResolvedRequired.length} newly resolved REQUIRED, ${newlyResolvedImportant.length} newly resolved IMPORTANT`);
             console.log(`📊 Current status: ${currentRequired.length} pending REQUIRED, ${currentImportant.length} pending IMPORTANT`);
@@ -1656,8 +1732,8 @@ jobs:
 
             ### 📊 Current Status Summary
             - **Failed Checks**: ${failedChecksCount > 0 ? `❌ ${failedChecksCount} failed` : '✅ All passed'}
-            - **REQUIRED Items**: ${pendingRequiredCount > 0 ? `❌ ${pendingRequiredCount} pending` : (allRequiredAddressed ? '✅ All addressed' : '⚠️ Status unknown')}
-            - **IMPORTANT Items**: ${pendingImportantCount > 0 ? `⏳ ${pendingImportantCount} pending` : (allImportantAddressed ? '✅ All addressed' : '⚠️ Status unknown')}
+            - **REQUIRED Items**: ${pendingRequiredCount > 0 ? `❌ ${pendingRequiredCount} pending` : (allRequiredAddressed ? '✅ All addressed' : '⏳ Pending analysis')}
+            - **IMPORTANT Items**: ${pendingImportantCount > 0 ? `⏳ ${pendingImportantCount} pending` : (allImportantAddressed ? '✅ All addressed' : '⏳ Pending analysis')}
             - **Claude Review**: ${'${{ needs.claude-review-official.outputs.success }}' === 'true' ? '✅ Completed' : '❌ Failed'}
             - **Approval Status**: ${revocationNeeded ? '🚨 Previous approval revoked due to new critical issues' : '✅ No revocation needed'}
 
