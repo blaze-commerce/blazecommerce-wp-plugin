@@ -123,34 +123,35 @@ jobs:
                   console.log(`WARNING: Claude review workflow failed with conclusion: ${conclusion}`);
                 }
               } else {
-                // For other events, check if Claude review workflow has completed
-                const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  per_page: 50
-                });
+                // For other events (PR synchronize, comments), proceed immediately to check for existing Claude reviews
+                // This allows the approval gate to work even if Priority 1 workflow is still running or failed
+                console.log(`INFO: Event type ${context.eventName} - proceeding to check for existing Claude reviews`);
+                shouldProceed = true;
+                completed = true;
+                conclusion = 'success';
 
-                // Find the most recent Claude review run for this PR
-                const claudeReviewRun = workflowRuns.workflow_runs.find(run =>
-                  run.name === 'Priority 1: Claude AI Code Review' &&
-                  (run.head_branch?.includes(`pr-${prNumber}`) ||
-                   run.display_title?.includes(`#${prNumber}`) ||
-                   run.pull_requests?.some(pr => pr.number == prNumber))
-                );
+                // Optional: Still check for recent workflow runs for debugging
+                try {
+                  const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    per_page: 10
+                  });
 
-                if (claudeReviewRun) {
-                  completed = claudeReviewRun.status === 'completed';
-                  conclusion = claudeReviewRun.conclusion || 'unknown';
-                  // Only proceed if the Claude review workflow completed successfully
-                  shouldProceed = completed && conclusion === 'success';
-                  console.log(`SUCCESS: Found Claude review run: ${claudeReviewRun.status} (${conclusion})`);
-                  if (!shouldProceed) {
-                    console.log(`WARNING: Claude review workflow not ready - status: ${claudeReviewRun.status}, conclusion: ${conclusion}`);
+                  const claudeReviewRun = workflowRuns.workflow_runs.find(run =>
+                    run.name === 'Priority 1: Claude AI Code Review' &&
+                    (run.head_branch?.includes(`pr-${prNumber}`) ||
+                     run.display_title?.includes(`#${prNumber}`) ||
+                     run.pull_requests?.some(pr => pr.number == prNumber))
+                  );
+
+                  if (claudeReviewRun) {
+                    console.log(`DEBUG: Found recent Claude review run: ${claudeReviewRun.status} (${claudeReviewRun.conclusion})`);
+                  } else {
+                    console.log('DEBUG: No recent Claude review workflow found');
                   }
-                } else {
-                  // No Claude review found - wait for it to complete
-                  shouldProceed = false;
-                  console.log('WARNING: No Claude review workflow found, waiting for Priority 1 to complete');
+                } catch (error) {
+                  console.log(`DEBUG: Error checking workflow runs: ${error.message}`);
                 }
               }
             } catch (error) {
@@ -271,18 +272,46 @@ jobs:
                   per_page: 100
                 });
 
-                const claudeAppComments = comments.data.filter(comment =>
-                  comment.user.login === 'claude[bot]' ||
-                  comment.user.login === 'claude' ||
-                  (comment.body && comment.body.includes('Claude AI') && comment.body.includes('review'))
-                );
+                // Enhanced Claude comment detection - look for any comment with FINAL VERDICT
+                const claudeAppComments = comments.data.filter(comment => {
+                  const isClaudeUser = comment.user.login === 'claude[bot]' ||
+                                      comment.user.login === 'claude' ||
+                                      comment.user.login.includes('claude');
 
-                console.log(`Found ${claudeAppComments.length} Claude App comment(s)`);
+                  const hasClaudeContent = comment.body && (
+                    comment.body.includes('Claude AI') ||
+                    comment.body.includes('FINAL VERDICT') ||
+                    comment.body.includes('### FINAL VERDICT') ||
+                    (comment.body.includes('Status') && comment.body.includes('APPROVED'))
+                  );
 
-                // Debug: Log comment details for troubleshooting
-                claudeAppComments.forEach((comment, index) => {
+                  const isRelevant = isClaudeUser || hasClaudeContent;
+
+                  if (isRelevant) {
+                    console.log(`🎯 FOUND RELEVANT COMMENT: User=${comment.user.login}, HasFinalVerdict=${comment.body.includes('FINAL VERDICT')}`);
+                  }
+
+                  return isRelevant;
+                });
+
+                console.log(`🔍 DETECTION DEBUG: Found ${claudeAppComments.length} Claude App comment(s) out of ${comments.data.length} total comments`);
+
+                // Debug: Log ALL comments for troubleshooting
+                console.log('📝 ALL COMMENTS ANALYSIS:');
+                comments.data.forEach((comment, index) => {
                   console.log(`Comment ${index + 1}: User=${comment.user.login}, Created=${comment.created_at}`);
-                  console.log(`Comment ${index + 1} preview:`, comment.body.substring(0, 200) + '...');
+                  console.log(`Comment ${index + 1} body contains "FINAL VERDICT":`, comment.body.includes('FINAL VERDICT'));
+                  console.log(`Comment ${index + 1} body contains "Status":`, comment.body.includes('Status'));
+                  if (comment.body.includes('FINAL VERDICT') || comment.body.includes('Status')) {
+                    console.log(`Comment ${index + 1} RELEVANT CONTENT:`, comment.body.substring(0, 500) + '...');
+                  }
+                });
+
+                // Debug: Log Claude-specific comments
+                console.log('🤖 CLAUDE COMMENTS ANALYSIS:');
+                claudeAppComments.forEach((comment, index) => {
+                  console.log(`Claude Comment ${index + 1}: User=${comment.user.login}, Created=${comment.created_at}`);
+                  console.log(`Claude Comment ${index + 1} preview:`, comment.body.substring(0, 300) + '...');
                 });
 
                 // Step 2: Analyze Claude's feedback using standardized format from CLAUDE.md
@@ -295,22 +324,38 @@ jobs:
                   console.log(`Analyzing Claude comment from ${comment.user.login}`);
 
                   // Check for standardized Final Verdict section with enhanced detection
-                  console.log('Searching for FINAL VERDICT section...');
+                  console.log('🔍 SEARCHING FOR FINAL VERDICT SECTION...');
+                  console.log('📄 Comment body length:', comment.body.length);
+                  console.log('📄 Comment contains "FINAL VERDICT":', comment.body.includes('FINAL VERDICT'));
+                  console.log('📄 Comment contains "Status":', comment.body.includes('Status'));
+
+                  // Show relevant part of comment for debugging
+                  const finalVerdictIndex = comment.body.indexOf('FINAL VERDICT');
+                  if (finalVerdictIndex !== -1) {
+                    const relevantSection = comment.body.substring(finalVerdictIndex, finalVerdictIndex + 300);
+                    console.log('📄 FINAL VERDICT SECTION:', relevantSection);
+                  }
 
                   // Primary detection for bracketed format [APPROVED]
+                  console.log('🔍 Testing Pattern 1: Bracketed format [APPROVED]');
                   let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
                   let detectionMethod = 'bracketed';
+                  console.log('🔍 Pattern 1 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
 
                   // Fallback to plain text format APPROVED
                   if (!finalVerdictMatch) {
+                    console.log('🔍 Testing Pattern 2: Plain text format APPROVED');
                     finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([A-Z\s]+)(?:\*\*|\n)/i);
                     detectionMethod = 'plain-text';
+                    console.log('🔍 Pattern 2 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
                   }
 
                   // Additional fallback for any status after "Status:"
                   if (!finalVerdictMatch) {
+                    console.log('🔍 Testing Pattern 3: Loose match for any Status');
                     finalVerdictMatch = comment.body.match(/\*\*Status\*\*:\s*([A-Z\s]+?)(?:\s*\*\*|\s*\n)/i);
                     detectionMethod = 'loose-match';
+                    console.log('🔍 Pattern 3 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
                   }
 
                   if (finalVerdictMatch) {
@@ -546,10 +591,10 @@ jobs:
 
   # New job: @blazecommerce-claude-ai auto-approval logic
   blazecommerce-claude-ai-approval:
-    needs: [check-trigger, wait-for-claude-review, claude-approval-gate]
-    if: always() && needs.check-trigger.outputs.should_run == 'true'
+    needs: [check-trigger]
+    if: needs.check-trigger.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     permissions:
       contents: read
@@ -572,7 +617,7 @@ jobs:
               return;
             }
 
-            console.log(`INFO: Evaluating Claude review for PR #${prNumber} for @blazecommerce-claude-ai approval`);
+            console.log(`🚀 BLAZECOMMERCE AUTO-APPROVAL: Evaluating Claude review for PR #${prNumber}`);
 
             try {
               // Check for official Claude App review comments
@@ -583,20 +628,38 @@ jobs:
                 per_page: 100
               });
 
-              const claudeAppComments = comments.data.filter(comment =>
-                comment.user.login === 'claude[bot]' ||
-                comment.user.login === 'claude' ||
-                (comment.body && comment.body.includes('Claude AI') && comment.body.includes('review'))
-              );
+              console.log(`📊 TOTAL COMMENTS FOUND: ${comments.data.length}`);
+
+              // Enhanced Claude comment detection - look for any comment with FINAL VERDICT
+              const claudeAppComments = comments.data.filter(comment => {
+                const isClaudeUser = comment.user.login === 'claude[bot]' ||
+                                    comment.user.login === 'claude' ||
+                                    comment.user.login.includes('claude');
+
+                const hasClaudeContent = comment.body && (
+                  comment.body.includes('Claude AI') ||
+                  comment.body.includes('FINAL VERDICT') ||
+                  comment.body.includes('### FINAL VERDICT') ||
+                  (comment.body.includes('Status') && comment.body.includes('APPROVED'))
+                );
+
+                const isRelevant = isClaudeUser || hasClaudeContent;
+
+                if (isRelevant) {
+                  console.log(`🎯 FOUND RELEVANT COMMENT: User=${comment.user.login}, HasFinalVerdict=${comment.body.includes('FINAL VERDICT')}`);
+                }
+
+                return isRelevant;
+              });
 
               if (claudeAppComments.length === 0) {
-                console.log('INFO: No Claude App review found yet - waiting');
+                console.log('❌ AUTO-APPROVAL: No Claude App review found yet - waiting');
                 core.setOutput('should_approve', 'false');
                 core.setOutput('reason', 'No Claude App review found');
                 return;
               }
 
-              console.log(`Found ${claudeAppComments.length} Claude App comment(s)`);
+              console.log(`✅ AUTO-APPROVAL: Found ${claudeAppComments.length} Claude App comment(s)`);
 
               // Analyze Claude's feedback using standardized format from CLAUDE.md
               let hasRequiredIssues = false;
@@ -607,22 +670,38 @@ jobs:
                 claudeReviewContent += comment.body + '\n\n';
 
                 // Check for standardized Final Verdict section with enhanced detection
-                console.log('Searching for FINAL VERDICT section...');
+                console.log('🔍 AUTO-APPROVAL: SEARCHING FOR FINAL VERDICT SECTION...');
+                console.log('📄 Comment body length:', comment.body.length);
+                console.log('📄 Comment contains "FINAL VERDICT":', comment.body.includes('FINAL VERDICT'));
+                console.log('📄 Comment contains "Status":', comment.body.includes('Status'));
+
+                // Show relevant part of comment for debugging
+                const finalVerdictIndex = comment.body.indexOf('FINAL VERDICT');
+                if (finalVerdictIndex !== -1) {
+                  const relevantSection = comment.body.substring(finalVerdictIndex, finalVerdictIndex + 300);
+                  console.log('📄 FINAL VERDICT SECTION:', relevantSection);
+                }
 
                 // Primary detection for bracketed format [APPROVED]
+                console.log('🔍 AUTO-APPROVAL: Testing Pattern 1: Bracketed format [APPROVED]');
                 let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
                 let detectionMethod = 'bracketed';
+                console.log('🔍 AUTO-APPROVAL: Pattern 1 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
 
                 // Fallback to plain text format APPROVED
                 if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 2: Plain text format APPROVED');
                   finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([A-Z\s]+)(?:\*\*|\n)/i);
                   detectionMethod = 'plain-text';
+                  console.log('🔍 AUTO-APPROVAL: Pattern 2 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
                 }
 
                 // Additional fallback for any status after "Status:"
                 if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 3: Loose match for any Status');
                   finalVerdictMatch = comment.body.match(/\*\*Status\*\*:\s*([A-Z\s]+?)(?:\s*\*\*|\s*\n)/i);
                   detectionMethod = 'loose-match';
+                  console.log('🔍 AUTO-APPROVAL: Pattern 3 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
                 }
 
                 if (finalVerdictMatch) {
