@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Standardized Error Handler
- * Provides consistent error handling, logging, and recovery patterns
- * Supports GitHub Actions integration and detailed error reporting
- * 
+ * Enhanced Error Handler for GitHub Actions Workflows
+ * Provides comprehensive error handling, logging, recovery mechanisms,
+ * and JavaScript syntax error prevention for BlazeCommerce workflow scripts
+ *
  * @author BlazeCommerce Workflow Optimization
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const fs = require('fs');
@@ -23,31 +23,51 @@ const ErrorSeverity = {
 };
 
 /**
- * Error categories
+ * Error categories for better classification
  */
 const ErrorCategory = {
+  GITHUB_API: 'github_api',
+  FILE_SYSTEM: 'file_system',
   VALIDATION: 'validation',
   NETWORK: 'network',
-  FILE_SYSTEM: 'file_system',
-  GIT: 'git',
-  DEPENDENCY: 'dependency',
-  CONFIGURATION: 'configuration',
-  UNKNOWN: 'unknown'
+  PARSING: 'parsing',
+  AUTHENTICATION: 'authentication',
+  WORKFLOW: 'workflow',
+  JAVASCRIPT_SYNTAX: 'javascript_syntax',
+  TEMPLATE_INJECTION: 'template_injection'
 };
 
 /**
- * Standardized Error Handler Class
+ * Enhanced Error Handler Class with JavaScript Safety Features
  */
-class ErrorHandler {
-  constructor() {
-    this.errors = [];
-    this.warnings = [];
-    this.context = this.getContext();
+class WorkflowErrorHandler {
+  constructor(options = {}) {
+    this.logLevel = options.logLevel || 'info';
+    this.enableFileLogging = options.enableFileLogging !== false;
+    this.logDirectory = options.logDirectory || '.github/logs';
+    this.maxLogSize = options.maxLogSize || 1024 * 1024; // 1MB
+    this.enableStackTrace = options.enableStackTrace !== false;
+    this.enableSafetyChecks = options.enableSafetyChecks !== false;
+
+    // Ensure log directory exists
+    if (this.enableFileLogging) {
+      this.ensureLogDirectory();
+    }
   }
 
   /**
-   * Get execution context
+   * Ensure log directory exists
    */
+  ensureLogDirectory() {
+    try {
+      if (!fs.existsSync(this.logDirectory)) {
+        fs.mkdirSync(this.logDirectory, { recursive: true });
+      }
+    } catch (error) {
+      console.error(`Failed to create log directory: ${error.message}`);
+      this.enableFileLogging = false;
+    }
+  }
   getContext() {
     return {
       workflow: process.env.GITHUB_WORKFLOW || 'unknown',
