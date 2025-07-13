@@ -6,9 +6,13 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 const { execSync } = require('child_process');
 const { parseConventionalCommit, getCommitsSinceLastTag, getLatestTag } = require('./semver-utils');
 const config = require('./config');
+
+// Configuration for changelog file location
+const CHANGELOG_PATH = 'docs/reference/changelog.md';
 
 // Configuration
 const CONFIG = {
@@ -653,12 +657,75 @@ function generateChangelogEntry(version, categorizedCommits) {
 }
 
 /**
+ * Ensure the docs/reference directory exists
+ * @returns {boolean} True if successful
+ */
+function ensureChangelogDirectory() {
+  try {
+    const changelogDir = path.dirname(CHANGELOG_PATH);
+    if (!fs.existsSync(changelogDir)) {
+      console.log(`📁 Creating directory: ${changelogDir}`);
+      fs.mkdirSync(changelogDir, { recursive: true });
+    }
+    return true;
+  } catch (error) {
+    console.error(`❌ Error creating changelog directory: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Extract frontmatter from existing changelog
+ * @param {string} content - Changelog content
+ * @returns {object} Object with frontmatter and content
+ */
+function extractFrontmatter(content) {
+  const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
+  const match = content.match(frontmatterRegex);
+
+  if (match) {
+    return {
+      frontmatter: match[1],
+      content: match[2]
+    };
+  }
+
+  return {
+    frontmatter: null,
+    content: content
+  };
+}
+
+/**
+ * Create default frontmatter for new changelog
+ * @returns {string} Default frontmatter
+ */
+function createDefaultFrontmatter() {
+  const currentDate = new Date().toISOString().split('T')[0];
+  return `---
+title: "Changelog"
+description: "Version history and release notes for the Blaze Commerce WordPress Plugin"
+category: "reference"
+version: "1.0.0"
+last_updated: "${currentDate}"
+author: "Blaze Commerce Team"
+tags: ["changelog", "releases", "version-history", "updates"]
+related_docs: ["index.md"]
+---`;
+}
+
+/**
  * Update changelog file
  * @param {string} version - Version to add to changelog
  * @returns {boolean} True if successful
  */
 function updateChangelog(version = null) {
-  console.log('📝 Updating CHANGELOG.md...\n');
+  console.log(`📝 Updating changelog at ${CHANGELOG_PATH}...\n`);
+
+  // Ensure changelog directory exists
+  if (!ensureChangelogDirectory()) {
+    return false;
+  }
 
   // Get version
   if (!version) {
@@ -716,10 +783,18 @@ function updateChangelog(version = null) {
 
     // Read existing changelog or create new one
     let changelogContent = '';
-    if (fs.existsSync('CHANGELOG.md')) {
-      changelogContent = fs.readFileSync('CHANGELOG.md', 'utf8');
+    let frontmatter = null;
+
+    if (fs.existsSync(CHANGELOG_PATH)) {
+      console.log(`📖 Reading existing changelog from ${CHANGELOG_PATH}`);
+      const rawContent = fs.readFileSync(CHANGELOG_PATH, 'utf8');
+      const parsed = extractFrontmatter(rawContent);
+      frontmatter = parsed.frontmatter;
+      changelogContent = parsed.content;
     } else {
-      changelogContent = '# Changelog\n\nAll notable changes to this project will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n\n';
+      console.log(`📄 Creating new changelog at ${CHANGELOG_PATH}`);
+      frontmatter = createDefaultFrontmatter();
+      changelogContent = '# Changelog\n\nAll notable changes to the BlazeCommerce WordPress Plugin will be documented in this file.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),\nand this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\n\n> **Note**: Release dates have been corrected based on actual Git commit history to ensure accuracy.\n\n';
     }
 
     // Check if version already exists in changelog
@@ -751,11 +826,27 @@ function updateChangelog(version = null) {
     const entryLines = changelogEntry.split('\n');
     lines.splice(insertIndex, 0, ...entryLines);
 
-    // Write updated changelog
-    const updatedChangelog = lines.join('\n');
-    fs.writeFileSync('CHANGELOG.md', updatedChangelog);
+    // Write updated changelog with frontmatter if it exists
+    let updatedChangelog;
+    if (frontmatter) {
+      // Update the last_updated field in frontmatter
+      const currentDate = new Date().toISOString().split('T')[0];
+      const updatedFrontmatter = frontmatter.replace(
+        /last_updated:\s*"[^"]*"/,
+        `last_updated: "${currentDate}"`
+      );
+      updatedChangelog = `---\n${updatedFrontmatter}\n---\n${lines.join('\n')}`;
+    } else {
+      updatedChangelog = lines.join('\n');
+    }
 
-    console.log(`✅ Updated CHANGELOG.md with version ${version}`);
+    try {
+      fs.writeFileSync(CHANGELOG_PATH, updatedChangelog, 'utf8');
+      console.log(`✅ Updated ${CHANGELOG_PATH} with version ${version}`);
+    } catch (error) {
+      console.error(`❌ Error writing changelog file: ${error.message}`);
+      return false;
+    }
 
     if (CONFIG.verbose) {
       console.log('\n📝 Added sections:');
@@ -786,6 +877,8 @@ if (require.main === module) {
     console.log(`
 Usage: node scripts/update-changelog.js [options] [version]
 
+Updates the changelog at docs/reference/changelog.md following project documentation standards.
+
 Options:
   --dry-run         Show what would be generated without updating file
   --verbose, -v     Show detailed output
@@ -806,6 +899,11 @@ Examples:
 Format Options:
   Default: User-friendly descriptions with expanded abbreviations and context
   --technical: Original commit messages with minimal transformation
+
+File Location:
+  The changelog is maintained at docs/reference/changelog.md following the project's
+  documentation organization guidelines. Frontmatter metadata is preserved and
+  automatically updated with each change.
 `);
     process.exit(0);
   }

@@ -306,11 +306,11 @@ jobs:
         RELEASE_NOTES=""
 
         # Extract changelog for this version if it exists
-        if [ -f CHANGELOG.md ]; then
+        if [ -f docs/reference/changelog.md ]; then
           echo "📋 Extracting changelog for version $VERSION..."
 
           # Get content between this version and next version header
-          CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d' | head -50)
+          CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" docs/reference/changelog.md | sed '/^$/d' | head -50)
 
           if [ -n "$CHANGELOG_CONTENT" ]; then
             # Note: Using string concatenation instead of heredoc (cat << EOF)

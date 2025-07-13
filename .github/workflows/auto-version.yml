@@ -677,7 +677,7 @@ jobs:
         🤖 Automated version bump
         📦 Version: $VERSION
         🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}
-        📝 Updated files: package.json, blaze-wooless.php, blocks/package.json, CHANGELOG.md"
+        📝 Updated files: package.json, blaze-wooless.php, blocks/package.json, docs/reference/changelog.md"
 
         echo "🚀 Pushing changes..."
         git push
