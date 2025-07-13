@@ -359,26 +359,43 @@ function compareVersions(version1, version2) {
 }
 
 /**
- * Increment version based on type
+ * Increment version based on type - Simplified and more robust version
  * @param {string} version - Current version
  * @param {string} type - Increment type (major, minor, patch)
  * @param {string} prerelease - Optional prerelease identifier
  * @returns {string} New version string
  */
 function incrementVersion(version, type, prerelease = null) {
-  const parsed = parseVersion(version);
-  if (!parsed) {
-    throw new Error(`Invalid version format: ${version}`);
+  // Input validation
+  if (!version || typeof version !== 'string') {
+    throw new Error('Version must be a non-empty string');
   }
 
-  let { major, minor, patch } = parsed;
+  if (!type || typeof type !== 'string') {
+    throw new Error('Type must be a non-empty string');
+  }
+
+  // Validate version format using simple regex
+  const versionMatch = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
+  if (!versionMatch) {
+    throw new Error(`Invalid version format: ${version}. Expected format: MAJOR.MINOR.PATCH[-prerelease]`);
+  }
+
+  let major = parseInt(versionMatch[1], 10);
+  let minor = parseInt(versionMatch[2], 10);
+  let patch = parseInt(versionMatch[3], 10);
+  const currentPrerelease = versionMatch[4];
+
+  // Validate parsed numbers
+  if (isNaN(major) || isNaN(minor) || isNaN(patch)) {
+    throw new Error(`Invalid version components: major=${major}, minor=${minor}, patch=${patch}`);
+  }
 
   // Handle prerelease versioning logic
   if (prerelease) {
     // If current version is already a prerelease of the same type, increment the prerelease number
-    if (parsed.prerelease && parsed.prerelease.startsWith(prerelease)) {
-      // Extract prerelease number (e.g., "alpha.1" → 1)
-      const prereleaseMatch = parsed.prerelease.match(new RegExp(`^${prerelease}\\.(\\d+)$`));
+    if (currentPrerelease && currentPrerelease.startsWith(prerelease + '.')) {
+      const prereleaseMatch = currentPrerelease.match(new RegExp(`^${prerelease}\\.(\\d+)$`));
       if (prereleaseMatch) {
         const prereleaseNum = parseInt(prereleaseMatch[1], 10) + 1;
         return `${major}.${minor}.${patch}-${prerelease}.${prereleaseNum}`;
@@ -386,7 +403,7 @@ function incrementVersion(version, type, prerelease = null) {
     }
 
     // For new prerelease or different prerelease type, increment version and add prerelease.1
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'major':
         major++;
         minor = 0;
@@ -400,14 +417,14 @@ function incrementVersion(version, type, prerelease = null) {
         patch++;
         break;
       default:
-        throw new Error(`Invalid increment type: ${type}`);
+        throw new Error(`Invalid increment type: ${type}. Must be 'major', 'minor', or 'patch'`);
     }
 
     return `${major}.${minor}.${patch}-${prerelease}.1`;
   }
 
   // Standard version increment (no prerelease)
-  switch (type) {
+  switch (type.toLowerCase()) {
     case 'major':
       major++;
       minor = 0;
@@ -421,19 +438,15 @@ function incrementVersion(version, type, prerelease = null) {
       patch++;
       break;
     default:
-      throw new Error(`Invalid increment type: ${type}`);
+      throw new Error(`Invalid increment type: ${type}. Must be 'major', 'minor', or 'patch'`);
   }
 
   const newVersion = `${major}.${minor}.${patch}`;
 
   // Safety check: Ensure the new version is actually different from the original
-  if (newVersion === version) {
-    throw new Error(`Version increment failed: new version ${newVersion} is the same as original ${version}`);
-  }
-
-  // Additional safety check: Ensure the new version is greater than the original
-  if (compareVersions(newVersion, version) <= 0) {
-    throw new Error(`Version increment failed: new version ${newVersion} is not greater than original ${version}`);
+  const originalBase = version.split('-')[0]; // Remove prerelease from original for comparison
+  if (newVersion === originalBase) {
+    throw new Error(`Version increment failed: new version ${newVersion} is the same as original base ${originalBase}`);
   }
 
   return newVersion;
