@@ -1452,7 +1452,6 @@ jobs:
 
             // Enhanced audit logging for security and compliance
             const processingEndTime = Date.now();
-            const processingStartTime = processingEndTime - 30000; // Approximate start time
             const auditLog = {
               timestamp: new Date().toISOString(),
               pr_number: context.payload.pull_request?.number,
