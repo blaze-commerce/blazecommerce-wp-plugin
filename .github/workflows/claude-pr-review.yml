@@ -12,7 +12,7 @@ on:
 # Prevent race conditions between concurrent workflow runs
 concurrency:
   group: claude-review-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false  # Changed to false to ensure completion
 
 jobs:
   claude-review:
@@ -27,6 +27,17 @@ jobs:
       id-token: write
 
     steps:
+      - name: Debug Workflow Trigger
+        run: |
+          echo "🔍 DEBUG: Workflow triggered successfully!"
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.head_ref }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Timestamp: $(date -u)"
+
       - name: Validate Organization
         run: |
           if [[ "${{ github.repository_owner }}" != "blaze-commerce" ]]; then
