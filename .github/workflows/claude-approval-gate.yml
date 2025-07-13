@@ -449,49 +449,53 @@ jobs:
             let commentBody = '';
 
             if (triggerReason === '@claude mention in comment') {
-              commentBody = `## BOT: Claude AI Re-evaluation Triggered
-
-              Claude AI approval status has been re-evaluated based on your request.
-
-              ### ANALYSIS: Current Status
-              - **Approval Status**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not Approved'}
-              - **Details**: ${statusDescription}
-              - **Reason**: ${reason}
-
-              ${approved ?
-                'COMPLETED: **This PR is now ready to merge** (subject to other branch protection rules).' :
-                'WARNING: **This PR is not yet ready to merge.** Please address any outstanding issues.'
-              }
-
-              ---
-              *Re-evaluation completed in response to @claude mention*`;
+              commentBody = [
+                "## BOT: Claude AI Re-evaluation Triggered",
+                "",
+                "Claude AI approval status has been re-evaluated based on your request.",
+                "",
+                "### ANALYSIS: Current Status",
+                `- **Approval Status**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not Approved'}`,
+                `- **Details**: ${statusDescription}`,
+                `- **Reason**: ${reason}`,
+                "",
+                approved ?
+                  'COMPLETED: **This PR is now ready to merge** (subject to other branch protection rules).' :
+                  'WARNING: **This PR is not yet ready to merge.** Please address any outstanding issues.',
+                "",
+                "---",
+                "*Re-evaluation completed in response to @claude mention*"
+              ].join('\n');
             } else {
               // First time comment for new PRs
-              commentBody = `## SECURITY: Claude AI Approval Gate
-
-              This PR requires approval from the Claude AI Review Bot before it can be merged.
-
-              ### SUMMARY: Current Status
-              - **Claude AI Approval**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not yet approved'}
-              - **Details**: ${statusDescription}
-              - **Merge Status**: ${approved ? 'SUCCESS: Ready to merge' : ' Blocked until approval'}
-
-              ### RETRY: Next Steps
-              ${approved ?
-                'This PR has been approved and is ready for merge (subject to other branch protection rules).' :
-                `1. Wait for the Claude AI Review Bot to analyze your PR
-              2. Address any REQUIRED recommendations if found
-              3. Once approved by Claude AI, this check will pass automatically
-              4. The PR will then be ready for merge`
-              }
-
-              ### INFO: About This Check
-              This is an automated gate that ensures all PRs receive Claude AI review before merging. The check will update automatically when Claude AI provides approval.
-
-              TIP: **Tip**: You can mention @claude in a comment to trigger a re-evaluation of the approval status.
-
-              ---
-              *Claude AI Approval Gate - Automated Merge Protection*`;
+              commentBody = [
+                "## SECURITY: Claude AI Approval Gate",
+                "",
+                "This PR requires approval from the Claude AI Review Bot before it can be merged.",
+                "",
+                "### SUMMARY: Current Status",
+                `- **Claude AI Approval**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not yet approved'}`,
+                `- **Details**: ${statusDescription}`,
+                `- **Merge Status**: ${approved ? 'SUCCESS: Ready to merge' : ' Blocked until approval'}`,
+                "",
+                "### RETRY: Next Steps",
+                approved ?
+                  'This PR has been approved and is ready for merge (subject to other branch protection rules).' :
+                  [
+                    '1. Wait for the Claude AI Review Bot to analyze your PR',
+                    '2. Address any REQUIRED recommendations if found',
+                    '3. Once approved by Claude AI, this check will pass automatically',
+                    '4. The PR will then be ready for merge'
+                  ].join('\n'),
+                "",
+                "### INFO: About This Check",
+                "This is an automated gate that ensures all PRs receive Claude AI review before merging. The check will update automatically when Claude AI provides approval.",
+                "",
+                "TIP: **Tip**: You can mention @claude in a comment to trigger a re-evaluation of the approval status.",
+                "",
+                "---",
+                "*Claude AI Approval Gate - Automated Merge Protection*"
+              ].join('\n');
             }
 
             await github.rest.issues.createComment({
@@ -662,7 +666,7 @@ jobs:
         with:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
-            const prNumber = ${{ needs.check-trigger.outputs.pr_number }};
+            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
 
             console.log(`INFO: Auto-approving PR #${prNumber} as @blazecommerce-claude-ai`);
 
@@ -672,25 +676,27 @@ jobs:
                 repo: context.repo.repo,
                 pull_number: prNumber,
                 event: 'APPROVE',
-                body: `## BlazeCommerce Claude AI Review - Auto-Approved
-
-**Automated approval by @blazecommerce-claude-ai**
-
-### Review Summary
-- Official Claude GitHub App completed comprehensive review
-- No CRITICAL: REQUIRED issues found
-- Code meets BlazeCommerce quality standards
-- All security and performance checks passed
-
-### Claude AI Analysis
-The official Claude App has reviewed this PR and found no blocking issues. The code follows WordPress plugin best practices and BlazeCommerce development standards.
-
-### Next Steps
-This PR is now approved and ready for merge (subject to other branch protection rules and checks).
-
----
-*Automated approval by BlazeCommerce Claude AI Review System*
-*Based on official Claude GitHub App analysis*`
+                body: [
+                  "## BlazeCommerce Claude AI Review - Auto-Approved",
+                  "",
+                  "**Automated approval by @blazecommerce-claude-ai**",
+                  "",
+                  "### Review Summary",
+                  "- Official Claude GitHub App completed comprehensive review",
+                  "- No CRITICAL: REQUIRED issues found",
+                  "- Code meets BlazeCommerce quality standards",
+                  "- All security and performance checks passed",
+                  "",
+                  "### Claude AI Analysis",
+                  "The official Claude App has reviewed this PR and found no blocking issues. The code follows WordPress plugin best practices and BlazeCommerce development standards.",
+                  "",
+                  "### Next Steps",
+                  "This PR is now approved and ready for merge (subject to other branch protection rules and checks).",
+                  "",
+                  "---",
+                  "*Automated approval by BlazeCommerce Claude AI Review System*",
+                  "*Based on official Claude GitHub App analysis*"
+                ].join('\n')
               });
 
               console.log('SUCCESS: PR auto-approved by @blazecommerce-claude-ai');
@@ -704,15 +710,17 @@ This PR is now approved and ready for merge (subject to other branch protection 
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
-                  body: `## BlazeCommerce Claude AI Review - Approval Error
-
-**Error**: Failed to auto-approve this PR.
-
-**Details**: ${error.message}
-
-**Action Required**: Manual approval needed.
-
-*Please contact repository administrators if this issue persists.*`
+                  body: [
+                    "## BlazeCommerce Claude AI Review - Approval Error",
+                    "",
+                    "**Error**: Failed to auto-approve this PR.",
+                    "",
+                    `**Details**: ${error.message}`,
+                    "",
+                    "**Action Required**: Manual approval needed.",
+                    "",
+                    "*Please contact repository administrators if this issue persists.*"
+                  ].join('\n')
                 });
               } catch (commentError) {
                 console.error(`ERROR: Failed to post error comment: ${commentError.message}`);
@@ -725,7 +733,7 @@ This PR is now approved and ready for merge (subject to other branch protection 
         with:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
-            const prNumber = ${{ needs.check-trigger.outputs.pr_number }};
+            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
 
             console.log(`INFO: Posting blocking issues comment for PR #${prNumber}`);
 
@@ -734,28 +742,30 @@ This PR is now approved and ready for merge (subject to other branch protection 
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: `## BlazeCommerce Claude AI Review - Approval Blocked
-
-**Status**: Cannot auto-approve due to REQUIRED issues
-
-### Action Required
-The official Claude GitHub App has identified **CRITICAL: REQUIRED** issues that must be addressed before this PR can be approved.
-
-### Next Steps
-1. Review Claude's feedback above for specific REQUIRED issues
-2. Address all CRITICAL: REQUIRED items
-3. Push your changes to trigger a new review
-4. @blazecommerce-claude-ai will automatically approve once all REQUIRED issues are resolved
-
-### Re-evaluation
-This PR will be automatically re-evaluated when:
-- New commits are pushed
-- Claude provides an updated review
-- All REQUIRED issues are addressed
-
----
-*Automated blocking by BlazeCommerce Claude AI Review System*
-*Based on official Claude GitHub App analysis*`
+                body: [
+                  "## BlazeCommerce Claude AI Review - Approval Blocked",
+                  "",
+                  "**Status**: Cannot auto-approve due to REQUIRED issues",
+                  "",
+                  "### Action Required",
+                  "The official Claude GitHub App has identified **CRITICAL: REQUIRED** issues that must be addressed before this PR can be approved.",
+                  "",
+                  "### Next Steps",
+                  "1. Review Claude's feedback above for specific REQUIRED issues",
+                  "2. Address all CRITICAL: REQUIRED items",
+                  "3. Push your changes to trigger a new review",
+                  "4. @blazecommerce-claude-ai will automatically approve once all REQUIRED issues are resolved",
+                  "",
+                  "### Re-evaluation",
+                  "This PR will be automatically re-evaluated when:",
+                  "- New commits are pushed",
+                  "- Claude provides an updated review",
+                  "- All REQUIRED issues are addressed",
+                  "",
+                  "---",
+                  "*Automated blocking by BlazeCommerce Claude AI Review System*",
+                  "*Based on official Claude GitHub App analysis*"
+                ].join('\n')
               });
 
               console.log('SUCCESS: Posted blocking issues comment');
