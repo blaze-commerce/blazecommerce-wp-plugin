@@ -3,20 +3,31 @@ name: "🤖 Priority 1: Claude AI Code Review"
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches-ignore:
+      - main
+      - develop
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number to review (optional - auto-detected for pull_request events)'
+        description: 'PR number to review (optional - auto-detected for push events)'
         required: false
 
 # Priority 1: Highest priority workflow - PR-specific concurrency to prevent conflicts
 concurrency:
-  group: priority-1-claude-review-pr-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
-  cancel-in-progress: false  # Don't cancel to ensure review completion
+  group: priority-1-claude-review-pr-${{ github.event.pull_request.number || github.event.inputs.pr_number || github.ref }}
+  cancel-in-progress: true  # Cancel previous runs for better performance
 
 jobs:
   claude-review:
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT || 15 }}
     outputs:
@@ -40,14 +51,50 @@ jobs:
     steps:
       - name: Debug Workflow Trigger
         run: |
-          echo "DEBUG: Priority 1 Claude AI Review triggered successfully!"
+          echo "🔍 Priority 1 Claude AI Review triggered successfully!"
           echo "Event: ${{ github.event_name }}"
           echo "Action: ${{ github.event.action }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Head Ref: ${{ github.head_ref }}"
+          echo "Base Ref: ${{ github.base_ref }}"
           echo "PR Number: ${{ github.event.pull_request.number }}"
           echo "Repository: ${{ github.repository }}"
-          echo "Branch: ${{ github.head_ref }}"
+          echo "Actor: ${{ github.actor }}"
           echo "Commit SHA: ${{ github.sha }}"
           echo "Timestamp: $(date -u)"
+          echo "Workflow Run ID: ${{ github.run_id }}"
+          echo "Workflow Run Number: ${{ github.run_number }}"
+
+      - name: Detect PR Number for Push Events
+        id: detect-pr
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // For push events, we need to find the associated PR
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`,
+              state: 'open'
+            });
+
+            if (pulls.length > 0) {
+              const prNumber = pulls[0].number;
+              console.log(`Found PR #${prNumber} for push to ${context.ref}`);
+              core.setOutput('pr_number', prNumber.toString());
+              core.setOutput('has_pr', 'true');
+            } else {
+              console.log(`No open PR found for push to ${context.ref}`);
+              core.setOutput('pr_number', '');
+              core.setOutput('has_pr', 'false');
+            }
+
+      - name: Skip Non-PR Push Events
+        if: github.event_name == 'push' && steps.detect-pr.outputs.has_pr == 'false'
+        run: |
+          echo "⏭️ Skipping: Push to ${{ github.ref }} has no associated open PR"
+          exit 0
 
       - name: Validate Organization
         run: |
@@ -96,7 +143,7 @@ jobs:
       - name: Initialize Claude Status
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || steps.detect-pr.outputs.pr_number || github.event.inputs.pr_number }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
           echo "INFO: Initializing Claude AI review status..."
@@ -302,14 +349,14 @@ jobs:
         id: parse-review
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || steps.detect-pr.outputs.pr_number || github.event.inputs.pr_number }}
           CLAUDE_OUTPUT: ${{ steps.review-success.outputs.review_response || '' }}
           REPO_TYPE: ${{ steps.prepare-context.outputs.repo_type }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
           echo "INFO: Processing Claude review with enhanced error handling v2.0..."
-          echo "INFO: PR #${{ github.event.pull_request.number }}"
+          echo "INFO: PR #${{ github.event.pull_request.number || steps.detect-pr.outputs.pr_number || github.event.inputs.pr_number }}"
           echo "INFO: Repository ${{ github.repository }}"
           echo "INFO: Commit ${{ github.sha }}"
 
@@ -474,7 +521,7 @@ jobs:
         id: review-result
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || steps.detect-pr.outputs.pr_number || github.event.inputs.pr_number }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
           REVIEW_SUCCESS="${{ steps.review-success.outputs.successful_attempt != 'none' }}"
