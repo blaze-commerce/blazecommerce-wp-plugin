@@ -8,6 +8,9 @@ on:
 jobs:
   validate-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
       is-prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
@@ -205,6 +208,9 @@ EOF
     needs: validate-release
     runs-on: ubuntu-latest
     if: needs.validate-release.outputs.should_create_release == 'true'
+    permissions:
+      contents: write
+      actions: read
 
     steps:
     - name: Checkout code
@@ -364,6 +370,7 @@ EOF
         echo "✅ Release notes generated successfully"
 
     - name: Create GitHub Release
+      id: create_release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref_name }}
@@ -374,8 +381,23 @@ EOF
         draft: false
         prerelease: ${{ needs.validate-release.outputs.is-prerelease == 'true' }}
         generate_release_notes: true
+        fail_on_unmatched_files: true
       env:
-        GITHUB_TOKEN: ${{ secrets.BC_GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
+
+    - name: Verify release creation
+      run: |
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        RELEASE_URL="${{ steps.create_release.outputs.url }}"
+
+        if [ -z "$RELEASE_URL" ]; then
+          echo "❌ Release URL is empty - release creation may have failed"
+          exit 1
+        fi
+
+        echo "✅ Release created successfully!"
+        echo "🔗 Release URL: $RELEASE_URL"
+        echo "📦 Version: $VERSION"
 
     - name: Release summary
       run: |
@@ -392,6 +414,8 @@ EOF
     needs: validate-release
     runs-on: ubuntu-latest
     if: always()
+    permissions:
+      contents: read
 
     steps:
     - name: Workflow Summary
