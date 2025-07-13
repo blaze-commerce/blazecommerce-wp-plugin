@@ -130,17 +130,34 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         echo "📦 Release version: $VERSION"
 
-        # Validate semantic version format
-        if ! node -e "
-          const { isValidSemver } = require('./scripts/semver-utils');
-          if (!isValidSemver('$VERSION')) {
-            console.error('❌ Invalid semantic version format: $VERSION');
-            process.exit(1);
-          }
-          console.log('✅ Valid semantic version format');
-        "; then
+        # SECURITY FIX: Validate semantic version format using secure temp script
+        cat > temp_validate_version.js << 'EOF'
+const { isValidSemver } = require('./scripts/semver-utils');
+const version = process.env.VERSION;
+
+try {
+  if (!isValidSemver(version)) {
+    console.error('❌ Invalid semantic version format:', version);
+    process.exit(1);
+  }
+  console.log('✅ Valid semantic version format');
+} catch (error) {
+  console.error('Error validating version:', error.message);
+  process.exit(1);
+}
+EOF
+
+        # Set environment variable securely
+        export VERSION="$VERSION"
+
+        # Execute secure validation
+        if ! node temp_validate_version.js; then
+          rm -f temp_validate_version.js
           exit 1
         fi
+
+        # Clean up temporary file
+        rm -f temp_validate_version.js
 
         # Check if it's a prerelease
         if echo "$VERSION" | grep -qE "\-"; then
@@ -312,11 +329,11 @@ jobs:
         RELEASE_NOTES=""
 
         # Extract changelog for this version if it exists
-        if [ -f CHANGELOG.md ]; then
+        if [ -f docs/reference/changelog.md ]; then
           echo "📋 Extracting changelog for version $VERSION..."
 
           # Get content between this version and next version header
-          CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d' | head -50)
+          CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" docs/reference/changelog.md | sed '/^$/d' | head -50)
 
           if [ -n "$CHANGELOG_CONTENT" ]; then
             # Note: Using string concatenation instead of heredoc (cat << EOF)

@@ -484,29 +484,33 @@ jobs:
             NEW_VERSION="$NEW_VERSION-$PRERELEASE_TYPE.1"
           fi
         else
-          # Use semver-utils script for advanced version calculation
-          case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
-            "major")
-              NEW_VERSION=$(node -e "
-                const semver = require('./scripts/semver-utils');
-                const prerelease = '$PRERELEASE_TYPE' || null;
-                console.log(semver.incrementVersion('$CURRENT_VERSION', 'major', prerelease));
-              ")
-              ;;
-            "minor")
-              NEW_VERSION=$(node -e "
-                const semver = require('./scripts/semver-utils');
-                const prerelease = '$PRERELEASE_TYPE' || null;
-                console.log(semver.incrementVersion('$CURRENT_VERSION', 'minor', prerelease));
-              ")
-              ;;
-            "patch")
-              NEW_VERSION=$(node -e "
-                const semver = require('./scripts/semver-utils');
-                const prerelease = '$PRERELEASE_TYPE' || null;
-                console.log(semver.incrementVersion('$CURRENT_VERSION', 'patch', prerelease));
-              ")
-              ;;
+          # SECURITY FIX: Use secure temp script approach to prevent shell injection
+          # Create temporary script for secure version calculation
+          cat > temp_version_calc.js << 'EOF'
+const semver = require('./scripts/semver-utils');
+const bumpType = process.env.BUMP_TYPE;
+const currentVersion = process.env.CURRENT_VERSION;
+const prereleaseType = process.env.PRERELEASE_TYPE || null;
+
+try {
+  const newVersion = semver.incrementVersion(currentVersion, bumpType, prereleaseType);
+  console.log(newVersion);
+} catch (error) {
+  console.error('Error calculating version:', error.message);
+  process.exit(1);
+}
+EOF
+
+          # Set environment variables securely
+          export BUMP_TYPE="${{ steps.bump_type.outputs.BUMP_TYPE }}"
+          export CURRENT_VERSION="$CURRENT_VERSION"
+          export PRERELEASE_TYPE="$PRERELEASE_TYPE"
+
+          # Execute secure script
+          NEW_VERSION=$(node temp_version_calc.js)
+
+          # Clean up temporary file
+          rm -f temp_version_calc.js
           esac
         fi
 
@@ -545,17 +549,28 @@ jobs:
           echo "   Calculated version: $NEW_VERSION"
           echo "🔄 Auto-resolving by forcing patch version increment..."
 
-          # Force patch increment using validated semver utilities
-          FORCED_VERSION=$(node -e "
-            try {
-              const semver = require('./scripts/semver-utils');
-              const newVersion = semver.incrementVersion('$CURRENT_VERSION', 'patch');
-              console.log(newVersion);
-            } catch (error) {
-              console.error('Error incrementing version:', error.message);
-              process.exit(1);
-            }
-          ")
+          # SECURITY FIX: Force patch increment using secure temp script
+          cat > temp_force_patch.js << 'EOF'
+const semver = require('./scripts/semver-utils');
+const currentVersion = process.env.CURRENT_VERSION;
+
+try {
+  const newVersion = semver.incrementVersion(currentVersion, 'patch');
+  console.log(newVersion);
+} catch (error) {
+  console.error('Error incrementing version:', error.message);
+  process.exit(1);
+}
+EOF
+
+          # Set environment variable securely
+          export CURRENT_VERSION="$CURRENT_VERSION"
+
+          # Execute secure script
+          FORCED_VERSION=$(node temp_force_patch.js)
+
+          # Clean up temporary file
+          rm -f temp_force_patch.js
 
           # Validate the forced version was generated successfully
           if [ $? -eq 0 ] && [ -n "$FORCED_VERSION" ]; then
@@ -693,7 +708,7 @@ jobs:
         🤖 Automated version bump
         📦 Version: $VERSION
         🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}
-        📝 Updated files: package.json, blaze-wooless.php, blocks/package.json, CHANGELOG.md"
+        📝 Updated files: package.json, blaze-wooless.php, blocks/package.json, docs/reference/changelog.md"
 
         # Verify commit was created
         if [ $? -ne 0 ]; then

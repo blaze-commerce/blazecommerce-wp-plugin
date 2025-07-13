@@ -107,11 +107,39 @@ module.exports = {
   VALIDATION: {
     // Enable strict validation mode
     STRICT_MODE: false,
-    
+
     // Validation timeout in milliseconds
     TIMEOUT: 10000,
-    
+
     // Maximum validation errors to report
     MAX_ERRORS_TO_REPORT: 20
+  },
+
+  // Security settings (Claude AI Review Enhancement)
+  SECURITY: {
+    // Regex execution timeout to prevent ReDoS attacks
+    REGEX_TIMEOUT: 5000,
+
+    // Maximum iterations to prevent infinite loops
+    MAX_ITERATIONS: 10000,
+
+    // Maximum path length for security
+    MAX_PATH_LENGTH: 1000,
+
+    // Maximum input length for processing
+    MAX_INPUT_LENGTH: 50000,
+
+    // Suspicious pattern detection
+    SUSPICIOUS_PATTERNS: [
+      /\.\./g, // Directory traversal
+      /[<>"|*?]/g, // Invalid filename characters
+      /[\x00-\x1f\x7f]/g // Control characters
+    ],
+
+    // Rate limiting for operations
+    MAX_OPERATIONS_PER_SECOND: 100,
+
+    // Memory usage limits
+    MAX_MEMORY_USAGE_MB: 512
   }
 };

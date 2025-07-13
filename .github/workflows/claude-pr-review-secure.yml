@@ -9,11 +9,16 @@ on:
         description: 'PR number to review'
         required: false
 
+# Prevent race conditions by ensuring only one security gate runs at a time per PR
+concurrency:
+  group: security-gate-pr-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
 jobs:
   claude-review-secure:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     permissions:
       contents: read
       pull-requests: write
@@ -29,7 +34,7 @@ jobs:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             console.log('🔒 Claude AI Review Bot - Secure Version with Security Gates');
-            
+
             // Get PR number
             let prNumber;
             if (context.eventName === 'pull_request') {
@@ -37,59 +42,120 @@ jobs:
             } else if (context.eventName === 'workflow_dispatch') {
               prNumber = '${{ github.event.inputs.pr_number }}';
             }
-            
+
             if (!prNumber) {
               console.log('❌ No PR number found');
               return;
             }
-            
+
             console.log(`🔍 Performing secure review of PR #${prNumber}`);
+
+            // RACE CONDITION PREVENTION: Check for recent reviews from this bot
+            const recentReviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 10
+            });
+
+            const recentBotReviews = recentReviews.data.filter(review =>
+              review.user.login === 'blazecommerce-claude-ai' &&
+              new Date(review.submitted_at) > new Date(Date.now() - 60000) // Last 60 seconds
+            );
+
+            if (recentBotReviews.length > 0) {
+              console.log(`⚠️ Found ${recentBotReviews.length} recent bot reviews, skipping to prevent duplicates`);
+              return;
+            }
             
-            // SECURITY GATE 1: Parse Claude review comments for REQUIRED/IMPORTANT items
+            // SECURITY GATE 1: Parse Claude review comments for REQUIRED/IMPORTANT items with resolution tracking
             async function parseClaudeReviewComments() {
               const requiredItems = [];
               const importantItems = [];
-              
+
               try {
                 console.log('🔍 Parsing Claude review comments for security recommendations...');
-                
+
                 const comments = await github.rest.issues.listComments({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
                   per_page: 100
                 });
-                
+
                 const claudeComments = comments.data.filter(comment => {
-                  const isClaudeBot = comment.user.login.includes('claude') || 
+                  const isClaudeBot = comment.user.login.includes('claude') ||
                                      comment.user.login.includes('blazecommerce-claude-ai') ||
                                      comment.body.includes('Claude AI Review');
-                  const hasReviewContent = comment.body.includes('🔴') || 
+                  const hasReviewContent = comment.body.includes('🔴') ||
                                           comment.body.includes('🟡') ||
                                           comment.body.includes('REQUIRED') ||
                                           comment.body.includes('IMPORTANT');
                   return isClaudeBot && hasReviewContent;
                 });
-                
+
                 console.log(`Found ${claudeComments.length} Claude review comments`);
-                
-                for (const comment of claudeComments) {
-                  const commentBody = comment.body;
-                  
-                  // Enhanced regex patterns for security recommendations
-                  const requiredPattern = /🔴\s*(?:.*?)?REQUIRED[\s\S]*?(?=🟡\s*(?:.*?)?(?:IMPORTANT|SUGGESTIONS)|🔵\s*SUGGESTIONS|$)/gi;
-                  const requiredMatches = commentBody.match(requiredPattern) || [];
-                  
-                  const importantPattern = /🟡\s*(?:.*?)?IMPORTANT[\s\S]*?(?=🔴\s*(?:.*?)?REQUIRED|🔵\s*SUGGESTIONS|$)/gi;
-                  const importantMatches = commentBody.match(importantPattern) || [];
-                  
-                  requiredItems.push(...requiredMatches.map(match => match.trim().substring(0, 500)));
-                  importantItems.push(...importantMatches.map(match => match.trim().substring(0, 500)));
+
+                // Check for resolution indicators in recent comments
+                const hasResolutionIndicators = claudeComments.some(comment => {
+                  const body = comment.body.toLowerCase();
+                  return body.includes('all recommended changes applied successfully') ||
+                         body.includes('security fixes applied successfully') ||
+                         body.includes('all critical security recommendations have been successfully addressed') ||
+                         body.includes('all security vulnerabilities addressed') ||
+                         body.includes('security improvements applied') ||
+                         body.includes('resolved') && body.includes('security') ||
+                         body.includes('✅ all') && body.includes('implemented');
+                });
+
+                console.log(`🔍 Resolution indicators found: ${hasResolutionIndicators}`);
+
+                // If we have resolution indicators, only look for NEW unresolved issues
+                if (hasResolutionIndicators) {
+                  console.log('✅ Found resolution indicators - checking for NEW unresolved issues only');
+
+                  // Sort comments by date (newest first) and only check the most recent ones
+                  const recentComments = claudeComments
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                    .slice(0, 3); // Only check last 3 Claude comments
+
+                  for (const comment of recentComments) {
+                    const commentBody = comment.body;
+
+                    // Only flag as unresolved if explicitly marked as NEW or UNRESOLVED
+                    if (commentBody.includes('NEW REQUIRED') || commentBody.includes('UNRESOLVED REQUIRED')) {
+                      const requiredPattern = /🔴\s*(?:.*?)?(?:NEW\s+)?(?:UNRESOLVED\s+)?REQUIRED[\s\S]*?(?=🟡|🔵|$)/gi;
+                      const requiredMatches = commentBody.match(requiredPattern) || [];
+                      requiredItems.push(...requiredMatches.map(match => match.trim().substring(0, 500)));
+                    }
+
+                    if (commentBody.includes('NEW IMPORTANT') || commentBody.includes('UNRESOLVED IMPORTANT')) {
+                      const importantPattern = /🟡\s*(?:.*?)?(?:NEW\s+)?(?:UNRESOLVED\s+)?IMPORTANT[\s\S]*?(?=🔴|🔵|$)/gi;
+                      const importantMatches = commentBody.match(importantPattern) || [];
+                      importantItems.push(...importantMatches.map(match => match.trim().substring(0, 500)));
+                    }
+                  }
+                } else {
+                  // No resolution indicators - use original logic
+                  console.log('⚠️ No resolution indicators found - using original parsing logic');
+
+                  for (const comment of claudeComments) {
+                    const commentBody = comment.body;
+
+                    const requiredPattern = /🔴\s*(?:.*?)?REQUIRED[\s\S]*?(?=🟡\s*(?:.*?)?(?:IMPORTANT|SUGGESTIONS)|🔵\s*SUGGESTIONS|$)/gi;
+                    const requiredMatches = commentBody.match(requiredPattern) || [];
+
+                    const importantPattern = /🟡\s*(?:.*?)?IMPORTANT[\s\S]*?(?=🔴\s*(?:.*?)?REQUIRED|🔵\s*SUGGESTIONS|$)/gi;
+                    const importantMatches = commentBody.match(importantPattern) || [];
+
+                    requiredItems.push(...requiredMatches.map(match => match.trim().substring(0, 500)));
+                    importantItems.push(...importantMatches.map(match => match.trim().substring(0, 500)));
+                  }
                 }
-                
+
                 console.log(`🔴 Found ${requiredItems.length} REQUIRED security recommendations`);
                 console.log(`🟡 Found ${importantItems.length} IMPORTANT security recommendations`);
-                
+
                 return { requiredItems, importantItems };
               } catch (error) {
                 console.error(`❌ Error parsing Claude comments: ${error.message}`);
@@ -130,6 +196,21 @@ jobs:
             console.log(`  - REQUIRED items pending: ${hasUnaddressedRequired ? requiredItems.length : 0}`);
             console.log(`  - IMPORTANT items pending: ${hasUnaddressedImportant ? importantItems.length : 0}`);
             console.log(`  - Critical security issues: ${hasCriticalSecurityIssues ? securityIssues.length : 0}`);
+
+            // Enhanced debugging for security gate decisions
+            if (hasUnaddressedRequired) {
+              console.log(`🔍 REQUIRED items details:`);
+              requiredItems.forEach((item, index) => {
+                console.log(`  ${index + 1}. ${item.substring(0, 200)}...`);
+              });
+            }
+
+            if (hasUnaddressedImportant) {
+              console.log(`🔍 IMPORTANT items details:`);
+              importantItems.forEach((item, index) => {
+                console.log(`  ${index + 1}. ${item.substring(0, 200)}...`);
+              });
+            }
             
             // SECURE APPROVAL LOGIC - ONLY APPROVE IF ALL SECURITY GATES PASS
             if (hasUnaddressedRequired || hasCriticalSecurityIssues) {
