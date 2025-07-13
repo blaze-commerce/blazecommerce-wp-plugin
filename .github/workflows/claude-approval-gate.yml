@@ -116,8 +116,12 @@ jobs:
               if (context.eventName === 'workflow_run') {
                 completed = true;
                 conclusion = context.payload.workflow_run.conclusion;
-                shouldProceed = true;
+                // Only proceed if the Claude review workflow completed successfully
+                shouldProceed = conclusion === 'success';
                 console.log(`SUCCESS: Claude review workflow completed via workflow_run event: ${conclusion}`);
+                if (!shouldProceed) {
+                  console.log(`WARNING: Claude review workflow failed with conclusion: ${conclusion}`);
+                }
               } else {
                 // For other events, check if Claude review workflow has completed
                 const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -137,12 +141,16 @@ jobs:
                 if (claudeReviewRun) {
                   completed = claudeReviewRun.status === 'completed';
                   conclusion = claudeReviewRun.conclusion || 'unknown';
-                  shouldProceed = true;
+                  // Only proceed if the Claude review workflow completed successfully
+                  shouldProceed = completed && conclusion === 'success';
                   console.log(`SUCCESS: Found Claude review run: ${claudeReviewRun.status} (${conclusion})`);
+                  if (!shouldProceed) {
+                    console.log(`WARNING: Claude review workflow not ready - status: ${claudeReviewRun.status}, conclusion: ${conclusion}`);
+                  }
                 } else {
-                  // No Claude review found, but we should still proceed to check status
-                  shouldProceed = true;
-                  console.log('WARNING: No Claude review workflow found, proceeding with status check');
+                  // No Claude review found - wait for it to complete
+                  shouldProceed = false;
+                  console.log('WARNING: No Claude review workflow found, waiting for Priority 1 to complete');
                 }
               }
             } catch (error) {
