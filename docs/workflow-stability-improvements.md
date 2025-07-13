@@ -9,37 +9,37 @@ This document details the comprehensive stability improvements made to the GitHu
 ### 1. Claude AI Workflow Reliability
 
 #### Problem Solved:
-- Claude AI workflow was using unstable `@beta` version
 - Single-point-of-failure with no retry mechanism
 - Poor error handling when service was unavailable
+- Lack of graceful degradation when Claude AI service fails
 
 #### Solution Implemented:
 ```yaml
-# Before (Unreliable)
+# Maintained Official Recommendation
 uses: anthropics/claude-code-action@beta
 
-# After (Stable with Retry)
+# Enhanced with Retry Logic
 - name: Claude AI Review (Attempt 1)
   id: claude-review-1
   continue-on-error: true
-  uses: anthropics/claude-code-action@v1.0.0
+  uses: anthropics/claude-code-action@beta
 
 - name: Claude AI Review (Attempt 2 - Retry)
   id: claude-review-2
   if: steps.claude-review-1.outcome == 'failure'
   continue-on-error: true
-  uses: anthropics/claude-code-action@v1.0.0
+  uses: anthropics/claude-code-action@beta
 
 - name: Claude AI Review (Attempt 3 - Final Retry)
   id: claude-review-3
   if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
   continue-on-error: true
-  uses: anthropics/claude-code-action@v1.0.0
+  uses: anthropics/claude-code-action@beta
 ```
 
 #### Benefits:
 - **99.5% Success Rate**: Triple retry mechanism ensures high reliability
-- **Security**: Pinned version prevents supply chain attacks
+- **Official Compliance**: Uses Anthropic's recommended `@beta` tag
 - **Graceful Degradation**: Continues workflow even if Claude AI fails
 
 ### 2. Enhanced Error Handling
@@ -79,7 +79,7 @@ if (claudeReviewFailed) {
 # Updated for better reliability and security
 - uses: actions/checkout@v4      # Was: @v3
 - uses: actions/cache@v4         # Was: @v3
-- uses: anthropics/claude-code-action@v1.0.0  # Was: @beta
+- uses: anthropics/claude-code-action@beta  # Maintained as officially recommended
 ```
 
 ### 4. Workflow Timeout and Error Management
@@ -98,21 +98,52 @@ jobs:
 ### Before Improvements:
 - **Success Rate**: ~85% (frequent Claude AI failures)
 - **Recovery Time**: Manual intervention required
-- **Security Risk**: Using floating tags (@beta)
+- **Error Handling**: Poor error messages and no fallbacks
 - **User Experience**: Confusing error messages
 
 ### After Improvements:
 - **Success Rate**: 99.5% (with retry mechanisms)
 - **Recovery Time**: Automatic with clear messaging
-- **Security Risk**: Eliminated (pinned versions)
+- **Error Handling**: Comprehensive fallback mechanisms
 - **User Experience**: Clear error messages and fallback instructions
+
+## ⚠️ CRITICAL: Claude Action Version Requirements
+
+**IMPORTANT**: The `anthropics/claude-code-action` MUST use the `@beta` tag.
+
+### Why `@beta` is Required for Claude Action:
+
+1. **Official Anthropic Recommendation**: Anthropic explicitly recommends using `@beta`
+2. **No Stable Releases**: Specific version tags like `@v1.0.0` do not exist
+3. **API Evolution**: The action evolves with Claude API updates
+4. **Workflow Failures**: Using non-existent versions causes immediate failures
+
+### ❌ Common Mistakes to Avoid:
+```yaml
+# These will cause workflow failures:
+uses: anthropics/claude-code-action@v1.0.0  # Version does not exist
+uses: anthropics/claude-code-action@latest  # Not recommended
+uses: anthropics/claude-code-action@main    # Not stable
+```
+
+### ✅ Correct Usage:
+```yaml
+# This is the only correct approach:
+uses: anthropics/claude-code-action@beta
+```
+
+### Exception to Version Pinning Rule:
+While we pin versions for standard GitHub Actions for security, the Claude action is an exception because:
+- Anthropic maintains the `@beta` tag as the stable reference
+- The action is designed to work with evolving AI models
+- Pinning to non-existent versions breaks functionality
 
 ## 🛡️ Security Enhancements
 
-### 1. Version Pinning
-- All GitHub Actions now use specific versions
-- Prevents supply chain attacks through compromised actions
-- Ensures reproducible builds
+### 1. Selective Version Pinning
+- Standard GitHub Actions use specific versions for security
+- **EXCEPTION**: Claude action uses `@beta` as officially recommended by Anthropic
+- Prevents supply chain attacks while maintaining Claude API compatibility
 
 ### 2. Secret Handling
 - Enhanced error handling for authentication failures
