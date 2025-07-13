@@ -124,3 +124,40 @@ Run these manually in a WordPress environment to verify functionality.
 - **Interactive Support**: Use @claude mentions for assistance
 - **Security Focus**: WordPress plugin security best practices
 - **Performance Analysis**: WooCommerce optimization recommendations
+
+## Claude AI Review Guidelines
+
+### Required Review Structure
+Every Claude AI review must follow this standardized format for auto-approval workflow integration:
+
+#### 1. Review Header
+```markdown
+### Claude AI PR Review Complete ✅
+```
+
+#### 2. Assessment Categories (Use exact headers)
+- **🟢 Strengths** - Positive aspects and good practices
+- **🟡 Areas for Improvement** - Non-blocking suggestions
+- **🔴 Critical Issues** - Blocking issues that MUST be fixed
+- **⚡ Performance Considerations** - Performance-related observations
+- **🔒 Security Assessment** - Security-related findings
+
+#### 3. Final Verdict (REQUIRED - Use exact format)
+```markdown
+### 🎯 **Final Verdict**
+**Status**: [✅ APPROVED | 🟡 CONDITIONAL APPROVAL | ❌ BLOCKED]
+**Merge Readiness**: [✅ READY TO MERGE | 🟡 READY AFTER FIXES | ❌ NOT READY]
+**Recommendation**: [Brief recommendation text]
+```
+
+### Auto-Approval Parsing Rules
+- **✅ APPROVED**: No critical issues, ready for auto-approval
+- **🟡 CONDITIONAL**: Only improvement suggestions, manual review needed
+- **❌ BLOCKED**: Critical issues present, blocks merge until fixed
+
+### Example Critical Issue Patterns
+- Security vulnerabilities
+- Breaking changes
+- Performance regressions
+- Missing required functionality
+- Code that breaks existing features

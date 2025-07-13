@@ -1,4 +1,4 @@
-name: Claude Code Review
+name: Priority 1: Claude AI Code Review
 
 on:
   pull_request:
@@ -42,13 +42,31 @@ jobs:
 
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
-            Be constructive and helpful in your feedback.
+            Please review this pull request following the standardized format in CLAUDE.md.
+
+            IMPORTANT: You MUST follow the exact structure specified in CLAUDE.md for auto-approval workflow integration:
+
+            1. Start with: "### Claude AI PR Review Complete ✅"
+            2. Use these exact section headers:
+               - 🟢 **Strengths**
+               - 🟡 **Areas for Improvement**
+               - 🔴 **Critical Issues**
+               - ⚡ **Performance Considerations**
+               - 🔒 **Security Assessment**
+            3. End with the Final Verdict section using exact format:
+               **Status**: [✅ APPROVED | 🟡 CONDITIONAL APPROVAL | ❌ BLOCKED]
+               **Merge Readiness**: [✅ READY TO MERGE | 🟡 READY AFTER FIXES | ❌ NOT READY]
+
+            Focus your review on:
+            - WordPress plugin security best practices
+            - WooCommerce integration patterns
+            - Performance optimization for large catalogs
+            - Code quality and maintainability
+            - Potential breaking changes
+
+            Use ✅ APPROVED only when no critical issues exist.
+            Use ❌ BLOCKED for security vulnerabilities, breaking changes, or critical bugs.
+            Use 🟡 CONDITIONAL APPROVAL for non-blocking improvements only.
 
           # Optional: Customize review based on file types
           # direct_prompt: |
