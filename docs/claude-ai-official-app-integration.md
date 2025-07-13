@@ -288,3 +288,285 @@ Solutions:
 ## 🧪 **Testing Update**
 
 This documentation has been updated to reflect the new official Claude GitHub App integration. The workflow is now ready for testing with the simplified architecture that delegates AI review to the official Claude App while maintaining the @blazecommerce-claude-ai approval gate functionality.
+
+---
+
+## 📋 **Complete PR Scenario Documentation**
+
+### **Scenario 1: New PR Creation**
+```yaml
+Trigger: pull_request (opened)
+Flow:
+  1. Priority 1 workflow activates immediately
+  2. Posts @claude mention with WordPress plugin review criteria
+  3. Official Claude GitHub App analyzes the PR
+  4. Claude posts comprehensive review with categorized feedback
+  5. Priority 2 workflow evaluates Claude's feedback
+  6. If no REQUIRED issues: @blazecommerce-claude-ai auto-approves
+  7. If REQUIRED issues found: Blocking comment posted
+Expected Timeline: 5-15 minutes for complete cycle
+```
+
+### **Scenario 2: PR Updates (New Commits)**
+```yaml
+Trigger: pull_request (synchronize)
+Flow:
+  1. Priority 1 re-triggers on new commit
+  2. Posts new @claude mention for updated code
+  3. Claude reviews the changes (incremental or full)
+  4. Priority 2 re-evaluates based on new Claude feedback
+  5. Auto-approval or blocking based on current state
+Expected Timeline: 3-10 minutes for re-evaluation
+```
+
+### **Scenario 3: Push to PR Branch**
+```yaml
+Trigger: push (to non-main/develop branch)
+Flow:
+  1. Priority 1 detects push event
+  2. Finds associated open PR
+  3. Triggers Claude review for the PR
+  4. Same evaluation flow as PR synchronize
+Expected Timeline: 3-10 minutes
+```
+
+### **Scenario 4: Manual Workflow Dispatch**
+```yaml
+Trigger: workflow_dispatch (manual)
+Flow:
+  1. Admin manually triggers Priority 1 with PR number
+  2. Forces Claude review regardless of previous state
+  3. Useful for re-reviewing after Claude App updates
+  4. Full evaluation cycle runs
+Expected Timeline: 5-15 minutes
+```
+
+### **Scenario 5: Developer Fixes REQUIRED Issues**
+```yaml
+Trigger: New commit after blocking comment
+Flow:
+  1. Developer addresses REQUIRED issues from Claude
+  2. Pushes new commit to PR branch
+  3. Priority 1 re-triggers automatically
+  4. Claude reviews updated code
+  5. If issues resolved: Auto-approval
+  6. If issues remain: Continued blocking
+Expected Timeline: 3-10 minutes for re-evaluation
+```
+
+### **Scenario 6: Claude App Unavailable**
+```yaml
+Trigger: Any PR event when Claude App is down
+Flow:
+  1. Priority 1 posts @claude mention as usual
+  2. No response from Claude App (timeout)
+  3. Priority 2 waits for Claude review
+  4. Status remains "pending" until Claude responds
+  5. Manual review may be needed if extended outage
+Expected Timeline: Indefinite until Claude App responds
+```
+
+---
+
+## 🔧 **Advanced Configuration Options**
+
+### **Workflow Customization**
+```yaml
+# Priority 1 Timeout (default: 5 minutes)
+timeout-minutes: 5
+
+# Priority 2 Timeout (default: 10 minutes)
+timeout-minutes: 10
+
+# Concurrency Settings
+concurrency:
+  group: priority-1-claude-trigger-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+```
+
+### **Review Criteria Customization**
+The @claude mention can be customized for different repository types:
+
+#### **WordPress Plugin (Current)**
+```yaml
+Focus Areas:
+- WordPress coding standards
+- Security best practices (nonces, sanitization)
+- WooCommerce integration
+- Performance optimization
+```
+
+#### **Next.js Frontend (Alternative)**
+```yaml
+Focus Areas:
+- React best practices
+- TypeScript usage
+- Performance optimization
+- Accessibility compliance
+```
+
+#### **General PHP (Alternative)**
+```yaml
+Focus Areas:
+- PSR standards compliance
+- Security vulnerabilities
+- Performance optimization
+- Testing coverage
+```
+
+### **Branch Protection Integration**
+```yaml
+Required Status Checks:
+  - claude-ai/approval-required
+
+Required Reviews:
+  - @blazecommerce-claude-ai approval
+
+Additional Options:
+  - Dismiss stale reviews: true
+  - Require branches to be up to date: true
+  - Restrict pushes to matching branches: true
+```
+
+---
+
+## 🚨 **Error Handling and Recovery**
+
+### **Common Error Scenarios**
+
+#### **BOT_GITHUB_TOKEN Issues**
+```yaml
+Symptoms:
+  - Comments posted by github-actions[bot] instead of @blazecommerce-claude-ai
+  - 403 Forbidden errors in workflow logs
+
+Solutions:
+  - Verify BOT_GITHUB_TOKEN secret is configured
+  - Check token has required permissions (pull_requests: write)
+  - Regenerate token if expired
+  - Ensure token belongs to @blazecommerce-claude-ai account
+```
+
+#### **Claude App Not Responding**
+```yaml
+Symptoms:
+  - @claude mention posted but no review appears
+  - Priority 2 workflow stuck in "waiting" state
+
+Solutions:
+  - Verify Claude GitHub App is installed in organization
+  - Check app has repository access permissions
+  - Wait for Claude App processing (can take 10-15 minutes)
+  - Manual re-trigger if needed after extended delay
+```
+
+#### **Workflow Trigger Failures**
+```yaml
+Symptoms:
+  - Priority 1 workflow doesn't run on PR events
+  - Manual dispatch fails
+
+Solutions:
+  - Check workflow file syntax (YAML validation)
+  - Verify trigger conditions match event type
+  - Ensure repository has Actions enabled
+  - Check organization/repository permissions
+```
+
+#### **Auto-Approval Logic Failures**
+```yaml
+Symptoms:
+  - @blazecommerce-claude-ai doesn't approve clean PRs
+  - Approval happens when REQUIRED issues present
+
+Solutions:
+  - Check Priority 2 workflow logs for evaluation logic
+  - Verify Claude feedback parsing is working correctly
+  - Review REQUIRED issue detection patterns
+  - Check for edge cases in Claude's response format
+```
+
+---
+
+## 📊 **Monitoring and Analytics**
+
+### **Key Metrics to Track**
+```yaml
+Workflow Performance:
+  - Priority 1 execution time (target: <2 minutes)
+  - Priority 2 execution time (target: <3 minutes)
+  - Claude App response time (typical: 5-15 minutes)
+  - End-to-end cycle time (target: <20 minutes)
+
+Success Rates:
+  - Priority 1 trigger success rate (target: >99%)
+  - Claude App response rate (target: >95%)
+  - Auto-approval accuracy (target: >90%)
+  - False positive blocking rate (target: <5%)
+
+User Experience:
+  - Developer satisfaction with review quality
+  - Time to resolution for REQUIRED issues
+  - Manual intervention frequency (target: <10%)
+```
+
+### **Monitoring Setup**
+```yaml
+GitHub Actions Insights:
+  - Workflow run history and success rates
+  - Execution time trends
+  - Failure pattern analysis
+
+Custom Monitoring:
+  - Claude App response time tracking
+  - Auto-approval decision logging
+  - REQUIRED issue resolution tracking
+```
+
+---
+
+## 🔄 **Maintenance and Updates**
+
+### **Regular Maintenance Tasks**
+```yaml
+Weekly:
+  - Review workflow execution logs
+  - Check for any failed runs or errors
+  - Monitor Claude App response times
+
+Monthly:
+  - Review auto-approval accuracy
+  - Analyze REQUIRED issue patterns
+  - Update review criteria if needed
+  - Check for Claude App updates or changes
+
+Quarterly:
+  - Full workflow performance review
+  - Developer feedback collection
+  - Documentation updates
+  - Security review of tokens and permissions
+```
+
+### **Update Procedures**
+```yaml
+Workflow Updates:
+  1. Test changes in development branch
+  2. Validate with sample PRs
+  3. Deploy to main branch
+  4. Monitor for issues
+  5. Rollback if problems detected
+
+Review Criteria Updates:
+  1. Collaborate with development team
+  2. Update @claude mention template
+  3. Test with various PR types
+  4. Document changes
+  5. Communicate to team
+
+Token Rotation:
+  1. Generate new BOT_GITHUB_TOKEN
+  2. Update GitHub secrets
+  3. Test workflow functionality
+  4. Revoke old token
+  5. Document rotation date
+```
