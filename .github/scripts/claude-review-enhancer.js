@@ -680,32 +680,79 @@ class ClaudeReviewEnhancer {
    * @param {Object} result - Processing result
    */
   outputForGitHubActions(result) {
-    // Escape the comment for GitHub Actions output
-    const escapedComment = result.enhancedComment.replace(/\n/g, '\\n').replace(/"/g, '\\"');
+    try {
+      const fs = require('fs');
 
-    console.log(`enhanced_comment=${escapedComment}`);
-    console.log(`has_blocking_issues=${result.hasBlockingIssues}`);
-    console.log(`processing_success=${result.success}`);
-    console.log(`progress_made=${result.progressMade || false}`);
-    console.log(`review_version=${result.reviewVersion || 1}`);
+      // Prepare output data
+      const outputData = [];
 
-    if (result.recommendations) {
-      console.log(`required_count=${result.recommendations.required.length}`);
-      console.log(`important_count=${result.recommendations.important.length}`);
-      console.log(`suggestions_count=${result.recommendations.suggestions.length}`);
-    }
+      // Handle multiline comment using GitHub Actions multiline format
+      let enhancedComment = result.enhancedComment || '';
 
-    if (result.resolvedCount) {
-      console.log(`resolved_required=${result.resolvedCount.required}`);
-      console.log(`resolved_important=${result.resolvedCount.important}`);
-      console.log(`total_resolved=${result.resolvedCount.required + result.resolvedCount.important}`);
-    }
+      // GitHub Actions multiline output format using EOF delimiter
+      const delimiter = `EOF_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      outputData.push(`enhanced_comment<<${delimiter}`);
+      outputData.push(enhancedComment);
+      outputData.push(delimiter);
 
-    if (result.analysis) {
-      const newCount = (result.analysis.new.required.length || 0) + (result.analysis.new.important.length || 0);
-      const persistentCount = (result.analysis.persistent.required.length || 0) + (result.analysis.persistent.important.length || 0);
-      console.log(`new_issues_count=${newCount}`);
-      console.log(`persistent_issues_count=${persistentCount}`);
+      // Add other outputs as simple key=value pairs
+      outputData.push(`has_blocking_issues=${result.hasBlockingIssues || false}`);
+      outputData.push(`processing_success=${result.success || false}`);
+      outputData.push(`progress_made=${result.progressMade || false}`);
+      outputData.push(`review_version=${result.reviewVersion || 1}`);
+
+      if (result.recommendations) {
+        outputData.push(`required_count=${result.recommendations.required.length}`);
+        outputData.push(`important_count=${result.recommendations.important.length}`);
+        outputData.push(`suggestions_count=${result.recommendations.suggestions.length}`);
+      } else {
+        outputData.push(`required_count=0`);
+        outputData.push(`important_count=0`);
+        outputData.push(`suggestions_count=0`);
+      }
+
+      if (result.resolvedCount) {
+        outputData.push(`resolved_required=${result.resolvedCount.required}`);
+        outputData.push(`resolved_important=${result.resolvedCount.important}`);
+        outputData.push(`total_resolved=${result.resolvedCount.required + result.resolvedCount.important}`);
+      } else {
+        outputData.push(`resolved_required=0`);
+        outputData.push(`resolved_important=0`);
+        outputData.push(`total_resolved=0`);
+      }
+
+      if (result.analysis) {
+        const newCount = (result.analysis.new.required.length || 0) + (result.analysis.new.important.length || 0);
+        const persistentCount = (result.analysis.persistent.required.length || 0) + (result.analysis.persistent.important.length || 0);
+        outputData.push(`new_issues_count=${newCount}`);
+        outputData.push(`persistent_issues_count=${persistentCount}`);
+      } else {
+        outputData.push(`new_issues_count=0`);
+        outputData.push(`persistent_issues_count=0`);
+      }
+
+      // Write to GitHub Actions output file if available, otherwise use console
+      const githubOutput = process.env.GITHUB_OUTPUT;
+      if (githubOutput) {
+        // Write directly to GitHub Actions output file
+        fs.appendFileSync(githubOutput, outputData.join('\n') + '\n');
+
+        // Log success to stderr (won't interfere with output)
+        console.error('SUCCESS: GitHub Actions output written successfully');
+      } else {
+        // Fallback: output to console for local testing
+        console.log('# GitHub Actions Output (local testing mode):');
+        outputData.forEach(line => console.log(line));
+      }
+
+    } catch (error) {
+      // Log error to stderr (won't interfere with GitHub Actions output)
+      console.error(`ERROR: Failed to write GitHub Actions output: ${error.message}`);
+
+      // Fallback: output basic information to console
+      console.log(`processing_success=false`);
+      console.log(`has_blocking_issues=true`);
+      console.log(`error_message=${error.message.replace(/\n/g, ' ')}`);
     }
   }
 }

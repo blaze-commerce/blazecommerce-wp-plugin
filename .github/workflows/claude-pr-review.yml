@@ -322,7 +322,8 @@ jobs:
           fi
 
           # Run the enhanced Claude review processor with progressive tracking
-          if node .github/scripts/claude-review-enhancer.js >> $GITHUB_OUTPUT; then
+          # Note: Script now writes directly to $GITHUB_OUTPUT, no redirection needed
+          if node .github/scripts/claude-review-enhancer.js; then
             echo "SUCCESS: Progressive Claude review processing completed successfully"
 
             # Extract key metrics for logging
