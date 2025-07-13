@@ -55,11 +55,42 @@ jobs:
 
             core.setOutput('all_dependencies_completed', allCompleted.toString());
 
+  # Job that runs on feature branches to provide feedback but skip version operations
+  feature-branch-info:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    if: github.ref != 'refs/heads/main'
+    steps:
+      - name: Feature Branch Information
+        run: |
+          echo "ℹ️  Auto Version Bump - Feature Branch Mode"
+          echo "=========================================="
+          echo "Current branch: ${{ github.ref_name }}"
+          echo "Target branch for version bumps: main"
+          echo ""
+          echo "📋 Status: Version bump operations are SKIPPED on feature branches"
+          echo "✅ This is expected behavior to prevent version conflicts"
+          echo ""
+          echo "🔄 Version bumps will execute when:"
+          echo "   - Changes are merged to the main branch"
+          echo "   - Conventional commit messages are detected"
+          echo "   - No [skip ci] or [no version] flags are present"
+          echo ""
+          echo "💡 To test version bump logic locally:"
+          echo "   npm run test:version-system"
+          echo "   npm run validate-version"
+          echo ""
+          echo "SUCCESS: Feature branch validation completed"
+
   version-bump:
     needs: [wait-for-priority-2]
     runs-on: ubuntu-latest
     timeout-minutes: ${{ vars.AUTO_VERSION_TIMEOUT || 20 }}
-    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore(release)') && !contains(github.event.head_commit.message, '[no version]')"
+    if: |
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, 'chore(release)') &&
+      !contains(github.event.head_commit.message, '[no version]')
     permissions:
       # Minimum required permissions for auto-version workflow
       contents: write         # Required: Update version files and create commits
@@ -304,13 +335,58 @@ jobs:
         export BUMP_TYPE="${{ steps.bump_type.outputs.bump_type }}"
         export PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.prerelease_type }}"
         export PACKAGE_VERSION="${{ steps.version_validation.outputs.package_version }}"
+        export AUTO_RESOLVE_CONFLICTS="true"
+        export FORCE_VERSION_RESOLUTION="true"
 
-        # Run the version update script
+        # Run the version update script with enhanced error handling
+        echo "🔄 Starting version update process..."
+        echo "📦 Current version: $PACKAGE_VERSION"
+        echo "🔧 Bump type: $BUMP_TYPE"
+        echo "🏷️  Prerelease type: ${PRERELEASE_TYPE:-none}"
+
         if node scripts/update-version.js; then
           echo "SUCCESS: Version bump completed successfully"
+
+          # Get the new version for confirmation
+          NEW_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+          echo "✅ New version: $NEW_VERSION"
         else
           echo "ERROR: Version bump failed"
-          exit 1
+          echo "🔍 Checking for common issues..."
+
+          # Check if it's a tag conflict issue
+          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+          if git tag | grep -q "v$CURRENT_VERSION"; then
+            echo "⚠️  Tag conflict detected: v$CURRENT_VERSION already exists"
+            echo "🔧 Attempting automatic conflict resolution..."
+
+            # Try to find next available version using semver-utils
+            node -e "
+              const semver = require('./scripts/semver-utils');
+              const currentVersion = require('./package.json').version;
+
+              console.log('🔍 Finding next available version...');
+              const nextVersion = semver.findNextAvailableVersion(currentVersion, '$BUMP_TYPE');
+              console.log('📦 Next available version:', nextVersion);
+
+              // Update package.json with the resolved version
+              const fs = require('fs');
+              const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+              packageJson.version = nextVersion;
+              fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2) + '\n');
+
+              console.log('✅ Version conflict resolved automatically');
+            " || {
+              echo "❌ Automatic conflict resolution failed"
+              echo "💡 Manual intervention may be required"
+              exit 1
+            }
+
+            echo "SUCCESS: Version conflict resolved automatically"
+          else
+            echo "❌ Version bump failed for unknown reason"
+            exit 1
+          fi
         fi
 
     - name: Create git tag
@@ -322,11 +398,45 @@ jobs:
         NEW_VERSION=$(node -p "require('./package.json').version")
         TAG_NAME="v$NEW_VERSION"
 
-        # Create and push tag
-        git tag "$TAG_NAME"
-        git push origin "$TAG_NAME"
+        echo "🏷️  Preparing to create tag: $TAG_NAME"
 
-        echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+        # Check if tag already exists
+        if git tag | grep -q "^$TAG_NAME$"; then
+          echo "⚠️  Tag $TAG_NAME already exists"
+          echo "🔍 Checking if this is the same commit..."
+
+          # Get the commit hash for the existing tag
+          EXISTING_TAG_COMMIT=$(git rev-list -n 1 "$TAG_NAME" 2>/dev/null || echo "")
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+
+          if [ "$EXISTING_TAG_COMMIT" = "$CURRENT_COMMIT" ]; then
+            echo "✅ Tag $TAG_NAME already points to current commit"
+            echo "ℹ️  No action needed - tag is already correct"
+          else
+            echo "❌ Tag $TAG_NAME points to different commit"
+            echo "🔧 This should not happen after version conflict resolution"
+            echo "📋 Existing tag commit: $EXISTING_TAG_COMMIT"
+            echo "📋 Current commit: $CURRENT_COMMIT"
+            exit 1
+          fi
+        else
+          echo "✅ Tag $TAG_NAME does not exist, creating new tag..."
+
+          # Create and push tag
+          if git tag "$TAG_NAME"; then
+            echo "✅ Tag created locally: $TAG_NAME"
+
+            if git push origin "$TAG_NAME"; then
+              echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+            else
+              echo "ERROR: Failed to push tag to remote"
+              exit 1
+            fi
+          else
+            echo "ERROR: Failed to create tag locally"
+            exit 1
+          fi
+        fi
 
     - name: Commit version changes
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
