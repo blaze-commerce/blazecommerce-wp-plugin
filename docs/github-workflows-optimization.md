@@ -160,7 +160,7 @@ All workflow files now pass YAML syntax validation and GitHub Actions validation
 ### Major Enhancements:
 
 #### 1. Claude AI Workflow Reliability
-- **Pinned Action Version**: Updated from `@beta` to `@v1.0.0` for security and stability
+- **Maintained Beta Tag**: Kept `@beta` tag as officially recommended by Anthropic
 - **Retry Logic**: Implemented 3-attempt retry mechanism with exponential backoff
 - **Fallback Handling**: Added graceful degradation when Claude AI service is unavailable
 - **Error Recovery**: Comprehensive error handling with user-friendly failure messages
@@ -171,7 +171,7 @@ All workflow files now pass YAML syntax validation and GitHub Actions validation
 - **Manual Review Fallback**: Clear instructions when automated review fails
 
 #### 3. Security Improvements
-- **Version Pinning**: All GitHub Actions now use pinned versions instead of floating tags
+- **Selective Version Pinning**: Standard GitHub Actions use pinned versions; Claude action uses `@beta` as recommended
 - **Secret Validation**: Enhanced authentication error handling
 - **Timeout Management**: Proper timeout configuration to prevent hanging workflows
 
@@ -187,13 +187,13 @@ All workflow files now pass YAML syntax validation and GitHub Actions validation
 - name: Claude AI Review (Attempt 1)
   id: claude-review-1
   continue-on-error: true
-  uses: anthropics/claude-code-action@v1.0.0
+  uses: anthropics/claude-code-action@beta
 
 - name: Claude AI Review (Attempt 2 - Retry)
   id: claude-review-2
   if: steps.claude-review-1.outcome == 'failure'
   continue-on-error: true
-  uses: anthropics/claude-code-action@v1.0.0
+  uses: anthropics/claude-code-action@beta
 
 - name: Determine Successful Review
   id: review-success
@@ -214,10 +214,31 @@ All workflow files now pass YAML syntax validation and GitHub Actions validation
 - Clear instructions for manual review when automation fails
 - Graceful degradation without blocking the development workflow
 
+### ⚠️ CRITICAL: Claude Action Version Requirements
+
+**IMPORTANT**: The `anthropics/claude-code-action` MUST use the `@beta` tag, not pinned versions.
+
+#### Why `@beta` is Required:
+- **Official Recommendation**: Anthropic officially recommends using `@beta` for their action
+- **No Stable Releases**: Specific version tags like `@v1.0.0` do not exist and will cause failures
+- **Continuous Updates**: The `@beta` tag ensures access to latest features and bug fixes
+- **API Compatibility**: The action is designed to work with the evolving Claude API
+
+#### ❌ DO NOT USE:
+```yaml
+uses: anthropics/claude-code-action@v1.0.0  # This version does not exist!
+uses: anthropics/claude-code-action@latest  # Not recommended by Anthropic
+```
+
+#### ✅ CORRECT USAGE:
+```yaml
+uses: anthropics/claude-code-action@beta  # Official recommendation
+```
+
 ### Benefits Achieved:
 
 1. **🛡️ Improved Reliability**: 99.5% workflow success rate through retry mechanisms
-2. **🔒 Enhanced Security**: Pinned action versions prevent supply chain attacks
+2. **🔒 Enhanced Security**: Selective version pinning where appropriate
 3. **⚡ Better Performance**: Updated actions provide faster execution times
 4. **🎯 User Experience**: Clear error messages and fallback instructions
 5. **🔧 Maintainability**: Comprehensive error handling reduces manual intervention
