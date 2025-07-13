@@ -7,10 +7,19 @@ This document describes the enhanced version synchronization system that ensures
 The version synchronization system prevents issues like the v1.14.1 release where git tags were created but version files were not properly synchronized. It provides:
 
 - **Comprehensive validation** of version consistency across all files
-- **Automatic detection** of version mismatches between git tags and files  
+- **Automatic detection** of version mismatches between git tags and files
 - **Automatic resolution** of version conflicts (optional)
+- **Context-aware validation** for pre-bump and post-bump scenarios
+- **GitHub Actions integration** with proper workflow validation
 - **Detailed logging** and error reporting for debugging
 - **Safe rollback** capabilities with backup creation
+
+### Recent Fixes (v1.14.1 Issue Resolution)
+
+This system specifically addresses the v1.14.1 release issue where:
+- **Problem**: Git tag `v1.14.1` was created but all files still contained `1.14.0`
+- **Root Cause**: GitHub Actions workflows failed due to post-bump validation incorrectly flagging success as failure
+- **Solution**: Context-aware validation with `--no-conflicts` flag for post-bump scenarios
 
 ## Components
 
@@ -282,4 +291,54 @@ Add these steps to existing workflows:
 - name: Fix version mismatches (optional)
   if: failure()
   run: node scripts/fix-version-mismatch.js ${{ env.TARGET_VERSION }}
+```
+
+## GitHub Actions Workflow Fixes
+
+### Context-Aware Validation
+
+The workflows now use context-aware validation to distinguish between pre-bump and post-bump scenarios:
+
+#### Pre-Bump Validation
+```yaml
+# Standard validation with conflict checking
+- name: 🔍 Validate Current Version
+  run: node scripts/validate-version.js --verbose
+```
+
+#### Post-Bump Validation
+```yaml
+# Post-bump validation without conflict checking
+- name: 🔍 Validate Version Consistency (Post-Bump)
+  run: node scripts/validate-version.js --verbose --no-conflicts
+```
+
+### Auto-Version Workflow Fixes
+
+The auto-version workflow has been updated to:
+
+1. **Use `--no-conflicts` flag** for post-bump validation steps
+2. **Prevent false positive failures** when validating after version updates
+3. **Provide clear step names** indicating validation context
+4. **Include detailed error reporting** for debugging
+
+### Release Workflow Integration
+
+The release workflow includes:
+
+1. **Semantic version validation** using `scripts/semver-utils.js`
+2. **Tag-to-files synchronization** validation before release creation
+3. **Comprehensive error handling** with detailed logging
+
+### New NPM Scripts for Workflows
+
+```bash
+# Post-bump validation (no conflict checking)
+npm run validate-version:post-bump
+
+# Automatic resolution
+npm run fix-version-mismatch:auto
+
+# No-conflicts validation
+npm run validate-version:no-conflicts
 ```
