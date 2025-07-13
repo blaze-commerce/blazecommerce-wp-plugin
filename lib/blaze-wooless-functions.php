@@ -44,7 +44,7 @@ function blaze_wooless_should_use_site_url_context() {
 	}
 
 	// Check if request URI contains API patterns
-	$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+	$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( $_SERVER['REQUEST_URI'] ) : '';
 	$api_patterns = array( '/wp-json/', '/wc-api/', '/woocommerce-api/' );
 
 	foreach ( $api_patterns as $pattern ) {
@@ -99,7 +99,7 @@ function blaze_wooless_array_camel_case_keys( $array ) {
 	foreach ( $array as $key => $value ) {
 		$camelCaseKey = lcfirst( str_replace( ' ', '', ucwords( str_replace( '_', ' ', $key ) ) ) );
 		if ( is_array( $value ) ) {
-			$newArray[ $camelCaseKey ] = blaze_woolese_array_camel_case_keys( $value );
+			$newArray[ $camelCaseKey ] = blaze_wooless_array_camel_case_keys( $value );
 		} else {
 			$newArray[ $camelCaseKey ] = $value;
 		}
@@ -111,37 +111,44 @@ if ( function_exists( 'is_plugin_active' ) && is_plugin_active( 'klaviyo/klaviyo
 }
 
 function klaviyo_script() {
-	$klaviyo_api_key = "W7A7kP";
+	$klaviyo_api_key = bw_get_klaviyo_api_key();
 	if( ! is_klaviyo_connected() ) {
-		if( $klaviyo_api_key ) {
-			$src_url = 'https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=' . $klaviyo_api_key;
+		if( ! empty( $klaviyo_api_key ) ) {
+			$src_url = 'https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=' . esc_attr( $klaviyo_api_key );
 			?>
-			<script id="klaviyo-staging-script" src="<?php echo $src_url; ?>" async="true"></script>
+			<script id="klaviyo-staging-script" src="<?php echo esc_url( $src_url ); ?>" async="true"></script>
 			<?php
 		}
 	}
 }
 
 function is_klaviyo_connected() {
-	$klaviyo_api_key = "W7A7kP";
-	if ( ! empty( $klaviyo_api_key ) ) {
-		$url = 'https://a.klaviyo.com/api/v1/metrics?api_key=' . $klaviyo_api_key;
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-		$response = curl_exec($ch);
-		$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
-		if ( $httpcode == 200 ) {
-			return true;
-		}
+	$klaviyo_api_key = bw_get_klaviyo_api_key();
+	if ( empty( $klaviyo_api_key ) ) {
+		return false;
 	}
-	return false;
+
+	$url = 'https://a.klaviyo.com/api/v1/metrics?api_key=' . urlencode( $klaviyo_api_key );
+	$response = wp_remote_get( $url, array(
+		'timeout' => 10,
+		'sslverify' => true,
+		'user-agent' => 'BlazeCommerce-WP-Plugin/1.0'
+	) );
+
+	if ( is_wp_error( $response ) ) {
+		error_log( 'Klaviyo API connection error: ' . $response->get_error_message() );
+		return false;
+	}
+
+	$response_code = wp_remote_retrieve_response_code( $response );
+	return $response_code === 200;
 }
 
 function is_string_in_current_url( $string ) {
-	$current_url = "https://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+	$http_host = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( $_SERVER['HTTP_HOST'] ) : '';
+	$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( $_SERVER['REQUEST_URI'] ) : '';
+	$current_url = esc_url_raw( "https://" . $http_host . $request_uri );
+	
 	if ( strpos($current_url, $string) !== false ) {
 		return true;
 	}
