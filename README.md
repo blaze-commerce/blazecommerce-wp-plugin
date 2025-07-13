@@ -11,6 +11,8 @@ The official plugin that integrates your WordPress/WooCommerce site with the Bla
 
 Blaze Commerce is a powerful WordPress plugin that provides seamless integration between your WooCommerce store and the Blaze Commerce headless commerce platform. The plugin features advanced Typesense search integration, collection aliasing for zero-downtime syncing, comprehensive settings management, and extensive customization options.
 
+> **Testing Note**: This README has been updated to test the Claude PR review bot functionality.
+
 ## Key Features
 
 - **Typesense Integration**: Advanced search capabilities with real-time indexing
