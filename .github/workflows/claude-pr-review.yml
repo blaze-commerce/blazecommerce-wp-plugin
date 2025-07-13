@@ -255,43 +255,89 @@ jobs:
             exit 1
           fi
 
-      - name: Parse Claude Review and Update Tracking
+      - name: Parse Claude Review and Update Progressive Tracking
         id: parse-review
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CLAUDE_OUTPUT: ${{ steps.review-success.outputs.review_response || '' }}
+          REPO_TYPE: ${{ steps.prepare-context.outputs.repo_type }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
-          echo "🔍 Processing Claude review with enhanced tracking..."
+          echo "🔍 Processing Claude review with progressive tracking v2.0..."
+          echo "📊 PR: #${{ github.event.pull_request.number }}"
+          echo "🔗 Repository: ${{ github.repository }}"
+          echo "📝 Commit: ${{ github.sha }}"
 
-          # Set environment variables for the script
-          export PR_NUMBER="${{ github.event.pull_request.number }}"
-          export CLAUDE_OUTPUT="${{ steps.review-success.outputs.review_response || '' }}"
-          export REPO_TYPE="${{ steps.prepare-context.outputs.repo_type }}"
-
-          # Run the enhanced Claude review processor
-          if node .github/scripts/claude-review-enhancer.js >> $GITHUB_OUTPUT; then
-            echo "✅ Claude review processing completed successfully"
+          # Install dependencies for progressive review system
+          echo "📦 Installing dependencies for progressive review system..."
+          if node .github/scripts/install-dependencies.js; then
+            echo "✅ Dependencies ready for progressive tracking"
           else
-            echo "❌ Claude review processing failed, using fallback"
-            # Fallback to basic parsing
+            echo "⚠️ Using fallback implementation for limited GitHub API support"
+          fi
+
+          # Run the enhanced Claude review processor with progressive tracking
+          if node .github/scripts/claude-review-enhancer.js >> $GITHUB_OUTPUT; then
+            echo "✅ Progressive Claude review processing completed successfully"
+
+            # Extract key metrics for logging
+            PROGRESS_MADE=$(grep "progress_made=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "false")
+            REVIEW_VERSION=$(grep "review_version=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "1")
+            RESOLVED_COUNT=$(grep "total_resolved=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "0")
+
+            echo "📈 Review Version: $REVIEW_VERSION"
+            echo "🎯 Progress Made: $PROGRESS_MADE"
+            echo "✅ Issues Resolved: $RESOLVED_COUNT"
+
+          else
+            echo "❌ Progressive review processing failed, using fallback"
+            # Enhanced fallback with basic tracking
             echo "has_blocking_issues=false" >> $GITHUB_OUTPUT
             echo "required_count=0" >> $GITHUB_OUTPUT
             echo "important_count=0" >> $GITHUB_OUTPUT
+            echo "progress_made=false" >> $GITHUB_OUTPUT
+            echo "review_version=1" >> $GITHUB_OUTPUT
+            echo "processing_success=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Post Enhanced Claude Review Comment
+      - name: Post Progressive Claude Review Comment
         if: steps.review-success.outputs.successful_attempt != 'none'
         uses: actions/github-script@v7
         with:
           script: |
             const enhancedComment = `${{ steps.parse-review.outputs.enhanced_comment || steps.review-success.outputs.review_response }}`;
+            const progressMade = '${{ steps.parse-review.outputs.progress_made }}' === 'true';
+            const reviewVersion = '${{ steps.parse-review.outputs.review_version }}' || '1';
+            const resolvedCount = '${{ steps.parse-review.outputs.total_resolved }}' || '0';
+            const processingSuccess = '${{ steps.parse-review.outputs.processing_success }}' === 'true';
 
-            // Post the enhanced review comment
-            await github.rest.issues.createComment({
+            // Post the enhanced review comment with progressive tracking
+            const response = await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
               body: enhancedComment
             });
 
-            console.log('📝 Posted enhanced Claude AI review comment');
+            console.log(`📝 Posted progressive Claude AI review comment v${reviewVersion}`);
+
+            if (processingSuccess) {
+              if (progressMade) {
+                console.log(`🎉 Progress detected: ${resolvedCount} issue(s) resolved since last review`);
+              } else if (reviewVersion > 1) {
+                console.log(`🔄 Review updated: No new progress detected in version ${reviewVersion}`);
+              } else {
+                console.log(`🆕 Initial review: Version ${reviewVersion} posted`);
+              }
+            } else {
+              console.log(`⚠️ Posted with limited tracking due to processing issues`);
+            }
+
+            // Set output for other steps
+            core.setOutput('comment_id', response.data.id);
+            core.setOutput('comment_url', response.data.html_url);
 
       - name: Handle Claude AI Review Failure
         if: steps.review-success.outputs.successful_attempt == 'none'
@@ -347,16 +393,34 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            // Check if tracking file exists
+            console.log('🔍 Checking auto-approval criteria with progressive tracking...');
+
+            // Get enhanced tracking data from the updated tracking file
             const trackingFile = path.join('.github/claude-tracking', `pr-${context.payload.pull_request.number}-recommendations.json`);
             let hasBlockingIssues = false;
+            let progressMade = false;
+            let reviewVersion = 1;
+            let resolvedCount = 0;
 
             if (fs.existsSync(trackingFile)) {
               const trackingData = JSON.parse(fs.readFileSync(trackingFile, 'utf8'));
-              const unresolvedRequired = trackingData.total_recommendations.required - trackingData.resolved_recommendations.required.length;
-              hasBlockingIssues = unresolvedRequired > 0;
 
-              console.log(`📋 Tracking data: ${unresolvedRequired} unresolved REQUIRED items`);
+              // Enhanced tracking analysis
+              const currentRequired = trackingData.total_recommendations?.required || 0;
+              const cumulativeResolved = trackingData.cumulative_stats?.total_resolved?.required || 0;
+              const totalReviews = trackingData.cumulative_stats?.total_reviews || 1;
+
+              hasBlockingIssues = currentRequired > 0;
+              progressMade = cumulativeResolved > 0;
+              reviewVersion = totalReviews;
+              resolvedCount = cumulativeResolved;
+
+              console.log(`📊 Progressive Tracking Analysis:`);
+              console.log(`   - Review Version: ${reviewVersion}`);
+              console.log(`   - Current Required Issues: ${currentRequired}`);
+              console.log(`   - Cumulative Resolved Issues: ${cumulativeResolved}`);
+              console.log(`   - Progress Made: ${progressMade}`);
+              console.log(`   - Has Blocking Issues: ${hasBlockingIssues}`);
             } else {
               // Fallback: check if Claude review had blocking issues
               hasBlockingIssues = '${{ needs.claude-review.outputs.has_blocking_issues }}' === 'true';
@@ -366,17 +430,25 @@ jobs:
             // Check if Claude review succeeded
             const claudeReviewSucceeded = '${{ needs.claude-review.result }}' === 'success';
 
-            // Auto-approval decision based ONLY on Claude's recommendations
-            // GitHub checks are handled separately by branch protection rules
+            // Enhanced auto-approval decision with progressive tracking
             const shouldApprove = claudeReviewSucceeded && !hasBlockingIssues;
 
+            // Set outputs with enhanced information
             core.setOutput('should_approve', shouldApprove ? 'true' : 'false');
             core.setOutput('blocking_issues', hasBlockingIssues ? 'true' : 'false');
             core.setOutput('claude_review_failed', claudeReviewSucceeded ? 'false' : 'true');
+            core.setOutput('progress_made', progressMade ? 'true' : 'false');
+            core.setOutput('review_version', reviewVersion.toString());
+            core.setOutput('resolved_count', resolvedCount.toString());
 
             console.log(`🎯 Auto-approval decision: ${shouldApprove ? 'APPROVE' : 'SKIP'}`);
             console.log(`   - Claude review succeeded: ${claudeReviewSucceeded}`);
             console.log(`   - Blocking issues: ${hasBlockingIssues}`);
+
+            if (progressMade) {
+              console.log(`🎉 Progress detected: ${resolvedCount} issue(s) resolved across ${reviewVersion} review(s)`);
+            }
+
             console.log(`   - GitHub checks: Handled by branch protection rules`);
 
       - name: Enhanced Token Security Validation
