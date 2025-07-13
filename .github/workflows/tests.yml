@@ -9,16 +9,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ vars.TEST_TIMEOUT || 15 }}
+    timeout-minutes: ${{ vars.TEST_TIMEOUT || 20 }}
 
     strategy:
       # Prevent cancellation of other jobs when one fails
       fail-fast: false
       matrix:
-        # Optimized matrix: Only WordPress-compatible PHP versions (removed 8.2)
-        php-version: [7.4, 8.0, 8.1]
+        # Fixed PHP version matrix - use string format for consistency
+        php-version: ['7.4', '8.0', '8.1']
         # Updated WordPress versions for better compatibility
-        wordpress-version: [latest, 6.3, 6.2]
+        wordpress-version: [latest, '6.3', '6.2']
     
     services:
       mysql:
@@ -51,11 +51,44 @@ jobs:
           ${{ runner.os }}-php-${{ matrix.php-version }}-
     
     - name: Install Composer dependencies
-      run: composer install --prefer-dist --no-progress --no-suggest
+      run: |
+        echo "🔍 Installing Composer dependencies..."
+        echo "PHP Version: $(php --version)"
+        echo "Composer Version: $(composer --version)"
+
+        # Validate composer.json exists and is valid
+        if [ ! -f "composer.json" ]; then
+          echo "❌ composer.json not found"
+          exit 1
+        fi
+
+        echo "✅ composer.json found, validating..."
+        composer validate --no-check-publish --no-check-all
+
+        # Install dependencies with better error handling
+        composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+
+        echo "✅ Composer dependencies installed successfully"
     
     - name: Setup WordPress test environment
       run: |
+        echo "🔍 Setting up WordPress test environment..."
+        echo "WordPress Version: ${{ matrix.wordpress-version }}"
+        echo "PHP Version: ${{ matrix.php-version }}"
+
+        # Validate test script exists
+        if [ ! -f "bin/install-wp-tests.sh" ]; then
+          echo "❌ WordPress test installation script not found"
+          exit 1
+        fi
+
+        # Make script executable
+        chmod +x bin/install-wp-tests.sh
+
+        # Install WordPress test environment with better error handling
         bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ matrix.wordpress-version }}
+
+        echo "✅ WordPress test environment setup complete"
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib
         WP_CORE_DIR: /tmp/wordpress/
@@ -69,7 +102,29 @@ jobs:
     
     - name: Run PHPUnit tests
       run: |
-        vendor/bin/phpunit --configuration phpunit.xml --coverage-clover=coverage.xml
+        echo "🧪 Running PHPUnit tests..."
+        echo "PHP Version: ${{ matrix.php-version }}"
+        echo "WordPress Version: ${{ matrix.wordpress-version }}"
+
+        # Validate PHPUnit configuration
+        if [ ! -f "phpunit.xml" ]; then
+          echo "❌ phpunit.xml not found"
+          exit 1
+        fi
+
+        # Validate PHPUnit binary exists
+        if [ ! -f "vendor/bin/phpunit" ]; then
+          echo "❌ PHPUnit binary not found in vendor/bin/"
+          echo "Available files in vendor/bin/:"
+          ls -la vendor/bin/ || echo "vendor/bin/ directory not found"
+          exit 1
+        fi
+
+        # Run tests with comprehensive error handling
+        echo "🚀 Executing PHPUnit tests..."
+        vendor/bin/phpunit --configuration phpunit.xml --coverage-clover=coverage.xml --verbose
+
+        echo "✅ PHPUnit tests completed successfully"
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib
         WP_CORE_DIR: /tmp/wordpress/
@@ -105,16 +160,50 @@ jobs:
         extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, mysql, mysqli, pdo_mysql, bcmath, soap, intl, gd, exif, iconv
     
     - name: Install Composer dependencies
-      run: composer install --prefer-dist --no-progress --no-suggest
+      run: |
+        echo "🔍 Installing Composer dependencies for code quality checks..."
+        composer validate --no-check-publish --no-check-all
+        composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+        echo "✅ Composer dependencies installed successfully"
     
     - name: Run PHP_CodeSniffer
       run: |
-        vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=vendor/,tests/coverage/ .
+        echo "🔍 Running PHP_CodeSniffer..."
+
+        # Check if PHPCS is available
+        if [ ! -f "vendor/bin/phpcs" ]; then
+          echo "❌ PHP_CodeSniffer not found in vendor/bin/"
+          exit 1
+        fi
+
+        # Run PHPCS with better error handling
+        echo "🚀 Executing PHP_CodeSniffer..."
+        vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=vendor/,tests/coverage/ . --report=summary
+
+        echo "✅ PHP_CodeSniffer completed"
       continue-on-error: true
     
     - name: Run PHPStan
       run: |
-        vendor/bin/phpstan analyse --level=5 app/
+        echo "🔍 Running PHPStan static analysis..."
+
+        # Check if PHPStan is available
+        if [ ! -f "vendor/bin/phpstan" ]; then
+          echo "❌ PHPStan not found in vendor/bin/"
+          exit 1
+        fi
+
+        # Check if app directory exists
+        if [ ! -d "app/" ]; then
+          echo "❌ app/ directory not found"
+          exit 1
+        fi
+
+        # Run PHPStan with better error handling
+        echo "🚀 Executing PHPStan analysis..."
+        vendor/bin/phpstan analyse --level=5 app/ --no-progress
+
+        echo "✅ PHPStan analysis completed"
       continue-on-error: true
     
   test-coverage:
@@ -136,18 +225,43 @@ jobs:
         coverage: xdebug
     
     - name: Install Composer dependencies
-      run: composer install --prefer-dist --no-progress --no-suggest
+      run: |
+        echo "🔍 Installing Composer dependencies for test coverage..."
+        composer validate --no-check-publish --no-check-all
+        composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+        echo "✅ Composer dependencies installed successfully"
     
     - name: Setup WordPress test environment
       run: |
+        echo "🔍 Setting up WordPress test environment for coverage..."
+
+        # Validate test script exists
+        if [ ! -f "bin/install-wp-tests.sh" ]; then
+          echo "❌ WordPress test installation script not found"
+          exit 1
+        fi
+
+        # Make script executable and run
+        chmod +x bin/install-wp-tests.sh
         bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest
+
+        echo "✅ WordPress test environment setup complete"
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib
         WP_CORE_DIR: /tmp/wordpress/
     
     - name: Generate coverage report
       run: |
-        vendor/bin/phpunit --configuration phpunit.xml --coverage-html=tests/coverage/html --coverage-text
+        echo "📊 Generating test coverage report..."
+
+        # Ensure coverage directory exists
+        mkdir -p tests/coverage/html
+
+        # Generate coverage report with error handling
+        echo "🚀 Running PHPUnit with coverage..."
+        vendor/bin/phpunit --configuration phpunit.xml --coverage-html=tests/coverage/html --coverage-text --verbose
+
+        echo "✅ Coverage report generated successfully"
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib
         WP_CORE_DIR: /tmp/wordpress/

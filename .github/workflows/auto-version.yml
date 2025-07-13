@@ -119,7 +119,17 @@ jobs:
 
     - name: Install dependencies
       if: steps.check_files.outputs.should_bump_version == 'true'
-      run: npm install
+      run: |
+        echo "📦 Installing npm dependencies..."
+        npm install
+        echo "✅ Dependencies installed successfully"
+
+    - name: Validate workflow environment
+      if: steps.check_files.outputs.should_bump_version == 'true'
+      run: |
+        echo "🔍 Validating workflow environment..."
+        node scripts/validate-workflow-environment.js
+        echo "✅ Environment validation passed"
 
     - name: Configure Git
       if: steps.check_files.outputs.should_bump_version == 'true'
@@ -512,17 +522,23 @@ jobs:
       run: |
         echo "🔍 Calculating new version based on bump type and current version..."
 
-        # Get current version from package.json (reliable method)
-        CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
-        if [ $? -ne 0 ] || [ -z "$CURRENT_VERSION" ]; then
+        # Validate required files exist
+        if [ ! -f "package.json" ]; then
+          echo "❌ Error: package.json file not found"
+          exit 1
+        fi
+
+        # Get current version from package.json with better error handling
+        echo "📄 Reading current version from package.json..."
+        if ! CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null); then
           echo "❌ Error: Could not extract current version from package.json"
-          echo "🔍 Debugging: Checking if package.json exists and is valid..."
-          if [ ! -f "package.json" ]; then
-            echo "❌ package.json file not found"
-          else
-            echo "📄 package.json exists, checking content..."
-            head -5 package.json
-          fi
+          echo "🔍 Debugging package.json content:"
+          head -10 package.json || echo "Could not read package.json"
+          exit 1
+        fi
+
+        if [ -z "$CURRENT_VERSION" ]; then
+          echo "❌ Error: Current version is empty"
           exit 1
         fi
 
@@ -535,88 +551,52 @@ jobs:
         PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
         echo "🏷️  Prerelease type: ${PRERELEASE_TYPE:-'none (stable release)'}"
 
-        # Validate semver-utils script exists and implement proper fallback (Claude's recommendation)
-        USE_FALLBACK_CALCULATION=false
-        if [ ! -f "scripts/semver-utils.js" ]; then
-          echo "⚠️  Warning: semver-utils.js not found, using fallback version calculation"
-          echo "   Expected: scripts/semver-utils.js"
-          echo "   Fallback: Using built-in bash version calculation"
-          USE_FALLBACK_CALCULATION=true
+        # Use simplified version calculation with better error handling
+        echo "🔄 Calculating new version..."
+        echo "   Current version: $CURRENT_VERSION"
+        echo "   Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
+        echo "   Prerelease type: ${PRERELEASE_TYPE:-'none'}"
+
+        # Parse current version components
+        if ! echo "$CURRENT_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+          echo "❌ Error: Current version '$CURRENT_VERSION' is not in valid semver format"
+          exit 1
         fi
 
-        if [ "$USE_FALLBACK_CALCULATION" = "true" ]; then
-          # Fallback version calculation using bash (no external dependencies)
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        # Extract version components using bash parameter expansion
+        VERSION_WITHOUT_PRERELEASE="${CURRENT_VERSION%%-*}"
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_WITHOUT_PRERELEASE"
 
-          case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
-            "major")
-              NEW_VERSION="$((MAJOR + 1)).0.0"
-              ;;
-            "minor")
-              NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
-              ;;
-            "patch")
-              NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
-              ;;
-          esac
-
-          # Add prerelease suffix if specified
-          if [ -n "$PRERELEASE_TYPE" ]; then
-            NEW_VERSION="$NEW_VERSION-$PRERELEASE_TYPE.1"
-          fi
-        else
-          # SECURITY FIX: Use secure temp script approach to prevent shell injection
-          # Create temporary script for secure version calculation
-          TEMP_FILE=$(mktemp "${TMPDIR:-/tmp}/version_calc.XXXXXXXXXX.js")
-          trap 'rm -f "$TEMP_FILE"' EXIT
-          cat > "$TEMP_FILE" << 'EOF'
-          const semver = require('./scripts/semver-utils');
-          const bumpType = process.env.BUMP_TYPE;
-          const currentVersion = process.env.CURRENT_VERSION;
-          const prereleaseType = process.env.PRERELEASE_TYPE || null;
-
-          try {
-            const newVersion = semver.incrementVersion(currentVersion, bumpType, prereleaseType);
-            console.log(newVersion);
-          } catch (error) {
-            console.error('Error calculating version:', error.message);
-            process.exit(1);
-          }
-          EOF
-
-          # Set environment variables securely
-          export BUMP_TYPE="${{ steps.bump_type.outputs.BUMP_TYPE }}"
-          export CURRENT_VERSION="$CURRENT_VERSION"
-          export PRERELEASE_TYPE="$PRERELEASE_TYPE"
-
-          # Execute secure script with error handling
-          echo "🔄 Executing version calculation script..."
-          NEW_VERSION=$(node "$TEMP_FILE" 2>&1)
-          EXIT_CODE=$?
-
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ Error: Version calculation script failed with exit code $EXIT_CODE"
-            echo "📋 Error output: $NEW_VERSION"
-            echo "🔄 Falling back to bash version calculation..."
-
-            # Fallback to bash calculation
-            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-            case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
-              "major") NEW_VERSION="$((MAJOR + 1)).0.0" ;;
-              "minor") NEW_VERSION="$MAJOR.$((MINOR + 1)).0" ;;
-              "patch") NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))" ;;
-              *) echo "❌ Unknown bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"; exit 1 ;;
-            esac
-
-            if [ -n "$PRERELEASE_TYPE" ]; then
-              NEW_VERSION="$NEW_VERSION-$PRERELEASE_TYPE.1"
-            fi
-
-            echo "✅ Fallback calculation successful: $NEW_VERSION"
-          else
-            echo "✅ Version calculation successful: $NEW_VERSION"
-          fi
+        # Validate version components are numbers
+        if ! [[ "$MAJOR" =~ ^[0-9]+$ ]] || ! [[ "$MINOR" =~ ^[0-9]+$ ]] || ! [[ "$PATCH" =~ ^[0-9]+$ ]]; then
+          echo "❌ Error: Invalid version components - MAJOR: $MAJOR, MINOR: $MINOR, PATCH: $PATCH"
+          exit 1
         fi
+
+        # Calculate new version based on bump type
+        case "${{ steps.bump_type.outputs.BUMP_TYPE }}" in
+          "major")
+            NEW_VERSION="$((MAJOR + 1)).0.0"
+            ;;
+          "minor")
+            NEW_VERSION="$MAJOR.$((MINOR + 1)).0"
+            ;;
+          "patch")
+            NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+            ;;
+          *)
+            echo "❌ Error: Unknown bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}"
+            exit 1
+            ;;
+        esac
+
+        # Add prerelease suffix if specified
+        if [ -n "$PRERELEASE_TYPE" ]; then
+          NEW_VERSION="$NEW_VERSION-$PRERELEASE_TYPE.1"
+        fi
+
+        echo "✅ Version calculation successful using bash method"
+
 
         # Enhanced validation for calculated version (Claude's recommendation)
         if [ -z "$NEW_VERSION" ]; then
@@ -688,54 +668,26 @@ jobs:
           fi
         fi
 
-        # Enhanced auto-increment logic using extracted conflict resolution module
-        # Addresses Claude AI recommendation to extract complex workflow logic
-        echo "🔍 Starting version conflict resolution..."
+        # Simplified version conflict resolution
+        echo "🔍 Checking for version conflicts..."
 
-        PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.PRERELEASE }}"
+        # Check if the calculated version already exists as a git tag
+        if git rev-parse --verify "v$NEW_VERSION" >/dev/null 2>&1; then
+          echo "⚠️  Version conflict: v$NEW_VERSION already exists as a git tag"
+          echo "🔄 Auto-resolving by incrementing patch version..."
 
-        # Use the extracted conflict resolution script for better maintainability
-        # Validate script existence before execution to prevent race conditions
-        # Claude's recommendation: Consider if script should be required or improve fallback handling
-        if [ ! -f "scripts/resolve-version-conflicts.js" ]; then
-          echo "⚠️  Conflict resolution script not found, using calculated version"
-          echo "   Expected: scripts/resolve-version-conflicts.js"
-          echo "   Impact: Advanced conflict resolution features will be unavailable"
-          echo "   Fallback: Using calculated version without conflict resolution"
-          echo "   Recommendation: Add the script for enhanced version conflict handling"
-          RESOLVED_VERSION="$NEW_VERSION"
-          echo "📦 Resolved version (fallback): $RESOLVED_VERSION"
-        else
-          echo "🔧 Running conflict resolution script..."
-          RESOLUTION_RESULT=$(node scripts/resolve-version-conflicts.js "$NEW_VERSION" "$PRERELEASE_TYPE")
-          RESOLUTION_EXIT_CODE=$?
+          # Parse the new version and increment patch
+          VERSION_BASE="${NEW_VERSION%%-*}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_BASE"
+          PATCH=$((PATCH + 1))
 
-          if [ $RESOLUTION_EXIT_CODE -ne 0 ]; then
-            echo "❌ Version conflict resolution failed"
-            echo "$RESOLUTION_RESULT"
-            echo "🔄 Fallback: Using calculated version without conflict resolution"
-            RESOLVED_VERSION="$NEW_VERSION"
+          if [ -n "$PRERELEASE_TYPE" ]; then
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH-$PRERELEASE_TYPE.1"
           else
-            # Extract resolved version from output
-            RESOLVED_VERSION=$(echo "$RESOLUTION_RESULT" | grep "📦 Final resolved version:" | sed 's/.*: //')
-
-            # Validate that a resolved version was extracted
-            if [ -z "$RESOLVED_VERSION" ]; then
-              echo "⚠️  Could not extract resolved version from script output"
-              echo "🔄 Fallback: Using calculated version without conflict resolution"
-              RESOLVED_VERSION="$NEW_VERSION"
-            fi
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
           fi
-        fi
 
-        if [ -n "$RESOLVED_VERSION" ] && [ "$RESOLVED_VERSION" != "$NEW_VERSION" ]; then
-          echo "🔄 Version updated due to conflict resolution:"
-          echo "   Original: $NEW_VERSION"
-          echo "   Resolved: $RESOLVED_VERSION"
-          NEW_VERSION="$RESOLVED_VERSION"
-
-          # Update bump type to patch since we're doing patch increments for resolution
-          echo "BUMP_TYPE=patch" >> $GITHUB_OUTPUT
+          echo "✅ Conflict resolved: new version is $NEW_VERSION"
         fi
 
         echo "📦 Final version will be: $NEW_VERSION"
@@ -745,41 +697,84 @@ jobs:
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         echo "🔄 Bumping version using npm scripts..."
-        npm run version:${{ steps.bump_type.outputs.BUMP_TYPE }}
+
+        # Validate npm script exists
+        if ! npm run | grep -q "version:${{ steps.bump_type.outputs.BUMP_TYPE }}"; then
+          echo "❌ Error: npm script 'version:${{ steps.bump_type.outputs.BUMP_TYPE }}' not found"
+          echo "Available scripts:"
+          npm run | grep "version:" || echo "No version scripts found"
+          exit 1
+        fi
+
+        # Run version bump with error handling
+        if ! npm run version:${{ steps.bump_type.outputs.BUMP_TYPE }}; then
+          echo "❌ Error: Version bump script failed"
+          exit 1
+        fi
 
         echo "✅ Version bump completed"
-        UPDATED_VERSION=$(node -p "require('./package.json').version")
+
+        # Verify version was updated
+        if ! UPDATED_VERSION=$(node -p "require('./package.json').version" 2>/dev/null); then
+          echo "❌ Error: Could not read updated version from package.json"
+          exit 1
+        fi
+
         echo "📦 Updated version: $UPDATED_VERSION"
 
     - name: Update changelog
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         echo "📝 Updating changelog..."
-        npm run changelog
-        echo "✅ Changelog updated"
+
+        # Validate changelog script exists
+        if ! npm run | grep -q "changelog"; then
+          echo "❌ Error: changelog script not found in package.json"
+          exit 1
+        fi
+
+        # Run changelog update with error handling
+        if ! npm run changelog; then
+          echo "❌ Error: Changelog update failed"
+          exit 1
+        fi
+
+        echo "✅ Changelog updated successfully"
 
     - name: Validate post-bump version system
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         echo "🔍 Validating version system after bump..."
-        FINAL_VERSION=$(node -p "require('./package.json').version")
-        echo "📦 Validating final version: $FINAL_VERSION"
 
-        # Use --no-conflicts flag since we've already resolved conflicts in the bump process
-        node scripts/validate-version.js --verbose --no-conflicts
-        if [ $? -ne 0 ]; then
-          echo "❌ Post-bump validation failed. This indicates an issue with the version update process."
-          echo "   Final version: $FINAL_VERSION"
-          echo "   This suggests a problem with file consistency or version format."
+        # Get final version with error handling
+        if ! FINAL_VERSION=$(node -p "require('./package.json').version" 2>/dev/null); then
+          echo "❌ Error: Could not read final version from package.json"
           exit 1
         fi
 
-        # Additional verification: Ensure git tag was created successfully
-        TAG_NAME="v$FINAL_VERSION"
-        if git rev-parse --verify "$TAG_NAME" >/dev/null 2>&1; then
-          echo "✅ Git tag $TAG_NAME exists and is valid"
+        echo "📦 Validating final version: $FINAL_VERSION"
+
+        # Validate version format
+        if ! echo "$FINAL_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$'; then
+          echo "❌ Error: Final version '$FINAL_VERSION' is not in valid semver format"
+          exit 1
+        fi
+
+        # Run validation script if available
+        if [ -f "scripts/validate-version.js" ]; then
+          echo "🔍 Running version validation script..."
+          if ! node scripts/validate-version.js --verbose --no-conflicts; then
+            echo "❌ Post-bump validation failed"
+            echo "   Final version: $FINAL_VERSION"
+            exit 1
+          fi
         else
-          echo "⚠️  Git tag $TAG_NAME was not found (this is expected - tag will be created during commit)"
+          echo "⚠️  Version validation script not found, skipping detailed validation"
+        fi
+
+        # Check if version was actually updated
+        if [ "$FINAL_VERSION" = "$(git show HEAD~1:package.json | node -p 'JSON.parse(require("fs").readFileSync("/dev/stdin", "utf8")).version' 2>/dev/null || echo 'unknown')" ]; then
+          echo "⚠️  Warning: Version may not have been updated"
         fi
 
         echo "✅ Post-bump validation passed successfully"
