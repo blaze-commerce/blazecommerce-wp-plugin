@@ -1,4 +1,4 @@
-name: Priority 1: Claude AI Code Review
+name: "Priority 1: Claude AI Code Review"
 
 on:
   pull_request:
