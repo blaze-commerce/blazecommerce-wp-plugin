@@ -133,10 +133,18 @@ core.setOutput('all_important_addressed', importantRecommendationsStatus.allAddr
 - Workflow concurrency controls to prevent race conditions
 - Proper handling of concurrent workflow runs
 
-### 12. Updated Documentation
+### 12. Added Automatic Approval Revocation System (NEW SECURITY FEATURE)
+- Detects when PRs were previously approved but new commits introduce critical issues
+- Automatically revokes approval and creates REQUEST_CHANGES review
+- Prevents previously-approved code from being merged with new vulnerabilities
+- Comprehensive audit logging of all revocation decisions
+- Enhanced security by blocking approval bypass scenarios
+
+### 13. Updated Documentation
 - Updated auto-approval criteria descriptions in workflow comments
 - Modified status messages to reflect accurate recommendation status
 - Updated related documentation files with new security features
+- Added comprehensive approval revocation system documentation
 
 ## 🎯 Expected Behavior After Fixes
 
