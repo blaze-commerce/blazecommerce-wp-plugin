@@ -19,6 +19,12 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT || 15 }}
+    outputs:
+      review_success: ${{ steps.review-result.outputs.success }}
+      has_blocking_issues: ${{ steps.review-result.outputs.has_blocking_issues }}
+      required_count: ${{ steps.review-result.outputs.required_count }}
+      important_count: ${{ steps.review-result.outputs.important_count }}
+      processing_success: ${{ steps.review-result.outputs.processing_success }}
 
     permissions:
       # Minimum required permissions for Claude AI review workflow
@@ -64,6 +70,15 @@ jobs:
 
       - name: Install dependencies
         run: npm install --production
+
+      - name: Initialize Claude Status
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          echo "🔄 Initializing Claude AI review status..."
+          node .github/scripts/claude-status-manager.js start-review
 
       - name: Determine Repository Type
         id: repo-context
@@ -252,7 +267,6 @@ jobs:
             echo "successful_attempt=none" >> $GITHUB_OUTPUT
             echo "review_response=" >> $GITHUB_OUTPUT
             echo "❌ All Claude AI Review attempts failed"
-            exit 1
           fi
 
       - name: Parse Claude Review and Update Progressive Tracking
@@ -369,6 +383,35 @@ jobs:
             });
 
             console.log('📝 Posted Claude AI service failure notice');
+
+      - name: Set Review Result Outputs
+        id: review-result
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          REVIEW_SUCCESS="${{ steps.review-success.outputs.successful_attempt != 'none' }}"
+          HAS_BLOCKING="${{ steps.parse-review.outputs.has_blocking_issues || 'false' }}"
+          REQUIRED_COUNT="${{ steps.parse-review.outputs.required_count || '0' }}"
+          IMPORTANT_COUNT="${{ steps.parse-review.outputs.important_count || '0' }}"
+          PROCESSING_SUCCESS="${{ steps.parse-review.outputs.processing_success || 'false' }}"
+
+          echo "success=$REVIEW_SUCCESS" >> $GITHUB_OUTPUT
+          echo "has_blocking_issues=$HAS_BLOCKING" >> $GITHUB_OUTPUT
+          echo "required_count=$REQUIRED_COUNT" >> $GITHUB_OUTPUT
+          echo "important_count=$IMPORTANT_COUNT" >> $GITHUB_OUTPUT
+          echo "processing_success=$PROCESSING_SUCCESS" >> $GITHUB_OUTPUT
+
+          # Update status based on review result
+          if [ "$REVIEW_SUCCESS" = "true" ]; then
+            echo "✅ Updating status for successful review"
+            RECOMMENDATIONS="{\"required\":$REQUIRED_COUNT,\"important\":$IMPORTANT_COUNT}"
+            node .github/scripts/claude-status-manager.js review-success "$HAS_BLOCKING" "$RECOMMENDATIONS"
+          else
+            echo "❌ Updating status for failed review"
+            node .github/scripts/claude-status-manager.js review-failure "Claude AI review service encountered technical difficulties"
+          fi
 
   auto-approval:
     needs: claude-review
