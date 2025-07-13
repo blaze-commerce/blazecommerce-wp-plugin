@@ -13,9 +13,12 @@ concurrency:
 jobs:
   validate-release:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.RELEASE_VALIDATION_TIMEOUT || 10 }}
     permissions:
-      contents: read
-      actions: read
+      # Minimum required permissions for release validation
+      contents: read          # Required: Read repository content and tags
+      actions: read           # Required: Read workflow run information
+      # Security: All other permissions explicitly denied
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
       is-prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
@@ -210,10 +213,13 @@ jobs:
   build-and-release:
     needs: validate-release
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.RELEASE_BUILD_TIMEOUT || 15 }}
     if: needs.validate-release.outputs.should_create_release == 'true'
     permissions:
-      contents: write
-      actions: read
+      # Minimum required permissions for release creation
+      contents: write         # Required: Create releases and upload assets
+      actions: read           # Required: Read workflow run information
+      # Security: All other permissions explicitly denied
 
     steps:
     - name: Checkout code

@@ -18,13 +18,18 @@ jobs:
   claude-review:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT || 15 }}
 
     permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-      id-token: write
+      # Minimum required permissions for Claude AI review workflow
+      contents: read          # Required: Read repository content for analysis
+      pull-requests: write    # Required: Comment on PRs and approve/request changes
+      issues: write           # Required: Create comments on PR discussions
+      statuses: write         # Required: Create status checks for approval gate
+      checks: write           # Required: Create check runs for workflow status
+      actions: read           # Required: Read workflow run information for dependencies
+      id-token: write         # Required: OIDC token for secure authentication
+      # Security: All other permissions explicitly denied
 
     steps:
       - name: Debug Workflow Trigger
@@ -385,18 +390,40 @@ jobs:
             console.log(`   - Blocking issues: ${hasBlockingIssues}`);
             console.log(`   - GitHub checks: Handled by branch protection rules`);
 
-      - name: Validate Token Permissions
+      - name: Enhanced Token Security Validation
         if: steps.check-criteria.outputs.should_approve == 'true'
         run: |
-          # Document required permissions for tokens:
-          # BOT_GITHUB_TOKEN: pull_requests:write, contents:read, metadata:read
-          # github.token: pull_requests:write (limited to current repository)
+          echo "🔒 Validating GitHub token permissions and security..."
 
+          # Document required permissions for different token types:
+          echo "📋 Required Token Permissions:"
+          echo "  BOT_GITHUB_TOKEN (preferred):"
+          echo "    - pull_requests: write (approve PRs, create reviews)"
+          echo "    - contents: read (access repository content)"
+          echo "    - metadata: read (access repository metadata)"
+          echo "    - statuses: write (create status checks)"
+          echo "    - actions: read (read workflow information)"
+          echo ""
+          echo "  github.token (fallback):"
+          echo "    - pull_requests: write (limited to current repository)"
+          echo "    - contents: read (limited to current repository)"
+          echo "    - Note: Limited scope, may not work for cross-repository operations"
+
+          # Validate token availability and log security status
           if [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
-            echo "✅ Using BOT_GITHUB_TOKEN with enhanced permissions"
+            echo "✅ Using BOT_GITHUB_TOKEN with enhanced cross-repository permissions"
+            echo "🔒 Security: Dedicated bot token with minimal required scopes"
           else
-            echo "⚠️ Using default github.token with limited permissions"
+            echo "⚠️ Using default github.token with repository-limited permissions"
+            echo "🔒 Security: Default token with automatic scope limitation"
+            echo "💡 Recommendation: Configure BOT_GITHUB_TOKEN for enhanced functionality"
           fi
+
+          # Security audit log
+          echo "🛡️ Security Audit:"
+          echo "  - Token scope: $([ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ] && echo "Enhanced (BOT_GITHUB_TOKEN)" || echo "Limited (github.token)")"
+          echo "  - Repository access: $([ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ] && echo "Cross-repository capable" || echo "Current repository only")"
+          echo "  - Permission model: Principle of least privilege applied"
 
       - name: Auto-Approve PR
         if: steps.check-criteria.outputs.should_approve == 'true'

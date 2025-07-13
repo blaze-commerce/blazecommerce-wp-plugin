@@ -16,11 +16,14 @@ concurrency:
 jobs:
   version-bump:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.AUTO_VERSION_TIMEOUT || 20 }}
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'chore(release)') && !contains(github.event.head_commit.message, '[no version]')"
     permissions:
-      contents: write
-      pull-requests: read
-      actions: read
+      # Minimum required permissions for auto-version workflow
+      contents: write         # Required: Update version files and create commits
+      pull-requests: read     # Required: Read PR information for version analysis
+      actions: read           # Required: Read workflow run information
+      # Security: All other permissions explicitly denied (no issues, packages, etc.)
 
     steps:
     - name: Checkout code
@@ -440,16 +443,70 @@ jobs:
           echo "   📝 Consider using conventional commit format: feat:, fix:, etc."
         fi
 
+    - name: Enhanced Commit Analysis
+      if: steps.check_files.outputs.should_bump_version == 'true'
+      id: enhanced_analysis
+      run: |
+        echo "🚀 Running enhanced commit analysis using extracted scripts..."
+
+        # Get current version from multiple sources for validation
+        PACKAGE_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "")
+        PLUGIN_VERSION=$(grep -oP "Version:\s*\K[\d\.]+" blaze-wooless.php 2>/dev/null | head -1 || echo "")
+
+        # Use package.json as primary source, fallback to plugin file
+        if [ -n "$PACKAGE_VERSION" ]; then
+          CURRENT_VERSION="$PACKAGE_VERSION"
+          echo "📦 Using version from package.json: $CURRENT_VERSION"
+        elif [ -n "$PLUGIN_VERSION" ]; then
+          CURRENT_VERSION="$PLUGIN_VERSION"
+          echo "🔌 Using version from plugin file: $CURRENT_VERSION"
+        else
+          echo "❌ Error: Could not extract current version from any source"
+          exit 1
+        fi
+
+        # Get commit messages and changed files for analysis
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          COMMIT_MESSAGES=$(git log ${LAST_TAG}..HEAD --oneline --no-merges)
+          CHANGED_FILES=$(git diff --name-only ${LAST_TAG}..HEAD)
+          echo "📊 Analyzing commits since tag: $LAST_TAG"
+        else
+          COMMIT_MESSAGES=$(git log --oneline --no-merges -10)
+          CHANGED_FILES=$(git diff --name-only HEAD~10..HEAD 2>/dev/null || git ls-files)
+          echo "📊 Analyzing recent commits (no previous tags found)"
+        fi
+
+        # Export environment variables for scripts
+        export CURRENT_VERSION="$CURRENT_VERSION"
+        export COMMIT_MESSAGES="$COMMIT_MESSAGES"
+        export CHANGED_FILES="$CHANGED_FILES"
+        export GITHUB_REF="$GITHUB_REF"
+        export PR_TITLE="${{ github.event.pull_request.title || '' }}"
+        export PR_BODY="${{ github.event.pull_request.body || '' }}"
+
+        echo "🔍 Running commit parser script..."
+        node .github/scripts/commit-parser.js
+
+        echo "🔍 Running version analyzer script..."
+        node .github/scripts/version-analyzer.js
+
     - name: Preview version bump
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.BUMP_TYPE != 'none'
       run: |
         echo "🔍 Calculating new version based on bump type and current version..."
 
-        # Validate current version extraction
-        CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
-        if [ $? -ne 0 ] || [ -z "$CURRENT_VERSION" ]; then
-          echo "❌ Error: Could not extract current version from package.json"
-          exit 1
+        # Use enhanced analysis results if available
+        if [ -n "${{ steps.enhanced_analysis.outputs.NEW_VERSION }}" ]; then
+          echo "✅ Using enhanced analysis result: ${{ steps.enhanced_analysis.outputs.NEW_VERSION }}"
+          CURRENT_VERSION="${{ steps.enhanced_analysis.outputs.NEW_VERSION }}"
+        else
+          # Fallback to original method
+          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null)
+          if [ $? -ne 0 ] || [ -z "$CURRENT_VERSION" ]; then
+            echo "❌ Error: Could not extract current version from package.json"
+            exit 1
+          fi
         fi
 
         echo "📦 Current version: $CURRENT_VERSION"

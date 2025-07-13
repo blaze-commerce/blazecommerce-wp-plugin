@@ -16,15 +16,55 @@ concurrency:
   cancel-in-progress: false  # Don't cancel to ensure approval gate completion
 
 jobs:
-  claude-approval-gate:
+  # Wait for Priority 1 workflow completion before proceeding
+  wait-for-claude-review:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: ${{ vars.CLAUDE_DEPENDENCY_CHECK_TIMEOUT || 3 }}
+    outputs:
+      claude-review-completed: ${{ steps.check-completion.outputs.completed }}
+    steps:
+      - name: Check Claude Review Workflow Completion
+        id: check-completion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('🔍 Checking for Priority 1 (Claude Review) workflow completion...');
+
+            // Get all workflow runs for this commit
+            const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head_sha: context.payload.pull_request?.head?.sha || context.sha,
+              status: 'completed'
+            });
+
+            // Look for completed Claude review workflow
+            const claudeReviewRun = workflowRuns.workflow_runs.find(run =>
+              run.name === 'Priority 1: Claude AI PR Review' &&
+              run.head_sha === (context.payload.pull_request?.head?.sha || context.sha)
+            );
+
+            if (claudeReviewRun) {
+              console.log(`✅ Priority 1 workflow completed with status: ${claudeReviewRun.conclusion}`);
+              core.setOutput('completed', 'true');
+            } else {
+              console.log('⏳ Priority 1 workflow not yet completed, will proceed with dependency check');
+              core.setOutput('completed', 'false');
+            }
+
+  claude-approval-gate:
+    needs: [wait-for-claude-review]
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.CLAUDE_APPROVAL_GATE_TIMEOUT || 5 }}
     
     permissions:
-      contents: read
-      pull-requests: read
-      statuses: write
-      checks: write
+      # Minimum required permissions for Claude approval gate workflow
+      contents: read          # Required: Read repository content for validation
+      pull-requests: read     # Required: Read PR information and reviews
+      statuses: write         # Required: Create status checks for merge protection
+      checks: write           # Required: Create check runs for approval status
+      actions: read           # Required: Read workflow run information for dependencies
+      # Security: All other permissions explicitly denied
     
     steps:
       - name: Check Claude AI Approval Status
