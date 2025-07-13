@@ -676,7 +676,70 @@ class ClaudeReviewEnhancer {
   }
 
   /**
-   * Output results in GitHub Actions format (enhanced)
+   * Escape content for safe GitHub Actions output
+   * @param {string} content - Content to escape
+   * @returns {string} Escaped content
+   */
+  escapeForGitHubActions(content) {
+    if (!content || typeof content !== 'string') {
+      return '';
+    }
+
+    // Escape content to prevent GitHub Actions injection and JavaScript syntax errors
+    return content
+      .replace(/\\/g, '\\\\')  // Escape backslashes first
+      .replace(/`/g, '\\`')    // Escape backticks to prevent template literal issues
+      .replace(/\$/g, '\\$')   // Escape dollar signs to prevent variable interpolation
+      .replace(/"/g, '\\"')    // Escape double quotes
+      .replace(/'/g, "\\'")    // Escape single quotes
+      .replace(/\r?\n/g, '\\n') // Convert newlines to escaped newlines for single-line output
+      .trim();
+  }
+
+  /**
+   * Validate GitHub Actions output content
+   * @param {string} content - Content to validate
+   * @returns {Object} Validation result
+   */
+  validateOutputContent(content) {
+    const validation = {
+      isValid: true,
+      issues: [],
+      sanitizedContent: content
+    };
+
+    if (!content || typeof content !== 'string') {
+      validation.isValid = false;
+      validation.issues.push('Content is empty or not a string');
+      validation.sanitizedContent = '';
+      return validation;
+    }
+
+    // Check for potentially problematic patterns
+    const problematicPatterns = [
+      { pattern: /`[a-f0-9]{7,40}`/g, description: 'Unescaped commit hashes in backticks' },
+      { pattern: /\$\{[^}]*\}/g, description: 'Template literal expressions' },
+      { pattern: /\$\([^)]*\)/g, description: 'Command substitution patterns' },
+      { pattern: /[`$"'\\]/g, description: 'Unescaped special characters' }
+    ];
+
+    problematicPatterns.forEach(({ pattern, description }) => {
+      if (pattern.test(content)) {
+        validation.issues.push(description);
+      }
+    });
+
+    // If issues found, sanitize the content
+    if (validation.issues.length > 0) {
+      validation.sanitizedContent = this.escapeForGitHubActions(content);
+      Logger.warning(`Content validation issues found: ${validation.issues.join(', ')}`);
+    }
+
+    return validation;
+  }
+
+  /**
+   * Output results in GitHub Actions format (enhanced with safety checks)
    * @param {Object} result - Processing result
    */
   outputForGitHubActions(result) {
@@ -686,25 +749,43 @@ class ClaudeReviewEnhancer {
       // Prepare output data
       const outputData = [];
 
-      // Handle multiline comment using GitHub Actions multiline format
+      // Handle multiline comment using GitHub Actions multiline format with safety checks
       let enhancedComment = result.enhancedComment || '';
 
-      // GitHub Actions multiline output format using EOF delimiter
-      const delimiter = `EOF_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Validate and sanitize the enhanced comment
+      const validation = this.validateOutputContent(enhancedComment);
+      if (!validation.isValid) {
+        Logger.error(`Enhanced comment validation failed: ${validation.issues.join(', ')}`);
+        enhancedComment = validation.sanitizedContent || 'Error: Comment content could not be safely processed';
+      }
+
+      // Ensure comment is not empty
+      if (!enhancedComment.trim()) {
+        enhancedComment = `## BlazeCommerce Claude AI Review - Processing Error\n\nThe Claude AI review service encountered an issue processing the review content.\n\n*Manual review recommended.*`;
+      }
+
+      // GitHub Actions multiline output format using EOF delimiter with safety
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substr(2, 9);
+      const delimiter = `EOF_CLAUDE_${timestamp}_${randomSuffix}`;
+
       outputData.push(`enhanced_comment<<${delimiter}`);
       outputData.push(enhancedComment);
       outputData.push(delimiter);
 
-      // Add other outputs as simple key=value pairs
-      outputData.push(`has_blocking_issues=${result.hasBlockingIssues || false}`);
-      outputData.push(`processing_success=${result.success || false}`);
-      outputData.push(`progress_made=${result.progressMade || false}`);
-      outputData.push(`review_version=${result.reviewVersion || 1}`);
+      // Add other outputs as simple key=value pairs with validation
+      const safeBoolean = (value) => Boolean(value).toString();
+      const safeNumber = (value) => parseInt(value) || 0;
+
+      outputData.push(`has_blocking_issues=${safeBoolean(result.hasBlockingIssues)}`);
+      outputData.push(`processing_success=${safeBoolean(result.success)}`);
+      outputData.push(`progress_made=${safeBoolean(result.progressMade)}`);
+      outputData.push(`review_version=${safeNumber(result.reviewVersion) || 1}`);
 
       if (result.recommendations) {
-        outputData.push(`required_count=${result.recommendations.required.length}`);
-        outputData.push(`important_count=${result.recommendations.important.length}`);
-        outputData.push(`suggestions_count=${result.recommendations.suggestions.length}`);
+        outputData.push(`required_count=${safeNumber(result.recommendations.required.length)}`);
+        outputData.push(`important_count=${safeNumber(result.recommendations.important.length)}`);
+        outputData.push(`suggestions_count=${safeNumber(result.recommendations.suggestions.length)}`);
       } else {
         outputData.push(`required_count=0`);
         outputData.push(`important_count=0`);
@@ -712,9 +793,11 @@ class ClaudeReviewEnhancer {
       }
 
       if (result.resolvedCount) {
-        outputData.push(`resolved_required=${result.resolvedCount.required}`);
-        outputData.push(`resolved_important=${result.resolvedCount.important}`);
-        outputData.push(`total_resolved=${result.resolvedCount.required + result.resolvedCount.important}`);
+        const requiredResolved = safeNumber(result.resolvedCount.required);
+        const importantResolved = safeNumber(result.resolvedCount.important);
+        outputData.push(`resolved_required=${requiredResolved}`);
+        outputData.push(`resolved_important=${importantResolved}`);
+        outputData.push(`total_resolved=${requiredResolved + importantResolved}`);
       } else {
         outputData.push(`resolved_required=0`);
         outputData.push(`resolved_important=0`);
@@ -722,8 +805,8 @@ class ClaudeReviewEnhancer {
       }
 
       if (result.analysis) {
-        const newCount = (result.analysis.new.required.length || 0) + (result.analysis.new.important.length || 0);
-        const persistentCount = (result.analysis.persistent.required.length || 0) + (result.analysis.persistent.important.length || 0);
+        const newCount = safeNumber((result.analysis.new.required.length || 0) + (result.analysis.new.important.length || 0));
+        const persistentCount = safeNumber((result.analysis.persistent.required.length || 0) + (result.analysis.persistent.important.length || 0));
         outputData.push(`new_issues_count=${newCount}`);
         outputData.push(`persistent_issues_count=${persistentCount}`);
       } else {
@@ -734,11 +817,21 @@ class ClaudeReviewEnhancer {
       // Write to GitHub Actions output file if available, otherwise use console
       const githubOutput = process.env.GITHUB_OUTPUT;
       if (githubOutput) {
-        // Write directly to GitHub Actions output file
-        fs.appendFileSync(githubOutput, outputData.join('\n') + '\n');
+        // Validate that the output file exists and is writable
+        try {
+          fs.accessSync(githubOutput, fs.constants.W_OK);
+        } catch (accessError) {
+          throw new Error(`GitHub Actions output file is not writable: ${githubOutput}`);
+        }
+
+        // Write directly to GitHub Actions output file with atomic operation
+        const outputContent = outputData.join('\n') + '\n';
+        fs.appendFileSync(githubOutput, outputContent, { encoding: 'utf8' });
 
         // Log success to stderr (won't interfere with output)
         console.error('SUCCESS: GitHub Actions output written successfully');
+        console.error(`INFO: Output size: ${outputContent.length} characters`);
+        console.error(`INFO: Delimiter used: ${delimiter}`);
       } else {
         // Fallback: output to console for local testing
         console.log('# GitHub Actions Output (local testing mode):');
@@ -748,11 +841,32 @@ class ClaudeReviewEnhancer {
     } catch (error) {
       // Log error to stderr (won't interfere with GitHub Actions output)
       console.error(`ERROR: Failed to write GitHub Actions output: ${error.message}`);
+      console.error(`ERROR: Stack trace: ${error.stack}`);
 
-      // Fallback: output basic information to console
-      console.log(`processing_success=false`);
-      console.log(`has_blocking_issues=true`);
-      console.log(`error_message=${error.message.replace(/\n/g, ' ')}`);
+      // Fallback: output basic information to console with safe escaping
+      const safeErrorMessage = (error.message || 'Unknown error').replace(/\n/g, ' ').replace(/[`$"'\\]/g, '');
+
+      try {
+        const fallbackOutput = [
+          `processing_success=false`,
+          `has_blocking_issues=true`,
+          `error_message=${safeErrorMessage}`,
+          `review_version=1`,
+          `required_count=0`,
+          `important_count=0`,
+          `total_resolved=0`
+        ];
+
+        const githubOutput = process.env.GITHUB_OUTPUT;
+        if (githubOutput) {
+          fs.appendFileSync(githubOutput, fallbackOutput.join('\n') + '\n');
+        } else {
+          fallbackOutput.forEach(line => console.log(line));
+        }
+      } catch (fallbackError) {
+        console.error(`CRITICAL: Failed to write fallback output: ${fallbackError.message}`);
+        process.exit(1);
+      }
     }
   }
 }

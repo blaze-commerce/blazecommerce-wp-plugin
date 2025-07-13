@@ -308,7 +308,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          echo "INFO: Processing Claude review with progressive tracking v2.0..."
+          echo "INFO: Processing Claude review with enhanced error handling v2.0..."
           echo "INFO: PR #${{ github.event.pull_request.number }}"
           echo "INFO: Repository ${{ github.repository }}"
           echo "INFO: Commit ${{ github.sha }}"
@@ -321,67 +321,123 @@ jobs:
             echo "WARNING: Using fallback implementation for limited GitHub API support"
           fi
 
-          # Run the enhanced Claude review processor with progressive tracking
-          # Note: Script now writes directly to $GITHUB_OUTPUT, no redirection needed
+          # Set up error handling for uncaught exceptions
+          trap 'echo "ERROR: Script execution failed with exit code $?"; node .github/scripts/enhanced-error-handler.js handle-uncaught-exception' ERR
+
+          # Run the enhanced Claude review processor with progressive tracking and error handling
           if node .github/scripts/claude-review-enhancer.js; then
             echo "SUCCESS: Progressive Claude review processing completed successfully"
 
-            # Extract key metrics for logging
-            PROGRESS_MADE=$(grep "progress_made=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "false")
-            REVIEW_VERSION=$(grep "review_version=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "1")
-            RESOLVED_COUNT=$(grep "total_resolved=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "0")
+            # Extract key metrics for logging with safe parsing
+            PROGRESS_MADE=$(grep "progress_made=" $GITHUB_OUTPUT | cut -d'=' -f2 2>/dev/null || echo "false")
+            REVIEW_VERSION=$(grep "review_version=" $GITHUB_OUTPUT | cut -d'=' -f2 2>/dev/null || echo "1")
+            RESOLVED_COUNT=$(grep "total_resolved=" $GITHUB_OUTPUT | cut -d'=' -f2 2>/dev/null || echo "0")
 
             echo "INFO: Review Version $REVIEW_VERSION"
             echo "INFO: Progress Made $PROGRESS_MADE"
             echo "INFO: Issues Resolved $RESOLVED_COUNT"
 
+            # Validate output content for safety
+            if node .github/scripts/enhanced-error-handler.js validate-output; then
+              echo "SUCCESS: Output validation passed"
+            else
+              echo "WARNING: Output validation detected issues - content was sanitized"
+            fi
+
           else
-            echo "ERROR: Progressive review processing failed, using fallback"
-            # Enhanced fallback with basic tracking
-            echo "has_blocking_issues=false" >> $GITHUB_OUTPUT
-            echo "required_count=0" >> $GITHUB_OUTPUT
-            echo "important_count=0" >> $GITHUB_OUTPUT
-            echo "progress_made=false" >> $GITHUB_OUTPUT
-            echo "review_version=1" >> $GITHUB_OUTPUT
-            echo "processing_success=false" >> $GITHUB_OUTPUT
+            echo "ERROR: Progressive review processing failed, using enhanced fallback"
+
+            # Use enhanced error handler for safe fallback
+            node .github/scripts/enhanced-error-handler.js create-fallback-output || {
+              # Ultimate fallback if error handler fails
+              echo "has_blocking_issues=false" >> $GITHUB_OUTPUT
+              echo "required_count=0" >> $GITHUB_OUTPUT
+              echo "important_count=0" >> $GITHUB_OUTPUT
+              echo "progress_made=false" >> $GITHUB_OUTPUT
+              echo "review_version=1" >> $GITHUB_OUTPUT
+              echo "processing_success=false" >> $GITHUB_OUTPUT
+              echo "enhanced_comment=## BlazeCommerce Claude AI Review - Processing Error\n\nThe Claude AI review service encountered an issue. Manual review recommended." >> $GITHUB_OUTPUT
+            }
           fi
 
       - name: Post Progressive Claude Review Comment
         if: steps.review-success.outputs.successful_attempt != 'none'
         uses: actions/github-script@v7
+        env:
+          ENHANCED_COMMENT: ${{ steps.parse-review.outputs.enhanced_comment || steps.review-success.outputs.review_response }}
+          PROGRESS_MADE: ${{ steps.parse-review.outputs.progress_made }}
+          REVIEW_VERSION: ${{ steps.parse-review.outputs.review_version }}
+          TOTAL_RESOLVED: ${{ steps.parse-review.outputs.total_resolved }}
+          PROCESSING_SUCCESS: ${{ steps.parse-review.outputs.processing_success }}
         with:
           script: |
-            const enhancedComment = `${{ steps.parse-review.outputs.enhanced_comment || steps.review-success.outputs.review_response }}`;
-            const progressMade = '${{ steps.parse-review.outputs.progress_made }}' === 'true';
-            const reviewVersion = '${{ steps.parse-review.outputs.review_version }}' || '1';
-            const resolvedCount = '${{ steps.parse-review.outputs.total_resolved }}' || '0';
-            const processingSuccess = '${{ steps.parse-review.outputs.processing_success }}' === 'true';
+            // Safely get environment variables to avoid JavaScript injection
+            const enhancedComment = process.env.ENHANCED_COMMENT || '';
+            const progressMade = process.env.PROGRESS_MADE === 'true';
+            const reviewVersion = process.env.REVIEW_VERSION || '1';
+            const resolvedCount = process.env.TOTAL_RESOLVED || '0';
+            const processingSuccess = process.env.PROCESSING_SUCCESS === 'true';
 
-            // Post the enhanced review comment with progressive tracking
-            const response = await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: enhancedComment
-            });
+            // Validate comment content before posting
+            if (!enhancedComment.trim()) {
+              console.log('ERROR: Enhanced comment is empty, using fallback');
+              const fallbackComment = `## BlazeCommerce Claude AI Review - Service Issue\n\nThe Claude AI review service encountered an issue generating the enhanced comment. Please check the workflow logs for details.\n\n*Manual review recommended.*`;
 
-            console.log(`NOTE: Posted progressive Claude AI review comment v${reviewVersion}`);
-
-            if (processingSuccess) {
-              if (progressMade) {
-                console.log(`COMPLETED: Progress detected: ${resolvedCount} issue(s) resolved since last review`);
-              } else if (reviewVersion > 1) {
-                console.log(`RETRY: Review updated: No new progress detected in version ${reviewVersion}`);
-              } else {
-                console.log(`NEW: Initial review: Version ${reviewVersion} posted`);
-              }
-            } else {
-              console.log(`WARNING: Posted with limited tracking due to processing issues`);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: fallbackComment
+              });
+              return;
             }
 
-            // Set output for other steps
-            core.setOutput('comment_id', response.data.id);
-            core.setOutput('comment_url', response.data.html_url);
+            try {
+              // Post the enhanced review comment with progressive tracking
+              const response = await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: enhancedComment
+              });
+
+              console.log(`NOTE: Posted progressive Claude AI review comment v${reviewVersion}`);
+
+              if (processingSuccess) {
+                if (progressMade) {
+                  console.log(`COMPLETED: Progress detected: ${resolvedCount} issue(s) resolved since last review`);
+                } else if (parseInt(reviewVersion) > 1) {
+                  console.log(`RETRY: Review updated: No new progress detected in version ${reviewVersion}`);
+                } else {
+                  console.log(`NEW: Initial review: Version ${reviewVersion} posted`);
+                }
+              } else {
+                console.log(`WARNING: Posted with limited tracking due to processing issues`);
+              }
+
+              // Set output for other steps
+              core.setOutput('comment_id', response.data.id);
+              core.setOutput('comment_url', response.data.html_url);
+
+            } catch (error) {
+              console.error(`ERROR: Failed to post comment: ${error.message}`);
+
+              // Post error notification comment
+              const errorComment = `## BlazeCommerce Claude AI Review - Posting Error\n\n**Error**: Failed to post the enhanced review comment.\n\n**Details**: ${error.message}\n\n*Please check the workflow logs and try again.*`;
+
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  body: errorComment
+                });
+              } catch (fallbackError) {
+                console.error(`ERROR: Failed to post error comment: ${fallbackError.message}`);
+              }
+
+              throw error;
+            }
 
       - name: Handle Claude AI Review Failure
         if: steps.review-success.outputs.successful_attempt == 'none'
