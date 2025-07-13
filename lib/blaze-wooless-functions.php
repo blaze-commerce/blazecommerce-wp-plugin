@@ -14,6 +14,11 @@ add_filter( 'logout_redirect', 'blaze_wooless_custom_logout_redirect', 50, 3 );
  * @return string The appropriate URL
  */
 function blaze_wooless_get_integration_url( $path = '', $scheme = null ) {
+	// Improved error handling: validate input parameters
+	if ( ! is_string( $path ) ) {
+		$path = '';
+	}
+
 	// Check if we should use site_url for this context
 	if ( blaze_wooless_should_use_site_url_context() ) {
 		return site_url( $path, $scheme );

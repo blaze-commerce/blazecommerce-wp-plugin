@@ -47,8 +47,17 @@ class BlazeWooless {
 		if (
 			isset( $_GET['s'] ) && ! empty( $_GET['s'] )
 		) {
-			wp_redirect( site_url( '/search-results?s=' . urlencode( $_GET['s'] ) ) );
-			exit();
+			// Improved error handling: validate search query and handle redirect failures
+			$search_query = sanitize_text_field( $_GET['s'] );
+			if ( strlen( $search_query ) > 0 && strlen( $search_query ) <= 200 ) {
+				$redirect_url = site_url( '/search-results?s=' . urlencode( $search_query ) );
+				if ( wp_redirect( $redirect_url ) ) {
+					exit();
+				} else {
+					// Log redirect failure for debugging
+					error_log( 'BlazeWooless: Search redirect failed for query: ' . $search_query );
+				}
+			}
 		}
 	}
 
@@ -64,9 +73,19 @@ class BlazeWooless {
 		);
 
 		foreach ( $settings as $setting ) {
-			// Instantiating the settings will register an admin_init hook to add the configuration
-			// See here BlazeWooless\Settings\BaseSEttings.php @ line 18
-			$setting::get_instance();
+			// Improved error handling: validate class exists before instantiation
+			if ( class_exists( $setting ) ) {
+				try {
+					// Instantiating the settings will register an admin_init hook to add the configuration
+					// See here BlazeWooless\Settings\BaseSettings.php @ line 18
+					$setting::get_instance();
+				} catch ( Exception $e ) {
+					// Log setting registration failure for debugging
+					error_log( 'BlazeWooless: Failed to register setting ' . $setting . ': ' . $e->getMessage() );
+				}
+			} else {
+				error_log( 'BlazeWooless: Setting class not found: ' . $setting );
+			}
 		}
 	}
 
