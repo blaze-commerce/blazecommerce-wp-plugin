@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write  # Allow Claude to comment on PRs
+      issues: write         # Allow Claude to comment on issues
       id-token: write
     steps:
       - name: Checkout repository
@@ -29,24 +29,64 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Verify Claude API Configuration
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "❌ ERROR: ANTHROPIC_API_KEY secret is not configured"
+            echo "Please configure the ANTHROPIC_API_KEY secret in repository settings"
+            exit 1
+          else
+            echo "✅ SUCCESS: ANTHROPIC_API_KEY is configured"
+            echo "🤖 Claude AI review functionality is ready"
+          fi
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
+          # Use latest Claude 4 Sonnet model for optimal performance
+          model: "claude-3-sonnet-20240229"
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"
-          # Optional: Allow Claude to run specific commands
-          # allowed_tools: "Bash(npm install),Bash(npm run build),Bash(npm run test:*),Bash(npm run lint:*)"
-          # Optional: Add custom instructions for Claude to customize its behavior for your project
-          # custom_instructions: |
-          #   Follow our coding standards
-          #   Ensure all new code has tests
-          #   Use TypeScript for new files
-          # Optional: Custom environment variables for Claude
-          # claude_env: |
-          #   NODE_ENV: test
+          # Allow Claude to run specific commands for BlazeCommerce workflows
+          allowed_tools: "Bash(npm install),Bash(npm run build),Bash(npm run test:*),Bash(npm run lint:*),Bash(composer install),Bash(composer test)"
+          # Custom instructions for BlazeCommerce WordPress plugin development
+          custom_instructions: |
+            You are reviewing code for the BlazeCommerce WordPress plugin. Please focus on:
+
+            **Code Quality & Standards:**
+            - WordPress coding standards and best practices
+            - PHP 7.4+ compatibility and modern PHP features
+            - Proper sanitization and validation of user inputs
+            - Secure database queries using WordPress APIs
+
+            **Security & Performance:**
+            - WordPress security best practices (nonces, capability checks, sanitization)
+            - Performance optimization for WordPress environments
+            - Proper use of WordPress hooks and filters
+            - Caching considerations and database query optimization
+
+            **BlazeCommerce Specific:**
+            - Integration with WooCommerce APIs and hooks
+            - Compatibility with BlazeCommerce frontend systems
+            - Proper handling of product data and customer information
+            - API endpoint security and rate limiting
+
+            **Testing & Documentation:**
+            - PHPUnit tests for WordPress plugin functionality
+            - Proper inline documentation and code comments
+            - Integration test considerations for WordPress/WooCommerce
+
+            Provide categorized feedback:
+            - **CRITICAL: REQUIRED** - Security issues, breaking changes, or critical bugs
+            - **WARNING: IMPORTANT** - Performance issues, code quality problems, or best practice violations
+            - **INFO: SUGGESTIONS** - Optional improvements, refactoring opportunities, or enhancements
+
+            Focus on actionable feedback that improves security, performance, and maintainability.
+          # Environment variables for WordPress/PHP development
+          claude_env: |
+            WP_ENV: development
+            PHP_VERSION: 8.1
