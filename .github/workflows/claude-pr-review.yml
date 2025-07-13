@@ -10,9 +10,6 @@ on:
       - 'hotfix/**'
       - 'bugfix/**'
       - 'enhancement/**'
-    branches-ignore:
-      - main
-      - develop
   workflow_run:
     workflows: ["*"]
     types: [completed]
@@ -30,11 +27,7 @@ concurrency:
 
 jobs:
   claude-review-official:
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && github.ref_name != 'main' && github.ref_name != 'develop') ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'workflow_run'
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name != 'main' && github.ref_name != 'develop') || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: 15  # Increased timeout for better reliability
 
@@ -144,19 +137,18 @@ jobs:
                   // Only skip for specific minor workflow maintenance patterns
                   (commitMessage.includes('chore:') && commitMessage.includes('workflow')) ||
                   (commitMessage.includes('docs:') && commitMessage.includes('workflow')) ||
-                  (commitMessage.includes('fix:') && commitMessage.includes('claude') && commitMessage.includes('workflow')) ||
-                  // Or if it's specifically a Claude bot fix
-                  (commitMessage.includes('claude') && commitMessage.includes('bot')) ||
-                  // And only if files are limited to specific workflow maintenance (not major changes)
-                  (files.length <= 3 && files.every(file =>
-                    (file.filename.startsWith('.github/workflows/') &&
-                     !file.filename.includes('claude-pr-review') &&
-                     !file.filename.includes('auto-version') &&
-                     !file.filename.includes('release')) ||
-                    file.filename.startsWith('docs/') ||
-                    file.filename === 'README.md'
-                  ))
-                );
+                  // Claude bot fixes (but NOT claude-pr-review changes)
+                  (commitMessage.includes('claude') && commitMessage.includes('bot'))
+                ) &&
+                // AND only if files are limited to specific workflow maintenance (not major changes)
+                (files.length <= 3 && files.every(file =>
+                  (file.filename.startsWith('.github/workflows/') &&
+                   file.filename.indexOf('claude-pr-review') === -1 &&
+                   file.filename.indexOf('auto-version') === -1 &&
+                   file.filename.indexOf('release') === -1) ||
+                  file.filename.startsWith('docs/') ||
+                  file.filename === 'README.md'
+                ));
 
                 if (isMinorWorkflowFix) {
                   console.log('🔄 Detected minor workflow/config maintenance on approved PR - skipping review');
