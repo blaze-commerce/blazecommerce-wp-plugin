@@ -442,8 +442,7 @@ jobs:
 
             🤖 **Automated approval** - All quality gates passed:
             - ✅ No blocking (🔴 REQUIRED) issues found
-            - ✅ All GitHub checks passing
-            - ✅ Code meets BlazeCommerce standards for ${{ needs.claude-review.outputs.repo_type }}
+            - ✅ Code meets BlazeCommerce standards for ${{ steps.prepare-context.outputs.repo_type }} development
 
             *This PR has been automatically approved by the BlazeCommerce Claude AI Review Bot.*`
             });
