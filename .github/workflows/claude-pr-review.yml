@@ -1,4 +1,4 @@
-name: BlazeCommerce Claude AI Review Bot (Simplified & Secure)
+name: "🤖 Priority 1: Claude AI Code Review"
 
 on:
   pull_request:
