@@ -1,4 +1,4 @@
-name: "Priority 2: Claude AI Approval Gate"
+name: "✅ Priority 2: Claude AI Approval Gate"
 
 # This workflow creates a required status check that only passes when Claude AI has approved the PR
 # Use this with GitHub Branch Protection Rules to block merging until Claude AI approval
