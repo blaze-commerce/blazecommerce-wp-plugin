@@ -42,12 +42,25 @@ jobs:
 
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
-            Please review this pull request and provide feedback on:
+            Please review this pull request and provide comprehensive feedback on:
             - Code quality and best practices
             - Potential bugs or issues
             - Performance considerations
             - Security concerns
             - Test coverage
+
+            IMPORTANT: You must end your review with a standardized verdict section using this exact format:
+
+            ### FINAL VERDICT
+            **Status**: [Choose one: APPROVED | CONDITIONAL APPROVAL | BLOCKED]
+            **Merge Readiness**: [Choose one: READY TO MERGE | READY AFTER FIXES | NOT READY]
+            **Recommendation**: [Brief explanation of your decision]
+
+            Use these status guidelines:
+            - APPROVED: No critical issues found, code meets all standards
+            - CONDITIONAL APPROVAL: Minor improvements suggested but not blocking
+            - BLOCKED: Critical issues that must be fixed before merge
+
             Be constructive and helpful in your feedback.
 
           # Optional: Customize review based on file types
