@@ -778,30 +778,42 @@ jobs:
               }
 
               // Decision logic based on standardized Claude review format
+              console.log('🔍 DECISION LOGIC DEBUG:');
+              console.log(`   claudeApprovalStatus: "${claudeApprovalStatus}"`);
+              console.log(`   hasRequiredIssues: ${hasRequiredIssues}`);
+              console.log(`   claudeReviewContent length: ${claudeReviewContent.length}`);
+
               if (claudeApprovalStatus === 'approved' && !hasRequiredIssues) {
-                console.log('SUCCESS: Claude approved with APPROVED status - eligible for auto-approval');
+                console.log('✅ SUCCESS: Claude approved with APPROVED status - eligible for auto-approval');
                 core.setOutput('should_approve', 'true');
                 core.setOutput('reason', 'Claude approved with APPROVED status and no critical issues');
                 core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
               } else if (claudeApprovalStatus === 'conditional' && !hasRequiredIssues) {
-                console.log('SUCCESS: Claude conditionally approved with CONDITIONAL APPROVAL - eligible for auto-approval');
+                console.log('✅ SUCCESS: Claude conditionally approved with CONDITIONAL APPROVAL - eligible for auto-approval');
                 core.setOutput('should_approve', 'true');
                 core.setOutput('reason', 'Claude conditionally approved with CONDITIONAL APPROVAL and no critical issues');
                 core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
               } else if (claudeApprovalStatus === 'blocked' || hasRequiredIssues) {
-                console.log('BLOCKED: Claude blocked with BLOCKED status or critical issues found - cannot auto-approve');
+                console.log('❌ BLOCKED: Claude blocked with BLOCKED status or critical issues found - cannot auto-approve');
                 core.setOutput('should_approve', 'false');
                 core.setOutput('reason', 'Claude blocked with BLOCKED status or critical issues found');
               } else if (!hasRequiredIssues) {
-                console.log('SUCCESS: No critical issues found - eligible for auto-approval');
+                console.log('✅ SUCCESS: No critical issues found - eligible for auto-approval');
                 core.setOutput('should_approve', 'true');
                 core.setOutput('reason', 'No critical issues found in Claude review');
                 core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
               } else {
-                console.log('BLOCKED: Critical issues found - cannot auto-approve');
+                console.log('❌ BLOCKED: Critical issues found - cannot auto-approve');
                 core.setOutput('should_approve', 'false');
                 core.setOutput('reason', 'Critical issues found in Claude review');
               }
+
+              // CRITICAL DEBUG: Show final decision
+              const finalDecision = (claudeApprovalStatus === 'approved' && !hasRequiredIssues) ||
+                                   (claudeApprovalStatus === 'conditional' && !hasRequiredIssues) ||
+                                   (!hasRequiredIssues);
+              console.log(`🎯 FINAL DECISION: should_approve = ${finalDecision}`);
+              console.log(`🎯 DECISION REASON: claudeApprovalStatus="${claudeApprovalStatus}", hasRequiredIssues=${hasRequiredIssues}`);
 
             } catch (error) {
               console.error(`ERROR: Failed to evaluate Claude review: ${error.message}`);
@@ -816,11 +828,18 @@ jobs:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
+            const shouldApprove = '${{ steps.evaluate-review.outputs.should_approve }}';
+            const reason = '${{ steps.evaluate-review.outputs.reason }}';
 
-            console.log(`INFO: Auto-approving PR #${prNumber} as @blazecommerce-claude-ai`);
+            console.log(`🚀 AUTO-APPROVAL STEP EXECUTING!`);
+            console.log(`   PR Number: ${prNumber}`);
+            console.log(`   Should Approve: ${shouldApprove}`);
+            console.log(`   Reason: ${reason}`);
+            console.log(`🚀 EXECUTING APPROVAL API CALL...`);
+            console.log(`📡 API Call: POST /repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNumber}/reviews`);
 
             try {
-              await github.rest.pulls.createReview({
+              const approvalResponse = await github.rest.pulls.createReview({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: prNumber,
@@ -848,7 +867,11 @@ jobs:
                 ].join('\n')
               });
 
-              console.log('SUCCESS: PR auto-approved by @blazecommerce-claude-ai');
+              console.log('✅ SUCCESS: Approval API call completed!');
+              console.log(`📋 Review ID: ${approvalResponse.data.id}`);
+              console.log(`📋 Review State: ${approvalResponse.data.state}`);
+              console.log(`📋 Review URL: ${approvalResponse.data.html_url}`);
+              console.log('🎉 PR auto-approved by @blazecommerce-claude-ai');
 
             } catch (error) {
               console.error(`ERROR: Failed to auto-approve PR: ${error.message}`);
