@@ -24,14 +24,13 @@ phpunit.xml
 jest.config.js
 github-workflows-tests.yml
 
-# Dependencies & Build Configuration
+# Dependencies & Build Configuration (excluding dependency files that should trigger version bumps)
 vendor/
 node_modules/
-composer.json
+# Note: composer.json and package.json changes should trigger version bumps
+# Only lock files are ignored as they're auto-generated
 composer.lock
-package.json
 package-lock.json
-blocks/package.json
 blocks/package-lock.json
 blocks/yarn.lock
 

@@ -1,0 +1,71 @@
+{
+  "pr_number": 337,
+  "created_at": "2025-07-13T16:17:01.345Z",
+  "repo_type": "general",
+  "review_history": [
+    {
+      "version": 1,
+      "timestamp": "2025-07-13T16:17:01.345Z",
+      "recommendations": {
+        "required": [],
+        "important": [],
+        "suggestions": []
+      },
+      "analysis": {
+        "resolved": {
+          "required": [],
+          "important": []
+        },
+        "new": {
+          "required": [],
+          "important": []
+        },
+        "persistent": {
+          "required": [],
+          "important": []
+        },
+        "resolvedHashes": {
+          "required": [],
+          "important": []
+        }
+      },
+      "resolved_count": {
+        "required": 0,
+        "important": 0
+      }
+    }
+  ],
+  "total_recommendations": {
+    "required": 0,
+    "important": 0,
+    "suggestions": 0
+  },
+  "resolved_recommendations": {
+    "required": [],
+    "important": [],
+    "required_timestamps": {},
+    "important_timestamps": {}
+  },
+  "recommendations": {
+    "required": [],
+    "important": [],
+    "suggestions": []
+  },
+  "recommendation_hashes": {
+    "required": [],
+    "important": []
+  },
+  "updated_at": "2025-07-13T16:17:01.345Z",
+  "review_version": 1,
+  "cumulative_stats": {
+    "total_reviews": 1,
+    "total_resolved": {
+      "required": 0,
+      "important": 0
+    },
+    "current_pending": {
+      "required": 0,
+      "important": 0
+    }
+  }
+}
