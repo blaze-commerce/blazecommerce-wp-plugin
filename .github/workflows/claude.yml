@@ -1,4 +1,4 @@
-name: Claude Code
+name: "💬 Claude Interactive Assistant"
 
 on:
   issue_comment:
