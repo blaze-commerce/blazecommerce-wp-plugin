@@ -168,12 +168,53 @@ jobs:
             console.log(`🎯 Repository Type: ${repoType}`);
             console.log(`📝 Using ${repoType} specific prompt for Claude AI review`);
 
-      - name: Claude AI Review
-        id: claude-review
+      - name: Claude AI Review (Attempt 1)
+        id: claude-review-1
+        continue-on-error: true
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
+
+      - name: Claude AI Review (Attempt 2 - Retry)
+        id: claude-review-2
+        if: steps.claude-review-1.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
+
+      - name: Claude AI Review (Attempt 3 - Final Retry)
+        id: claude-review-3
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
+
+      - name: Determine Successful Review
+        id: review-success
+        run: |
+          if [ "${{ steps.claude-review-1.outcome }}" = "success" ]; then
+            echo "successful_attempt=1" >> $GITHUB_OUTPUT
+            echo "review_response=${{ steps.claude-review-1.outputs.response }}" >> $GITHUB_OUTPUT
+            echo "✅ Claude AI Review succeeded on attempt 1"
+          elif [ "${{ steps.claude-review-2.outcome }}" = "success" ]; then
+            echo "successful_attempt=2" >> $GITHUB_OUTPUT
+            echo "review_response=${{ steps.claude-review-2.outputs.response }}" >> $GITHUB_OUTPUT
+            echo "✅ Claude AI Review succeeded on attempt 2"
+          elif [ "${{ steps.claude-review-3.outcome }}" = "success" ]; then
+            echo "successful_attempt=3" >> $GITHUB_OUTPUT
+            echo "review_response=${{ steps.claude-review-3.outputs.response }}" >> $GITHUB_OUTPUT
+            echo "✅ Claude AI Review succeeded on attempt 3"
+          else
+            echo "successful_attempt=none" >> $GITHUB_OUTPUT
+            echo "review_response=" >> $GITHUB_OUTPUT
+            echo "❌ All Claude AI Review attempts failed"
+            exit 1
+          fi
 
       - name: Parse Claude Review and Update Tracking
         id: parse-review
@@ -190,7 +231,7 @@ jobs:
             }
 
             // Parse Claude's review for REQUIRED and IMPORTANT items
-            const claudeOutput = `${{ steps.claude-review.outputs.response || '' }}`;
+            const claudeOutput = `${{ steps.review-success.outputs.review_response || '' }}`;
             const requiredItems = [];
             const importantItems = [];
 
@@ -233,9 +274,40 @@ jobs:
 
             console.log(`📊 Found ${requiredItems.length} REQUIRED and ${importantItems.length} IMPORTANT items`);
 
+      - name: Handle Claude AI Review Failure
+        if: steps.review-success.outputs.successful_attempt == 'none'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const failureComment = `## ⚠️ Claude AI Review Service Unavailable
+
+            The Claude AI Review Bot encountered technical difficulties and was unable to complete the review after multiple attempts.
+
+            ### 📋 Manual Review Required
+            - **Status**: ❌ Automated review failed
+            - **Action Required**: Manual code review needed
+            - **Merge Status**: ⏳ Pending manual approval
+
+            ### 🔄 Next Steps
+            1. A human reviewer should manually review this PR
+            2. Address any obvious code quality issues
+            3. Ensure all tests pass
+            4. Proceed with manual approval when ready
+
+            *This is a temporary service issue. The Claude AI Review Bot will resume normal operation once the service is restored.*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: failureComment
+            });
+
+            console.log('📝 Posted Claude AI service failure notice');
+
   auto-approval:
     needs: claude-review
-    if: always() && needs.claude-review.result == 'success'
+    if: always() && (needs.claude-review.result == 'success' || needs.claude-review.result == 'failure')
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -283,13 +355,18 @@ jobs:
               check.status === 'completed' && check.conclusion !== 'success' && check.conclusion !== 'skipped'
             );
 
-            const shouldApprove = !hasBlockingIssues && failedChecks.length === 0;
+            // Check if Claude review succeeded
+            const claudeReviewSucceeded = '${{ needs.claude-review.result }}' === 'success';
+
+            const shouldApprove = claudeReviewSucceeded && !hasBlockingIssues && failedChecks.length === 0;
 
             core.setOutput('should_approve', shouldApprove ? 'true' : 'false');
             core.setOutput('blocking_issues', hasBlockingIssues ? 'true' : 'false');
             core.setOutput('failed_checks', failedChecks.length.toString());
+            core.setOutput('claude_review_failed', claudeReviewSucceeded ? 'false' : 'true');
 
             console.log(`🎯 Auto-approval decision: ${shouldApprove ? 'APPROVE' : 'SKIP'}`);
+            console.log(`   - Claude review succeeded: ${claudeReviewSucceeded}`);
             console.log(`   - Blocking issues: ${hasBlockingIssues}`);
             console.log(`   - Failed checks: ${failedChecks.length}`);
 
@@ -323,10 +400,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const blockingIssues = steps.check-criteria.outputs.blocking_issues === 'true';
-            const failedChecks = parseInt(steps.check-criteria.outputs.failed_checks);
+            const blockingIssues = '${{ steps.check-criteria.outputs.blocking_issues }}' === 'true';
+            const failedChecks = parseInt('${{ steps.check-criteria.outputs.failed_checks }}');
+            const claudeReviewFailed = '${{ steps.check-criteria.outputs.claude_review_failed }}' === 'true';
 
             let skipReason = '## ⏳ BlazeCommerce Claude AI Review - Approval Pending\n\n';
+
+            if (claudeReviewFailed) {
+              skipReason += '⚠️ **Claude AI Review Failed**: The automated review service encountered technical difficulties. Manual review required.\n\n';
+            }
 
             if (blockingIssues) {
               skipReason += '❌ **Blocking Issues Found**: This PR has 🔴 REQUIRED recommendations that must be addressed before approval.\n\n';
@@ -336,7 +418,11 @@ jobs:
               skipReason += `❌ **Failed Checks**: ${failedChecks} GitHub check(s) are failing and must pass before approval.\n\n`;
             }
 
-            skipReason += '*Address the issues above and the bot will automatically approve when criteria are met.*';
+            if (!claudeReviewFailed) {
+              skipReason += '*Address the issues above and the bot will automatically approve when criteria are met.*';
+            } else {
+              skipReason += '*Manual review and approval required due to service issues.*';
+            }
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
