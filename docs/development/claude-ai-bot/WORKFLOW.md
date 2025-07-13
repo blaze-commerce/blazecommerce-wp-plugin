@@ -218,6 +218,8 @@ graph TD
 
 ### Auto-Approval Criteria
 
+**IMPORTANT**: Auto-approval now requires **ALL** conditions to be met (AND logic, not OR).
+
 #### 1. Technical Requirements
 ```yaml
 GitHub Actions: All workflows must pass
@@ -226,20 +228,52 @@ Build Status: Successful compilation/build
 Test Results: All tests passing
 ```
 
-#### 2. Recommendation Requirements
+#### 2. Claude Review Requirements (MANDATORY)
 ```yaml
-REQUIRED Items: All must be "addressed" or "verified"
-IMPORTANT Items: All must be "addressed" or "verified"
-SUGGESTION Items: Optional (not required for approval)
-Confidence Threshold: >= 70% for addressed items
+Claude Review Status: Must complete successfully
+Claude Authentication: Must use official Anthropic action
+Review Comments: Must be posted successfully
 ```
 
-#### 3. Quality Gates
+#### 3. Recommendation Requirements (MANDATORY)
+```yaml
+REQUIRED Items: ALL must be addressed (no exceptions)
+IMPORTANT Items: ALL must be addressed (no exceptions)
+SUGGESTION Items: Optional (not required for approval)
+Parsing Method: Direct comment parsing OR tracking file
+```
+
+#### 4. Approval Revocation Protection (NEW)
+```yaml
+Previous Approval Status: No recent revocation due to new critical issues
+New Commit Analysis: Latest commits must not introduce REQUIRED/IMPORTANT issues
+Revocation Check: System automatically revokes approval if new critical issues found
+Security Gate: Prevents merge of previously-approved code with new vulnerabilities
+```
+
+#### 4. Quality Gates
 ```yaml
 Code Coverage: Maintained or improved (if configured)
 Security Scans: No new vulnerabilities
 Performance: No significant regressions
 Documentation: Updated as needed
+```
+
+#### 5. Logic Changes (Fixed Bugs)
+```yaml
+Previous Logic: Claude Success OR Tracking Complete OR Recommendations Addressed
+Current Logic: Claude Success AND All REQUIRED Addressed AND All IMPORTANT Addressed
+Tracking File: Optional (will parse Claude comments if missing)
+Bypass Logic: Removed (no more auto-approval without recommendation checking)
+```
+
+#### 6. Approval Revocation System (NEW SECURITY FEATURE)
+```yaml
+Revocation Trigger: New commits introducing REQUIRED or IMPORTANT recommendations
+Revocation Action: Automatic REQUEST_CHANGES review creation
+Revocation Prevention: Blocks auto-approval until new issues are resolved
+Security Benefit: Prevents merge of previously-approved code with new vulnerabilities
+Audit Trail: Comprehensive logging of all revocation decisions
 ```
 
 ### Performance Targets
