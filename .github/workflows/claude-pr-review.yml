@@ -168,7 +168,7 @@ jobs:
           script: |
             const repoType = '${{ steps.repo-context.outputs.repo_type }}';
 
-            // Initialize tracking data for this step
+            // Initialize tracking data for this step with enhanced error handling
             const fs = require('fs');
             const path = require('path');
             const trackingDir = '.github/claude-tracking';
@@ -178,15 +178,36 @@ jobs:
             let resolvedRequiredCount = 0;
             let resolvedImportantCount = 0;
 
-            // Load existing tracking data if file exists
-            if (fs.existsSync(trackingFile)) {
-              try {
-                trackingData = JSON.parse(fs.readFileSync(trackingFile, 'utf8'));
-                resolvedRequiredCount = trackingData.resolved_recommendations?.required?.length || 0;
-                resolvedImportantCount = trackingData.resolved_recommendations?.important?.length || 0;
-              } catch (error) {
-                console.log(`⚠️ Error loading tracking data: ${error.message}`);
+            // Ensure tracking directory exists before any file operations
+            try {
+              if (!fs.existsSync(trackingDir)) {
+                fs.mkdirSync(trackingDir, { recursive: true });
+                console.log(`📁 Created tracking directory: ${trackingDir}`);
               }
+            } catch (dirError) {
+              console.log(`⚠️ Could not create tracking directory: ${dirError.message}`);
+              console.log('📁 Continuing without tracking directory - using fallback mechanisms');
+            }
+
+            // Load existing tracking data if file exists with comprehensive error handling
+            try {
+              if (fs.existsSync(trackingFile)) {
+                const fileContent = fs.readFileSync(trackingFile, 'utf8');
+                if (fileContent.trim()) {
+                  trackingData = JSON.parse(fileContent);
+                  resolvedRequiredCount = trackingData.resolved_recommendations?.required?.length || 0;
+                  resolvedImportantCount = trackingData.resolved_recommendations?.important?.length || 0;
+                  console.log(`📋 Loaded existing tracking data successfully`);
+                } else {
+                  console.log(`⚠️ Tracking file exists but is empty - using default structure`);
+                }
+              } else {
+                console.log(`📋 No existing tracking file found - will create new one`);
+              }
+            } catch (error) {
+              console.log(`⚠️ Error loading tracking data: ${error.message}`);
+              console.log(`📋 Using default tracking structure as fallback`);
+              // Continue with default trackingData structure
             }
 
             // Repository-specific prompts for BlazeCommerce standards
@@ -1337,6 +1358,16 @@ jobs:
             console.log(`📁 Tracking file path: ${trackingFile}`);
 
             try {
+              // Ensure tracking directory exists before any file operations
+              if (!fs.existsSync(trackingDir)) {
+                try {
+                  fs.mkdirSync(trackingDir, { recursive: true });
+                  console.log(`📁 Created tracking directory: ${trackingDir}`);
+                } catch (dirError) {
+                  console.log(`⚠️ Could not create tracking directory: ${dirError.message}`);
+                }
+              }
+
               if (!fs.existsSync(trackingFile)) {
                 console.log('⚠️ Tracking file not found - parsing Claude review comments directly');
 
@@ -1357,20 +1388,24 @@ jobs:
 
                 trackingStatus = 'parsed-from-comments';
                 console.log(`✅ Successfully parsed recommendations from Claude comments`);
-              }
 
-              const trackingContent = fs.readFileSync(trackingFile, 'utf8');
-              console.log('📄 Tracking file found, analyzing content...');
-
-              // Check for overall completion indicators
-              if (trackingContent.includes('All critical and important recommendations implemented') ||
-                  trackingContent.includes('Implementation Rate: 100%') ||
-                  trackingContent.includes('Status: All Claude AI bot recommendations successfully implemented')) {
-                trackingStatus = 'complete';
-                console.log('✅ Tracking file indicates complete implementation');
+                // Skip file reading since file doesn't exist - continue with parsed data
+                console.log(`📊 Using parsed recommendation data from Claude comments`);
               } else {
-                trackingStatus = 'incomplete';
-                console.log('⚠️ Tracking file indicates incomplete implementation, checking specific recommendations...');
+                // File exists, try to read it with error handling
+                try {
+                  const trackingContent = fs.readFileSync(trackingFile, 'utf8');
+                  console.log('📄 Tracking file found, analyzing content...');
+
+                  // Check for overall completion indicators
+                  if (trackingContent.includes('All critical and important recommendations implemented') ||
+                      trackingContent.includes('Implementation Rate: 100%') ||
+                      trackingContent.includes('Status: All Claude AI bot recommendations successfully implemented')) {
+                    trackingStatus = 'complete';
+                    console.log('✅ Tracking file indicates complete implementation');
+                  } else {
+                    trackingStatus = 'incomplete';
+                    console.log('⚠️ Tracking file indicates incomplete implementation, checking specific recommendations...');
 
                 // Enhanced parsing: Check REQUIRED recommendations status
                 const requiredPattern = /🔴.*REQUIRED.*\(([^)]+)\)/g;
@@ -1412,11 +1447,34 @@ jobs:
                   } else {
                     console.log(`✅ IMPORTANT item addressed: ${fullMatch.substring(0, 80)}...`);
                   }
+                  }
+                } catch (fileError) {
+                  console.log(`⚠️ Error reading tracking file: ${fileError.message}`);
+                  console.log('📋 Falling back to Claude comment parsing');
+
+                  // Fallback to parsing Claude comments if file read fails
+                  const { requiredItems, importantItems } = await parseClaudeReviewComments(github, context);
+
+                  requiredRecommendationsStatus = {
+                    allAddressed: requiredItems.length === 0,
+                    pendingItems: requiredItems
+                  };
+
+                  importantRecommendationsStatus = {
+                    allAddressed: importantItems.length === 0,
+                    pendingItems: importantItems
+                  };
+
+                  trackingStatus = 'fallback-parsed';
                 }
               }
             } catch (error) {
-              console.log(`⚠️ Error reading tracking file: ${error.message}`);
+              console.log(`⚠️ Error in tracking file analysis: ${error.message}`);
               trackingStatus = 'error';
+
+              // Final fallback - assume no recommendations addressed
+              requiredRecommendationsStatus = { allAddressed: false, pendingItems: ['Unable to parse recommendations'] };
+              importantRecommendationsStatus = { allAddressed: false, pendingItems: ['Unable to parse recommendations'] };
             }
 
             console.log(`Tracking file status: ${trackingStatus}`);
@@ -2053,3 +2111,36 @@ jobs:
             } catch (error) {
               console.log(`❌ Failed to post skip approval comment: ${error.message}`);
             }
+
+  auto-approve:
+    needs: claude-review-official
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Trigger Auto-Approval Check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          script: |
+            console.log('🔄 Auto-approval workflow triggered by successful Claude review');
+
+            // Get the PR number from the workflow run
+            const workflowRun = context.payload.workflow_run;
+            const prNumber = workflowRun.pull_requests[0]?.number;
+
+            if (!prNumber) {
+              console.log('❌ No PR number found in workflow run');
+              return;
+            }
+
+            console.log(`✅ Auto-approval check completed for PR #${prNumber}`);
+
+            // The actual auto-approval logic is handled in the claude-review-official job
+            // This job serves as a trigger point for workflow_run events
