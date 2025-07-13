@@ -6,13 +6,37 @@ name: BlazeCommerce Claude AI Review Bot
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'hotfix/**'
+      - 'bugfix/**'
+      - 'enhancement/**'
+    branches-ignore:
+      - main
+      - develop
   workflow_run:
     workflows: ["*"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review (backup workflow)'
+        required: false
+
+# Prevent race conditions between concurrent workflow runs
+concurrency:
+  group: claude-review-backup-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
 
 jobs:
   claude-review:
-    if: github.event_name == 'pull_request'
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && github.ref_name != 'main' && github.ref_name != 'develop') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: 15  # Hard timeout for initial review
     
