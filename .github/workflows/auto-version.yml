@@ -1,4 +1,4 @@
-name: Auto Version Bump
+name: "🔢 Priority 3: Auto Version Bump"
 
 on:
   push:
