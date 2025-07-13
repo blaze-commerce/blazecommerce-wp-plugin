@@ -9,6 +9,8 @@ Author: Blaze Commerce
 Author URI: https://www.blazecommerce.io
 */
 
+// Test comment for GitHub Actions workflow validation - this change is non-functional
+
 use BlazeWooless\PostType;
 
 define( 'BLAZE_COMMERCE_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
