@@ -288,22 +288,31 @@ jobs:
                   claudeReviewFound = true;
                   console.log(`Analyzing Claude comment from ${comment.user.login}`);
 
-                  // Check for standardized Final Verdict section
-                  const finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([^*\n]+)/i);
+                  // Check for standardized Final Verdict section with enhanced bracketed format detection
+                  let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+
+                  // Fallback to old format if new bracketed format not found
+                  if (!finalVerdictMatch) {
+                    finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([^*\n\[]+)/i);
+                  }
+
                   if (finalVerdictMatch) {
                     const status = finalVerdictMatch[1].trim();
                     console.log(`Found Final Verdict status: ${status}`);
 
-                    if (status.includes('APPROVED') && !status.includes('CONDITIONAL')) {
+                    // Handle bracketed format [APPROVED] or plain text APPROVED
+                    if (status === 'APPROVED' || (status.includes('APPROVED') && !status.includes('CONDITIONAL'))) {
                       claudeApprovalStatus = 'approved';
                       console.log('Claude approved the PR');
-                    } else if (status.includes('BLOCKED')) {
+                    } else if (status === 'BLOCKED' || status.includes('BLOCKED')) {
                       claudeApprovalStatus = 'blocked';
                       hasRequiredIssues = true;
                       console.log('Claude blocked the PR');
-                    } else if (status.includes('CONDITIONAL APPROVAL')) {
+                    } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL APPROVAL')) {
                       claudeApprovalStatus = 'conditional';
                       console.log('Claude conditionally approved the PR');
+                    } else {
+                      console.log(`Unknown status format: ${status}`);
                     }
                   }
 
@@ -569,22 +578,31 @@ jobs:
               for (const comment of claudeAppComments) {
                 claudeReviewContent += comment.body + '\n\n';
 
-                // Check for standardized Final Verdict section
-                const finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([^*\n]+)/i);
+                // Check for standardized Final Verdict section with enhanced bracketed format detection
+                let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+
+                // Fallback to old format if new bracketed format not found
+                if (!finalVerdictMatch) {
+                  finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([^*\n\[]+)/i);
+                }
+
                 if (finalVerdictMatch) {
                   const status = finalVerdictMatch[1].trim();
                   console.log(`Found Final Verdict status: ${status}`);
 
-                  if (status.includes('APPROVED') && !status.includes('CONDITIONAL')) {
+                  // Handle bracketed format [APPROVED] or plain text APPROVED
+                  if (status === 'APPROVED' || (status.includes('APPROVED') && !status.includes('CONDITIONAL'))) {
                     claudeApprovalStatus = 'approved';
                     console.log('Claude approved the PR');
-                  } else if (status.includes('BLOCKED')) {
+                  } else if (status === 'BLOCKED' || status.includes('BLOCKED')) {
                     claudeApprovalStatus = 'blocked';
                     hasRequiredIssues = true;
                     console.log('Claude blocked the PR');
-                  } else if (status.includes('CONDITIONAL APPROVAL')) {
+                  } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL APPROVAL')) {
                     claudeApprovalStatus = 'conditional';
                     console.log('Claude conditionally approved the PR');
+                  } else {
+                    console.log(`Unknown status format: ${status}`);
                   }
                 }
 
@@ -605,7 +623,17 @@ jobs:
                     hasRequiredIssues = true;
                     claudeApprovalStatus = 'blocked';
                     console.log('Found REQUIRED issues using legacy pattern matching');
+                  } else if (comment.body.match(/no\s+critical\s+issues|ready\s+to\s+merge|looks\s+good/i)) {
+                    claudeApprovalStatus = 'approved';
+                    console.log('Found approval indicators using legacy pattern matching');
                   }
+                }
+
+                // Additional validation: Check for implementation verification language
+                if (claudeApprovalStatus === 'approved' && comment.body.match(/previous.*changes.*not.*implemented|required.*changes.*missing|still.*need.*to.*address/i)) {
+                  claudeApprovalStatus = 'blocked';
+                  hasRequiredIssues = true;
+                  console.log('Detected unimplemented previous changes - overriding to blocked status');
                 }
               }
 

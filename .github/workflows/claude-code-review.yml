@@ -49,17 +49,41 @@ jobs:
             - Security concerns
             - Test coverage
 
-            IMPORTANT: You must end your review with a standardized verdict section using this exact format:
+            CRITICAL INSTRUCTIONS FOR STATUS DETERMINATION:
+
+            1. **Review Previous Feedback**: If this PR has previous Claude review comments, check if the required changes from those reviews have been properly implemented in the new commits.
+
+            2. **Do NOT mark as APPROVED**: If required changes from previous reviews haven't been implemented, even if the new code looks good in isolation.
+
+            3. **Implementation Verification**: Verify that any CRITICAL or REQUIRED issues from previous reviews have been addressed before considering approval.
+
+            IMPORTANT: You must end your review with a standardized verdict section using this EXACT format with brackets:
 
             ### FINAL VERDICT
-            **Status**: [Choose one: APPROVED | CONDITIONAL APPROVAL | BLOCKED]
-            **Merge Readiness**: [Choose one: READY TO MERGE | READY AFTER FIXES | NOT READY]
-            **Recommendation**: [Brief explanation of your decision]
+            **Status**: [APPROVED]
+            **Merge Readiness**: READY TO MERGE
+            **Recommendation**: Brief explanation of your decision
 
-            Use these status guidelines:
-            - APPROVED: No critical issues found, code meets all standards
-            - CONDITIONAL APPROVAL: Minor improvements suggested but not blocking
-            - BLOCKED: Critical issues that must be fixed before merge
+            OR
+
+            ### FINAL VERDICT
+            **Status**: [CONDITIONAL APPROVAL]
+            **Merge Readiness**: READY AFTER FIXES
+            **Recommendation**: Brief explanation of your decision
+
+            OR
+
+            ### FINAL VERDICT
+            **Status**: [BLOCKED]
+            **Merge Readiness**: NOT READY
+            **Recommendation**: Brief explanation of your decision
+
+            STATUS GUIDELINES:
+            - [APPROVED]: No critical issues found, all previous required changes implemented, code meets all standards
+            - [CONDITIONAL APPROVAL]: Minor improvements suggested but not blocking, previous required changes addressed
+            - [BLOCKED]: Critical issues that must be fixed before merge, OR required changes from previous reviews not implemented
+
+            The bracketed format [APPROVED], [CONDITIONAL APPROVAL], [BLOCKED] is required for automated detection.
 
             Be constructive and helpful in your feedback.
 
