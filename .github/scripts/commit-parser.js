@@ -3,31 +3,59 @@
 /**
  * Commit Parser Script
  * Analyzes commit messages and determines appropriate actions
- * Supports conventional commits and custom patterns
+ * Supports conventional commits and custom patterns with enhanced error handling
+ *
+ * @author BlazeCommerce Workflow Optimization
+ * @version 2.0.0
  */
 
 const fs = require('fs');
+const { Logger, handleError, handleWarning, ErrorCategory, ErrorSeverity } = require('./error-handler');
 
+/**
+ * Commit Parser Class
+ * Provides comprehensive commit message analysis with standardized error handling
+ */
 class CommitParser {
+  /**
+   * Initialize CommitParser with environment variables
+   */
   constructor() {
-    this.commitMessages = process.env.COMMIT_MESSAGES || '';
-    this.prTitle = process.env.PR_TITLE || '';
-    this.prBody = process.env.PR_BODY || '';
+    try {
+      this.commitMessages = process.env.COMMIT_MESSAGES || '';
+      this.prTitle = process.env.PR_TITLE || '';
+      this.prBody = process.env.PR_BODY || '';
+
+      Logger.info('CommitParser initialized successfully');
+      Logger.debug(`Commit messages length: ${this.commitMessages.length}`);
+      Logger.debug(`PR title: ${this.prTitle}`);
+    } catch (error) {
+      handleError('Failed to initialize CommitParser', ErrorCategory.CONFIGURATION, ErrorSeverity.CRITICAL, error);
+      throw error;
+    }
   }
 
   /**
-   * Parse conventional commit format
-   * @param {string} message - Commit message
-   * @returns {object} Parsed commit information
+   * Parse conventional commit format with comprehensive validation
+   * @param {string} message - Commit message to parse
+   * @returns {Object} Parsed commit information with validation status
+   * @throws {Error} When message parsing fails critically
    */
   parseConventionalCommit(message) {
-    // Conventional commit pattern: type(scope): description
-    const conventionalPattern = /^(\w+)(\([^)]+\))?\s*:\s*(.+)$/;
-    const match = message.match(conventionalPattern);
-    
-    if (match) {
-      return {
-        type: match[1].toLowerCase(),
+    try {
+      if (!message || typeof message !== 'string') {
+        handleWarning('Invalid commit message provided', { message });
+        return { isValid: false, type: 'unknown', description: message || '' };
+      }
+
+      // Enhanced conventional commit pattern with breaking change support
+      const conventionalPattern = /^(\w+)(\([^)]+\))?\s*(!?):\s*(.+)$/;
+      const match = message.trim().match(conventionalPattern);
+
+      if (match) {
+        const result = {
+          isValid: true,
+          type: match[1].toLowerCase(),
         scope: match[2] ? match[2].slice(1, -1) : null,
         description: match[3],
         isConventional: true
