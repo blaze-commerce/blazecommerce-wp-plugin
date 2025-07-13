@@ -10,9 +10,6 @@ on:
       - 'hotfix/**'
       - 'bugfix/**'
       - 'enhancement/**'
-    branches-ignore:
-      - main
-      - develop
   workflow_run:
     workflows: ["*"]
     types: [completed]
