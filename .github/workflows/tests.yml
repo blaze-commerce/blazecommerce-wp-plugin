@@ -34,6 +34,57 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install system dependencies
+      run: |
+        echo "DEBUG: Installing system dependencies for WordPress testing..."
+
+        # Update package list
+        sudo apt-get update -qq
+
+        # Install Subversion (required by install-wp-tests.sh)
+        echo "INSTALLING: Subversion (SVN)..."
+        sudo apt-get install -y subversion
+
+        # Verify SVN installation
+        if ! command -v svn &> /dev/null; then
+          echo "ERROR: SVN installation failed - svn command not found"
+          exit 1
+        fi
+        echo "SUCCESS: SVN installed successfully - $(svn --version --quiet)"
+
+        # Verify other required tools are available
+        echo "VERIFYING: Checking other required dependencies..."
+
+        # Check curl or wget
+        if ! command -v curl &> /dev/null && ! command -v wget &> /dev/null; then
+          echo "ERROR: Neither curl nor wget is available"
+          exit 1
+        fi
+        echo "SUCCESS: HTTP client available - $(command -v curl &> /dev/null && echo "curl $(curl --version | head -1)" || echo "wget $(wget --version | head -1)")"
+
+        # Check unzip
+        if ! command -v unzip &> /dev/null; then
+          echo "ERROR: unzip command not found"
+          exit 1
+        fi
+        echo "SUCCESS: unzip available - $(unzip -v | head -1)"
+
+        # Check tar
+        if ! command -v tar &> /dev/null; then
+          echo "ERROR: tar command not found"
+          exit 1
+        fi
+        echo "SUCCESS: tar available - $(tar --version | head -1)"
+
+        # Check mysql client
+        if ! command -v mysql &> /dev/null; then
+          echo "ERROR: mysql client not found"
+          exit 1
+        fi
+        echo "SUCCESS: mysql client available - $(mysql --version)"
+
+        echo "SUCCESS: All system dependencies verified successfully"
+
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
@@ -96,8 +147,42 @@ jobs:
         # Make script executable
         chmod +x bin/install-wp-tests.sh
 
-        # Install WordPress test environment with better error handling
-        bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ matrix.wordpress-version }}
+        # Wait for MySQL service to be ready
+        echo "WAITING: Ensuring MySQL service is ready..."
+        for i in {1..30}; do
+          if mysql -h 127.0.0.1 -P 3306 -u root -proot -e "SELECT 1" &> /dev/null; then
+            echo "SUCCESS: MySQL service is ready"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "ERROR: MySQL service failed to start within 30 seconds"
+            exit 1
+          fi
+          echo "WAITING: MySQL not ready yet, attempt $i/30..."
+          sleep 1
+        done
+
+        # Install WordPress test environment with comprehensive error handling
+        echo "EXECUTING: Running WordPress test environment setup..."
+        if ! bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ matrix.wordpress-version }}; then
+          echo "ERROR: WordPress test environment setup failed"
+          echo "DEBUG: Checking for common issues..."
+
+          # Check if directories were created
+          if [ ! -d "/tmp/wordpress-tests-lib" ]; then
+            echo "ERROR: WordPress tests library directory not created"
+          fi
+          if [ ! -d "/tmp/wordpress" ]; then
+            echo "ERROR: WordPress core directory not created"
+          fi
+
+          # Check SVN connectivity
+          if ! svn info https://develop.svn.wordpress.org/trunk/ &> /dev/null; then
+            echo "ERROR: Cannot connect to WordPress SVN repository"
+          fi
+
+          exit 1
+        fi
 
         echo "SUCCESS: WordPress test environment setup complete"
       env:
@@ -236,10 +321,35 @@ jobs:
     # Run coverage even if some test matrix jobs fail
     needs: test
     if: always()
-    
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        echo "DEBUG: Installing system dependencies for test coverage..."
+
+        # Update package list and install SVN
+        sudo apt-get update -qq
+        sudo apt-get install -y subversion
+
+        # Verify installation
+        if ! command -v svn &> /dev/null; then
+          echo "ERROR: SVN installation failed"
+          exit 1
+        fi
+        echo "SUCCESS: SVN installed - $(svn --version --quiet)"
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -278,9 +388,30 @@ jobs:
           exit 1
         fi
 
-        # Make script executable and run
+        # Make script executable
         chmod +x bin/install-wp-tests.sh
-        bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest
+
+        # Wait for MySQL service to be ready (using default MySQL service)
+        echo "WAITING: Ensuring MySQL service is ready..."
+        for i in {1..30}; do
+          if mysql -h 127.0.0.1 -P 3306 -u root -proot -e "SELECT 1" &> /dev/null; then
+            echo "SUCCESS: MySQL service is ready"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "ERROR: MySQL service failed to start within 30 seconds"
+            exit 1
+          fi
+          echo "WAITING: MySQL not ready yet, attempt $i/30..."
+          sleep 1
+        done
+
+        # Install WordPress test environment with error handling
+        echo "EXECUTING: Running WordPress test environment setup..."
+        if ! bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest; then
+          echo "ERROR: WordPress test environment setup failed"
+          exit 1
+        fi
 
         echo "SUCCESS: WordPress test environment setup complete"
       env:
