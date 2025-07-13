@@ -15,19 +15,20 @@ const path = require('path');
 
 /**
  * Standardized logging utility
- * Note: Emojis removed to prevent GitHub Actions output formatting errors
+ * Uses stderr for all log messages to prevent GitHub Actions output formatting errors
+ * Only actual output data should go to stdout for GitHub Actions
  */
 class Logger {
   static info(message) {
-    console.log(`INFO: ${message}`);
+    console.error(`INFO: ${message}`);
   }
 
   static success(message) {
-    console.log(`SUCCESS: ${message}`);
+    console.error(`SUCCESS: ${message}`);
   }
 
   static warning(message) {
-    console.log(`WARNING: ${message}`);
+    console.error(`WARNING: ${message}`);
   }
 
   static error(message) {
@@ -36,7 +37,7 @@ class Logger {
 
   static debug(message) {
     if (process.env.DEBUG === 'true') {
-      console.log(`DEBUG: ${message}`);
+      console.error(`DEBUG: ${message}`);
     }
   }
 }
@@ -217,12 +218,34 @@ class FileChangeAnalyzer {
    * @param {Object} result - Analysis result
    */
   outputForGitHubActions(result) {
-    // Set output for GitHub Actions
-    console.log(`should_bump_version=${result.shouldBump}`);
-    console.log(`analysis_reason=${result.reason}`);
-    console.log(`changed_files_count=${result.analysis.totalFiles}`);
-    console.log(`significant_files_count=${result.analysis.significantCount}`);
-    console.log(`ignored_files_count=${result.analysis.ignoredCount}`);
+    const fs = require('fs');
+
+    // Prepare output data
+    const outputs = [
+      `should_bump_version=${result.shouldBump}`,
+      `analysis_reason=${result.reason}`,
+      `changed_files_count=${result.analysis.totalFiles}`,
+      `significant_files_count=${result.analysis.significantCount}`,
+      `ignored_files_count=${result.analysis.ignoredCount}`
+    ];
+
+    // Write to GitHub Actions output file if available
+    if (process.env.GITHUB_OUTPUT) {
+      try {
+        outputs.forEach(output => {
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+        });
+        Logger.debug('Successfully wrote outputs to GITHUB_OUTPUT file');
+      } catch (error) {
+        Logger.error(`Failed to write to GITHUB_OUTPUT file: ${error.message}`);
+        // Fallback to stdout for backward compatibility
+        outputs.forEach(output => console.log(output));
+      }
+    } else {
+      // Fallback to stdout when GITHUB_OUTPUT is not available
+      Logger.debug('GITHUB_OUTPUT not available, using stdout');
+      outputs.forEach(output => console.log(output));
+    }
   }
 }
 

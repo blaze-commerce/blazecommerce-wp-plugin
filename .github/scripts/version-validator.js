@@ -169,18 +169,40 @@ class VersionValidator {
    * @param {Object} result - Validation result
    */
   outputForGitHubActions(result) {
+    const fs = require('fs');
+
+    // Prepare output data
+    const outputs = [];
+
     if (!result.isValid) {
-      console.log('validation_passed=false');
-      console.log(`validation_error=${result.error}`);
-      return;
+      outputs.push('validation_passed=false');
+      outputs.push(`validation_error=${result.error}`);
+    } else {
+      outputs.push('validation_passed=true');
+      outputs.push(`package_version=${result.packageVersion}`);
+      outputs.push(`last_tag=${result.lastTag}`);
+      outputs.push(`expected_tag=${result.expectedTag}`);
+      outputs.push(`version_mismatch=${result.hasMismatch}`);
+      outputs.push(`is_first_release=${result.isFirstRelease}`);
     }
 
-    console.log('validation_passed=true');
-    console.log(`package_version=${result.packageVersion}`);
-    console.log(`last_tag=${result.lastTag}`);
-    console.log(`expected_tag=${result.expectedTag}`);
-    console.log(`version_mismatch=${result.hasMismatch}`);
-    console.log(`is_first_release=${result.isFirstRelease}`);
+    // Write to GitHub Actions output file if available
+    if (process.env.GITHUB_OUTPUT) {
+      try {
+        outputs.forEach(output => {
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+        });
+        Logger.debug('Successfully wrote outputs to GITHUB_OUTPUT file');
+      } catch (error) {
+        Logger.error(`Failed to write to GITHUB_OUTPUT file: ${error.message}`);
+        // Fallback to stdout for backward compatibility
+        outputs.forEach(output => console.log(output));
+      }
+    } else {
+      // Fallback to stdout when GITHUB_OUTPUT is not available
+      Logger.debug('GITHUB_OUTPUT not available, using stdout');
+      outputs.forEach(output => console.log(output));
+    }
   }
 }
 

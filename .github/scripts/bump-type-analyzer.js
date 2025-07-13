@@ -212,13 +212,36 @@ class BumpTypeAnalyzer {
    * @param {Object} result - Analysis result
    */
   outputForGitHubActions(result) {
-    console.log(`bump_type=${result.bumpType}`);
-    console.log(`bump_reason=${result.reason}`);
-    console.log(`total_commits=${result.analysis.totalCommits}`);
-    console.log(`breaking_changes=${result.analysis.breakingChanges}`);
-    console.log(`features=${result.analysis.features}`);
-    console.log(`fixes=${result.analysis.fixes}`);
-    console.log(`analysis_strategy=${result.strategy}`);
+    const fs = require('fs');
+
+    // Prepare output data
+    const outputs = [
+      `bump_type=${result.bumpType}`,
+      `bump_reason=${result.reason}`,
+      `total_commits=${result.analysis.totalCommits}`,
+      `breaking_changes=${result.analysis.breakingChanges}`,
+      `features=${result.analysis.features}`,
+      `fixes=${result.analysis.fixes}`,
+      `analysis_strategy=${result.strategy}`
+    ];
+
+    // Write to GitHub Actions output file if available
+    if (process.env.GITHUB_OUTPUT) {
+      try {
+        outputs.forEach(output => {
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+        });
+        Logger.debug('Successfully wrote outputs to GITHUB_OUTPUT file');
+      } catch (error) {
+        Logger.error(`Failed to write to GITHUB_OUTPUT file: ${error.message}`);
+        // Fallback to stdout for backward compatibility
+        outputs.forEach(output => console.log(output));
+      }
+    } else {
+      // Fallback to stdout when GITHUB_OUTPUT is not available
+      Logger.debug('GITHUB_OUTPUT not available, using stdout');
+      outputs.forEach(output => console.log(output));
+    }
   }
 }
 

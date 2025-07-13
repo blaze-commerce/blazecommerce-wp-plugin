@@ -144,10 +144,10 @@ class VersionAnalyzer {
       const fileAnalysis = this.analyzeChangedFiles();
 
       // If only documentation changed, don't bump version
-      if (fileAnalysis.hasDocumentationOnly && 
-          !fileAnalysis.hasSourceChanges && 
+      if (fileAnalysis.hasDocumentationOnly &&
+          !fileAnalysis.hasSourceChanges &&
           !fileAnalysis.hasConfigChanges) {
-        console.log('DOCS: Only documentation changes detected - no version bump needed');
+        console.error('DOCS: Only documentation changes detected - no version bump needed');
         return this.currentVersion;
       }
 
@@ -167,18 +167,18 @@ class VersionAnalyzer {
           newVersion.patch += 1;
           break;
         case 'none':
-          console.log('RETRY: No functional changes detected - no version bump needed');
+          console.error('RETRY: No functional changes detected - no version bump needed');
           return this.currentVersion;
       }
 
       const newVersionString = `${newVersion.major}.${newVersion.minor}.${newVersion.patch}`;
-      
-      console.log(`ANALYSIS: Version Analysis Results:`);
-      console.log(`  Current Version: ${this.currentVersion}`);
-      console.log(`  Bump Type: ${bumpType}`);
-      console.log(`  New Version: ${newVersionString}`);
-      console.log(`  Critical Files Changed: ${fileAnalysis.criticalFiles.length}`);
-      
+
+      console.error(`ANALYSIS: Version Analysis Results:`);
+      console.error(`  Current Version: ${this.currentVersion}`);
+      console.error(`  Bump Type: ${bumpType}`);
+      console.error(`  New Version: ${newVersionString}`);
+      console.error(`  Critical Files Changed: ${fileAnalysis.criticalFiles.length}`);
+
       return newVersionString;
       
     } catch (error) {
@@ -201,24 +201,32 @@ class VersionAnalyzer {
    * Main execution function
    */
   run() {
-    console.log('EXECUTING: Starting version analysis...');
-    
+    console.error('EXECUTING: Starting version analysis...');
+
     const newVersion = this.calculateNewVersion();
-    
+
     if (!this.validateVersion(newVersion)) {
       console.error(`ERROR: Invalid version format: ${newVersion}`);
       process.exit(1);
     }
-    
-    // Output for GitHub Actions
-    console.log(`NEW_VERSION=${newVersion}`);
-    
-    // Write to GitHub Actions output
+
+    // Write to GitHub Actions output file if available
     if (process.env.GITHUB_OUTPUT) {
-      fs.appendFileSync(process.env.GITHUB_OUTPUT, `NEW_VERSION=${newVersion}\n`);
+      try {
+        fs.appendFileSync(process.env.GITHUB_OUTPUT, `NEW_VERSION=${newVersion}\n`);
+        console.error('Successfully wrote NEW_VERSION to GITHUB_OUTPUT file');
+      } catch (error) {
+        console.error(`Failed to write to GITHUB_OUTPUT file: ${error.message}`);
+        // Fallback to stdout for backward compatibility
+        console.log(`NEW_VERSION=${newVersion}`);
+      }
+    } else {
+      // Fallback to stdout when GITHUB_OUTPUT is not available
+      console.error('GITHUB_OUTPUT not available, using stdout');
+      console.log(`NEW_VERSION=${newVersion}`);
     }
-    
-    console.log('SUCCESS: Version analysis completed successfully');
+
+    console.error('SUCCESS: Version analysis completed successfully');
   }
 }
 

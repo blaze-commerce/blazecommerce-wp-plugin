@@ -124,7 +124,7 @@ jobs:
           echo "SUCCESS: Fallback file change analysis completed"
         else
           # Run the extracted file change analyzer
-          if node .github/scripts/file-change-analyzer.js >> $GITHUB_OUTPUT; then
+          if node .github/scripts/file-change-analyzer.js; then
             echo "SUCCESS: File change analysis completed successfully"
           else
             echo "ERROR: File change analysis failed"
@@ -198,7 +198,7 @@ jobs:
           fi
         else
           # Run the extracted version validator
-          if node .github/scripts/version-validator.js >> $GITHUB_OUTPUT; then
+          if node .github/scripts/version-validator.js; then
             echo "SUCCESS: Version validation completed successfully"
           else
             echo "ERROR: Version validation failed"
@@ -238,7 +238,7 @@ jobs:
           echo "SUCCESS: Fallback branch analysis completed"
         else
           # Run the extracted branch analyzer
-          if node .github/scripts/branch-analyzer.js >> $GITHUB_OUTPUT; then
+          if node .github/scripts/branch-analyzer.js; then
             echo "SUCCESS: Branch analysis completed successfully"
           else
             echo "ERROR: Branch analysis failed"
@@ -287,7 +287,7 @@ jobs:
           echo "SUCCESS: Fallback bump type analysis completed"
         else
           # Run the extracted bump type analyzer
-          if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG" >> $GITHUB_OUTPUT; then
+          if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG"; then
             echo "SUCCESS: Bump type analysis completed successfully"
           else
             echo "ERROR: Bump type analysis failed"
