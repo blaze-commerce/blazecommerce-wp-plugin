@@ -1,9 +1,111 @@
 #!/usr/bin/env bash
 
+# WordPress Test Environment Setup Script
+# Enhanced with comprehensive dependency checking and error handling
+
+# Enable strict error handling
+set -e
+
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Function to check dependencies
+check_dependencies() {
+    echo "CHECKING: Verifying required dependencies..."
+
+    local missing_deps=()
+
+    # Check for SVN (Subversion) - Critical dependency
+    if ! command_exists svn; then
+        missing_deps+=("subversion")
+        echo "ERROR: SVN (Subversion) is required but not installed"
+    else
+        echo "SUCCESS: SVN found - $(svn --version --quiet)"
+    fi
+
+    # Check for HTTP client (curl or wget)
+    if ! command_exists curl && ! command_exists wget; then
+        missing_deps+=("curl or wget")
+        echo "ERROR: Either curl or wget is required but neither is installed"
+    else
+        if command_exists curl; then
+            echo "SUCCESS: curl found - $(curl --version | head -1)"
+        else
+            echo "SUCCESS: wget found - $(wget --version | head -1)"
+        fi
+    fi
+
+    # Check for unzip
+    if ! command_exists unzip; then
+        missing_deps+=("unzip")
+        echo "ERROR: unzip is required but not installed"
+    else
+        echo "SUCCESS: unzip found"
+    fi
+
+    # Check for tar
+    if ! command_exists tar; then
+        missing_deps+=("tar")
+        echo "ERROR: tar is required but not installed"
+    else
+        echo "SUCCESS: tar found"
+    fi
+
+    # Check for MySQL client tools
+    if ! command_exists mysql; then
+        missing_deps+=("mysql-client")
+        echo "ERROR: mysql client is required but not installed"
+    else
+        echo "SUCCESS: mysql client found"
+    fi
+
+    if ! command_exists mysqladmin; then
+        missing_deps+=("mysql-client (mysqladmin)")
+        echo "ERROR: mysqladmin is required but not installed"
+    else
+        echo "SUCCESS: mysqladmin found"
+    fi
+
+    # Check for sed and grep (should be available on most systems)
+    if ! command_exists sed; then
+        missing_deps+=("sed")
+        echo "ERROR: sed is required but not installed"
+    fi
+
+    if ! command_exists grep; then
+        missing_deps+=("grep")
+        echo "ERROR: grep is required but not installed"
+    fi
+
+    # If any dependencies are missing, provide installation instructions and exit
+    if [ ${#missing_deps[@]} -ne 0 ]; then
+        echo ""
+        echo "DEPENDENCY ERROR: The following required dependencies are missing:"
+        for dep in "${missing_deps[@]}"; do
+            echo "  - $dep"
+        done
+        echo ""
+        echo "Installation instructions:"
+        echo "  Ubuntu/Debian: sudo apt-get install subversion curl unzip mysql-client"
+        echo "  CentOS/RHEL:   sudo yum install subversion curl unzip mysql"
+        echo "  macOS:         brew install subversion mysql-client"
+        echo ""
+        exit 1
+    fi
+
+    echo "SUCCESS: All dependencies verified successfully"
+}
+
+# Check script arguments
 if [ $# -lt 3 ]; then
 	echo "usage: $0 <db-name> <db-user> <db-pass> [db-host] [wp-version] [skip-database-creation]"
 	exit 1
 fi
+
+# Check dependencies before proceeding
+check_dependencies
 
 DB_NAME=$1
 DB_USER=$2
@@ -18,11 +120,34 @@ WP_TESTS_DIR=${WP_TESTS_DIR-$TMPDIR/wordpress-tests-lib}
 WP_CORE_DIR=${WP_CORE_DIR-$TMPDIR/wordpress/}
 
 download() {
-    if [ `which curl` ]; then
-        curl -s "$1" > "$2";
-    elif [ `which wget` ]; then
-        wget -nv -O "$2" "$1"
+    local url="$1"
+    local output="$2"
+
+    echo "DOWNLOADING: $url"
+
+    if command_exists curl; then
+        if ! curl -s -f "$url" > "$output"; then
+            echo "ERROR: Failed to download $url using curl"
+            return 1
+        fi
+    elif command_exists wget; then
+        if ! wget -nv -O "$output" "$url"; then
+            echo "ERROR: Failed to download $url using wget"
+            return 1
+        fi
+    else
+        echo "ERROR: Neither curl nor wget is available for downloading"
+        return 1
     fi
+
+    # Verify the download was successful and file is not empty
+    if [ ! -f "$output" ] || [ ! -s "$output" ]; then
+        echo "ERROR: Download failed or resulted in empty file: $output"
+        return 1
+    fi
+
+    echo "SUCCESS: Downloaded $url to $output"
+    return 0
 }
 
 if [[ $WP_VERSION =~ ^[0-9]+\.[0-9]+\-(beta|RC)[0-9]+$ ]]; then
@@ -101,10 +226,34 @@ install_test_suite() {
 
 	# set up testing suite if it doesn't yet exist
 	if [ ! -d $WP_TESTS_DIR ]; then
-		# set up testing suite
+		echo "SETUP: Creating WordPress test suite directory..."
 		mkdir -p $WP_TESTS_DIR
-		svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/ $WP_TESTS_DIR/includes
-		svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/ $WP_TESTS_DIR/data
+
+		echo "DOWNLOADING: WordPress test includes via SVN..."
+		if ! svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/ $WP_TESTS_DIR/includes; then
+			echo "ERROR: Failed to download WordPress test includes from SVN"
+			echo "URL: https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/includes/"
+			echo "This could be due to:"
+			echo "  - Network connectivity issues"
+			echo "  - SVN server unavailability"
+			echo "  - Invalid WordPress version tag: ${WP_TESTS_TAG}"
+			exit 1
+		fi
+
+		echo "DOWNLOADING: WordPress test data via SVN..."
+		if ! svn co --quiet https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/ $WP_TESTS_DIR/data; then
+			echo "ERROR: Failed to download WordPress test data from SVN"
+			echo "URL: https://develop.svn.wordpress.org/${WP_TESTS_TAG}/tests/phpunit/data/"
+			echo "This could be due to:"
+			echo "  - Network connectivity issues"
+			echo "  - SVN server unavailability"
+			echo "  - Invalid WordPress version tag: ${WP_TESTS_TAG}"
+			exit 1
+		fi
+
+		echo "SUCCESS: WordPress test suite downloaded successfully"
+	else
+		echo "INFO: WordPress test suite directory already exists, skipping download"
 	fi
 
 	if [ ! -f wp-tests-config.php ]; then
