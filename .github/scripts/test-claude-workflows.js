@@ -59,7 +59,7 @@ class ClaudeWorkflowTests {
         error: null
       });
       
-      Logger.success(`✅ ${testName} - PASSED (${duration}ms)`);
+      Logger.success(`SUCCESS: ${testName} - PASSED (${duration}ms)`);
     } catch (error) {
       this.testResults.push({
         name: testName,
@@ -68,7 +68,7 @@ class ClaudeWorkflowTests {
         error: error.message
       });
       
-      Logger.error(`❌ ${testName} - FAILED: ${error.message}`);
+      Logger.error(`ERROR: ${testName} - FAILED: ${error.message}`);
     }
   }
 
@@ -269,7 +269,7 @@ class ClaudeWorkflowTests {
    * Run all tests
    */
   async runAllTests() {
-    Logger.info('🧪 Starting Claude Workflows Test Suite');
+    Logger.info('TESTING: Starting Claude Workflows Test Suite');
     
     if (!(await this.initialize())) {
       Logger.error('Failed to initialize test environment');
@@ -300,14 +300,14 @@ class ClaudeWorkflowTests {
     const passedTests = this.testResults.filter(r => r.status === 'PASS').length;
     const failedTests = this.testResults.filter(r => r.status === 'FAIL').length;
     
-    Logger.info('\n📊 Test Results Summary:');
+    Logger.info('\nANALYSIS: Test Results Summary:');
     Logger.info(`   Total Tests: ${totalTests}`);
     Logger.info(`   Passed: ${passedTests}`);
     Logger.info(`   Failed: ${failedTests}`);
     Logger.info(`   Success Rate: ${((passedTests / totalTests) * 100).toFixed(1)}%`);
     
     if (failedTests > 0) {
-      Logger.error('\n❌ Failed Tests:');
+      Logger.error('\nERROR: Failed Tests:');
       this.testResults
         .filter(r => r.status === 'FAIL')
         .forEach(result => {
@@ -317,9 +317,9 @@ class ClaudeWorkflowTests {
     
     const success = failedTests === 0;
     if (success) {
-      Logger.success('\n🎉 All tests passed!');
+      Logger.success('\nCOMPLETED: All tests passed!');
     } else {
-      Logger.error('\n💥 Some tests failed!');
+      Logger.error('\n Some tests failed!');
     }
     
     return success;

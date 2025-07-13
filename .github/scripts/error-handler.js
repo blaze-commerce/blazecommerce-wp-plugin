@@ -133,7 +133,7 @@ class ErrorHandler {
     };
     
     this.warnings.push(warning);
-    console.log(`⚠️  WARNING: ${message}`);
+    console.log(`WARNING:  WARNING: ${message}`);
     
     return warning;
   }
@@ -144,10 +144,10 @@ class ErrorHandler {
    */
   logError(error) {
     const severityEmoji = {
-      [ErrorSeverity.LOW]: '🔵',
-      [ErrorSeverity.MEDIUM]: '🟡',
-      [ErrorSeverity.HIGH]: '🟠',
-      [ErrorSeverity.CRITICAL]: '🔴'
+      [ErrorSeverity.LOW]: 'INFO:',
+      [ErrorSeverity.MEDIUM]: 'WARNING:',
+      [ErrorSeverity.HIGH]: '',
+      [ErrorSeverity.CRITICAL]: 'CRITICAL:'
     };
 
     console.error(`${severityEmoji[error.severity]} ERROR [${error.category.toUpperCase()}]: ${error.message}`);
@@ -220,7 +220,7 @@ class ErrorHandler {
   generateReport() {
     const summary = this.getSummary();
     
-    let report = `\n📊 ERROR REPORT\n`;
+    let report = `\nANALYSIS: ERROR REPORT\n`;
     report += `================\n`;
     report += `Total Errors: ${summary.totalErrors}\n`;
     report += `Total Warnings: ${summary.totalWarnings}\n`;
@@ -261,7 +261,7 @@ class ErrorHandler {
       };
 
       fs.writeFileSync(filePath, JSON.stringify(fullReport, null, 2));
-      console.log(`📄 Error report saved to: ${filePath}`);
+      console.log(`REPORT: Error report saved to: ${filePath}`);
     } catch (error) {
       console.error(`Failed to save error report: ${error.message}`);
     }
@@ -274,16 +274,16 @@ class ErrorHandler {
     const summary = this.getSummary();
     
     if (summary.hasCritical) {
-      console.error('\n🔴 CRITICAL ERRORS DETECTED - EXITING WITH CODE 2');
+      console.error('\nCRITICAL: CRITICAL ERRORS DETECTED - EXITING WITH CODE 2');
       process.exit(2);
     } else if (summary.totalErrors > 0) {
-      console.error('\n🟡 ERRORS DETECTED - EXITING WITH CODE 1');
+      console.error('\nWARNING: ERRORS DETECTED - EXITING WITH CODE 1');
       process.exit(1);
     } else if (summary.totalWarnings > 0) {
-      console.log('\n⚠️  WARNINGS DETECTED - EXITING WITH CODE 0');
+      console.log('\nWARNING:  WARNINGS DETECTED - EXITING WITH CODE 0');
       process.exit(0);
     } else {
-      console.log('\n✅ NO ERRORS OR WARNINGS - EXITING WITH CODE 0');
+      console.log('\nSUCCESS: NO ERRORS OR WARNINGS - EXITING WITH CODE 0');
       process.exit(0);
     }
   }

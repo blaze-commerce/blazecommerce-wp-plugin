@@ -38,20 +38,20 @@ class WorkflowScriptsTestSuite {
    * Run all tests
    */
   async runAll() {
-    console.log('🧪 Running Workflow Scripts Test Suite...\n');
+    console.log('TESTING: Running Workflow Scripts Test Suite...\n');
 
     for (const { name, testFn } of this.tests) {
       try {
         await testFn();
-        console.log(`✅ ${name}`);
+        console.log(`SUCCESS: ${name}`);
         this.passed++;
       } catch (error) {
-        console.log(`❌ ${name}: ${error.message}`);
+        console.log(`ERROR: ${name}: ${error.message}`);
         this.failed++;
       }
     }
 
-    console.log(`\n📊 Test Results: ${this.passed} passed, ${this.failed} failed`);
+    console.log(`\nANALYSIS: Test Results: ${this.passed} passed, ${this.failed} failed`);
     return this.failed === 0;
   }
 
@@ -185,13 +185,13 @@ suite.test('ClaudeReviewEnhancer - parseClaudeReview', () => {
   enhancer.prNumber = '123';
   
   const claudeOutput = `
-🔴 REQUIRED - Fix security vulnerability
+CRITICAL: REQUIRED - Fix security vulnerability
 This is a critical security issue that must be addressed.
 
-🟡 IMPORTANT - Improve error handling
+WARNING: IMPORTANT - Improve error handling
 Consider adding better error handling here.
 
-🔵 SUGGESTIONS - Add documentation
+INFO: SUGGESTIONS - Add documentation
 It would be nice to have more documentation.
   `;
   
@@ -228,7 +228,7 @@ suite.test('Integration - Full workflow simulation', () => {
   const branchResult = branchAnalyzer.analyze();
   suite.assertEqual(branchResult.prereleaseType, 'alpha', 'Should be alpha prerelease');
   
-  console.log('✅ Integration test completed successfully');
+  console.log('SUCCESS: Integration test completed successfully');
 });
 
 // Error Handling Tests
@@ -270,7 +270,7 @@ if (require.main === module) {
   suite.runAll().then(success => {
     process.exit(success ? 0 : 1);
   }).catch(error => {
-    console.error('❌ Test suite failed:', error);
+    console.error('ERROR: Test suite failed:', error);
     process.exit(1);
   });
 }

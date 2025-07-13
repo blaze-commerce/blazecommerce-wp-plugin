@@ -17,7 +17,7 @@ process.env.REPO_TYPE = 'test';
 
 // Test data
 const mockClaudeOutput1 = `
-## 🔴 REQUIRED - Critical Issues
+## CRITICAL: REQUIRED - Critical Issues
 
 ### 1. Security Vulnerability in User Input
 The user input validation is missing proper sanitization.
@@ -25,19 +25,19 @@ The user input validation is missing proper sanitization.
 ### 2. Database Query Injection Risk
 SQL queries are not using prepared statements.
 
-## 🟡 IMPORTANT - Improvements
+## WARNING: IMPORTANT - Improvements
 
 ### 1. Error Handling Enhancement
 Add comprehensive error handling for API calls.
 
-## 🔵 SUGGESTIONS - Optional
+## INFO: SUGGESTIONS - Optional
 
 ### 1. Code Documentation
 Add JSDoc comments to all functions.
 `;
 
 const mockClaudeOutput2 = `
-## 🔴 REQUIRED - Critical Issues
+## CRITICAL: REQUIRED - Critical Issues
 
 ### 1. Database Query Injection Risk
 SQL queries are not using prepared statements.
@@ -45,12 +45,12 @@ SQL queries are not using prepared statements.
 ### 2. Memory Leak in Event Handlers
 Event listeners are not properly cleaned up.
 
-## 🟡 IMPORTANT - Improvements
+## WARNING: IMPORTANT - Improvements
 
 ### 1. Error Handling Enhancement
 Add comprehensive error handling for API calls.
 
-## 🔵 SUGGESTIONS - Optional
+## INFO: SUGGESTIONS - Optional
 
 ### 1. Performance Optimization
 Implement caching for frequently accessed data.
@@ -64,7 +64,7 @@ class ProgressiveReviewTester {
 
   log(message, type = 'info') {
     const timestamp = new Date().toISOString();
-    const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+    const prefix = type === 'error' ? 'ERROR:' : type === 'success' ? 'SUCCESS:' : 'INFO:';
     console.log(`${prefix} [${timestamp}] ${message}`);
   }
 
@@ -82,7 +82,7 @@ class ProgressiveReviewTester {
 
   async testRecommendationHashing() {
     const rec1 = "1. Security Vulnerability in User Input\nThe user input validation is missing proper sanitization.";
-    const rec2 = "2. ✅ **RESOLVED** Security Vulnerability in User Input\nThe user input validation is missing proper sanitization.\n*Applied: 2024-12-13*";
+    const rec2 = "2. SUCCESS: **RESOLVED** Security Vulnerability in User Input\nThe user input validation is missing proper sanitization.\n*Applied: 2024-12-13*";
     
     const hash1 = this.enhancer.generateRecommendationHash(rec1);
     const hash2 = this.enhancer.generateRecommendationHash(rec2);
@@ -181,11 +181,11 @@ class ProgressiveReviewTester {
       throw new Error('Comment missing version header');
     }
     
-    if (!comment.includes('🔴 REQUIRED Issues')) {
+    if (!comment.includes('CRITICAL: REQUIRED Issues')) {
       throw new Error('Comment missing required issues section');
     }
     
-    if (!comment.includes('🆕 **NEW**')) {
+    if (!comment.includes('NEW: **NEW**')) {
       throw new Error('Comment missing new issue indicators');
     }
   }

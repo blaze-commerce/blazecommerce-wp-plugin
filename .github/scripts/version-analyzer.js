@@ -147,7 +147,7 @@ class VersionAnalyzer {
       if (fileAnalysis.hasDocumentationOnly && 
           !fileAnalysis.hasSourceChanges && 
           !fileAnalysis.hasConfigChanges) {
-        console.log('📚 Only documentation changes detected - no version bump needed');
+        console.log('DOCS: Only documentation changes detected - no version bump needed');
         return this.currentVersion;
       }
 
@@ -167,13 +167,13 @@ class VersionAnalyzer {
           newVersion.patch += 1;
           break;
         case 'none':
-          console.log('🔄 No functional changes detected - no version bump needed');
+          console.log('RETRY: No functional changes detected - no version bump needed');
           return this.currentVersion;
       }
 
       const newVersionString = `${newVersion.major}.${newVersion.minor}.${newVersion.patch}`;
       
-      console.log(`📊 Version Analysis Results:`);
+      console.log(`ANALYSIS: Version Analysis Results:`);
       console.log(`  Current Version: ${this.currentVersion}`);
       console.log(`  Bump Type: ${bumpType}`);
       console.log(`  New Version: ${newVersionString}`);
@@ -182,7 +182,7 @@ class VersionAnalyzer {
       return newVersionString;
       
     } catch (error) {
-      console.error(`❌ Version calculation failed: ${error.message}`);
+      console.error(`ERROR: Version calculation failed: ${error.message}`);
       process.exit(1);
     }
   }
@@ -201,12 +201,12 @@ class VersionAnalyzer {
    * Main execution function
    */
   run() {
-    console.log('🚀 Starting version analysis...');
+    console.log('EXECUTING: Starting version analysis...');
     
     const newVersion = this.calculateNewVersion();
     
     if (!this.validateVersion(newVersion)) {
-      console.error(`❌ Invalid version format: ${newVersion}`);
+      console.error(`ERROR: Invalid version format: ${newVersion}`);
       process.exit(1);
     }
     
@@ -218,7 +218,7 @@ class VersionAnalyzer {
       fs.appendFileSync(process.env.GITHUB_OUTPUT, `NEW_VERSION=${newVersion}\n`);
     }
     
-    console.log('✅ Version analysis completed successfully');
+    console.log('SUCCESS: Version analysis completed successfully');
   }
 }
 

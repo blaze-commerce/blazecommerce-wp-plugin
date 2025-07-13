@@ -17,7 +17,7 @@ class DependencyInstaller {
   }
 
   log(message, type = 'info') {
-    const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+    const prefix = type === 'error' ? 'ERROR:' : type === 'success' ? 'SUCCESS:' : 'INFO:';
     console.log(`${prefix} ${message}`);
   }
 

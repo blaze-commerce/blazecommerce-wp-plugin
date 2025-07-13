@@ -105,7 +105,7 @@ jobs:
             const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
             const triggerReason = '${{ needs.check-trigger.outputs.trigger_reason }}';
 
-            console.log(`🔍 Checking Claude Review completion for PR #${prNumber} (${triggerReason})`);
+            console.log(`DEBUG: Checking Claude Review completion for PR #${prNumber} (${triggerReason})`);
 
             let shouldProceed = false;
             let completed = false;
@@ -117,7 +117,7 @@ jobs:
                 completed = true;
                 conclusion = context.payload.workflow_run.conclusion;
                 shouldProceed = true;
-                console.log(`✅ Claude review workflow completed via workflow_run event: ${conclusion}`);
+                console.log(`SUCCESS: Claude review workflow completed via workflow_run event: ${conclusion}`);
               } else {
                 // For other events, check if Claude review workflow has completed
                 const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -138,11 +138,11 @@ jobs:
                   completed = claudeReviewRun.status === 'completed';
                   conclusion = claudeReviewRun.conclusion || 'unknown';
                   shouldProceed = true;
-                  console.log(`✅ Found Claude review run: ${claudeReviewRun.status} (${conclusion})`);
+                  console.log(`SUCCESS: Found Claude review run: ${claudeReviewRun.status} (${conclusion})`);
                 } else {
                   // No Claude review found, but we should still proceed to check status
                   shouldProceed = true;
-                  console.log('⚠️ No Claude review workflow found, proceeding with status check');
+                  console.log('WARNING: No Claude review workflow found, proceeding with status check');
                 }
               }
             } catch (error) {
@@ -192,7 +192,7 @@ jobs:
           PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
           GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          echo "🔍 Getting current Claude AI status..."
+          echo "INFO: Getting current Claude AI status..."
           node .github/scripts/claude-status-manager.js get-state
       - name: Enhanced Claude AI Approval Check
         id: check-approval
@@ -207,7 +207,7 @@ jobs:
             const claudeReviewCompleted = '${{ needs.wait-for-claude-review.outputs.claude-review-completed }}' === 'true';
             const claudeReviewConclusion = '${{ needs.wait-for-claude-review.outputs.claude-review-conclusion }}';
 
-            console.log(`🔍 Enhanced approval check for PR #${prNumber}`);
+            console.log(`DEBUG: Enhanced approval check for PR #${prNumber}`);
             console.log(`   Trigger: ${triggerReason}`);
             console.log(`   Claude review completed: ${claudeReviewCompleted}`);
             console.log(`   Claude review conclusion: ${claudeReviewConclusion}`);
@@ -253,7 +253,7 @@ jobs:
                 reason = 'Claude AI review in progress';
               } else {
                 // Fallback: check for manual approvals in PR reviews
-                console.log('🔄 Fallback: Checking PR reviews for manual Claude AI approval...');
+                console.log('RETRY: Fallback: Checking PR reviews for manual Claude AI approval...');
 
                 const reviews = await github.rest.pulls.listReviews({
                   owner: context.repo.owner,
@@ -276,7 +276,7 @@ jobs:
                   statusState = 'success';
                   statusDescription = `Approved by ${claudeApproval.user.login}`;
                   reason = 'Manual Claude AI approval found';
-                  console.log(`✅ Found manual Claude AI approval by ${claudeApproval.user.login}`);
+                  console.log(`SUCCESS: Found manual Claude AI approval by ${claudeApproval.user.login}`);
                 } else {
                   approved = false;
                   statusState = 'pending';
@@ -299,7 +299,7 @@ jobs:
             core.setOutput('status_state', statusState);
             core.setOutput('status_description', statusDescription);
 
-            console.log(`📊 Final result: approved=${approved}, state=${statusState}, reason=${reason}`);
+            console.log(`ANALYSIS: Final result: approved=${approved}, state=${statusState}, reason=${reason}`);
 
       - name: Update Approval Status
         env:
@@ -310,7 +310,7 @@ jobs:
           STATUS_STATE="${{ steps.check-approval.outputs.status_state }}"
           STATUS_DESCRIPTION="${{ steps.check-approval.outputs.status_description }}"
 
-          echo "🔄 Updating approval status: $STATUS_STATE - $STATUS_DESCRIPTION"
+          echo "INFO: Updating approval status: $STATUS_STATE - $STATUS_DESCRIPTION"
 
           # Use status manager to set the approval status
           node -e "
@@ -327,9 +327,9 @@ jobs:
               '$STATUS_DESCRIPTION',
               parseInt(process.env.PR_NUMBER)
             ).then(() => {
-              console.log('✅ Approval status updated successfully');
+              console.log('SUCCESS: Approval status updated successfully');
             }).catch(error => {
-              console.error('❌ Failed to update approval status:', error.message);
+              console.error('ERROR: Failed to update approval status:', error.message);
               process.exit(1);
             });
           "
@@ -354,34 +354,34 @@ jobs:
             let commentBody = '';
 
             if (triggerReason === '@claude mention in comment') {
-              commentBody = `## 🤖 Claude AI Re-evaluation Triggered
+              commentBody = `## BOT: Claude AI Re-evaluation Triggered
 
               Claude AI approval status has been re-evaluated based on your request.
 
-              ### 📊 Current Status
-              - **Approval Status**: ${approved ? '✅ Approved' : '❌ Not Approved'}
+              ### ANALYSIS: Current Status
+              - **Approval Status**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not Approved'}
               - **Details**: ${statusDescription}
               - **Reason**: ${reason}
 
               ${approved ?
-                '🎉 **This PR is now ready to merge** (subject to other branch protection rules).' :
-                '⚠️ **This PR is not yet ready to merge.** Please address any outstanding issues.'
+                'COMPLETED: **This PR is now ready to merge** (subject to other branch protection rules).' :
+                'WARNING: **This PR is not yet ready to merge.** Please address any outstanding issues.'
               }
 
               ---
               *Re-evaluation completed in response to @claude mention*`;
             } else {
               // First time comment for new PRs
-              commentBody = `## 🛡️ Claude AI Approval Gate
+              commentBody = `## SECURITY: Claude AI Approval Gate
 
               This PR requires approval from the Claude AI Review Bot before it can be merged.
 
-              ### 📋 Current Status
-              - **Claude AI Approval**: ${approved ? '✅ Approved' : '❌ Not yet approved'}
+              ### SUMMARY: Current Status
+              - **Claude AI Approval**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not yet approved'}
               - **Details**: ${statusDescription}
-              - **Merge Status**: ${approved ? '✅ Ready to merge' : '🚫 Blocked until approval'}
+              - **Merge Status**: ${approved ? 'SUCCESS: Ready to merge' : ' Blocked until approval'}
 
-              ### 🔄 Next Steps
+              ### RETRY: Next Steps
               ${approved ?
                 'This PR has been approved and is ready for merge (subject to other branch protection rules).' :
                 `1. Wait for the Claude AI Review Bot to analyze your PR
@@ -390,10 +390,10 @@ jobs:
               4. The PR will then be ready for merge`
               }
 
-              ### ℹ️ About This Check
+              ### INFO: About This Check
               This is an automated gate that ensures all PRs receive Claude AI review before merging. The check will update automatically when Claude AI provides approval.
 
-              💡 **Tip**: You can mention @claude in a comment to trigger a re-evaluation of the approval status.
+              TIP: **Tip**: You can mention @claude in a comment to trigger a re-evaluation of the approval status.
 
               ---
               *Claude AI Approval Gate - Automated Merge Protection*`;
@@ -406,4 +406,4 @@ jobs:
               body: commentBody
             });
 
-            console.log(`📝 Posted ${triggerReason === '@claude mention in comment' ? 're-evaluation' : 'initial'} status comment`);
+            console.log(`NOTE: Posted ${triggerReason === '@claude mention in comment' ? 're-evaluation' : 'initial'} status comment`);
