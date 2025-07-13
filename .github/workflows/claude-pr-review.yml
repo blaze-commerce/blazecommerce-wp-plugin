@@ -1959,6 +1959,3 @@ jobs:
             } catch (error) {
               console.log(`❌ Failed to post skip approval comment: ${error.message}`);
             }
-
-
-
