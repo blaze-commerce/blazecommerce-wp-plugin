@@ -495,9 +495,6 @@ jobs:
             const fs = require('fs');
 
             console.log('📊 Updating recommendation tracking based on Claude review...');
-
-            // Initialize tracking data for this job since we can't access cross-job step outputs
-            const fs = require('fs');
             const path = require('path');
             const trackingDir = '.github/claude-tracking';
             const trackingFile = path.join(trackingDir, `pr-${context.payload.pull_request.number}-recommendations.json`);
@@ -1555,10 +1552,18 @@ jobs:
             const revocationReason = '${{ steps.check-revocation.outputs.reason }}' || 'N/A';
 
             // Get tracking information
-            const totalResolvedRequired = '${{ needs.claude-review-official.outputs.total_resolved_required }}' || '0';
-            const totalResolvedImportant = '${{ needs.claude-review-official.outputs.total_resolved_important }}' || '0';
-            const newlyResolvedRequired = '${{ needs.claude-review-official.outputs.newly_resolved_required }}' || '0';
-            const newlyResolvedImportant = '${{ needs.claude-review-official.outputs.newly_resolved_important }}' || '0';
+            const totalResolvedRequired = parseInt('${{ needs.claude-review-official.outputs.total_resolved_required }}' || '0');
+            const totalResolvedImportant = parseInt('${{ needs.claude-review-official.outputs.total_resolved_important }}' || '0');
+            const newlyResolvedRequired = parseInt('${{ needs.claude-review-official.outputs.newly_resolved_required }}' || '0');
+            const newlyResolvedImportant = parseInt('${{ needs.claude-review-official.outputs.newly_resolved_important }}' || '0');
+
+            // Calculate total items (resolved + pending) for progress ratios
+            const totalRequiredItems = totalResolvedRequired + pendingRequiredCount;
+            const totalImportantItems = totalResolvedImportant + pendingImportantCount;
+
+            // Calculate progress percentages
+            const requiredProgress = totalRequiredItems > 0 ? Math.round((totalResolvedRequired / totalRequiredItems) * 100) : 0;
+            const importantProgress = totalImportantItems > 0 ? Math.round((totalResolvedImportant / totalImportantItems) * 100) : 0;
 
             let statusBody = `## 🔍 Auto-Approval Status Check
 
@@ -1657,13 +1662,15 @@ jobs:
             - **Approval Status**: ${revocationNeeded ? '🚨 Previous approval revoked due to new critical issues' : '✅ No revocation needed'}
 
             ### 📈 Recommendation Tracking Progress
-            - **Total Resolved REQUIRED**: ${totalResolvedRequired} items ✅
-            - **Total Resolved IMPORTANT**: ${totalResolvedImportant} items ✅
-            ${parseInt(newlyResolvedRequired) > 0 || parseInt(newlyResolvedImportant) > 0 ? `- **Newly Resolved This Update**: ${newlyResolvedRequired} REQUIRED + ${newlyResolvedImportant} IMPORTANT 🎉` : ''}
+            - **REQUIRED Items**: ${totalRequiredItems > 0 ? `${totalResolvedRequired}/${totalRequiredItems} resolved (${requiredProgress}%) ✅` : 'No items tracked yet'}
+            - **IMPORTANT Items**: ${totalImportantItems > 0 ? `${totalResolvedImportant}/${totalImportantItems} resolved (${importantProgress}%) ✅` : 'No items tracked yet'}
+            ${newlyResolvedRequired > 0 || newlyResolvedImportant > 0 ? `- **Newly Resolved This Update**: ${newlyResolvedRequired} REQUIRED + ${newlyResolvedImportant} IMPORTANT 🎉` : ''}
 
-            ${parseInt(totalResolvedRequired) > 0 || parseInt(totalResolvedImportant) > 0 ? `
+            ${totalResolvedRequired > 0 || totalResolvedImportant > 0 ? `
             ### 🎯 Progress Highlights
-            **Great work!** This PR has successfully resolved **${parseInt(totalResolvedRequired) + parseInt(totalResolvedImportant)}** recommendations across multiple commits, demonstrating continuous improvement and attention to code quality.
+            **Great work!** This PR has successfully resolved **${totalResolvedRequired + totalResolvedImportant}** recommendations across multiple commits, demonstrating continuous improvement and attention to code quality.
+
+            **Overall Progress**: ${totalRequiredItems + totalImportantItems > 0 ? `${Math.round(((totalResolvedRequired + totalResolvedImportant) / (totalRequiredItems + totalImportantItems)) * 100)}% of all recommendations resolved` : 'Starting fresh with quality improvements'}
             ` : ''}
 
             ${revocationNeeded ? `
