@@ -164,9 +164,8 @@ const securityPatterns = [
 
 ### Required Status Checks
 Update branch protection rules to require:
-- `Claude AI Review Secure / claude-review-secure`
-- `Temporary Build Pass / Temporary Build Pass`
-- `Claude AI Approval Gate / claude-approval-gate (pull_request)`
+- `claude-ai/approval-required` (created by claude-approval-gate workflow)
+- Additional checks as needed (tests, code-quality, etc.)
 
 ### Workflow Triggers
 - `pull_request`: [opened, synchronize, reopened]
