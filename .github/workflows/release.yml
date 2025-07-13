@@ -5,12 +5,62 @@ on:
     tags:
       - 'v*'
 
+# Priority 3: Post-merge workflow - runs after PR workflows complete
+concurrency:
+  group: priority-3-release-${{ github.repository }}
+  cancel-in-progress: false  # Don't cancel to ensure release consistency
+
 jobs:
-  validate-release:
+  # Wait for Priority 2 (Claude Approval Gate) to complete before proceeding
+  wait-for-priority-2:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.PRIORITY_DEPENDENCY_TIMEOUT || 5 }}
+    outputs:
+      priority-2-completed: ${{ steps.check-dependencies.outputs.all_dependencies_completed }}
+    steps:
+      - name: Check Priority 2 Dependencies
+        id: check-dependencies
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('DEBUG: Checking Priority 2 workflow completion...');
+
+            // Get all workflow runs for this commit
+            const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head_sha: context.sha,
+              status: 'completed'
+            });
+
+            // Look for completed Priority 2 workflows
+            const priority2Workflows = ['Priority 2: Claude AI Approval Gate'];
+            let allCompleted = true;
+
+            for (const workflowName of priority2Workflows) {
+              const workflow = workflowRuns.workflow_runs.find(run =>
+                run.name === workflowName && run.head_sha === context.sha
+              );
+
+              if (workflow) {
+                console.log(`SUCCESS: ${workflowName} completed with status: ${workflow.conclusion}`);
+              } else {
+                console.log(`PENDING: ${workflowName} not yet completed`);
+                allCompleted = false;
+              }
+            }
+
+            core.setOutput('all_dependencies_completed', allCompleted.toString());
+
+  validate-release:
+    needs: [wait-for-priority-2]
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.RELEASE_VALIDATION_TIMEOUT || 10 }}
     permissions:
-      contents: read
-      actions: read
+      # Minimum required permissions for release validation
+      contents: read          # Required: Read repository content and tags
+      actions: read           # Required: Read workflow run information
+      # Security: All other permissions explicitly denied
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
       is-prerelease: ${{ steps.version.outputs.IS_PRERELEASE }}
@@ -25,62 +75,62 @@ jobs:
     - name: Check if release is needed
       id: check_files
       run: |
-        echo "🔍 Checking if release is needed based on changed files..."
+        echo "DEBUG: Checking if release is needed based on changed files..."
 
         # Get the tag that triggered this workflow
         CURRENT_TAG="${GITHUB_REF#refs/tags/}"
-        echo "🏷️  Current tag: $CURRENT_TAG"
+        echo "TAG:  Current tag: $CURRENT_TAG"
 
         # Validate tag format
         if [ -z "$CURRENT_TAG" ] || [[ ! "$CURRENT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-          echo "❌ Invalid tag format: $CURRENT_TAG"
+          echo "ERROR: Invalid tag format: $CURRENT_TAG"
           echo "   Expected format: v1.2.3"
           exit 1
         fi
 
         # Get the previous tag to compare against with better error handling
-        echo "🔍 Looking for previous tag..."
+        echo "DEBUG: Looking for previous tag..."
         if ! PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG^" 2>/dev/null); then
-          echo "📋 No previous tags found, this appears to be the first release"
+          echo "SUMMARY: No previous tags found, this appears to be the first release"
           PREVIOUS_TAG=""
         else
-          echo "📋 Found previous tag: $PREVIOUS_TAG"
+          echo "SUMMARY: Found previous tag: $PREVIOUS_TAG"
         fi
 
         # Get changed files with proper error handling
         if [ -n "$PREVIOUS_TAG" ]; then
-          echo "📋 Comparing changes since previous tag: $PREVIOUS_TAG"
+          echo "SUMMARY: Comparing changes since previous tag: $PREVIOUS_TAG"
           if ! CHANGED_FILES=$(git diff --name-only "$PREVIOUS_TAG..$CURRENT_TAG" 2>/dev/null); then
-            echo "❌ Failed to get changed files between tags"
+            echo "ERROR: Failed to get changed files between tags"
             echo "   Previous: $PREVIOUS_TAG"
             echo "   Current: $CURRENT_TAG"
             exit 1
           fi
         else
-          echo "📋 No previous tags found, checking all files in current commit"
+          echo "SUMMARY: No previous tags found, checking all files in current commit"
           if ! CHANGED_FILES=$(git diff --name-only HEAD~1 2>/dev/null); then
-            echo "⚠️  Could not get diff, falling back to listing all files"
+            echo "WARNING:  Could not get diff, falling back to listing all files"
             CHANGED_FILES=$(git ls-files)
           fi
         fi
 
         # Validate that we have files to analyze
         if [ -z "$CHANGED_FILES" ]; then
-          echo "⚠️  No changed files detected, skipping release creation"
+          echo "WARNING:  No changed files detected, skipping release creation"
           echo "should_create_release=false" >> $GITHUB_OUTPUT
           exit 0
         fi
 
-        echo "📁 Changed files since last release:"
+        echo "FILES: Changed files since last release:"
         echo "$CHANGED_FILES"
         echo ""
 
         # Use extracted file detection script for better maintainability and testability
-        echo "🔍 Analyzing changed files using dedicated detection script..."
+        echo "DEBUG: Analyzing changed files using dedicated detection script..."
 
         # Validate that required scripts exist
         if [ ! -f "scripts/check-file-changes.sh" ]; then
-          echo "❌ Required script 'scripts/check-file-changes.sh' not found"
+          echo "ERROR: Required script 'scripts/check-file-changes.sh' not found"
           echo "   This script is required for file change analysis"
           exit 1
         fi
@@ -89,7 +139,7 @@ jobs:
         FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
         PERFORMANCE_ARGS=""
         if [ "$FILE_COUNT" -gt 50 ]; then
-          echo "📊 Large changeset detected ($FILE_COUNT files) - enabling performance mode"
+          echo "ANALYSIS: Large changeset detected ($FILE_COUNT files) - enabling performance mode"
           PERFORMANCE_ARGS="--performance-mode"
         fi
 
@@ -97,16 +147,16 @@ jobs:
         SHOULD_CREATE_RELEASE="false"
         if echo "$CHANGED_FILES" | bash scripts/check-file-changes.sh /dev/stdin $PERFORMANCE_ARGS; then
           SHOULD_CREATE_RELEASE="true"
-          echo "🚀 File analysis complete - release creation needed"
+          echo "EXECUTING: File analysis complete - release creation needed"
         else
-          echo "⏭️  File analysis complete - release creation skipped"
+          echo "SKIPPED:  File analysis complete - release creation skipped"
         fi
 
         echo ""
         if [ "$SHOULD_CREATE_RELEASE" = "true" ]; then
-          echo "🚀 Release creation needed - non-ignored files were changed"
+          echo "EXECUTING: Release creation needed - non-ignored files were changed"
         else
-          echo "⏭️  Release creation skipped - only ignored files were changed"
+          echo "SKIPPED:  Release creation skipped - only ignored files were changed"
         fi
 
         echo "should_create_release=$SHOULD_CREATE_RELEASE" >> $GITHUB_OUTPUT
@@ -128,89 +178,90 @@ jobs:
       run: |
         VERSION=${GITHUB_REF#refs/tags/v}
         echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        echo "📦 Release version: $VERSION"
+        echo "PACKAGE: Release version: $VERSION"
 
         # SECURITY FIX: Validate semantic version format using secure temp script
-        cat > temp_validate_version.js << 'EOF'
-const { isValidSemver } = require('./scripts/semver-utils');
-const version = process.env.VERSION;
+        TEMP_VALIDATE_FILE=$(mktemp "${TMPDIR:-/tmp}/validate_version.XXXXXXXXXX.js")
+        trap 'rm -f "$TEMP_VALIDATE_FILE"' EXIT
+        cat > "$TEMP_VALIDATE_FILE" << 'EOF'
+        const { isValidSemver } = require('./scripts/semver-utils');
+        const version = process.env.VERSION;
 
-try {
-  if (!isValidSemver(version)) {
-    console.error('❌ Invalid semantic version format:', version);
-    process.exit(1);
-  }
-  console.log('✅ Valid semantic version format');
-} catch (error) {
-  console.error('Error validating version:', error.message);
-  process.exit(1);
-}
-EOF
+        try {
+          if (!isValidSemver(version)) {
+            console.error('ERROR: Invalid semantic version format:', version);
+            process.exit(1);
+          }
+          console.log('SUCCESS: Valid semantic version format');
+        } catch (error) {
+          console.error('Error validating version:', error.message);
+          process.exit(1);
+        }
+        EOF
 
         # Set environment variable securely
         export VERSION="$VERSION"
 
         # Execute secure validation
-        if ! node temp_validate_version.js; then
-          rm -f temp_validate_version.js
+        if ! node "$TEMP_VALIDATE_FILE"; then
           exit 1
         fi
-
-        # Clean up temporary file
-        rm -f temp_validate_version.js
 
         # Check if it's a prerelease
         if echo "$VERSION" | grep -qE "\-"; then
           echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
-          echo "🚧 Pre-release version detected"
+          echo "IN_PROGRESS: Pre-release version detected"
         else
           echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
-          echo "🚀 Stable release version"
+          echo "EXECUTING: Stable release version"
         fi
 
     - name: Validate YAML syntax
       if: steps.check_files.outputs.should_create_release == 'true'
       run: |
-        echo "🔍 Validating YAML syntax in workflow files..."
+        echo "DEBUG: Validating YAML syntax in workflow files..."
         python3 -c "
         import yaml
         import sys
         try:
             with open('.github/workflows/release.yml', 'r') as f:
                 yaml.safe_load(f)
-            print('✅ YAML syntax is valid')
+            print('SUCCESS: YAML syntax is valid')
         except yaml.YAMLError as e:
-            print(f'❌ YAML syntax error: {e}')
+            print(f'ERROR: YAML syntax error: {e}')
             sys.exit(1)
         "
 
     - name: Validate version consistency
       if: steps.check_files.outputs.should_create_release == 'true'
       run: |
-        echo "🔍 Validating version consistency across files..."
+        echo "DEBUG: Validating version consistency across files..."
 
         # Validate that required script exists
         if [ ! -f "scripts/validate-version.js" ]; then
-          echo "❌ Required script 'scripts/validate-version.js' not found"
+          echo "ERROR: Required script 'scripts/validate-version.js' not found"
           echo "   This script is required for version validation"
           exit 1
         fi
 
         if ! node scripts/validate-version.js --verbose; then
-          echo "❌ Version validation failed"
+          echo "ERROR: Version validation failed"
           echo "   Check the validation output above for specific issues"
           exit 1
         fi
 
-        echo "✅ Version validation passed"
+        echo "SUCCESS: Version validation passed"
 
   build-and-release:
     needs: validate-release
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.RELEASE_BUILD_TIMEOUT || 15 }}
     if: needs.validate-release.outputs.should_create_release == 'true'
     permissions:
-      contents: write
-      actions: read
+      # Minimum required permissions for release creation
+      contents: write         # Required: Create releases and upload assets
+      actions: read           # Required: Read workflow run information
+      # Security: All other permissions explicitly denied
 
     steps:
     - name: Checkout code
@@ -231,69 +282,69 @@ EOF
 
     - name: Install dependencies
       run: |
-        echo "📦 Installing Node.js dependencies..."
+        echo "PACKAGE: Installing Node.js dependencies..."
         npm install
 
-        echo "📦 Installing PHP dependencies..."
+        echo "PACKAGE: Installing PHP dependencies..."
         composer install --no-dev --optimize-autoloader --no-interaction
 
     - name: Build blocks
       run: |
-        echo "🔨 Building Gutenberg blocks..."
+        echo "BUILDING: Building Gutenberg blocks..."
         cd blocks
         npm install
         npm run build
 
-        echo "✅ Blocks built successfully"
+        echo "SUCCESS: Blocks built successfully"
         ls -la build/
 
     - name: Validate build artifacts
       run: |
-        echo "🔍 Validating build artifacts..."
+        echo "DEBUG: Validating build artifacts..."
 
         # Check if blocks were built
         if [ ! -d "blocks/build" ] || [ -z "$(ls -A blocks/build)" ]; then
-          echo "❌ Blocks build directory is missing or empty"
+          echo "ERROR: Blocks build directory is missing or empty"
           exit 1
         fi
 
         # Check main plugin file
         if [ ! -f "blaze-wooless.php" ]; then
-          echo "❌ Main plugin file is missing"
+          echo "ERROR: Main plugin file is missing"
           exit 1
         fi
 
         # Validate PHP syntax
-        echo "🔍 Validating PHP syntax..."
+        echo "DEBUG: Validating PHP syntax..."
         find . -name "*.php" -not -path "./vendor/*" -not -path "./node_modules/*" -exec php -l {} \; > /dev/null
         if [ $? -ne 0 ]; then
-          echo "❌ PHP syntax validation failed"
+          echo "ERROR: PHP syntax validation failed"
           exit 1
         fi
 
-        echo "✅ Build artifacts validated successfully"
+        echo "SUCCESS: Build artifacts validated successfully"
 
     - name: Create plugin ZIP
       run: |
         VERSION="${{ needs.validate-release.outputs.version }}"
         ZIP_NAME="blazecommerce-wp-plugin-$VERSION.zip"
 
-        echo "📦 Creating plugin ZIP: $ZIP_NAME"
+        echo "PACKAGE: Creating plugin ZIP: $ZIP_NAME"
 
         # Create a temporary directory for the plugin
         TEMP_DIR="/tmp/blazecommerce-wp-plugin"
         mkdir -p "$TEMP_DIR"
 
         # Copy plugin files (exclude development files)
-        echo "📋 Copying plugin files..."
+        echo "SUMMARY: Copying plugin files..."
         rsync -av --exclude-from='.github/workflows/.zipignore' . "$TEMP_DIR/"
 
         # Verify essential files are included
-        echo "🔍 Verifying essential files in ZIP..."
+        echo "DEBUG: Verifying essential files in ZIP..."
         ESSENTIAL_FILES=("blaze-wooless.php" "blocks/build")
         for file in "${ESSENTIAL_FILES[@]}"; do
           if [ ! -e "$TEMP_DIR/$file" ]; then
-            echo "❌ Essential file/directory missing from ZIP: $file"
+            echo "ERROR: Essential file/directory missing from ZIP: $file"
             exit 1
           fi
         done
@@ -304,17 +355,17 @@ EOF
 
         # Verify ZIP was created and has reasonable size
         if [ ! -f "$ZIP_NAME" ]; then
-          echo "❌ ZIP file was not created"
+          echo "ERROR: ZIP file was not created"
           exit 1
         fi
 
         ZIP_SIZE=$(stat -f%z "$ZIP_NAME" 2>/dev/null || stat -c%s "$ZIP_NAME")
         if [ "$ZIP_SIZE" -lt 10000 ]; then
-          echo "❌ ZIP file seems too small ($ZIP_SIZE bytes)"
+          echo "ERROR: ZIP file seems too small ($ZIP_SIZE bytes)"
           exit 1
         fi
 
-        echo "✅ ZIP file created successfully ($ZIP_SIZE bytes)"
+        echo "SUCCESS: ZIP file created successfully ($ZIP_SIZE bytes)"
 
         # Move ZIP back to workspace
         mv "$ZIP_NAME" "$GITHUB_WORKSPACE/"
@@ -323,14 +374,14 @@ EOF
       id: release_notes
       run: |
         VERSION="${{ needs.validate-release.outputs.version }}"
-        echo "📝 Generating release notes for version $VERSION..."
+        echo "NOTE: Generating release notes for version $VERSION..."
 
         # Initialize release notes
         RELEASE_NOTES=""
 
         # Extract changelog for this version if it exists
         if [ -f docs/reference/changelog.md ]; then
-          echo "📋 Extracting changelog for version $VERSION..."
+          echo "SUMMARY: Extracting changelog for version $VERSION..."
 
           # Get content between this version and next version header
           CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" docs/reference/changelog.md | sed '/^$/d' | head -50)
@@ -348,16 +399,16 @@ EOF
         # (Improved based on Claude AI's maintainability recommendations)
 
         # Installation instructions section
-        INSTALL_SECTION="## 📦 Installation"$'\n\n'"1. Download the \`blazecommerce-wp-plugin-$VERSION.zip\` file below"$'\n'"2. In your WordPress admin, go to **Plugins > Add New > Upload Plugin**"$'\n'"3. Choose the downloaded ZIP file and click **Install Now**"$'\n'"4. Activate the plugin after installation"
+        INSTALL_SECTION="## PACKAGE: Installation"$'\n\n'"1. Download the \`blazecommerce-wp-plugin-$VERSION.zip\` file below"$'\n'"2. In your WordPress admin, go to **Plugins > Add New > Upload Plugin**"$'\n'"3. Choose the downloaded ZIP file and click **Install Now**"$'\n'"4. Activate the plugin after installation"
 
         # Requirements section
-        REQUIREMENTS_SECTION="## 🔧 Requirements"$'\n\n'"- WordPress 5.0 or higher"$'\n'"- PHP 7.4 or higher"$'\n'"- WooCommerce plugin"
+        REQUIREMENTS_SECTION="## CONFIG: Requirements"$'\n\n'"- WordPress 5.0 or higher"$'\n'"- PHP 7.4 or higher"$'\n'"- WooCommerce plugin"
 
         # Documentation section
-        DOCS_SECTION="## 📚 Documentation"$'\n\n'"For setup and configuration instructions, visit our [documentation](https://github.com/blaze-commerce/blazecommerce-wp-plugin/tree/main/docs)."
+        DOCS_SECTION="## DOCS: Documentation"$'\n\n'"For setup and configuration instructions, visit our [documentation](https://github.com/blaze-commerce/blazecommerce-wp-plugin/tree/main/docs)."
 
         # Support section
-        SUPPORT_SECTION="## 🐛 Support"$'\n\n'"If you encounter any issues, please [create an issue](https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues) on GitHub."
+        SUPPORT_SECTION="## BUG: Support"$'\n\n'"If you encounter any issues, please [create an issue](https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues) on GitHub."
 
         # Combine all sections into final release notes
         RELEASE_NOTES="$RELEASE_NOTES"$'\n\n'"$INSTALL_SECTION"$'\n\n'"$REQUIREMENTS_SECTION"$'\n\n'"$DOCS_SECTION"$'\n\n'"$SUPPORT_SECTION"
@@ -367,14 +418,14 @@ EOF
         echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
 
-        echo "✅ Release notes generated successfully"
+        echo "SUCCESS: Release notes generated successfully"
 
     - name: Create GitHub Release
       id: create_release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref_name }}
-        name: "🚀 Release ${{ needs.validate-release.outputs.version }}"
+        name: "EXECUTING: Release ${{ needs.validate-release.outputs.version }}"
         body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
         files: |
           blazecommerce-wp-plugin-${{ needs.validate-release.outputs.version }}.zip
@@ -391,24 +442,24 @@ EOF
         RELEASE_URL="${{ steps.create_release.outputs.url }}"
 
         if [ -z "$RELEASE_URL" ]; then
-          echo "❌ Release URL is empty - release creation may have failed"
+          echo "ERROR: Release URL is empty - release creation may have failed"
           exit 1
         fi
 
-        echo "✅ Release created successfully!"
-        echo "🔗 Release URL: $RELEASE_URL"
-        echo "📦 Version: $VERSION"
+        echo "SUCCESS: Release created successfully!"
+        echo "LINK: Release URL: $RELEASE_URL"
+        echo "PACKAGE: Version: $VERSION"
 
     - name: Release summary
       run: |
         VERSION="${{ needs.validate-release.outputs.version }}"
         IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
 
-        echo "🎉 Release completed successfully!"
-        echo "📦 Version: $VERSION"
-        echo "🚧 Pre-release: $IS_PRERELEASE"
-        echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
-        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+        echo "COMPLETED: Release completed successfully!"
+        echo "PACKAGE: Version: $VERSION"
+        echo "IN_PROGRESS: Pre-release: $IS_PRERELEASE"
+        echo "FILES: Asset: blazecommerce-wp-plugin-$VERSION.zip"
+        echo "LINK: Release URL: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
 
   workflow-summary:
     needs: validate-release
@@ -420,39 +471,39 @@ EOF
     steps:
     - name: Workflow Summary
       run: |
-        echo "📋 Create Release Workflow Summary"
+        echo "SUMMARY: Create Release Workflow Summary"
         echo "=================================="
 
         TAG_NAME="${GITHUB_REF#refs/tags/}"
-        echo "🏷️  Triggered by tag: $TAG_NAME"
+        echo "TAG:  Triggered by tag: $TAG_NAME"
 
         if [ "${{ needs.validate-release.outputs.should_create_release }}" = "true" ]; then
-          echo "✅ Release was processed"
+          echo "SUCCESS: Release was processed"
 
           # Check if build-and-release job was successful
           if [ "${{ needs.validate-release.result }}" = "success" ]; then
             VERSION="${{ needs.validate-release.outputs.version }}"
             IS_PRERELEASE="${{ needs.validate-release.outputs.is-prerelease }}"
 
-            echo "📦 Version: $VERSION"
-            echo "🚧 Pre-release: $IS_PRERELEASE"
-            echo "📁 Asset: blazecommerce-wp-plugin-$VERSION.zip"
-            echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
-            echo "🎉 Release created successfully!"
+            echo "PACKAGE: Version: $VERSION"
+            echo "IN_PROGRESS: Pre-release: $IS_PRERELEASE"
+            echo "FILES: Asset: blazecommerce-wp-plugin-$VERSION.zip"
+            echo "LINK: Release URL: https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+            echo "COMPLETED: Release created successfully!"
           else
-            echo "❌ Release processing failed during validation"
+            echo "ERROR: Release processing failed during validation"
             echo "   Check the validate-release job logs for details"
           fi
         else
-          echo "⏭️  Release creation was skipped"
-          echo "📁 Reason: Only ignored files were changed since last release"
-          echo "ℹ️  This is normal behavior - no release needed for:"
-          echo "   • Documentation changes"
-          echo "   • CI/CD configuration updates"
-          echo "   • Development tooling changes"
-          echo "   • Auto-generated files"
-          echo "   • Version bump commits"
+          echo "SKIPPED:  Release creation was skipped"
+          echo "FILES: Reason: Only ignored files were changed since last release"
+          echo "INFO:  This is normal behavior - no release needed for:"
+          echo "   - Documentation changes"
+          echo "   - CI/CD configuration updates"
+          echo "   - Development tooling changes"
+          echo "   - Auto-generated files"
+          echo "   - Version bump commits"
           echo ""
-          echo "✅ Workflow completed successfully (no action required)"
-          echo "💡 The tag $TAG_NAME remains available but no GitHub release was created"
+          echo "SUCCESS: Workflow completed successfully (no action required)"
+          echo "TIP: The tag $TAG_NAME remains available but no GitHub release was created"
         fi

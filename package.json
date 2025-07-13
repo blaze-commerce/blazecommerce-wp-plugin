@@ -60,7 +60,8 @@
   "devDependencies": {
     "jest": "^29.7.0",
     "js-yaml": "^4.1.0",
-    "semver": "^7.5.4"
+    "semver": "^7.5.4",
+    "node-fetch": "^2.6.7"
   },
   "engines": {
     "node": ">=14.0.0",
