@@ -7,6 +7,11 @@ on:
     workflows: ["*"]
     types: [completed]
 
+# Prevent race conditions between concurrent workflow runs
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number }}
+  cancel-in-progress: false
+
 jobs:
   claude-review-official:
     if: github.event_name == 'pull_request'
@@ -439,40 +444,99 @@ jobs:
               try {
                 console.log('🔍 Parsing Claude review comments for recommendations...');
 
-                // Get PR comments
+                // Get PR comments with pagination support
                 const comments = await github.rest.issues.listComments({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  issue_number: context.payload.pull_request.number
+                  issue_number: context.payload.pull_request.number,
+                  per_page: 100
                 });
 
                 console.log(`Found ${comments.data.length} comments on PR`);
 
-                // Find Claude bot comment
-                const claudeComment = comments.data.find(comment =>
-                  (comment.user.login === 'claude[bot]' || comment.user.type === 'Bot') &&
-                  comment.body.includes('Code Review')
-                );
+                // Find Claude bot comment with enhanced detection
+                const claudeComment = comments.data.find(comment => {
+                  const isClaudeBot = comment.user.login === 'claude[bot]' ||
+                                     comment.user.type === 'Bot' ||
+                                     comment.user.login.includes('claude');
+                  const hasReviewContent = comment.body && (
+                    comment.body.includes('Code Review') ||
+                    comment.body.includes('🔴') ||
+                    comment.body.includes('🟡') ||
+                    comment.body.includes('REQUIRED') ||
+                    comment.body.includes('IMPORTANT')
+                  );
+                  return isClaudeBot && hasReviewContent;
+                });
 
                 if (claudeComment) {
                   console.log('✅ Found Claude bot review comment');
-                  const commentBody = claudeComment.body;
+                  let commentBody = claudeComment.body;
 
-                  // Parse REQUIRED items - look for 🔴 REQUIRED sections
-                  const requiredMatches = commentBody.match(/🔴.*?REQUIRED.*?(?=🟡|🔵|$)/gs) || [];
-                  requiredItems.push(...requiredMatches.map(match => match.trim()));
+                  // Input validation and sanitization
+                  if (!commentBody || typeof commentBody !== 'string') {
+                    console.log('⚠️ Invalid comment body format');
+                    return { requiredItems, importantItems };
+                  }
 
-                  // Parse IMPORTANT items - look for 🟡 IMPORTANT sections
-                  const importantMatches = commentBody.match(/🟡.*?IMPORTANT.*?(?=🔴|🔵|$)/gs) || [];
-                  importantItems.push(...importantMatches.map(match => match.trim()));
+                  // Limit content size to prevent performance issues
+                  const MAX_CONTENT_SIZE = 50000; // 50KB limit
+                  if (commentBody.length > MAX_CONTENT_SIZE) {
+                    console.log(`⚠️ Comment body too large (${commentBody.length} chars), truncating to ${MAX_CONTENT_SIZE}`);
+                    commentBody = commentBody.substring(0, MAX_CONTENT_SIZE);
+                  }
+
+                  // Sanitize content - remove potential script injections
+                  commentBody = commentBody.replace(/<script[^>]*>.*?<\/script>/gi, '')
+                                          .replace(/javascript:/gi, '')
+                                          .replace(/on\w+\s*=/gi, '');
+
+                  // Enhanced regex patterns with proper escaping and validation
+                  // Look for 🔴 REQUIRED sections with more specific patterns
+                  const requiredPattern = /🔴\s*(?:.*?)?REQUIRED[\s\S]*?(?=🟡\s*(?:.*?)?(?:IMPORTANT|SUGGESTIONS)|🔵\s*SUGGESTIONS|$)/gi;
+                  const requiredMatches = commentBody.match(requiredPattern) || [];
+
+                  // Look for 🟡 IMPORTANT sections with more specific patterns
+                  const importantPattern = /🟡\s*(?:.*?)?IMPORTANT[\s\S]*?(?=🔴\s*(?:.*?)?REQUIRED|🔵\s*SUGGESTIONS|$)/gi;
+                  const importantMatches = commentBody.match(importantPattern) || [];
+
+                  // Process and sanitize matches
+                  requiredItems.push(...requiredMatches.map(match => {
+                    return match.trim().substring(0, 1000); // Limit individual item size
+                  }));
+
+                  importantItems.push(...importantMatches.map(match => {
+                    return match.trim().substring(0, 1000); // Limit individual item size
+                  }));
 
                   console.log(`Found ${requiredItems.length} REQUIRED recommendations in Claude comments`);
                   console.log(`Found ${importantItems.length} IMPORTANT recommendations in Claude comments`);
+
+                  // Log first few characters of each item for debugging (without sensitive content)
+                  requiredItems.forEach((item, index) => {
+                    console.log(`REQUIRED ${index + 1}: ${item.substring(0, 100)}...`);
+                  });
+                  importantItems.forEach((item, index) => {
+                    console.log(`IMPORTANT ${index + 1}: ${item.substring(0, 100)}...`);
+                  });
+
                 } else {
                   console.log('⚠️ No Claude bot review comment found');
                 }
               } catch (error) {
-                console.log(`⚠️ Error parsing Claude comments: ${error.message}`);
+                // Enhanced error handling with specific error types
+                if (error.name === 'HttpError' && error.status === 403) {
+                  console.error('❌ API access denied - check token permissions');
+                } else if (error.name === 'HttpError' && error.status === 404) {
+                  console.error('❌ PR or comments not found');
+                } else if (error.name === 'RequestError') {
+                  console.error('❌ Network error accessing GitHub API');
+                } else {
+                  console.error(`❌ Critical error parsing Claude comments: ${error.message}`);
+                }
+
+                // Don't throw - return empty arrays to allow workflow to continue
+                console.log('⚠️ Continuing with empty recommendation lists due to parsing error');
               }
 
               return { requiredItems, importantItems };
@@ -619,11 +683,28 @@ jobs:
               return { action: 'skip_approval', reason: 'Important items pending', pendingItems: importantRecommendationsStatus.pendingItems };
             }
 
+            // Enhanced audit logging for security and compliance
+            const auditLog = {
+              timestamp: new Date().toISOString(),
+              pr_number: context.payload.pull_request?.number,
+              actor: context.actor,
+              event: context.eventName,
+              claude_review_success: claudeReviewSuccess,
+              required_addressed: requiredRecommendationsStatus.allAddressed,
+              important_addressed: importantRecommendationsStatus.allAddressed,
+              required_count: requiredRecommendationsStatus.pendingItems.length,
+              important_count: importantRecommendationsStatus.pendingItems.length,
+              tracking_status: trackingStatus
+            };
+            console.log('📊 AUDIT LOG:', JSON.stringify(auditLog, null, 2));
+
             // Auto-approve ONLY if Claude review succeeded AND all recommendations addressed
             if (claudeReviewSuccess &&
                 requiredRecommendationsStatus.allAddressed &&
                 importantRecommendationsStatus.allAddressed) {
               console.log('🎉 Auto-approval criteria met: Claude review succeeded AND all recommendations addressed!');
+              console.log(`📋 APPROVAL DECISION: PR #${context.payload.pull_request?.number} approved by ${context.actor} at ${new Date().toISOString()}`);
+
               core.setOutput('action_type', 'approve');
               core.setOutput('claude_success', claudeReviewSuccess.toString());
               core.setOutput('tracking_complete', (trackingStatus === 'complete').toString());
@@ -638,7 +719,6 @@ jobs:
               return { action: 'approve', reason: 'Claude review succeeded and all recommendations addressed' };
             } else {
               console.log('❌ Auto-approval criteria not met - Claude review must succeed AND all recommendations must be addressed');
-              core.setOutput('action_type', 'skip_approval');
 
               let failureReasons = [];
               if (!claudeReviewSuccess) failureReasons.push('Claude review failed');
@@ -646,6 +726,10 @@ jobs:
               if (!importantRecommendationsStatus.allAddressed) failureReasons.push('IMPORTANT recommendations pending');
 
               const reason = failureReasons.join(', ');
+              console.log(`📋 REJECTION DECISION: PR #${context.payload.pull_request?.number} rejected by auto-approval system at ${new Date().toISOString()}`);
+              console.log(`📋 REJECTION REASONS: ${reason}`);
+
+              core.setOutput('action_type', 'skip_approval');
               core.setOutput('reason', reason);
               return { action: 'skip_approval', reason: reason };
             }
@@ -901,8 +985,12 @@ jobs:
 
             const reason = '${{ steps.check-criteria.outputs.reason }}';
             const failedChecksCount = '${{ steps.check-criteria.outputs.failed_checks_count }}' || '0';
+            const pendingRequiredCount = '${{ steps.check-criteria.outputs.pending_required_count }}' || '0';
             const pendingImportantCount = '${{ steps.check-criteria.outputs.pending_important_count }}' || '0';
+            const pendingRequiredItems = '${{ steps.check-criteria.outputs.pending_required_items }}' || '[]';
             const pendingImportantItems = '${{ steps.check-criteria.outputs.pending_important_items }}' || '[]';
+            const allRequiredAddressed = '${{ steps.check-criteria.outputs.all_required_addressed }}' === 'true';
+            const allImportantAddressed = '${{ steps.check-criteria.outputs.all_important_addressed }}' === 'true';
 
             let statusBody = `## 🔍 Auto-Approval Status Check
 
@@ -921,6 +1009,28 @@ jobs:
               Please review the failed checks in the "Checks" tab and resolve any issues before auto-approval can proceed.
 
               `;
+            }
+
+            if (reason.includes('REQUIRED recommendations pending')) {
+              statusBody += `### 🔴 Pending REQUIRED Recommendations
+
+              **${pendingRequiredCount} REQUIRED recommendation(s) must be addressed**
+
+              These are critical issues that must be fixed before the PR can be approved:
+
+              `;
+
+              try {
+                const pendingItems = JSON.parse(pendingRequiredItems);
+                pendingItems.forEach((item, index) => {
+                  const cleanItem = item.replace(/\([^)]+\)$/, '').trim();
+                  statusBody += `${index + 1}. ${cleanItem.substring(0, 300)}...\n`;
+                });
+              } catch (e) {
+                statusBody += `Please check the Claude review comment for details.\n`;
+              }
+
+              statusBody += `\n`;
             }
 
             if (reason.includes('IMPORTANT recommendations pending')) {
@@ -973,8 +1083,8 @@ jobs:
 
             ### 📊 Current Status Summary
             - **Failed Checks**: ${failedChecksCount > 0 ? `❌ ${failedChecksCount} failed` : '✅ All passed'}
-            - **REQUIRED Items**: ✅ All addressed (or none found)
-            - **IMPORTANT Items**: ${pendingImportantCount > 0 ? `⏳ ${pendingImportantCount} pending` : '✅ All addressed'}
+            - **REQUIRED Items**: ${pendingRequiredCount > 0 ? `❌ ${pendingRequiredCount} pending` : (allRequiredAddressed ? '✅ All addressed' : '⚠️ Status unknown')}
+            - **IMPORTANT Items**: ${pendingImportantCount > 0 ? `⏳ ${pendingImportantCount} pending` : (allImportantAddressed ? '✅ All addressed' : '⚠️ Status unknown')}
             - **Claude Review**: ${'${{ needs.claude-review-official.outputs.success }}' === 'true' ? '✅ Completed' : '❌ Failed'}
 
             ---
