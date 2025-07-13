@@ -52,8 +52,8 @@
         <!-- Test Database Configuration -->
         <const name="DB_NAME" value="wordpress_test" />
         <const name="DB_USER" value="root" />
-        <const name="DB_PASSWORD" value="" />
-        <const name="DB_HOST" value="localhost" />
+        <const name="DB_PASSWORD" value="root" />
+        <const name="DB_HOST" value="127.0.0.1:3306" />
         <const name="DB_CHARSET" value="utf8" />
         <const name="DB_COLLATE" value="" />
         

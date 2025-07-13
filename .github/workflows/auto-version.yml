@@ -81,7 +81,18 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm install
+      run: |
+        echo "🔍 Installing Node.js dependencies for version management..."
+
+        # Check if package.json exists
+        if [ ! -f "package.json" ]; then
+          echo "❌ package.json not found"
+          exit 1
+        fi
+
+        # Install dependencies with error handling
+        npm install --no-audit --no-fund
+        echo "✅ Node.js dependencies installed successfully"
 
     - name: Check if version bump is needed
       id: check_files
@@ -92,12 +103,33 @@ jobs:
         export GITHUB_EVENT_BEFORE="${{ github.event.before }}"
         export DEBUG="${{ vars.DEBUG_MODE || 'false' }}"
 
-        # Run the extracted file change analyzer
-        if node .github/scripts/file-change-analyzer.js >> $GITHUB_OUTPUT; then
-          echo "✅ File change analysis completed successfully"
+        # Check if the script exists
+        if [ ! -f ".github/scripts/file-change-analyzer.js" ]; then
+          echo "⚠️ File change analyzer script not found, using fallback logic..."
+
+          # Simple fallback: check if any significant files changed
+          if [ -n "$GITHUB_EVENT_BEFORE" ] && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            CHANGED_FILES=$(git diff --name-only $GITHUB_EVENT_BEFORE..HEAD || echo "")
+            if [ -n "$CHANGED_FILES" ]; then
+              echo "should_bump_version=true" >> $GITHUB_OUTPUT
+              echo "change_reason=Files changed (fallback analysis)" >> $GITHUB_OUTPUT
+            else
+              echo "should_bump_version=false" >> $GITHUB_OUTPUT
+              echo "change_reason=No files changed" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should_bump_version=true" >> $GITHUB_OUTPUT
+            echo "change_reason=First push or no before commit" >> $GITHUB_OUTPUT
+          fi
+          echo "✅ Fallback file change analysis completed"
         else
-          echo "❌ File change analysis failed"
-          exit 1
+          # Run the extracted file change analyzer
+          if node .github/scripts/file-change-analyzer.js >> $GITHUB_OUTPUT; then
+            echo "✅ File change analysis completed successfully"
+          else
+            echo "❌ File change analysis failed"
+            exit 1
+          fi
         fi
 
     - name: Configure Git
@@ -149,12 +181,29 @@ jobs:
       run: |
         echo "🔍 Running version validation..."
 
-        # Run the extracted version validator
-        if node .github/scripts/version-validator.js >> $GITHUB_OUTPUT; then
-          echo "✅ Version validation completed successfully"
+        # Check if the script exists
+        if [ ! -f ".github/scripts/version-validator.js" ]; then
+          echo "⚠️ Version validator script not found, using fallback logic..."
+
+          # Simple fallback: get version from package.json
+          if [ -f "package.json" ]; then
+            PACKAGE_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")
+            echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+            echo "version_mismatch=false" >> $GITHUB_OUTPUT
+            echo "last_tag=" >> $GITHUB_OUTPUT
+            echo "✅ Fallback version validation completed"
+          else
+            echo "❌ No package.json found"
+            exit 1
+          fi
         else
-          echo "❌ Version validation failed"
-          exit 1
+          # Run the extracted version validator
+          if node .github/scripts/version-validator.js >> $GITHUB_OUTPUT; then
+            echo "✅ Version validation completed successfully"
+          else
+            echo "❌ Version validation failed"
+            exit 1
+          fi
         fi
 
     - name: Determine prerelease type based on branch
@@ -166,12 +215,35 @@ jobs:
         # Set environment variables for the script
         export GITHUB_REF="${{ github.ref }}"
 
-        # Run the extracted branch analyzer
-        if node .github/scripts/branch-analyzer.js >> $GITHUB_OUTPUT; then
-          echo "✅ Branch analysis completed successfully"
+        # Check if the script exists
+        if [ ! -f ".github/scripts/branch-analyzer.js" ]; then
+          echo "⚠️ Branch analyzer script not found, using fallback logic..."
+
+          # Simple fallback: determine prerelease type from branch name
+          BRANCH_NAME=$(echo "$GITHUB_REF" | sed 's|refs/heads/||')
+
+          if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" == "master" ]]; then
+            echo "prerelease_type=" >> $GITHUB_OUTPUT
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH_NAME" == "develop" ]]; then
+            echo "prerelease_type=beta" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH_NAME" == release/* ]]; then
+            echo "prerelease_type=rc" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease_type=alpha" >> $GITHUB_OUTPUT
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          fi
+          echo "✅ Fallback branch analysis completed"
         else
-          echo "❌ Branch analysis failed"
-          exit 1
+          # Run the extracted branch analyzer
+          if node .github/scripts/branch-analyzer.js >> $GITHUB_OUTPUT; then
+            echo "✅ Branch analysis completed successfully"
+          else
+            echo "❌ Branch analysis failed"
+            exit 1
+          fi
         fi
 
     - name: Determine version bump type
@@ -186,12 +258,41 @@ jobs:
         export LIMITED_COMMIT_LIMIT="${{ vars.LIMITED_COMMIT_LIMIT || '25' }}"
         export FALLBACK_COMMIT_LIMIT="${{ vars.FALLBACK_COMMIT_LIMIT || '50' }}"
 
-        # Run the extracted bump type analyzer
-        if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG" >> $GITHUB_OUTPUT; then
-          echo "✅ Bump type analysis completed successfully"
+        # Check if the script exists
+        if [ ! -f ".github/scripts/bump-type-analyzer.js" ]; then
+          echo "⚠️ Bump type analyzer script not found, using fallback logic..."
+
+          # Simple fallback: determine bump type from recent commits
+          if [ "$VERSION_MISMATCH" = "true" ]; then
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "reason=Version mismatch fix" >> $GITHUB_OUTPUT
+          else
+            # Check recent commit messages for conventional commit patterns
+            RECENT_COMMITS=$(git log --oneline -10 --pretty=format:"%s" 2>/dev/null || echo "")
+
+            if echo "$RECENT_COMMITS" | grep -qE "^(feat|feature)(\(.+\))?:"; then
+              echo "bump_type=minor" >> $GITHUB_OUTPUT
+              echo "reason=Feature commits detected" >> $GITHUB_OUTPUT
+            elif echo "$RECENT_COMMITS" | grep -qE "^(fix|bugfix|hotfix)(\(.+\))?:"; then
+              echo "bump_type=patch" >> $GITHUB_OUTPUT
+              echo "reason=Fix commits detected" >> $GITHUB_OUTPUT
+            elif echo "$RECENT_COMMITS" | grep -qE "BREAKING CHANGE|!:"; then
+              echo "bump_type=major" >> $GITHUB_OUTPUT
+              echo "reason=Breaking changes detected" >> $GITHUB_OUTPUT
+            else
+              echo "bump_type=patch" >> $GITHUB_OUTPUT
+              echo "reason=Default patch bump" >> $GITHUB_OUTPUT
+            fi
+          fi
+          echo "✅ Fallback bump type analysis completed"
         else
-          echo "❌ Bump type analysis failed"
-          exit 1
+          # Run the extracted bump type analyzer
+          if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG" >> $GITHUB_OUTPUT; then
+            echo "✅ Bump type analysis completed successfully"
+          else
+            echo "❌ Bump type analysis failed"
+            exit 1
+          fi
         fi
 
     - name: Execute version bump
