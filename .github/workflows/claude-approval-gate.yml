@@ -1,155 +1,409 @@
-name: Claude AI Approval Gate
+name: "Priority 2: Claude AI Approval Gate"
 
 # This workflow creates a required status check that only passes when Claude AI has approved the PR
 # Use this with GitHub Branch Protection Rules to block merging until Claude AI approval
+# Priority 2: Runs after Claude AI Review (Priority 1) completes
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
   pull_request_review:
     types: [submitted, dismissed]
+  issue_comment:
+    types: [created]
+  workflow_run:
+    workflows: ["Priority 1: Claude AI PR Review"]
+    types: [completed]
+
+# Priority 2: Wait for Priority 1 (Claude Review) to complete before running
+concurrency:
+  group: priority-2-claude-approval-pr-${{ github.event.pull_request.number || github.event.number }}
+  cancel-in-progress: false  # Don't cancel to ensure approval gate completion
 
 jobs:
-  claude-approval-gate:
+  # Check if this workflow should run
+  check-trigger:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    
-    permissions:
-      contents: read
-      pull-requests: read
-      statuses: write
-      checks: write
-    
+    timeout-minutes: 2
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      trigger_reason: ${{ steps.check.outputs.trigger_reason }}
     steps:
-      - name: Check Claude AI Approval Status
-        id: check-approval
+      - name: Check Trigger Conditions
+        id: check
         uses: actions/github-script@v7
         with:
           script: |
-            console.log('🔍 Checking Claude AI approval status for PR gate...');
-            
-            try {
-              // Get PR number from context
-              const prNumber = context.payload.pull_request?.number || context.payload.number;
-              
-              if (!prNumber) {
-                console.log('❌ No PR number found in context');
-                return { approved: false, reason: 'No PR context' };
+            let shouldRun = false;
+            let prNumber = null;
+            let triggerReason = '';
+
+            if (context.eventName === 'pull_request') {
+              shouldRun = true;
+              prNumber = context.payload.pull_request.number;
+              triggerReason = `PR ${context.payload.action}`;
+            } else if (context.eventName === 'pull_request_review') {
+              shouldRun = true;
+              prNumber = context.payload.pull_request.number;
+              triggerReason = `Review ${context.payload.action}`;
+            } else if (context.eventName === 'workflow_run') {
+              if (context.payload.workflow_run.conclusion) {
+                shouldRun = true;
+                // Extract PR number from workflow run
+                const prMatch = context.payload.workflow_run.head_branch?.match(/^pr-(\d+)/) ||
+                               context.payload.workflow_run.display_title?.match(/#(\d+)/);
+                prNumber = prMatch ? parseInt(prMatch[1]) : null;
+                triggerReason = `Claude review workflow ${context.payload.workflow_run.conclusion}`;
               }
-              
-              console.log(`📋 Checking approval status for PR #${prNumber}`);
-              
-              // Get all reviews for the PR
-              const reviews = await github.rest.pulls.listReviews({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber,
-                per_page: 100
-              });
-              
-              console.log(`Found ${reviews.data.length} reviews to analyze`);
-              
-              // Look for Claude AI approval
-              const claudeApproval = reviews.data.find(review => 
-                review.state === 'APPROVED' && 
-                (review.user.login === 'blazecommerce-claude-ai' || 
-                 review.user.login === 'github-actions[bot]' ||
-                 (review.body && review.body.includes('BlazeCommerce Claude AI Review Bot')))
-              );
-              
-              if (claudeApproval) {
-                console.log(`✅ Found Claude AI approval by ${claudeApproval.user.login} at ${claudeApproval.submitted_at}`);
-                core.setOutput('approved', 'true');
-                core.setOutput('approver', claudeApproval.user.login);
-                core.setOutput('approved_at', claudeApproval.submitted_at);
-                return { 
-                  approved: true, 
-                  approver: claudeApproval.user.login,
-                  approvedAt: claudeApproval.submitted_at
-                };
-              } else {
-                console.log('❌ No Claude AI approval found');
-                core.setOutput('approved', 'false');
-                core.setOutput('reason', 'Claude AI approval required');
-                return { approved: false, reason: 'Claude AI approval required' };
+            } else if (context.eventName === 'issue_comment') {
+              const comment = context.payload.comment.body.toLowerCase();
+              if (comment.includes('@claude') && context.payload.issue.pull_request) {
+                shouldRun = true;
+                prNumber = context.payload.issue.number;
+                triggerReason = '@claude mention in comment';
               }
-              
-            } catch (error) {
-              console.error(`Error checking Claude AI approval: ${error.message}`);
-              core.setOutput('approved', 'false');
-              core.setOutput('reason', `Error: ${error.message}`);
-              return { approved: false, reason: `Error: ${error.message}` };
             }
 
-      - name: Set Success Status
-        if: steps.check-approval.outputs.approved == 'true'
+            console.log(`Event: ${context.eventName}, Should run: ${shouldRun}, PR: ${prNumber}, Reason: ${triggerReason}`);
+
+            core.setOutput('should_run', shouldRun.toString());
+            core.setOutput('pr_number', prNumber?.toString() || '');
+            core.setOutput('trigger_reason', triggerReason);
+
+  # Wait for Priority 1 workflow completion before proceeding
+  wait-for-claude-review:
+    needs: [check-trigger]
+    if: needs.check-trigger.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.CLAUDE_DEPENDENCY_CHECK_TIMEOUT || 5 }}
+    outputs:
+      claude-review-completed: ${{ steps.check-completion.outputs.completed }}
+      claude-review-conclusion: ${{ steps.check-completion.outputs.conclusion }}
+      should-proceed: ${{ steps.check-completion.outputs.should_proceed }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --production
+
+      - name: Check Claude Review Workflow Completion
+        id: check-completion
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
         uses: actions/github-script@v7
         with:
           script: |
-            const approver = '${{ steps.check-approval.outputs.approver }}';
-            const approvedAt = '${{ steps.check-approval.outputs.approved_at }}';
-            
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.payload.pull_request?.head?.sha || context.sha,
-              state: 'success',
-              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${context.payload.pull_request?.number || context.payload.number}`,
-              description: `Approved by ${approver} at ${new Date(approvedAt).toLocaleString()}`,
-              context: 'claude-ai/approval-required'
+            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
+            const triggerReason = '${{ needs.check-trigger.outputs.trigger_reason }}';
+
+            console.log(`DEBUG: Checking Claude Review completion for PR #${prNumber} (${triggerReason})`);
+
+            let shouldProceed = false;
+            let completed = false;
+            let conclusion = 'unknown';
+
+            try {
+              // For workflow_run events, we know the Claude review just completed
+              if (context.eventName === 'workflow_run') {
+                completed = true;
+                conclusion = context.payload.workflow_run.conclusion;
+                shouldProceed = true;
+                console.log(`SUCCESS: Claude review workflow completed via workflow_run event: ${conclusion}`);
+              } else {
+                // For other events, check if Claude review workflow has completed
+                const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  per_page: 50
+                });
+
+                // Find the most recent Claude review run for this PR
+                const claudeReviewRun = workflowRuns.workflow_runs.find(run =>
+                  run.name === 'Priority 1: Claude AI PR Review' &&
+                  (run.head_branch?.includes(`pr-${prNumber}`) ||
+                   run.display_title?.includes(`#${prNumber}`) ||
+                   run.pull_requests?.some(pr => pr.number == prNumber))
+                );
+
+                if (claudeReviewRun) {
+                  completed = claudeReviewRun.status === 'completed';
+                  conclusion = claudeReviewRun.conclusion || 'unknown';
+                  shouldProceed = true;
+                  console.log(`SUCCESS: Found Claude review run: ${claudeReviewRun.status} (${conclusion})`);
+                } else {
+                  // No Claude review found, but we should still proceed to check status
+                  shouldProceed = true;
+                  console.log('WARNING: No Claude review workflow found, proceeding with status check');
+                }
+              }
+            } catch (error) {
+              console.error(`Error checking workflow completion: ${error.message}`);
+              // On error, proceed anyway to avoid blocking
+              shouldProceed = true;
+            }
+
+            core.setOutput('completed', completed.toString());
+            core.setOutput('conclusion', conclusion);
+            core.setOutput('should_proceed', shouldProceed.toString());
+
+            console.log(`Result: completed=${completed}, conclusion=${conclusion}, shouldProceed=${shouldProceed}`);
+
+  claude-approval-gate:
+    needs: [check-trigger, wait-for-claude-review]
+    if: needs.wait-for-claude-review.outputs.should-proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.CLAUDE_APPROVAL_GATE_TIMEOUT || 5 }}
+
+    permissions:
+      # Minimum required permissions for Claude approval gate workflow
+      contents: read          # Required: Read repository content for validation
+      pull-requests: read     # Required: Read PR information and reviews
+      statuses: write         # Required: Create status checks for merge protection
+      checks: write           # Required: Create check runs for approval status
+      actions: read           # Required: Read workflow run information for dependencies
+      # Security: All other permissions explicitly denied
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --production
+
+      - name: Get Current Status
+        id: current-status
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          echo "INFO: Getting current Claude AI status..."
+          node .github/scripts/claude-status-manager.js get-state
+      - name: Enhanced Claude AI Approval Check
+        id: check-approval
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
+            const triggerReason = '${{ needs.check-trigger.outputs.trigger_reason }}';
+            const claudeReviewCompleted = '${{ needs.wait-for-claude-review.outputs.claude-review-completed }}' === 'true';
+            const claudeReviewConclusion = '${{ needs.wait-for-claude-review.outputs.claude-review-conclusion }}';
+
+            console.log(`DEBUG: Enhanced approval check for PR #${prNumber}`);
+            console.log(`   Trigger: ${triggerReason}`);
+            console.log(`   Claude review completed: ${claudeReviewCompleted}`);
+            console.log(`   Claude review conclusion: ${claudeReviewConclusion}`);
+
+            let approved = false;
+            let reason = 'Unknown status';
+            let statusState = 'pending';
+            let statusDescription = 'Checking Claude AI approval status...';
+
+            try {
+              // Check current status from environment outputs
+              const claudeCanMerge = process.env.claude_can_merge === 'true';
+              const claudeApprovalState = process.env.claude_approval_state || 'none';
+              const claudeReviewState = process.env.claude_review_state || 'none';
+              const claudeNeedsReview = process.env.claude_needs_review === 'true';
+
+              console.log(`   Status check results:`);
+              console.log(`     - Can merge: ${claudeCanMerge}`);
+              console.log(`     - Approval state: ${claudeApprovalState}`);
+              console.log(`     - Review state: ${claudeReviewState}`);
+              console.log(`     - Needs review: ${claudeNeedsReview}`);
+
+              // Determine approval status based on current state
+              if (claudeCanMerge && claudeApprovalState === 'success') {
+                approved = true;
+                statusState = 'success';
+                statusDescription = 'Approved by Claude AI - ready to merge';
+                reason = 'Claude AI approved';
+              } else if (claudeReviewState === 'failure' || claudeApprovalState === 'failure') {
+                approved = false;
+                statusState = 'failure';
+                statusDescription = 'Manual review required - Claude AI service unavailable';
+                reason = 'Claude AI review failed';
+              } else if (claudeApprovalState === 'pending' && claudeReviewState === 'success') {
+                approved = false;
+                statusState = 'pending';
+                statusDescription = 'Blocked by required issues - address Claude AI recommendations';
+                reason = 'Required issues must be resolved';
+              } else if (claudeNeedsReview || claudeReviewState === 'pending') {
+                approved = false;
+                statusState = 'pending';
+                statusDescription = 'Waiting for Claude AI review to complete';
+                reason = 'Claude AI review in progress';
+              } else {
+                // Fallback: check for manual approvals in PR reviews
+                console.log('RETRY: Fallback: Checking PR reviews for manual Claude AI approval...');
+
+                const reviews = await github.rest.pulls.listReviews({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: prNumber,
+                  per_page: 100
+                });
+
+                const claudeReviews = reviews.data.filter(review =>
+                  (review.user.login === 'blazecommerce-claude-ai' ||
+                   review.user.login === 'github-actions[bot]' ||
+                   review.user.login === 'claude[bot]' ||
+                   (review.body && review.body.includes('BlazeCommerce Claude AI Review Bot')))
+                );
+
+                const claudeApproval = claudeReviews.find(review => review.state === 'APPROVED');
+
+                if (claudeApproval) {
+                  approved = true;
+                  statusState = 'success';
+                  statusDescription = `Approved by ${claudeApproval.user.login}`;
+                  reason = 'Manual Claude AI approval found';
+                  console.log(`SUCCESS: Found manual Claude AI approval by ${claudeApproval.user.login}`);
+                } else {
+                  approved = false;
+                  statusState = 'pending';
+                  statusDescription = 'Waiting for Claude AI approval';
+                  reason = 'No Claude AI approval found';
+                }
+              }
+
+            } catch (error) {
+              console.error(`Error in approval check: ${error.message}`);
+              approved = false;
+              statusState = 'error';
+              statusDescription = `Error checking approval status: ${error.message}`;
+              reason = `Error: ${error.message}`;
+            }
+
+            // Set outputs
+            core.setOutput('approved', approved.toString());
+            core.setOutput('reason', reason);
+            core.setOutput('status_state', statusState);
+            core.setOutput('status_description', statusDescription);
+
+            console.log(`ANALYSIS: Final result: approved=${approved}, state=${statusState}, reason=${reason}`);
+
+      - name: Update Approval Status
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          STATUS_STATE="${{ steps.check-approval.outputs.status_state }}"
+          STATUS_DESCRIPTION="${{ steps.check-approval.outputs.status_description }}"
+
+          echo "INFO: Updating approval status: $STATUS_STATE - $STATUS_DESCRIPTION"
+
+          # Use status manager to set the approval status
+          node -e "
+            const { ClaudeStatusManager } = require('./.github/scripts/claude-status-manager.js');
+            const statusManager = new ClaudeStatusManager(
+              process.env.GITHUB_TOKEN,
+              process.env.GITHUB_REPOSITORY.split('/')[0],
+              process.env.GITHUB_REPOSITORY.split('/')[1]
+            );
+
+            statusManager.setApprovalStatus(
+              process.env.GITHUB_SHA,
+              '$STATUS_STATE',
+              '$STATUS_DESCRIPTION',
+              parseInt(process.env.PR_NUMBER)
+            ).then(() => {
+              console.log('SUCCESS: Approval status updated successfully');
+            }).catch(error => {
+              console.error('ERROR: Failed to update approval status:', error.message);
+              process.exit(1);
             });
-            
-            console.log(`✅ Set success status - Claude AI approval confirmed`);
+          "
 
-      - name: Set Pending Status
-        if: steps.check-approval.outputs.approved == 'false'
+      - name: Post Status Update Comment
+        if: needs.check-trigger.outputs.trigger_reason == '@claude mention in comment' || (github.event.action == 'opened' && steps.check-approval.outputs.approved == 'false')
+        env:
+          PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
+          TRIGGER_REASON: ${{ needs.check-trigger.outputs.trigger_reason }}
+          APPROVED: ${{ steps.check-approval.outputs.approved }}
+          REASON: ${{ steps.check-approval.outputs.reason }}
+          STATUS_DESCRIPTION: ${{ steps.check-approval.outputs.status_description }}
         uses: actions/github-script@v7
         with:
           script: |
-            const reason = '${{ steps.check-approval.outputs.reason }}';
-            
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.payload.pull_request?.head?.sha || context.sha,
-              state: 'pending',
-              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${context.payload.pull_request?.number || context.payload.number}`,
-              description: 'Waiting for Claude AI approval before merge',
-              context: 'claude-ai/approval-required'
-            });
-            
-            console.log(`⏳ Set pending status - ${reason}`);
+            const prNumber = '${{ env.PR_NUMBER }}';
+            const triggerReason = '${{ env.TRIGGER_REASON }}';
+            const approved = '${{ env.APPROVED }}' === 'true';
+            const reason = '${{ env.REASON }}';
+            const statusDescription = '${{ env.STATUS_DESCRIPTION }}';
 
-      - name: Post Status Comment (First Time Only)
-        if: steps.check-approval.outputs.approved == 'false' && github.event.action == 'opened'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const statusComment = `## 🛡️ Claude AI Approval Required
+            let commentBody = '';
 
-            This PR requires approval from the Claude AI Review Bot before it can be merged.
+            if (triggerReason === '@claude mention in comment') {
+              commentBody = `## BOT: Claude AI Re-evaluation Triggered
 
-            ### 📋 Current Status
-            - **Claude AI Approval**: ❌ Not yet approved
-            - **Merge Status**: 🚫 Blocked until approval
+              Claude AI approval status has been re-evaluated based on your request.
 
-            ### 🔄 Next Steps
-            1. Wait for the Claude AI Review Bot to analyze your PR
-            2. Address any REQUIRED recommendations if found
-            3. Once approved by Claude AI, this check will pass automatically
-            4. The PR will then be ready for merge (subject to other branch protection rules)
+              ### ANALYSIS: Current Status
+              - **Approval Status**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not Approved'}
+              - **Details**: ${statusDescription}
+              - **Reason**: ${reason}
 
-            ### ℹ️ About This Check
-            This is an automated gate that ensures all PRs receive Claude AI review before merging. The check will update automatically when Claude AI provides approval.
+              ${approved ?
+                'COMPLETED: **This PR is now ready to merge** (subject to other branch protection rules).' :
+                'WARNING: **This PR is not yet ready to merge.** Please address any outstanding issues.'
+              }
 
-            ---
-            *Claude AI Approval Gate - Automated Merge Protection*`;
+              ---
+              *Re-evaluation completed in response to @claude mention*`;
+            } else {
+              // First time comment for new PRs
+              commentBody = `## SECURITY: Claude AI Approval Gate
+
+              This PR requires approval from the Claude AI Review Bot before it can be merged.
+
+              ### SUMMARY: Current Status
+              - **Claude AI Approval**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not yet approved'}
+              - **Details**: ${statusDescription}
+              - **Merge Status**: ${approved ? 'SUCCESS: Ready to merge' : ' Blocked until approval'}
+
+              ### RETRY: Next Steps
+              ${approved ?
+                'This PR has been approved and is ready for merge (subject to other branch protection rules).' :
+                `1. Wait for the Claude AI Review Bot to analyze your PR
+              2. Address any REQUIRED recommendations if found
+              3. Once approved by Claude AI, this check will pass automatically
+              4. The PR will then be ready for merge`
+              }
+
+              ### INFO: About This Check
+              This is an automated gate that ensures all PRs receive Claude AI review before merging. The check will update automatically when Claude AI provides approval.
+
+              TIP: **Tip**: You can mention @claude in a comment to trigger a re-evaluation of the approval status.
+
+              ---
+              *Claude AI Approval Gate - Automated Merge Protection*`;
+            }
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: statusComment
+              issue_number: prNumber,
+              body: commentBody
             });
 
-            console.log('📝 Posted initial status comment for Claude AI approval requirement');
+            console.log(`NOTE: Posted ${triggerReason === '@claude mention in comment' ? 're-evaluation' : 'initial'} status comment`);
