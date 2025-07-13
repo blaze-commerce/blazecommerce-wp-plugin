@@ -467,6 +467,7 @@ jobs:
           TOTAL_RESOLVED: ${{ steps.parse-review.outputs.total_resolved }}
           PROCESSING_SUCCESS: ${{ steps.parse-review.outputs.processing_success }}
         with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
             // Safely get environment variables to avoid JavaScript injection
             const enhancedComment = process.env.ENHANCED_COMMENT || '';
@@ -631,15 +632,20 @@ jobs:
             if (fs.existsSync(trackingFile)) {
               const trackingData = JSON.parse(fs.readFileSync(trackingFile, 'utf8'));
 
-              // Enhanced tracking analysis
+              // Enhanced tracking analysis with new changes detection
               const currentRequired = trackingData.total_recommendations?.required || 0;
               const cumulativeResolved = trackingData.cumulative_stats?.total_resolved?.required || 0;
               const totalReviews = trackingData.cumulative_stats?.total_reviews || 1;
+              const lastReviewSha = trackingData.last_review_sha || '';
+              const currentSha = '${{ github.sha }}';
 
               hasBlockingIssues = currentRequired > 0;
               progressMade = cumulativeResolved > 0;
               reviewVersion = totalReviews;
               resolvedCount = cumulativeResolved;
+
+              // Check if this is a new commit since last review
+              const isNewCommit = lastReviewSha !== currentSha;
 
               console.log(`INFO: Progressive Tracking Analysis:`);
               console.log(`   - Review Version: ${reviewVersion}`);
@@ -647,6 +653,14 @@ jobs:
               console.log(`   - Cumulative Resolved Issues: ${cumulativeResolved}`);
               console.log(`   - Progress Made: ${progressMade}`);
               console.log(`   - Has Blocking Issues: ${hasBlockingIssues}`);
+              console.log(`   - Last Review SHA: ${lastReviewSha}`);
+              console.log(`   - Current SHA: ${currentSha}`);
+              console.log(`   - Is New Commit: ${isNewCommit}`);
+
+              // If new changes were pushed and all previous REQUIRED issues were implemented
+              if (isNewCommit && !hasBlockingIssues && cumulativeResolved > 0) {
+                console.log(`SUCCESS: New changes pushed after implementing all REQUIRED recommendations - eligible for auto-approval`);
+              }
             } else {
               // Fallback: check if Claude review had blocking issues
               hasBlockingIssues = '${{ needs.claude-review.outputs.has_blocking_issues }}' === 'true';
@@ -656,20 +670,30 @@ jobs:
             // Check if Claude review succeeded
             const claudeReviewSucceeded = '${{ needs.claude-review.result }}' === 'success';
 
-            // Enhanced auto-approval decision with progressive tracking
+            // Enhanced auto-approval decision with strict detection logic
             const shouldApprove = claudeReviewSucceeded && !hasBlockingIssues;
 
+            // Additional validation: ensure Claude review actually completed with meaningful content
+            const reviewResponse = '${{ steps.review-success.outputs.review_response }}';
+            const hasValidReview = reviewResponse && reviewResponse.length > 100; // Ensure substantial review content
+
+            // Final approval decision with all criteria
+            const finalApprovalDecision = shouldApprove && hasValidReview;
+
             // Set outputs with enhanced information
-            core.setOutput('should_approve', shouldApprove ? 'true' : 'false');
+            core.setOutput('should_approve', finalApprovalDecision ? 'true' : 'false');
             core.setOutput('blocking_issues', hasBlockingIssues ? 'true' : 'false');
             core.setOutput('claude_review_failed', claudeReviewSucceeded ? 'false' : 'true');
             core.setOutput('progress_made', progressMade ? 'true' : 'false');
             core.setOutput('review_version', reviewVersion.toString());
             core.setOutput('resolved_count', resolvedCount.toString());
+            core.setOutput('has_valid_review', hasValidReview ? 'true' : 'false');
 
-            console.log(`INFO: Auto-approval decision: ${shouldApprove ? 'APPROVE' : 'SKIP'}`);
+            console.log(`INFO: Auto-approval decision: ${finalApprovalDecision ? 'APPROVE' : 'SKIP'}`);
             console.log(`   - Claude review succeeded: ${claudeReviewSucceeded}`);
             console.log(`   - Blocking issues: ${hasBlockingIssues}`);
+            console.log(`   - Has valid review content: ${hasValidReview}`);
+            console.log(`   - Review content length: ${reviewResponse ? reviewResponse.length : 0} characters`);
 
             if (progressMade) {
               console.log(`INFO: Progress detected: ${resolvedCount} issue(s) resolved across ${reviewVersion} review(s)`);
@@ -740,6 +764,7 @@ jobs:
         if: steps.check-criteria.outputs.should_approve == 'false'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
             const blockingIssues = '${{ steps.check-criteria.outputs.blocking_issues }}' === 'true';
             const claudeReviewFailed = '${{ steps.check-criteria.outputs.claude_review_failed }}' === 'true';

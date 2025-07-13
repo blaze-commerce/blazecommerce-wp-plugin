@@ -87,6 +87,14 @@ This document provides a comprehensive testing strategy for the Claude AI PR Rev
 # Success Criteria: Review indicates retry attempt number
 ```
 
+#### **Test 2.5: Comment Attribution Test**
+```yaml
+# Test Scenario: Verify comment attribution is correct
+# Expected: Comments posted by blazecommerce-claude-ai bot, not github-actions[bot]
+# Verification: Check comment author in PR
+# Success Criteria: All Claude AI comments show proper bot attribution
+```
+
 ### **Phase 3: Comment Posting Testing**
 
 #### **Test 3.1: Successful Comment Posting**
@@ -110,23 +118,49 @@ This document provides a comprehensive testing strategy for the Claude AI PR Rev
 # Success Criteria: Comments posted successfully
 ```
 
-### **Phase 4: Integration Testing**
+### **Phase 4: Auto-Approval Testing**
 
-#### **Test 4.1: Priority 2 Workflow Dependency**
+#### **Test 4.1: Auto-Approval Logic Test**
+```yaml
+# Test Scenario: Claude review completes with no REQUIRED issues
+# Expected: PR automatically approved by blazecommerce-claude-ai
+# Verification: Check PR approvals for bot approval
+# Success Criteria: Auto-approval appears immediately after review completion
+```
+
+#### **Test 4.2: New Changes Auto-Approval Test**
+```yaml
+# Test Scenario: New changes pushed after implementing all REQUIRED recommendations
+# Expected: New review triggers and auto-approves if no new REQUIRED issues
+# Verification: Check that new commits trigger re-review and auto-approval
+# Success Criteria: Auto-approval works for subsequent commits
+```
+
+#### **Test 4.3: Blocking Issues Prevention Test**
+```yaml
+# Test Scenario: Claude review finds REQUIRED issues
+# Expected: No auto-approval, clear blocking message
+# Verification: Check that PR remains unapproved with clear guidance
+# Success Criteria: Auto-approval blocked until issues resolved
+```
+
+### **Phase 5: Integration Testing**
+
+#### **Test 5.1: Priority 2 Workflow Dependency**
 ```yaml
 # Expected: Priority 2 triggers after Priority 1 completes
 # Verification: workflow_run trigger works correctly
 # Success Criteria: Approval gate workflow runs after review
 ```
 
-#### **Test 4.2: Repository Type Detection**
+#### **Test 5.2: Repository Type Detection**
 ```yaml
 # Expected: WordPress plugin context detected correctly
 # Verification: Review content includes WordPress-specific guidance
 # Success Criteria: Security and performance checks are WordPress-focused
 ```
 
-#### **Test 4.3: Progressive Tracking Integration**
+#### **Test 5.3: Progressive Tracking Integration**
 ```yaml
 # Expected: Review results integrated with tracking system
 # Verification: Tracking data updated correctly
