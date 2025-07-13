@@ -18,6 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10  # Reduced timeout since official action is more reliable
 
+    outputs:
+      success: ${{ steps.review-status.outputs.success }}
+      total_resolved_required: ${{ steps.update-tracking.outputs.total_resolved_required }}
+      total_resolved_important: ${{ steps.update-tracking.outputs.total_resolved_important }}
+      newly_resolved_required: ${{ steps.update-tracking.outputs.newly_resolved_required }}
+      newly_resolved_important: ${{ steps.update-tracking.outputs.newly_resolved_important }}
+
     permissions:
       contents: read
       pull-requests: write
@@ -161,6 +168,11 @@ jobs:
           script: |
             const repoType = '${{ steps.repo-context.outputs.repo_type }}';
 
+            // Get tracking data from previous step
+            const trackingData = JSON.parse('${{ steps.init-tracking.outputs.tracking_data }}' || '{}');
+            const resolvedRequiredCount = parseInt('${{ steps.init-tracking.outputs.resolved_required_count }}' || '0');
+            const resolvedImportantCount = parseInt('${{ steps.init-tracking.outputs.resolved_important_count }}' || '0');
+
             // Repository-specific prompts for BlazeCommerce standards
             const prompts = {
               'nextjs-frontend': `
@@ -256,7 +268,50 @@ jobs:
 
             const selectedPrompt = prompts[repoType] || prompts['general'];
 
-            // Add PR context
+            // Add PR context with tracking information
+            let trackingContext = '';
+            if (resolvedRequiredCount > 0 || resolvedImportantCount > 0) {
+              trackingContext = `
+
+            ## 📋 Previous Recommendation Tracking
+            **IMPORTANT**: This PR has been updated since the last review. Please consider the following:
+
+            ### ✅ Previously Resolved Items
+            - **REQUIRED Issues Resolved**: ${resolvedRequiredCount}
+            - **IMPORTANT Issues Resolved**: ${resolvedImportantCount}
+
+            ### 🔍 Review Instructions
+            When providing your review, please:
+            1. **Focus on NEW issues** introduced by the latest commits
+            2. **Acknowledge resolved items** by noting "✅ Previously identified [issue] has been resolved"
+            3. **Clearly distinguish** between new recommendations and any remaining unresolved items
+            4. **Use visual indicators**:
+               - 🆕 NEW: For newly identified issues
+               - ✅ RESOLVED: For previously identified issues that are now fixed
+               - ⏳ PENDING: For previously identified issues that still need attention
+
+            ### 📊 Resolved Items Summary
+            `;
+
+              if (trackingData.resolved_recommendations?.required?.length > 0) {
+                trackingContext += `
+            **Previously Resolved REQUIRED Issues:**
+            `;
+                trackingData.resolved_recommendations.required.forEach((item, index) => {
+                  trackingContext += `${index + 1}. ✅ ${item.title || item.description?.substring(0, 100) || 'Resolved issue'}\n`;
+                });
+              }
+
+              if (trackingData.resolved_recommendations?.important?.length > 0) {
+                trackingContext += `
+            **Previously Resolved IMPORTANT Issues:**
+            `;
+                trackingData.resolved_recommendations.important.forEach((item, index) => {
+                  trackingContext += `${index + 1}. ✅ ${item.title || item.description?.substring(0, 100) || 'Resolved issue'}\n`;
+                });
+              }
+            }
+
             const prContext = `
 
             ## Pull Request Context
@@ -264,8 +319,11 @@ jobs:
             - PR #${context.issue.number}: ${context.payload.pull_request?.title || 'N/A'}
             - Author: ${context.payload.pull_request?.user?.login || 'N/A'}
             - Type: ${repoType}
+            ${trackingContext}
 
             Please provide a comprehensive code review with specific, actionable recommendations.
+            Use the visual indicators (🆕 NEW, ✅ RESOLVED, ⏳ PENDING) to help developers understand
+            the status of each recommendation relative to previous reviews.
             `;
 
             const fullPrompt = selectedPrompt + prContext;
@@ -412,6 +470,142 @@ jobs:
               body: errorComment
             });
 
+      - name: Update Recommendation Tracking
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.review-status.outputs.success == 'true'
+        id: update-tracking
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            console.log('📊 Updating recommendation tracking based on Claude review...');
+
+            const trackingFile = '${{ steps.init-tracking.outputs.tracking_file }}';
+            const trackingData = JSON.parse('${{ steps.init-tracking.outputs.tracking_data }}');
+
+            // Parse the latest Claude review comment to identify current recommendations
+            async function parseLatestClaudeReview() {
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                per_page: 100
+              });
+
+              // Find the most recent Claude bot comment
+              const claudeComment = comments.data
+                .filter(comment => {
+                  const isClaudeBot = comment.user.login === 'claude[bot]' ||
+                                     comment.user.type === 'Bot' ||
+                                     comment.user.login.includes('claude');
+                  const hasReviewContent = comment.body && (
+                    comment.body.includes('Code Review') ||
+                    comment.body.includes('🔴') ||
+                    comment.body.includes('🟡')
+                  );
+                  return isClaudeBot && hasReviewContent;
+                })
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+              if (!claudeComment) {
+                console.log('⚠️ No Claude review comment found');
+                return { currentRequired: [], currentImportant: [] };
+              }
+
+              const commentBody = claudeComment.body;
+
+              // Parse current recommendations
+              const requiredPattern = /🔴\s*(?:.*?)?REQUIRED[\s\S]*?(?=🟡\s*(?:.*?)?(?:IMPORTANT|SUGGESTIONS)|🔵\s*SUGGESTIONS|$)/gi;
+              const importantPattern = /🟡\s*(?:.*?)?IMPORTANT[\s\S]*?(?=🔴\s*(?:.*?)?REQUIRED|🔵\s*SUGGESTIONS|$)/gi;
+
+              const currentRequired = (commentBody.match(requiredPattern) || []).map(match => ({
+                id: Buffer.from(match.substring(0, 100)).toString('base64').substring(0, 16),
+                description: match.trim(),
+                identified_at: new Date().toISOString(),
+                status: 'pending'
+              }));
+
+              const currentImportant = (commentBody.match(importantPattern) || []).map(match => ({
+                id: Buffer.from(match.substring(0, 100)).toString('base64').substring(0, 16),
+                description: match.trim(),
+                identified_at: new Date().toISOString(),
+                status: 'pending'
+              }));
+
+              console.log(`📋 Found ${currentRequired.length} current REQUIRED and ${currentImportant.length} current IMPORTANT recommendations`);
+
+              return { currentRequired, currentImportant };
+            }
+
+            // Update tracking data
+            const { currentRequired, currentImportant } = await parseLatestClaudeReview();
+
+            // Identify resolved items (previously pending but not in current review)
+            const previouslyPendingRequired = trackingData.pending_recommendations?.required || [];
+            const previouslyPendingImportant = trackingData.pending_recommendations?.important || [];
+
+            // Find items that were pending but are no longer mentioned (resolved)
+            const newlyResolvedRequired = previouslyPendingRequired.filter(prevItem =>
+              !currentRequired.some(currItem =>
+                currItem.description.includes(prevItem.description?.substring(0, 50)) ||
+                prevItem.description?.includes(currItem.description.substring(0, 50))
+              )
+            );
+
+            const newlyResolvedImportant = previouslyPendingImportant.filter(prevItem =>
+              !currentImportant.some(currItem =>
+                currItem.description.includes(prevItem.description?.substring(0, 50)) ||
+                prevItem.description?.includes(currItem.description.substring(0, 50))
+              )
+            );
+
+            // Update tracking data
+            trackingData.resolved_recommendations.required.push(...newlyResolvedRequired.map(item => ({
+              ...item,
+              resolved_at: new Date().toISOString(),
+              status: 'resolved'
+            })));
+
+            trackingData.resolved_recommendations.important.push(...newlyResolvedImportant.map(item => ({
+              ...item,
+              resolved_at: new Date().toISOString(),
+              status: 'resolved'
+            })));
+
+            // Update pending recommendations with current ones
+            trackingData.pending_recommendations.required = currentRequired;
+            trackingData.pending_recommendations.important = currentImportant;
+
+            // Update metadata
+            trackingData.last_updated = new Date().toISOString();
+            trackingData.last_review_at = new Date().toISOString();
+
+            // Save updated tracking data
+            fs.writeFileSync(trackingFile, JSON.stringify(trackingData, null, 2));
+
+            console.log(`✅ Tracking updated: ${newlyResolvedRequired.length} newly resolved REQUIRED, ${newlyResolvedImportant.length} newly resolved IMPORTANT`);
+            console.log(`📊 Current status: ${currentRequired.length} pending REQUIRED, ${currentImportant.length} pending IMPORTANT`);
+
+            // Set outputs for the auto-approve job
+            core.setOutput('newly_resolved_required', newlyResolvedRequired.length.toString());
+            core.setOutput('newly_resolved_important', newlyResolvedImportant.length.toString());
+            core.setOutput('total_resolved_required', trackingData.resolved_recommendations.required.length.toString());
+            core.setOutput('total_resolved_important', trackingData.resolved_recommendations.important.length.toString());
+
+      - name: Commit Tracking Data
+        if: steps.skip-check.outputs.should_skip != 'true' && steps.review-status.outputs.success == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .github/claude-tracking/
+          if git diff --staged --quiet; then
+            echo "📋 No tracking changes to commit"
+          else
+            git commit -m "chore: update Claude AI recommendation tracking data [skip ci]"
+            git push
+            echo "✅ Tracking data committed and pushed"
+          fi
+
   auto-approve:
     needs: claude-review-official
     if: always()
@@ -426,6 +620,82 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Initialize Recommendation Tracking
+        id: init-tracking
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            console.log('🔍 Initializing recommendation tracking system...');
+
+            // Create tracking directory if it doesn't exist
+            const trackingDir = '.github/claude-tracking';
+            const trackingFile = path.join(trackingDir, `pr-${context.payload.pull_request.number}-recommendations.json`);
+
+            if (!fs.existsSync(trackingDir)) {
+              fs.mkdirSync(trackingDir, { recursive: true });
+              console.log(`📁 Created tracking directory: ${trackingDir}`);
+            }
+
+            // Initialize or load existing tracking data
+            let trackingData = {
+              pr_number: context.payload.pull_request.number,
+              created_at: new Date().toISOString(),
+              last_updated: new Date().toISOString(),
+              resolved_recommendations: {
+                required: [],
+                important: []
+              },
+              pending_recommendations: {
+                required: [],
+                important: []
+              },
+              commit_history: []
+            };
+
+            // Load existing tracking data if file exists
+            if (fs.existsSync(trackingFile)) {
+              try {
+                const existingData = JSON.parse(fs.readFileSync(trackingFile, 'utf8'));
+                trackingData = {
+                  ...existingData,
+                  last_updated: new Date().toISOString()
+                };
+                console.log(`📋 Loaded existing tracking data with ${trackingData.resolved_recommendations.required.length} resolved REQUIRED and ${trackingData.resolved_recommendations.important.length} resolved IMPORTANT items`);
+              } catch (error) {
+                console.log(`⚠️ Error loading existing tracking data: ${error.message}, using fresh tracking data`);
+              }
+            } else {
+              console.log('📋 No existing tracking data found, starting fresh');
+            }
+
+            // Add current commit to history
+            const currentCommit = {
+              sha: context.payload.pull_request.head.sha,
+              timestamp: new Date().toISOString(),
+              message: context.payload.pull_request.title
+            };
+
+            // Only add if it's a new commit
+            if (!trackingData.commit_history.find(c => c.sha === currentCommit.sha)) {
+              trackingData.commit_history.push(currentCommit);
+              console.log(`📝 Added commit ${currentCommit.sha.substring(0, 7)} to tracking history`);
+            }
+
+            // Save tracking data
+            fs.writeFileSync(trackingFile, JSON.stringify(trackingData, null, 2));
+
+            // Set outputs for other steps
+            core.setOutput('tracking_file', trackingFile);
+            core.setOutput('tracking_data', JSON.stringify(trackingData));
+            core.setOutput('resolved_required_count', trackingData.resolved_recommendations.required.length.toString());
+            core.setOutput('resolved_important_count', trackingData.resolved_recommendations.important.length.toString());
+
+            console.log(`✅ Tracking system initialized. File: ${trackingFile}`);
+            return { trackingFile, trackingData };
 
       - name: Check for Approval Revocation
         id: check-revocation
@@ -809,6 +1079,13 @@ jobs:
               console.error(`❌ Token validation failed: ${error.message}`);
               core.setOutput('action_type', 'skip_approval');
               core.setOutput('reason', 'Authentication token validation failed');
+              // Set default status outputs for accurate status reporting
+              core.setOutput('all_required_addressed', 'false');
+              core.setOutput('all_important_addressed', 'false');
+              core.setOutput('pending_required_count', '0');
+              core.setOutput('pending_important_count', '0');
+              core.setOutput('pending_required_items', '[]');
+              core.setOutput('pending_important_items', '[]');
               return { action: 'skip_approval', reason: 'Token validation failed' };
             }
 
@@ -1313,6 +1590,12 @@ jobs:
             const revocationNeeded = '${{ steps.check-revocation.outputs.revocation_needed }}' === 'true';
             const revocationReason = '${{ steps.check-revocation.outputs.reason }}' || 'N/A';
 
+            // Get tracking information
+            const totalResolvedRequired = '${{ needs.claude-review-official.outputs.total_resolved_required }}' || '0';
+            const totalResolvedImportant = '${{ needs.claude-review-official.outputs.total_resolved_important }}' || '0';
+            const newlyResolvedRequired = '${{ needs.claude-review-official.outputs.newly_resolved_required }}' || '0';
+            const newlyResolvedImportant = '${{ needs.claude-review-official.outputs.newly_resolved_important }}' || '0';
+
             let statusBody = `## 🔍 Auto-Approval Status Check
 
             **Status**: ⏳ Criteria not yet met for auto-approval
@@ -1408,6 +1691,16 @@ jobs:
             - **IMPORTANT Items**: ${pendingImportantCount > 0 ? `⏳ ${pendingImportantCount} pending` : (allImportantAddressed ? '✅ All addressed' : '⚠️ Status unknown')}
             - **Claude Review**: ${'${{ needs.claude-review-official.outputs.success }}' === 'true' ? '✅ Completed' : '❌ Failed'}
             - **Approval Status**: ${revocationNeeded ? '🚨 Previous approval revoked due to new critical issues' : '✅ No revocation needed'}
+
+            ### 📈 Recommendation Tracking Progress
+            - **Total Resolved REQUIRED**: ${totalResolvedRequired} items ✅
+            - **Total Resolved IMPORTANT**: ${totalResolvedImportant} items ✅
+            ${parseInt(newlyResolvedRequired) > 0 || parseInt(newlyResolvedImportant) > 0 ? `- **Newly Resolved This Update**: ${newlyResolvedRequired} REQUIRED + ${newlyResolvedImportant} IMPORTANT 🎉` : ''}
+
+            ${parseInt(totalResolvedRequired) > 0 || parseInt(totalResolvedImportant) > 0 ? `
+            ### 🎯 Progress Highlights
+            **Great work!** This PR has successfully resolved **${parseInt(totalResolvedRequired) + parseInt(totalResolvedImportant)}** recommendations across multiple commits, demonstrating continuous improvement and attention to code quality.
+            ` : ''}
 
             ${revocationNeeded ? `
             ### 🚨 Approval Revocation Notice
