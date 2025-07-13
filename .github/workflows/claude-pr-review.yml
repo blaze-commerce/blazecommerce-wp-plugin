@@ -431,6 +431,53 @@ jobs:
 
             console.log('🔍 Checking auto-approval criteria...');
 
+            // Helper function to parse Claude review comments for recommendations
+            async function parseClaudeReviewComments(github, context) {
+              const requiredItems = [];
+              const importantItems = [];
+
+              try {
+                console.log('🔍 Parsing Claude review comments for recommendations...');
+
+                // Get PR comments
+                const comments = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number
+                });
+
+                console.log(`Found ${comments.data.length} comments on PR`);
+
+                // Find Claude bot comment
+                const claudeComment = comments.data.find(comment =>
+                  (comment.user.login === 'claude[bot]' || comment.user.type === 'Bot') &&
+                  comment.body.includes('Code Review')
+                );
+
+                if (claudeComment) {
+                  console.log('✅ Found Claude bot review comment');
+                  const commentBody = claudeComment.body;
+
+                  // Parse REQUIRED items - look for 🔴 REQUIRED sections
+                  const requiredMatches = commentBody.match(/🔴.*?REQUIRED.*?(?=🟡|🔵|$)/gs) || [];
+                  requiredItems.push(...requiredMatches.map(match => match.trim()));
+
+                  // Parse IMPORTANT items - look for 🟡 IMPORTANT sections
+                  const importantMatches = commentBody.match(/🟡.*?IMPORTANT.*?(?=🔴|🔵|$)/gs) || [];
+                  importantItems.push(...importantMatches.map(match => match.trim()));
+
+                  console.log(`Found ${requiredItems.length} REQUIRED recommendations in Claude comments`);
+                  console.log(`Found ${importantItems.length} IMPORTANT recommendations in Claude comments`);
+                } else {
+                  console.log('⚠️ No Claude bot review comment found');
+                }
+              } catch (error) {
+                console.log(`⚠️ Error parsing Claude comments: ${error.message}`);
+              }
+
+              return { requiredItems, importantItems };
+            }
+
             // Step 1: Check if Claude review succeeded
             const claudeReviewSuccess = '${{ needs.claude-review-official.outputs.success }}' === 'true';
             console.log(`Claude Review Success: ${claudeReviewSuccess}`);
@@ -466,20 +513,25 @@ jobs:
 
             try {
               if (!fs.existsSync(trackingFile)) {
-                console.log('⚠️ Tracking file not found - checking if Claude review succeeded');
-                if (claudeReviewSuccess) {
-                  console.log('✅ Claude review succeeded, proceeding with approval despite missing tracking file');
-                  core.setOutput('action_type', 'approve');
-                  core.setOutput('claude_success', 'true');
-                  core.setOutput('tracking_complete', 'false');
-                  core.setOutput('approval_basis', 'claude_success_only');
-                  return { action: 'approve', reason: 'Claude review succeeded' };
-                } else {
-                  console.log('❌ No tracking file and Claude review failed - auto-approval blocked');
-                  core.setOutput('action_type', 'skip_approval');
-                  core.setOutput('reason', 'No tracking file found and Claude review failed');
-                  return { action: 'skip_approval', reason: 'No tracking file and Claude review failed' };
+                console.log('⚠️ Tracking file not found - parsing Claude review comments directly');
+
+                // Parse Claude review comments for recommendations
+                const { requiredItems, importantItems } = await parseClaudeReviewComments(github, context);
+
+                if (requiredItems.length > 0) {
+                  requiredRecommendationsStatus.allAddressed = false;
+                  requiredRecommendationsStatus.pendingItems = requiredItems;
+                  console.log(`❌ Found ${requiredItems.length} unaddressed REQUIRED recommendations in Claude comments`);
                 }
+
+                if (importantItems.length > 0) {
+                  importantRecommendationsStatus.allAddressed = false;
+                  importantRecommendationsStatus.pendingItems = importantItems;
+                  console.log(`❌ Found ${importantItems.length} unaddressed IMPORTANT recommendations in Claude comments`);
+                }
+
+                trackingStatus = 'parsed-from-comments';
+                console.log(`✅ Successfully parsed recommendations from Claude comments`);
               }
 
               const trackingContent = fs.readFileSync(trackingFile, 'utf8');
@@ -567,10 +619,11 @@ jobs:
               return { action: 'skip_approval', reason: 'Important items pending', pendingItems: importantRecommendationsStatus.pendingItems };
             }
 
-            // Auto-approve if Claude review succeeded OR tracking shows completion OR all recommendations addressed
-            if (claudeReviewSuccess || trackingStatus === 'complete' ||
-                (requiredRecommendationsStatus.allAddressed && importantRecommendationsStatus.allAddressed)) {
-              console.log('🎉 Auto-approval criteria met!');
+            // Auto-approve ONLY if Claude review succeeded AND all recommendations addressed
+            if (claudeReviewSuccess &&
+                requiredRecommendationsStatus.allAddressed &&
+                importantRecommendationsStatus.allAddressed) {
+              console.log('🎉 Auto-approval criteria met: Claude review succeeded AND all recommendations addressed!');
               core.setOutput('action_type', 'approve');
               core.setOutput('claude_success', claudeReviewSuccess.toString());
               core.setOutput('tracking_complete', (trackingStatus === 'complete').toString());
@@ -579,16 +632,22 @@ jobs:
 
               let approvalBasis = [];
               if (claudeReviewSuccess) approvalBasis.push('claude_success');
-              if (trackingStatus === 'complete') approvalBasis.push('tracking_complete');
               if (requiredRecommendationsStatus.allAddressed && importantRecommendationsStatus.allAddressed) approvalBasis.push('recommendations_addressed');
               core.setOutput('approval_basis', approvalBasis.join(','));
 
-              return { action: 'approve', reason: 'All criteria met' };
+              return { action: 'approve', reason: 'Claude review succeeded and all recommendations addressed' };
             } else {
-              console.log('❌ Auto-approval criteria not met - general failure');
+              console.log('❌ Auto-approval criteria not met - Claude review must succeed AND all recommendations must be addressed');
               core.setOutput('action_type', 'skip_approval');
-              core.setOutput('reason', 'Claude review failed and tracking incomplete');
-              return { action: 'skip_approval', reason: 'General criteria not met' };
+
+              let failureReasons = [];
+              if (!claudeReviewSuccess) failureReasons.push('Claude review failed');
+              if (!requiredRecommendationsStatus.allAddressed) failureReasons.push('REQUIRED recommendations pending');
+              if (!importantRecommendationsStatus.allAddressed) failureReasons.push('IMPORTANT recommendations pending');
+
+              const reason = failureReasons.join(', ');
+              core.setOutput('reason', reason);
+              return { action: 'skip_approval', reason: reason };
             }
 
       - name: Create Disapproval Review
@@ -629,14 +688,15 @@ jobs:
 
             ### 📋 Auto-Approval Criteria
 
-            For automatic approval, ensure:
+            For automatic approval, **ALL** of the following must be met:
             - ✅ All GitHub Actions checks pass
             - ✅ **All REQUIRED recommendations are addressed** (currently failing)
             - ✅ All IMPORTANT recommendations are addressed
+            - ✅ Claude AI review completes successfully
 
             ### 🔄 Automatic Re-evaluation
 
-            This review will be automatically updated when you push new commits. The bot will re-check all criteria and approve automatically once all REQUIRED recommendations are addressed.
+            This review will be automatically updated when you push new commits. The bot will re-check all criteria and approve automatically once ALL requirements are met (Claude review success AND all recommendations addressed).
 
             ---
             *BlazeCommerce Claude AI Review Bot v3.0 - Enhanced Auto-Approval with REQUIRED Recommendation Enforcement*`;
@@ -899,11 +959,13 @@ jobs:
 
             statusBody += `### ✅ Auto-Approval Criteria
 
-            For automatic approval, ensure:
+            For automatic approval, **ALL** of the following must be met:
             1. ✅ All GitHub Actions checks pass
             2. ✅ All REQUIRED recommendations are addressed (critical)
             3. ✅ All IMPORTANT recommendations are addressed (recommended)
-            4. ✅ Claude AI review completes successfully OR tracking file shows completion
+            4. ✅ Claude AI review completes successfully
+
+            **Note**: Auto-approval now requires Claude review success AND all recommendations addressed (no longer OR logic).
 
             ### 🔄 Automatic Re-evaluation
 
