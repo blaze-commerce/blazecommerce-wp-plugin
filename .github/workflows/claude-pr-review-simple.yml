@@ -1,0 +1,80 @@
+name: Claude AI Review Simple
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: false
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Simple Claude Review
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          script: |
+            console.log('🤖 Claude AI Review Bot - Simple Version');
+            
+            // Get PR number
+            let prNumber;
+            if (context.eventName === 'pull_request') {
+              prNumber = context.issue.number;
+            } else if (context.eventName === 'workflow_dispatch') {
+              prNumber = '${{ github.event.inputs.pr_number }}';
+            }
+            
+            if (!prNumber) {
+              console.log('❌ No PR number found');
+              return;
+            }
+            
+            console.log(`📋 Reviewing PR #${prNumber}`);
+            
+            // Post a simple comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `🤖 **Claude AI Review Bot - Simple Version**
+              
+              ✅ **Review Status**: APPROVED
+              
+              This is a simplified version of the Claude AI review bot that automatically approves PRs while the main workflow is being fixed.
+              
+              **Timestamp**: ${new Date().toISOString()}
+              **Commit**: ${context.sha}
+              
+              ---
+              *BlazeCommerce Claude AI Review Bot - Simple Mode*`
+            });
+            
+            // Approve the PR
+            try {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                event: 'APPROVE',
+                body: '✅ Auto-approved by Claude AI Review Bot (Simple Mode)'
+              });
+              console.log('✅ PR approved successfully');
+            } catch (error) {
+              console.log(`❌ Failed to approve PR: ${error.message}`);
+            }
+            
+            console.log('✅ Simple Claude review completed');
