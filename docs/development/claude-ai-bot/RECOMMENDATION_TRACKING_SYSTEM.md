@@ -22,10 +22,11 @@ Claude reviews now include clear visual indicators:
 - Reviews focus on new issues while acknowledging resolved ones
 - Prevents duplicate reporting of already-addressed recommendations
 
-### 4. **Progress Tracking**
-- Shows total resolved REQUIRED and IMPORTANT items
+### 4. **Progress Tracking with Ratios**
+- Shows resolved/total ratios with percentages (e.g., "3/10 resolved (30%)")
 - Highlights newly resolved items in each update
-- Provides progress metrics for developers
+- Provides overall completion percentage across all recommendation types
+- Motivational progress metrics for developers
 
 ## 🔧 Technical Implementation
 
@@ -115,21 +116,23 @@ Each PR gets a tracking file: `.github/claude-tracking/pr-{number}-recommendatio
 - **IMPORTANT Items**: ⏳ 1 pending
 ```
 
-### After Tracking System
+### After Tracking System with Progress Ratios
 ```
 ### 📊 Current Status Summary
 - **REQUIRED Items**: ❌ 2 pending
 - **IMPORTANT Items**: ⏳ 1 pending
 
 ### 📈 Recommendation Tracking Progress
-- **Total Resolved REQUIRED**: 3 items ✅
-- **Total Resolved IMPORTANT**: 5 items ✅
+- **REQUIRED Items**: 3/5 resolved (60%) ✅
+- **IMPORTANT Items**: 5/6 resolved (83%) ✅
 - **Newly Resolved This Update**: 1 REQUIRED + 2 IMPORTANT 🎉
 
 ### 🎯 Progress Highlights
-**Great work!** This PR has successfully resolved **8** recommendations 
-across multiple commits, demonstrating continuous improvement and 
+**Great work!** This PR has successfully resolved **8** recommendations
+across multiple commits, demonstrating continuous improvement and
 attention to code quality.
+
+**Overall Progress**: 73% of all recommendations resolved
 ```
 
 ## 🔍 Claude Review Enhancements
@@ -248,8 +251,40 @@ Planned improvements include:
 - **Custom Categories**: User-defined recommendation categories
 - **Automated Reporting**: Weekly/monthly quality reports
 
+## 📊 Progress Ratio Enhancement (v3.3)
+
+### **Enhanced Status Display Format**
+The tracking system now displays progress ratios in an intuitive format:
+
+**Format**: `REQUIRED Items: X/Y resolved (Z%) ✅`
+
+**Example**:
+- `REQUIRED Items: 3/10 resolved (30%) ✅`
+- `IMPORTANT Items: 5/8 resolved (63%) ✅`
+
+### **Calculation Logic**
+```javascript
+// Calculate total items (resolved + pending)
+const totalRequiredItems = totalResolvedRequired + pendingRequiredCount;
+const totalImportantItems = totalResolvedImportant + pendingImportantCount;
+
+// Calculate progress percentages
+const requiredProgress = totalRequiredItems > 0 ?
+  Math.round((totalResolvedRequired / totalRequiredItems) * 100) : 0;
+const importantProgress = totalImportantItems > 0 ?
+  Math.round((totalResolvedImportant / totalImportantItems) * 100) : 0;
+```
+
+### **Overall Progress Tracking**
+The system also provides an overall completion percentage:
+```
+**Overall Progress**: 73% of all recommendations resolved
+```
+
+This gives developers a clear understanding of their progress across all recommendation types.
+
 ---
 
-**Feature Version**: v3.2  
-**Implementation Date**: 2025-07-13  
-**Status**: ✅ Active and Tracking All PRs
+**Feature Version**: v3.3
+**Implementation Date**: 2025-07-13
+**Status**: ✅ Active and Tracking All PRs with Progress Ratios
