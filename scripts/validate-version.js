@@ -40,6 +40,13 @@ const VERSION_FILES = [
     path: 'blocks/package.json',
     type: 'json',
     field: 'version'
+  },
+  {
+    path: 'README.md',
+    type: 'markdown',
+    patterns: [
+      { regex: /^\*\*Version:\*\*\s*([\d.]+(?:-[\w.]+)?(?:\+[\w.]+)?)$/m, name: 'Version Badge' }
+    ]
   }
 ];
 

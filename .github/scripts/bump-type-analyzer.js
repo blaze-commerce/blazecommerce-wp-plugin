@@ -30,10 +30,31 @@ class BumpTypeAnalyzer {
   getCommitsForAnalysis(hasMismatch, lastTag) {
     try {
       let commits;
-      
+
+      // PRIORITY FIX: Always prioritize the most recent commit for triggering events
+      // Check if this is a merge commit and get the actual triggering commit
+      let triggeringCommit = null;
+      try {
+        const headCommit = execSync('git log -1 --pretty=format:"%s"', { encoding: 'utf8' }).trim();
+        Logger.info(`Head commit: ${headCommit}`);
+
+        // If it's a merge commit, get the second-to-last commit (the actual feature/fix commit)
+        if (headCommit.startsWith('Merge pull request') || headCommit.startsWith('Merge branch')) {
+          const secondCommit = execSync('git log -2 --skip=1 --pretty=format:"%s"', { encoding: 'utf8' }).trim();
+          if (secondCommit) {
+            triggeringCommit = secondCommit;
+            Logger.info(`Detected merge commit, using triggering commit: ${triggeringCommit}`);
+          }
+        } else {
+          triggeringCommit = headCommit;
+        }
+      } catch (error) {
+        Logger.warning(`Could not determine triggering commit: ${error.message}`);
+      }
+
       if (hasMismatch || lastTag === 'none') {
         Logger.info(`Using limited commit analysis (${this.limitedCommitLimit} commits) due to version mismatch`);
-        
+
         try {
           const output = execSync(`git log --oneline -n ${this.limitedCommitLimit} --pretty=format:"%s"`, { encoding: 'utf8' });
           commits = output.trim().split('\n').filter(msg => msg.trim());
@@ -44,7 +65,7 @@ class BumpTypeAnalyzer {
         }
       } else {
         Logger.info(`Analyzing commits since last tag: ${lastTag}`);
-        
+
         try {
           const output = execSync(`git log ${lastTag}..HEAD --oneline --pretty=format:"%s"`, { encoding: 'utf8' });
           commits = output.trim().split('\n').filter(msg => msg.trim());
@@ -55,8 +76,14 @@ class BumpTypeAnalyzer {
         }
       }
 
+      // PRIORITY FIX: If we have a triggering commit, prioritize it for bump type determination
+      if (triggeringCommit && !commits.includes(triggeringCommit)) {
+        Logger.info('Adding triggering commit to analysis');
+        commits.unshift(triggeringCommit);
+      }
+
       Logger.info(`Found ${commits.length} commits to analyze`);
-      return commits;
+      return { commits, triggeringCommit };
     } catch (error) {
       Logger.error(`Failed to get commits: ${error.message}`);
       throw error;
@@ -125,12 +152,13 @@ class BumpTypeAnalyzer {
     try {
       Logger.info('Analyzing commits for version bump type...');
       Logger.info('Commit Analysis Strategy:');
+      Logger.info('  - PRIORITY: Triggering commit takes precedence for bump type');
       Logger.info('  - Normal operation: Analyze commits since last matching git tag');
       Logger.info('  - Version mismatch: Use limited analysis to avoid historical features');
       Logger.info('  - No tags found: Analyze recent commits with fallback limits');
 
-      const commits = this.getCommitsForAnalysis(hasMismatch, lastTag);
-      
+      const { commits, triggeringCommit } = this.getCommitsForAnalysis(hasMismatch, lastTag);
+
       if (commits.length === 0) {
         Logger.warning('No commits found for analysis');
         return {
@@ -152,12 +180,21 @@ class BumpTypeAnalyzer {
         features: 0,
         fixes: 0,
         other: 0,
-        conventionalCommits: 0
+        conventionalCommits: 0,
+        triggeringCommitType: null
       };
+
+      // PRIORITY FIX: Analyze triggering commit first to determine primary bump type
+      let triggeringCommitAnalysis = null;
+      if (triggeringCommit) {
+        triggeringCommitAnalysis = this.parseConventionalCommit(triggeringCommit);
+        analysis.triggeringCommitType = triggeringCommitAnalysis.type;
+        Logger.info(`Triggering commit analysis: ${triggeringCommit} -> ${triggeringCommitAnalysis.type || 'unknown'}`);
+      }
 
       const parsedCommits = commits.map(message => {
         const parsed = this.parseConventionalCommit(message);
-        
+
         if (parsed.isConventional) analysis.conventionalCommits++;
         if (parsed.isBreaking) analysis.breakingChanges++;
         else if (parsed.type === 'feat' || parsed.type === 'feature') analysis.features++;
@@ -167,20 +204,29 @@ class BumpTypeAnalyzer {
         return { message, parsed };
       });
 
-      // Determine bump type based on analysis
+      // PRIORITY FIX: Determine bump type with triggering commit priority
       let bumpType, reason;
-      
-      if (analysis.breakingChanges > 0) {
-        bumpType = 'major';
-        reason = `Found ${analysis.breakingChanges} breaking change(s)`;
-      } else if (analysis.features > 0) {
-        bumpType = 'minor';
-        reason = `Found ${analysis.features} feature(s)`;
+
+      // If we have a triggering commit, prioritize its type unless there are breaking changes
+      if (triggeringCommitAnalysis && analysis.breakingChanges === 0) {
+        if (triggeringCommitAnalysis.isBreaking) {
+          bumpType = 'major';
+          reason = 'Triggering commit contains breaking changes';
+        } else if (triggeringCommitAnalysis.type === 'feat' || triggeringCommitAnalysis.type === 'feature') {
+          bumpType = 'minor';
+          reason = 'Triggering commit is a feature';
+        } else if (triggeringCommitAnalysis.type === 'fix' || triggeringCommitAnalysis.type === 'bugfix') {
+          bumpType = 'patch';
+          reason = 'Triggering commit is a fix';
+        } else {
+          // Fall back to historical analysis
+          bumpType = this.determineBumpTypeFromHistory(analysis);
+          reason = `Triggering commit type unclear, using historical analysis: ${bumpType}`;
+        }
       } else {
-        bumpType = 'patch';
-        reason = analysis.fixes > 0 ? 
-          `Found ${analysis.fixes} fix(es)` : 
-          'No features or breaking changes - defaulting to patch';
+        // Use historical analysis (original logic)
+        bumpType = this.determineBumpTypeFromHistory(analysis);
+        reason = this.getBumpReasonFromHistory(analysis, bumpType);
       }
 
       Logger.info(`Bump type determined: ${bumpType.toUpperCase()}`);
@@ -198,13 +244,39 @@ class BumpTypeAnalyzer {
         reason,
         analysis,
         commits: parsedCommits,
-        strategy: hasMismatch ? 'limited' : 'tag-based'
+        strategy: hasMismatch ? 'limited' : 'tag-based',
+        triggeringCommit: triggeringCommit || null
       };
 
     } catch (error) {
       Logger.error(`Commit analysis failed: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * Determine bump type from historical analysis (original logic)
+   * @param {Object} analysis - Analysis object with commit counts
+   * @returns {string} Bump type
+   */
+  determineBumpTypeFromHistory(analysis) {
+    if (analysis.breakingChanges > 0) return 'major';
+    if (analysis.features > 0) return 'minor';
+    return 'patch';
+  }
+
+  /**
+   * Get bump reason from historical analysis
+   * @param {Object} analysis - Analysis object with commit counts
+   * @param {string} bumpType - Determined bump type
+   * @returns {string} Reason string
+   */
+  getBumpReasonFromHistory(analysis, bumpType) {
+    if (bumpType === 'major') return `Found ${analysis.breakingChanges} breaking change(s)`;
+    if (bumpType === 'minor') return `Found ${analysis.features} feature(s)`;
+    return analysis.fixes > 0 ?
+      `Found ${analysis.fixes} fix(es)` :
+      'No features or breaking changes - defaulting to patch';
   }
 
   /**

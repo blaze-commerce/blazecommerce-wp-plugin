@@ -282,6 +282,12 @@ jobs:
       id: bump_type
       run: |
         echo "DEBUG: Running commit analysis for bump type..."
+        echo "🔍 Workflow Debug Information:"
+        echo "   - Trigger event: ${{ github.event_name }}"
+        echo "   - Head commit: ${{ github.event.head_commit.message }}"
+        echo "   - Ref: ${{ github.ref }}"
+        echo "   - Should bump version: ${{ steps.check_files.outputs.should_bump_version }}"
+        echo "   - Change reason: ${{ steps.check_files.outputs.change_reason }}"
 
         # Set environment variables for the script
         export VERSION_MISMATCH="${{ steps.version_validation.outputs.version_mismatch }}"
@@ -326,6 +332,44 @@ jobs:
           fi
         fi
 
+    - name: Pre-validate version conflicts
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      id: pre_validate
+      run: |
+        echo "🔍 Pre-validating for version conflicts..."
+
+        CURRENT_VERSION="${{ steps.version_validation.outputs.package_version }}"
+        BUMP_TYPE="${{ steps.bump_type.outputs.bump_type }}"
+
+        echo "📦 Current version: $CURRENT_VERSION"
+        echo "🔧 Planned bump type: $BUMP_TYPE"
+
+        # Check if current version tag already exists
+        if git tag | grep -q "v$CURRENT_VERSION"; then
+          echo "⚠️  Tag conflict detected: v$CURRENT_VERSION already exists"
+          echo "🔧 Pre-resolving version conflict..."
+
+          # Find next available version
+          RESOLVED_VERSION=$(node -e "
+            const semver = require('./scripts/semver-utils');
+            const nextVersion = semver.findNextAvailableVersion('$CURRENT_VERSION', '$BUMP_TYPE');
+            console.log(nextVersion);
+          ")
+
+          if [ -n "$RESOLVED_VERSION" ] && [ "$RESOLVED_VERSION" != "undefined" ]; then
+            echo "✅ Resolved version: $RESOLVED_VERSION"
+            echo "resolved_version=$RESOLVED_VERSION" >> $GITHUB_OUTPUT
+            echo "has_conflict=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to resolve version conflict"
+            exit 1
+          fi
+        else
+          echo "✅ No version conflicts detected"
+          echo "has_conflict=false" >> $GITHUB_OUTPUT
+          echo "resolved_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        fi
+
     - name: Execute version bump
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
       run: |
@@ -334,59 +378,42 @@ jobs:
         # Set environment variables for the script
         export BUMP_TYPE="${{ steps.bump_type.outputs.bump_type }}"
         export PRERELEASE_TYPE="${{ steps.prerelease_type.outputs.prerelease_type }}"
-        export PACKAGE_VERSION="${{ steps.version_validation.outputs.package_version }}"
+        export PACKAGE_VERSION="${{ steps.pre_validate.outputs.resolved_version }}"
         export AUTO_RESOLVE_CONFLICTS="true"
         export FORCE_VERSION_RESOLUTION="true"
+        export HAS_CONFLICT="${{ steps.pre_validate.outputs.has_conflict }}"
 
         # Run the version update script with enhanced error handling
         echo "🔄 Starting version update process..."
-        echo "📦 Current version: $PACKAGE_VERSION"
+        echo "📦 Target version: $PACKAGE_VERSION"
         echo "🔧 Bump type: $BUMP_TYPE"
         echo "🏷️  Prerelease type: ${PRERELEASE_TYPE:-none}"
+        echo "⚠️  Had conflict: $HAS_CONFLICT"
 
-        if node scripts/update-version.js; then
+        # If we had a conflict, update package.json first
+        if [ "$HAS_CONFLICT" = "true" ]; then
+          echo "🔧 Updating package.json with resolved version..."
+          node -e "
+            const fs = require('fs');
+            const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            packageJson.version = '$PACKAGE_VERSION';
+            fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2) + '\n');
+            console.log('✅ Package.json updated with resolved version');
+          "
+        fi
+
+        if node scripts/update-version.js --force; then
           echo "SUCCESS: Version bump completed successfully"
 
           # Get the new version for confirmation
           NEW_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
-          echo "✅ New version: $NEW_VERSION"
+          echo "✅ Final version: $NEW_VERSION"
         else
-          echo "ERROR: Version bump failed"
-          echo "🔍 Checking for common issues..."
-
-          # Check if it's a tag conflict issue
-          CURRENT_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
-          if git tag | grep -q "v$CURRENT_VERSION"; then
-            echo "⚠️  Tag conflict detected: v$CURRENT_VERSION already exists"
-            echo "🔧 Attempting automatic conflict resolution..."
-
-            # Try to find next available version using semver-utils
-            node -e "
-              const semver = require('./scripts/semver-utils');
-              const currentVersion = require('./package.json').version;
-
-              console.log('🔍 Finding next available version...');
-              const nextVersion = semver.findNextAvailableVersion(currentVersion, '$BUMP_TYPE');
-              console.log('📦 Next available version:', nextVersion);
-
-              // Update package.json with the resolved version
-              const fs = require('fs');
-              const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-              packageJson.version = nextVersion;
-              fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2) + '\n');
-
-              console.log('✅ Version conflict resolved automatically');
-            " || {
-              echo "❌ Automatic conflict resolution failed"
-              echo "💡 Manual intervention may be required"
-              exit 1
-            }
-
-            echo "SUCCESS: Version conflict resolved automatically"
-          else
-            echo "❌ Version bump failed for unknown reason"
-            exit 1
-          fi
+          echo "ERROR: Version bump failed even with conflict resolution"
+          echo "🔍 Debug information:"
+          echo "   Current package.json version: $(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")"
+          echo "   Existing tags: $(git tag | grep -E '^v[0-9]' | tail -5)"
+          exit 1
         fi
 
     - name: Create git tag
@@ -452,6 +479,12 @@ jobs:
         if [ -f "blaze-wooless.php" ]; then
           git add blaze-wooless.php
         fi
+        if [ -f "README.md" ]; then
+          git add README.md
+        fi
+        if [ -f "blocks/package.json" ]; then
+          git add blocks/package.json
+        fi
 
         # Create commit with conventional format
         git commit -m "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]"
@@ -464,6 +497,12 @@ jobs:
       run: |
         echo "SUMMARY: Auto Version Bump Workflow Summary"
         echo "======================================"
+        echo "🔍 Final Debug Information:"
+        echo "   - Workflow status: ${{ job.status }}"
+        echo "   - Should bump version: ${{ steps.check_files.outputs.should_bump_version }}"
+        echo "   - Bump type determined: ${{ steps.bump_type.outputs.bump_type || 'none' }}"
+        echo "   - Had version conflict: ${{ steps.pre_validate.outputs.has_conflict || 'false' }}"
+        echo "   - Resolved version: ${{ steps.pre_validate.outputs.resolved_version || 'none' }}"
 
         if [ "${{ steps.check_files.outputs.should_bump_version }}" = "true" ]; then
           echo "SUCCESS: Version bump was processed"
@@ -477,6 +516,12 @@ jobs:
             fi
             echo "PACKAGE: New version: $FINAL_VERSION"
             echo "COMPLETED: Version bump completed successfully!"
+
+            # Additional debug: check if all files were updated
+            echo "🔍 Version consistency check:"
+            echo "   - package.json: $(node -p "require('./package.json').version" 2>/dev/null || echo "error")"
+            echo "   - blaze-wooless.php: $(grep -o 'Version: [0-9.]*' blaze-wooless.php | cut -d' ' -f2 || echo "error")"
+            echo "   - README.md: $(grep -o '\*\*Version:\*\* [0-9.]*' README.md | cut -d' ' -f2 || echo "error")"
           else
             echo "INFO:  No version bump was needed (no conventional commits found)"
           fi
