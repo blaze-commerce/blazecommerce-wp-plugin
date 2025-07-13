@@ -281,26 +281,26 @@ jobs:
                   console.log(`Analyzing Claude comment from ${comment.user.login}`);
 
                   // Check for standardized Final Verdict section
-                  const finalVerdictMatch = comment.body.match(/### 🎯 \*\*Final Verdict\*\*[\s\S]*?\*\*Status\*\*:\s*([^*\n]+)/i);
+                  const finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([^*\n]+)/i);
                   if (finalVerdictMatch) {
                     const status = finalVerdictMatch[1].trim();
                     console.log(`Found Final Verdict status: ${status}`);
 
-                    if (status.includes('✅ APPROVED')) {
+                    if (status.includes('APPROVED') && !status.includes('CONDITIONAL')) {
                       claudeApprovalStatus = 'approved';
                       console.log('Claude approved the PR');
-                    } else if (status.includes('❌ BLOCKED')) {
+                    } else if (status.includes('BLOCKED')) {
                       claudeApprovalStatus = 'blocked';
                       hasRequiredIssues = true;
                       console.log('Claude blocked the PR');
-                    } else if (status.includes('🟡 CONDITIONAL APPROVAL')) {
+                    } else if (status.includes('CONDITIONAL APPROVAL')) {
                       claudeApprovalStatus = 'conditional';
                       console.log('Claude conditionally approved the PR');
                     }
                   }
 
                   // Also check for Critical Issues section content
-                  const criticalIssuesMatch = comment.body.match(/🔴 \*\*Critical Issues\*\*([\s\S]*?)(?=🟢|🟡|⚡|🔒|###|$)/i);
+                  const criticalIssuesMatch = comment.body.match(/\*\*CRITICAL ISSUES\*\*([\s\S]*?)(?=\*\*STRENGTHS\*\*|\*\*AREAS FOR IMPROVEMENT\*\*|\*\*PERFORMANCE CONSIDERATIONS\*\*|\*\*SECURITY ASSESSMENT\*\*|###|$)/i);
                   if (criticalIssuesMatch) {
                     const criticalContent = criticalIssuesMatch[1].trim();
                     // Check if there's actual content (not just empty lines or dashes)
@@ -343,19 +343,19 @@ jobs:
                   approved = false;
                   statusState = 'pending';
                   statusDescription = 'Claude approved - waiting for @blazecommerce-claude-ai to approve';
-                  reason = 'Claude approved with ✅ APPROVED status - awaiting @blazecommerce-claude-ai approval';
+                  reason = 'Claude approved with APPROVED status - awaiting @blazecommerce-claude-ai approval';
                   console.log('INFO: Claude approved - awaiting @blazecommerce-claude-ai approval');
                 } else if (claudeReviewFound && claudeApprovalStatus === 'conditional') {
                   approved = false;
                   statusState = 'pending';
                   statusDescription = 'Claude conditionally approved - waiting for @blazecommerce-claude-ai to approve';
-                  reason = 'Claude conditionally approved with 🟡 CONDITIONAL APPROVAL - awaiting @blazecommerce-claude-ai approval';
+                  reason = 'Claude conditionally approved with CONDITIONAL APPROVAL - awaiting @blazecommerce-claude-ai approval';
                   console.log('INFO: Claude conditionally approved - awaiting @blazecommerce-claude-ai approval');
                 } else if (claudeReviewFound && (claudeApprovalStatus === 'blocked' || hasRequiredIssues)) {
                   approved = false;
                   statusState = 'failure';
                   statusDescription = 'Blocked by critical issues from Claude review';
-                  reason = 'Claude found critical issues that must be addressed (❌ BLOCKED status)';
+                  reason = 'Claude found critical issues that must be addressed (BLOCKED status)';
                   console.log('BLOCKED: Claude found critical issues');
                 } else if (claudeReviewFound && !hasRequiredIssues) {
                   approved = false;
@@ -558,26 +558,26 @@ jobs:
                 claudeReviewContent += comment.body + '\n\n';
 
                 // Check for standardized Final Verdict section
-                const finalVerdictMatch = comment.body.match(/### 🎯 \*\*Final Verdict\*\*[\s\S]*?\*\*Status\*\*:\s*([^*\n]+)/i);
+                const finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([^*\n]+)/i);
                 if (finalVerdictMatch) {
                   const status = finalVerdictMatch[1].trim();
                   console.log(`Found Final Verdict status: ${status}`);
 
-                  if (status.includes('✅ APPROVED')) {
+                  if (status.includes('APPROVED') && !status.includes('CONDITIONAL')) {
                     claudeApprovalStatus = 'approved';
                     console.log('Claude approved the PR');
-                  } else if (status.includes('❌ BLOCKED')) {
+                  } else if (status.includes('BLOCKED')) {
                     claudeApprovalStatus = 'blocked';
                     hasRequiredIssues = true;
                     console.log('Claude blocked the PR');
-                  } else if (status.includes('🟡 CONDITIONAL APPROVAL')) {
+                  } else if (status.includes('CONDITIONAL APPROVAL')) {
                     claudeApprovalStatus = 'conditional';
                     console.log('Claude conditionally approved the PR');
                   }
                 }
 
                 // Also check for Critical Issues section content
-                const criticalIssuesMatch = comment.body.match(/🔴 \*\*Critical Issues\*\*([\s\S]*?)(?=🟢|🟡|⚡|🔒|###|$)/i);
+                const criticalIssuesMatch = comment.body.match(/\*\*CRITICAL ISSUES\*\*([\s\S]*?)(?=\*\*STRENGTHS\*\*|\*\*AREAS FOR IMPROVEMENT\*\*|\*\*PERFORMANCE CONSIDERATIONS\*\*|\*\*SECURITY ASSESSMENT\*\*|###|$)/i);
                 if (criticalIssuesMatch) {
                   const criticalContent = criticalIssuesMatch[1].trim();
                   // Check if there's actual content (not just empty lines or dashes)
@@ -618,19 +618,19 @@ jobs:
 
               // Decision logic based on standardized Claude review format
               if (claudeApprovalStatus === 'approved' && !hasRequiredIssues) {
-                console.log('SUCCESS: Claude approved with ✅ APPROVED status - eligible for auto-approval');
+                console.log('SUCCESS: Claude approved with APPROVED status - eligible for auto-approval');
                 core.setOutput('should_approve', 'true');
-                core.setOutput('reason', 'Claude approved with ✅ APPROVED status and no critical issues');
+                core.setOutput('reason', 'Claude approved with APPROVED status and no critical issues');
                 core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
               } else if (claudeApprovalStatus === 'conditional' && !hasRequiredIssues) {
-                console.log('SUCCESS: Claude conditionally approved with 🟡 CONDITIONAL APPROVAL - eligible for auto-approval');
+                console.log('SUCCESS: Claude conditionally approved with CONDITIONAL APPROVAL - eligible for auto-approval');
                 core.setOutput('should_approve', 'true');
-                core.setOutput('reason', 'Claude conditionally approved with 🟡 CONDITIONAL APPROVAL and no critical issues');
+                core.setOutput('reason', 'Claude conditionally approved with CONDITIONAL APPROVAL and no critical issues');
                 core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
               } else if (claudeApprovalStatus === 'blocked' || hasRequiredIssues) {
-                console.log('BLOCKED: Claude blocked with ❌ BLOCKED status or critical issues found - cannot auto-approve');
+                console.log('BLOCKED: Claude blocked with BLOCKED status or critical issues found - cannot auto-approve');
                 core.setOutput('should_approve', 'false');
-                core.setOutput('reason', 'Claude blocked with ❌ BLOCKED status or critical issues found');
+                core.setOutput('reason', 'Claude blocked with BLOCKED status or critical issues found');
               } else if (!hasRequiredIssues) {
                 console.log('SUCCESS: No critical issues found - eligible for auto-approval');
                 core.setOutput('should_approve', 'true');
@@ -664,20 +664,20 @@ jobs:
                 repo: context.repo.repo,
                 pull_number: prNumber,
                 event: 'APPROVE',
-                body: `## ✅ BlazeCommerce Claude AI Review - Auto-Approved
+                body: `## BlazeCommerce Claude AI Review - Auto-Approved
 
 **Automated approval by @blazecommerce-claude-ai**
 
-### 📋 Review Summary
+### Review Summary
 - Official Claude GitHub App completed comprehensive review
 - No CRITICAL: REQUIRED issues found
 - Code meets BlazeCommerce quality standards
 - All security and performance checks passed
 
-### 🎯 Claude AI Analysis
+### Claude AI Analysis
 The official Claude App has reviewed this PR and found no blocking issues. The code follows WordPress plugin best practices and BlazeCommerce development standards.
 
-### 🔄 Next Steps
+### Next Steps
 This PR is now approved and ready for merge (subject to other branch protection rules and checks).
 
 ---
@@ -696,7 +696,7 @@ This PR is now approved and ready for merge (subject to other branch protection 
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
-                  body: `## ⚠️ BlazeCommerce Claude AI Review - Approval Error
+                  body: `## BlazeCommerce Claude AI Review - Approval Error
 
 **Error**: Failed to auto-approve this PR.
 
@@ -726,20 +726,20 @@ This PR is now approved and ready for merge (subject to other branch protection 
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: `## 🚫 BlazeCommerce Claude AI Review - Approval Blocked
+                body: `## BlazeCommerce Claude AI Review - Approval Blocked
 
 **Status**: Cannot auto-approve due to REQUIRED issues
 
-### ⚠️ Action Required
+### Action Required
 The official Claude GitHub App has identified **CRITICAL: REQUIRED** issues that must be addressed before this PR can be approved.
 
-### 📋 Next Steps
+### Next Steps
 1. Review Claude's feedback above for specific REQUIRED issues
 2. Address all CRITICAL: REQUIRED items
 3. Push your changes to trigger a new review
 4. @blazecommerce-claude-ai will automatically approve once all REQUIRED issues are resolved
 
-### 🔄 Re-evaluation
+### Re-evaluation
 This PR will be automatically re-evaluated when:
 - New commits are pushed
 - Claude provides an updated review

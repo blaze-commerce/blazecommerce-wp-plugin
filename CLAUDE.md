@@ -136,24 +136,24 @@ Every Claude AI review must follow this standardized format for auto-approval wo
 ```
 
 #### 2. Assessment Categories (Use exact headers)
-- **🟢 Strengths** - Positive aspects and good practices
-- **🟡 Areas for Improvement** - Non-blocking suggestions
-- **🔴 Critical Issues** - Blocking issues that MUST be fixed
-- **⚡ Performance Considerations** - Performance-related observations
-- **🔒 Security Assessment** - Security-related findings
+- **STRENGTHS** - Positive aspects and good practices
+- **AREAS FOR IMPROVEMENT** - Non-blocking suggestions
+- **CRITICAL ISSUES** - Blocking issues that MUST be fixed
+- **PERFORMANCE CONSIDERATIONS** - Performance-related observations
+- **SECURITY ASSESSMENT** - Security-related findings
 
 #### 3. Final Verdict (REQUIRED - Use exact format)
 ```markdown
-### 🎯 **Final Verdict**
-**Status**: [✅ APPROVED | 🟡 CONDITIONAL APPROVAL | ❌ BLOCKED]
-**Merge Readiness**: [✅ READY TO MERGE | 🟡 READY AFTER FIXES | ❌ NOT READY]
+### FINAL VERDICT
+**Status**: [APPROVED | CONDITIONAL APPROVAL | BLOCKED]
+**Merge Readiness**: [READY TO MERGE | READY AFTER FIXES | NOT READY]
 **Recommendation**: [Brief recommendation text]
 ```
 
 ### Auto-Approval Parsing Rules
-- **✅ APPROVED**: No critical issues, ready for auto-approval
-- **🟡 CONDITIONAL**: Only improvement suggestions, manual review needed
-- **❌ BLOCKED**: Critical issues present, blocks merge until fixed
+- **APPROVED**: No critical issues, ready for auto-approval
+- **CONDITIONAL APPROVAL**: Only improvement suggestions, manual review needed
+- **BLOCKED**: Critical issues present, blocks merge until fixed
 
 ### Example Critical Issue Patterns
 - Security vulnerabilities
