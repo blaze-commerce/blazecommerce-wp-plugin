@@ -7,6 +7,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'hotfix/**'
+      - 'bugfix/**'
+      - 'enhancement/**'
     branches-ignore:
       - main
       - develop
@@ -21,15 +27,16 @@ on:
 
 # Prevent race conditions between concurrent workflow runs
 concurrency:
-  group: claude-review-backup-${{ github.ref }}
+  group: claude-review-backup-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   claude-review:
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && !contains(github.ref, 'refs/heads/main') && !contains(github.ref, 'refs/heads/develop')) ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'push' && github.ref_name != 'main' && github.ref_name != 'develop') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: 15  # Hard timeout for initial review
     
