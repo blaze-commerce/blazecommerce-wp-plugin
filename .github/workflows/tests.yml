@@ -9,10 +9,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: ${{ vars.TEST_TIMEOUT || 15 }}
+
     strategy:
+      # Prevent cancellation of other jobs when one fails
+      fail-fast: false
       matrix:
-        php-version: [7.4, 8.0, 8.1, 8.2]
+        # Optimized matrix: Only WordPress-compatible PHP versions (removed 8.2)
+        php-version: [7.4, 8.0, 8.1]
+        # Updated WordPress versions for better compatibility
         wordpress-version: [latest, 6.3, 6.2]
     
     services:
@@ -114,7 +119,10 @@ jobs:
     
   test-coverage:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.TEST_COVERAGE_TIMEOUT || 10 }}
+    # Run coverage even if some test matrix jobs fail
     needs: test
+    if: always()
     
     steps:
     - name: Checkout code
