@@ -1,9 +1,14 @@
-name: Create Release
+name: "Priority 3: Create Release"
 
 on:
   push:
     tags:
       - 'v*'
+
+# Priority 3: Post-merge workflow - runs after PR workflows complete
+concurrency:
+  group: priority-3-release-${{ github.repository }}
+  cancel-in-progress: false  # Don't cancel to ensure release consistency
 
 jobs:
   validate-release:

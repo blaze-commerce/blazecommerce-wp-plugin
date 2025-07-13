@@ -1,4 +1,4 @@
-name: Auto Version Bump
+name: "Priority 3: Auto Version Bump"
 
 on:
   push:
@@ -7,6 +7,11 @@ on:
       - develop
       - 'feature/**'
       - 'release/**'
+
+# Priority 3: Post-merge workflow - runs after PR workflows complete
+concurrency:
+  group: priority-3-auto-version-${{ github.repository }}
+  cancel-in-progress: false  # Don't cancel to ensure version consistency
 
 jobs:
   version-bump:

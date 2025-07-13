@@ -1,13 +1,19 @@
-name: Claude AI Approval Gate
+name: "Priority 2: Claude AI Approval Gate"
 
 # This workflow creates a required status check that only passes when Claude AI has approved the PR
 # Use this with GitHub Branch Protection Rules to block merging until Claude AI approval
+# Priority 2: Runs after Claude AI Review (Priority 1) completes
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
   pull_request_review:
     types: [submitted, dismissed]
+
+# Priority 2: Wait for Priority 1 (Claude Review) to complete before running
+concurrency:
+  group: priority-2-claude-approval-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false  # Don't cancel to ensure approval gate completion
 
 jobs:
   claude-approval-gate:

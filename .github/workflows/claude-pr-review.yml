@@ -1,4 +1,4 @@
-name: BlazeCommerce Claude AI Review Bot (Simplified & Secure)
+name: "Priority 1: Claude AI PR Review"
 
 on:
   pull_request:
@@ -9,10 +9,10 @@ on:
         description: 'PR number to review (optional - auto-detected for pull_request events)'
         required: false
 
-# Prevent race conditions between concurrent workflow runs
+# Priority 1: Highest priority workflow - PR-specific concurrency to prevent conflicts
 concurrency:
-  group: claude-review-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: priority-1-claude-review-pr-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+  cancel-in-progress: false  # Don't cancel to ensure review completion
 
 jobs:
   claude-review:
