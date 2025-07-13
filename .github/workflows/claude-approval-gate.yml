@@ -76,7 +76,7 @@ jobs:
     needs: [check-trigger]
     if: needs.check-trigger.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ vars.CLAUDE_DEPENDENCY_CHECK_TIMEOUT || 5 }}
+    timeout-minutes: ${{ vars.CLAUDE_DEPENDENCY_CHECK_TIMEOUT || 15 }}
     outputs:
       claude-review-completed: ${{ steps.check-completion.outputs.completed }}
       claude-review-conclusion: ${{ steps.check-completion.outputs.conclusion }}
@@ -196,7 +196,7 @@ jobs:
       - name: Get Current Status
         id: current-status
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
           GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -205,7 +205,7 @@ jobs:
       - name: Enhanced Claude AI Approval Check
         id: check-approval
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
         uses: actions/github-script@v7
         with:
@@ -405,15 +405,23 @@ jobs:
 
             console.log(`ANALYSIS: Final result: approved=${approved}, state=${statusState}, reason=${reason}`);
 
+      - name: Validate Required Token
+        run: |
+          if [ -z "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "ERROR: BOT_GITHUB_TOKEN secret is required for secure operation"
+            echo "Please configure BOT_GITHUB_TOKEN in repository secrets"
+            exit 1
+          fi
+          echo "SUCCESS: BOT_GITHUB_TOKEN is configured"
+
       - name: Update Approval Status
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
           GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          STATUS_STATE: ${{ steps.check-approval.outputs.status_state }}
+          STATUS_DESCRIPTION: ${{ steps.check-approval.outputs.status_description }}
         run: |
-          STATUS_STATE="${{ steps.check-approval.outputs.status_state }}"
-          STATUS_DESCRIPTION="${{ steps.check-approval.outputs.status_description }}"
-
           echo "INFO: Updating approval status: $STATUS_STATE - $STATUS_DESCRIPTION"
 
           # Use status manager to set the approval status
@@ -427,8 +435,8 @@ jobs:
 
             statusManager.setApprovalStatus(
               process.env.GITHUB_SHA,
-              '$STATUS_STATE',
-              '$STATUS_DESCRIPTION',
+              process.env.STATUS_STATE,
+              process.env.STATUS_DESCRIPTION,
               parseInt(process.env.PR_NUMBER)
             ).then(() => {
               console.log('SUCCESS: Approval status updated successfully');
@@ -533,7 +541,7 @@ jobs:
         id: evaluate-review
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             const prNumber = ${{ needs.check-trigger.outputs.pr_number }};
 
@@ -692,7 +700,7 @@ jobs:
         if: steps.evaluate-review.outputs.should_approve == 'true'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
 
@@ -759,7 +767,7 @@ jobs:
         if: steps.evaluate-review.outputs.should_approve == 'false' && steps.evaluate-review.outputs.reason == 'REQUIRED issues found in Claude review'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
 
