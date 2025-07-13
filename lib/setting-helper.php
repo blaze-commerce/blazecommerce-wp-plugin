@@ -12,27 +12,23 @@ function bw_get_general_settings( $key = false ) {
 }
 
 /**
- * Get Klaviyo API key from settings with fallback for migration
+ * Get Klaviyo API key from settings with proper validation
  *
  * @return string|null The Klaviyo API key or null if not set
  */
 function bw_get_klaviyo_api_key() {
 	$api_key = bw_get_general_settings( 'klaviyo_api_key' );
 
-	// Migration: If no API key is set in settings but we have the old hardcoded value,
-	// automatically migrate it to the settings system
-	if ( empty( $api_key ) ) {
-		$legacy_key = 'W7A7kP'; // The previously hardcoded key
+	// Validate API key format if present
+	if ( ! empty( $api_key ) && ! preg_match( '/^[A-Za-z0-9]{6,}$/', $api_key ) ) {
+		error_log( 'Invalid Klaviyo API key format detected' );
+		return null;
+	}
 
-		// Only migrate if this appears to be an existing installation
-		if ( get_option( 'wooless_general_settings_options' ) !== false ) {
-			// Set the legacy key in settings for seamless migration
-			$current_settings = bw_get_general_settings();
-			$current_settings['klaviyo_api_key'] = $legacy_key;
-			update_option( 'wooless_general_settings_options', $current_settings );
-
-			return $legacy_key;
-		}
+	// If no API key is set, check if this is an existing installation that needs configuration
+	if ( empty( $api_key ) && get_option( 'wooless_general_settings_options' ) !== false ) {
+		// Log that configuration is needed - do not auto-populate any values
+		error_log( 'Klaviyo API key needs to be configured in BlazeCommerce settings' );
 	}
 
 	return $api_key;
