@@ -243,6 +243,14 @@ SUGGESTION Items: Optional (not required for approval)
 Parsing Method: Direct comment parsing OR tracking file
 ```
 
+#### 4. Approval Revocation Protection (NEW)
+```yaml
+Previous Approval Status: No recent revocation due to new critical issues
+New Commit Analysis: Latest commits must not introduce REQUIRED/IMPORTANT issues
+Revocation Check: System automatically revokes approval if new critical issues found
+Security Gate: Prevents merge of previously-approved code with new vulnerabilities
+```
+
 #### 4. Quality Gates
 ```yaml
 Code Coverage: Maintained or improved (if configured)
@@ -257,6 +265,15 @@ Previous Logic: Claude Success OR Tracking Complete OR Recommendations Addressed
 Current Logic: Claude Success AND All REQUIRED Addressed AND All IMPORTANT Addressed
 Tracking File: Optional (will parse Claude comments if missing)
 Bypass Logic: Removed (no more auto-approval without recommendation checking)
+```
+
+#### 6. Approval Revocation System (NEW SECURITY FEATURE)
+```yaml
+Revocation Trigger: New commits introducing REQUIRED or IMPORTANT recommendations
+Revocation Action: Automatic REQUEST_CHANGES review creation
+Revocation Prevention: Blocks auto-approval until new issues are resolved
+Security Benefit: Prevents merge of previously-approved code with new vulnerabilities
+Audit Trail: Comprehensive logging of all revocation decisions
 ```
 
 ### Performance Targets

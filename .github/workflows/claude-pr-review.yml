@@ -427,6 +427,260 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Check for Approval Revocation
+        id: check-revocation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('🔍 Checking if approval revocation is needed...');
+
+            // Helper function to parse Claude review comments for recommendations
+            async function parseClaudeRecommendations(github, context) {
+              const requiredItems = [];
+              const importantItems = [];
+
+              try {
+                // Get PR comments with pagination support
+                const comments = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  per_page: 100
+                });
+
+                // Find the most recent Claude bot comment
+                const claudeComment = comments.data
+                  .filter(comment => {
+                    const isClaudeBot = comment.user.login === 'claude[bot]' ||
+                                       comment.user.type === 'Bot' ||
+                                       comment.user.login.includes('claude');
+                    const hasReviewContent = comment.body && (
+                      comment.body.includes('Code Review') ||
+                      comment.body.includes('🔴') ||
+                      comment.body.includes('🟡') ||
+                      comment.body.includes('REQUIRED') ||
+                      comment.body.includes('IMPORTANT')
+                    );
+                    return isClaudeBot && hasReviewContent;
+                  })
+                  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+                if (claudeComment) {
+                  let commentBody = claudeComment.body;
+
+                  // Input validation and sanitization
+                  if (!commentBody || typeof commentBody !== 'string') {
+                    return { requiredItems, importantItems };
+                  }
+
+                  // Limit content size and sanitize
+                  const MAX_CONTENT_SIZE = 50000;
+                  if (commentBody.length > MAX_CONTENT_SIZE) {
+                    commentBody = commentBody.substring(0, MAX_CONTENT_SIZE);
+                  }
+
+                  commentBody = commentBody.replace(/<script[^>]*>.*?<\/script>/gi, '')
+                                          .replace(/javascript:/gi, '')
+                                          .replace(/on\w+\s*=/gi, '');
+
+                  // Enhanced regex patterns for parsing recommendations
+                  const requiredPattern = /🔴\s*(?:.*?)?REQUIRED[\s\S]*?(?=🟡\s*(?:.*?)?(?:IMPORTANT|SUGGESTIONS)|🔵\s*SUGGESTIONS|$)/gi;
+                  const requiredMatches = commentBody.match(requiredPattern) || [];
+
+                  const importantPattern = /🟡\s*(?:.*?)?IMPORTANT[\s\S]*?(?=🔴\s*(?:.*?)?REQUIRED|🔵\s*SUGGESTIONS|$)/gi;
+                  const importantMatches = commentBody.match(importantPattern) || [];
+
+                  requiredItems.push(...requiredMatches.map(match => match.trim().substring(0, 1000)));
+                  importantItems.push(...importantMatches.map(match => match.trim().substring(0, 1000)));
+
+                  console.log(`Found ${requiredItems.length} REQUIRED and ${importantItems.length} IMPORTANT recommendations in latest Claude review`);
+                }
+              } catch (error) {
+                console.error(`Error parsing Claude recommendations: ${error.message}`);
+              }
+
+              return { requiredItems, importantItems };
+            }
+
+            // Check if PR was previously approved
+            async function checkPreviousApproval(github, context) {
+              try {
+                const reviews = await github.rest.pulls.listReviews({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: context.payload.pull_request.number
+                });
+
+                // Find the most recent approval
+                const approvals = reviews.data
+                  .filter(review => review.state === 'APPROVED')
+                  .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at));
+
+                if (approvals.length > 0) {
+                  const latestApproval = approvals[0];
+                  console.log(`✅ Found previous approval by ${latestApproval.user.login} at ${latestApproval.submitted_at}`);
+                  return {
+                    hasApproval: true,
+                    approvalId: latestApproval.id,
+                    approvedBy: latestApproval.user.login,
+                    approvedAt: latestApproval.submitted_at
+                  };
+                }
+
+                console.log('ℹ️ No previous approvals found');
+                return { hasApproval: false };
+              } catch (error) {
+                console.error(`Error checking previous approvals: ${error.message}`);
+                return { hasApproval: false };
+              }
+            }
+
+            // Main revocation logic
+            const claudeReviewSuccess = '${{ needs.claude-review-official.outputs.success }}' === 'true';
+
+            if (!claudeReviewSuccess) {
+              console.log('⚠️ Claude review failed - skipping revocation check');
+              core.setOutput('revocation_needed', 'false');
+              core.setOutput('reason', 'Claude review failed');
+              return { revocationNeeded: false, reason: 'Claude review failed' };
+            }
+
+            // Check for previous approval
+            const approvalStatus = await checkPreviousApproval(github, context);
+
+            if (!approvalStatus.hasApproval) {
+              console.log('ℹ️ No previous approval found - no revocation needed');
+              core.setOutput('revocation_needed', 'false');
+              core.setOutput('reason', 'No previous approval');
+              return { revocationNeeded: false, reason: 'No previous approval' };
+            }
+
+            // Parse current Claude recommendations
+            const { requiredItems, importantItems } = await parseClaudeRecommendations(github, context);
+
+            // Check if there are new critical recommendations
+            const hasNewCriticalIssues = requiredItems.length > 0 || importantItems.length > 0;
+
+            if (hasNewCriticalIssues) {
+              console.log(`🚨 APPROVAL REVOCATION NEEDED: Found ${requiredItems.length} REQUIRED and ${importantItems.length} IMPORTANT recommendations`);
+
+              core.setOutput('revocation_needed', 'true');
+              core.setOutput('required_count', requiredItems.length.toString());
+              core.setOutput('important_count', importantItems.length.toString());
+              core.setOutput('required_items', JSON.stringify(requiredItems));
+              core.setOutput('important_items', JSON.stringify(importantItems));
+              core.setOutput('approved_by', approvalStatus.approvedBy);
+              core.setOutput('approved_at', approvalStatus.approvedAt);
+              core.setOutput('reason', 'New critical recommendations found');
+
+              return {
+                revocationNeeded: true,
+                requiredCount: requiredItems.length,
+                importantCount: importantItems.length,
+                approvedBy: approvalStatus.approvedBy,
+                approvedAt: approvalStatus.approvedAt
+              };
+            } else {
+              console.log('✅ No new critical recommendations found - approval remains valid');
+              core.setOutput('revocation_needed', 'false');
+              core.setOutput('reason', 'No new critical issues');
+              return { revocationNeeded: false, reason: 'No new critical issues' };
+            }
+
+      - name: Revoke Approval if Needed
+        if: steps.check-revocation.outputs.revocation_needed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('🚨 Revoking previous approval due to new critical recommendations...');
+
+            const requiredCount = '${{ steps.check-revocation.outputs.required_count }}';
+            const importantCount = '${{ steps.check-revocation.outputs.important_count }}';
+            const requiredItems = JSON.parse('${{ steps.check-revocation.outputs.required_items }}');
+            const importantItems = JSON.parse('${{ steps.check-revocation.outputs.important_items }}');
+            const approvedBy = '${{ steps.check-revocation.outputs.approved_by }}';
+            const approvedAt = '${{ steps.check-revocation.outputs.approved_at }}';
+
+            // Create REQUEST_CHANGES review to revoke approval
+            let reviewBody = `## 🚨 Approval Revoked - New Critical Issues Detected
+
+            **Previous approval by @${approvedBy} (${new Date(approvedAt).toLocaleString()}) has been automatically revoked.**
+
+            ### 📋 Reason for Revocation
+            New commits have introduced critical issues that must be addressed before this PR can be approved again.
+
+            `;
+
+            if (requiredCount > 0) {
+              reviewBody += `### 🔴 REQUIRED Issues (${requiredCount})
+              **These critical issues must be fixed before approval:**
+
+              `;
+
+              requiredItems.forEach((item, index) => {
+                const cleanItem = item.replace(/🔴\s*(?:.*?)?REQUIRED\s*/gi, '').trim();
+                reviewBody += `${index + 1}. ${cleanItem.substring(0, 500)}...\n\n`;
+              });
+            }
+
+            if (importantCount > 0) {
+              reviewBody += `### 🟡 IMPORTANT Issues (${importantCount})
+              **These issues should be addressed for code quality:**
+
+              `;
+
+              importantItems.forEach((item, index) => {
+                const cleanItem = item.replace(/🟡\s*(?:.*?)?IMPORTANT\s*/gi, '').trim();
+                reviewBody += `${index + 1}. ${cleanItem.substring(0, 500)}...\n\n`;
+              });
+            }
+
+            reviewBody += `
+            ### 🔄 Next Steps
+            1. Address the REQUIRED issues listed above
+            2. Consider addressing the IMPORTANT issues for better code quality
+            3. Push new commits with the fixes
+            4. The Claude AI Review Bot will automatically re-evaluate for approval
+
+            ### 🛡️ Security Note
+            This automatic approval revocation helps ensure that new commits introducing critical issues don't bypass the review process, maintaining code quality and security standards.
+
+            ---
+            *This review was automatically generated by the Claude AI Review Bot's approval revocation system.*
+            `;
+
+            try {
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                event: 'REQUEST_CHANGES',
+                body: reviewBody
+              });
+
+              console.log('✅ Successfully created REQUEST_CHANGES review to revoke approval');
+
+              // Log the revocation for audit purposes
+              const revocationLog = {
+                timestamp: new Date().toISOString(),
+                pr_number: context.payload.pull_request.number,
+                action: 'approval_revoked',
+                previously_approved_by: approvedBy,
+                previously_approved_at: approvedAt,
+                revocation_reason: 'new_critical_recommendations',
+                required_issues_count: requiredCount,
+                important_issues_count: importantCount,
+                actor: context.actor,
+                workflow_run_id: context.runId
+              };
+
+              console.log('📊 REVOCATION AUDIT LOG:', JSON.stringify(revocationLog, null, 2));
+
+            } catch (error) {
+              console.error(`❌ Failed to create revocation review: ${error.message}`);
+              throw error;
+            }
+
       - name: Check Auto-Approval Criteria
         id: check-criteria
         uses: actions/github-script@v7
@@ -558,11 +812,26 @@ jobs:
               return { action: 'skip_approval', reason: 'Token validation failed' };
             }
 
-            // Step 2: Check if Claude review succeeded
+            // Step 2: Check if approval was just revoked
+            const revocationNeeded = '${{ steps.check-revocation.outputs.revocation_needed }}' === 'true';
+            if (revocationNeeded) {
+              console.log('🚨 Approval was just revoked due to new critical recommendations - skipping auto-approval');
+              core.setOutput('action_type', 'skip_approval');
+              core.setOutput('reason', 'Approval revoked due to new critical recommendations');
+              core.setOutput('all_required_addressed', 'false');
+              core.setOutput('all_important_addressed', 'false');
+              core.setOutput('pending_required_count', '${{ steps.check-revocation.outputs.required_count }}');
+              core.setOutput('pending_important_count', '${{ steps.check-revocation.outputs.important_count }}');
+              core.setOutput('pending_required_items', '${{ steps.check-revocation.outputs.required_items }}');
+              core.setOutput('pending_important_items', '${{ steps.check-revocation.outputs.important_items }}');
+              return { action: 'skip_approval', reason: 'Approval revoked due to new critical recommendations' };
+            }
+
+            // Step 3: Check if Claude review succeeded
             const claudeReviewSuccess = '${{ needs.claude-review-official.outputs.success }}' === 'true';
             console.log(`Claude Review Success: ${claudeReviewSuccess}`);
 
-            // Step 3: Check GitHub Actions status
+            // Step 4: Check GitHub Actions status
             try {
               const checkRuns = await github.rest.checks.listForRef({
                 owner: context.repo.owner,
@@ -1041,6 +1310,8 @@ jobs:
             const pendingImportantItems = '${{ steps.check-criteria.outputs.pending_important_items }}' || '[]';
             const allRequiredAddressed = '${{ steps.check-criteria.outputs.all_required_addressed }}' === 'true';
             const allImportantAddressed = '${{ steps.check-criteria.outputs.all_important_addressed }}' === 'true';
+            const revocationNeeded = '${{ steps.check-revocation.outputs.revocation_needed }}' === 'true';
+            const revocationReason = '${{ steps.check-revocation.outputs.reason }}' || 'N/A';
 
             let statusBody = `## 🔍 Auto-Approval Status Check
 
@@ -1136,9 +1407,27 @@ jobs:
             - **REQUIRED Items**: ${pendingRequiredCount > 0 ? `❌ ${pendingRequiredCount} pending` : (allRequiredAddressed ? '✅ All addressed' : '⚠️ Status unknown')}
             - **IMPORTANT Items**: ${pendingImportantCount > 0 ? `⏳ ${pendingImportantCount} pending` : (allImportantAddressed ? '✅ All addressed' : '⚠️ Status unknown')}
             - **Claude Review**: ${'${{ needs.claude-review-official.outputs.success }}' === 'true' ? '✅ Completed' : '❌ Failed'}
+            - **Approval Status**: ${revocationNeeded ? '🚨 Previous approval revoked due to new critical issues' : '✅ No revocation needed'}
+
+            ${revocationNeeded ? `
+            ### 🚨 Approval Revocation Notice
+
+            **A previous approval has been automatically revoked** because new commits introduced critical issues that must be addressed:
+            - **REQUIRED Issues**: ${pendingRequiredCount} critical issues found
+            - **IMPORTANT Issues**: ${pendingImportantCount} significant issues found
+
+            **Next Steps:**
+            1. Review the REQUEST_CHANGES review above for detailed issue descriptions
+            2. Address all REQUIRED issues (critical for approval)
+            3. Consider addressing IMPORTANT issues (recommended for code quality)
+            4. Push new commits with fixes
+            5. The bot will automatically re-evaluate for approval
+
+            **Security Note:** This automatic revocation prevents previously-approved code from being merged when new commits introduce security or quality issues.
+            ` : ''}
 
             ---
-            *BlazeCommerce Claude AI Review Bot v3.0 - Enhanced Auto-Approval with Detailed Status Tracking*`;
+            *BlazeCommerce Claude AI Review Bot v3.1 - Enhanced Auto-Approval with Automatic Revocation System*`;
 
             try {
               await github.rest.issues.createComment({
