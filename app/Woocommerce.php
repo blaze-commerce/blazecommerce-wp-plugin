@@ -46,7 +46,18 @@ class Woocommerce {
 	 * @return void
 	 */
 	public function before_delete_product( $post_id ) {
+		// Enhanced error handling: validate post ID and type
+		if ( ! is_numeric( $post_id ) || $post_id <= 0 ) {
+			error_log( 'BlazeCommerce: Invalid post ID provided for deletion: ' . $post_id );
+			return;
+		}
+
 		$post_type = get_post_type( $post_id );
+		if ( ! $post_type ) {
+			error_log( 'BlazeCommerce: Could not determine post type for ID: ' . $post_id );
+			return;
+		}
+
 		if ( $post_type === 'product' || $post_type === 'product_variation' ) {
 			$product = wc_get_product( $post_id );
 			if ( $product ) {

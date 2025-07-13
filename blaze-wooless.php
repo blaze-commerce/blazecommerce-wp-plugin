@@ -23,9 +23,14 @@ require_once plugin_dir_path( __FILE__ ) . 'lib/blaze-wooless-functions.php';
 require_once plugin_dir_path( __FILE__ ) . 'lib/blaze-wooless-shortcodes.php';
 require_once plugin_dir_path( __FILE__ ) . 'blocks/blocks.php';
 
-// Include test file for development/debugging
+// Include test file for development/debugging with enhanced error handling
 if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-	require_once plugin_dir_path( __FILE__ ) . 'test/test-country-specific-images.php';
+	$test_file = plugin_dir_path( __FILE__ ) . 'test/test-country-specific-images.php';
+	if ( file_exists( $test_file ) ) {
+		require_once $test_file;
+	} else {
+		error_log( 'BlazeCommerce: Test file not found: ' . $test_file );
+	}
 }
 
 
