@@ -3,7 +3,7 @@ title: "Automation Guide"
 description: "Automated workflows for version management, releases, and plugin packaging in the BlazeCommerce WordPress Plugin"
 category: "development"
 version: "1.0.0"
-last_updated: "2025-01-09"
+last_updated: "2025-07-13"
 author: "Blaze Commerce Team"
 tags: ["automation", "version-management", "releases", "workflows", "ci-cd"]
 related_docs: ["usage.md", "claude.md"]
@@ -146,6 +146,49 @@ npm install
 npm run build
 ```
 
+## Recent Workflow Fixes (2025-07-13)
+
+### Auto-Version Workflow Improvements
+
+The auto-version workflow has been updated with the following fixes:
+
+1. **Git Configuration**: Fixed Git user configuration to use proper GitHub Actions bot identity
+   - Changed from `action@github.com` to `github-actions[bot]@users.noreply.github.com`
+   - Updated user name to `github-actions[bot]`
+
+2. **Token Permissions**: Enhanced token handling and permissions
+   - Added `actions: read` permission for better workflow access
+   - Improved token fallback logic: `BC_GITHUB_TOKEN || github.token`
+
+3. **Commit Process**: Added comprehensive error handling and debugging
+   - Added git status checks before and after commit operations
+   - Enhanced error messages for troubleshooting failed commits
+   - Added verification steps for successful push operations
+
+### Release Workflow Improvements
+
+The release workflow has been updated with:
+
+1. **Permissions**: Added proper permissions for each job
+   - `validate-release`: `contents: read, actions: read`
+   - `build-and-release`: `contents: write, actions: read`
+   - `workflow-summary`: `contents: read`
+
+2. **Release Creation**: Enhanced GitHub release creation process
+   - Added `fail_on_unmatched_files: true` for better error detection
+   - Improved token handling with fallback logic
+   - Added release verification step to confirm successful creation
+
+3. **Error Handling**: Better debugging and error reporting throughout the workflow
+
+### Testing Commit Messages
+
+To test the fixed workflows, use these commit message formats:
+
+- **Patch bump**: `fix: repair auto-version workflow commit issues`
+- **Minor bump**: `feat: add enhanced error handling to release workflow`
+- **Major bump**: `feat!: restructure workflow permissions (BREAKING CHANGE)`
+
 ## Best Practices
 
 1. **Always use conventional commits** for automatic version management
@@ -153,3 +196,5 @@ npm run build
 3. **Review changelog** before creating releases
 4. **Keep dependencies updated** in both root and blocks package.json
 5. **Follow semantic versioning** principles
+6. **Monitor workflow runs** in GitHub Actions for any failures
+7. **Check branch protection rules** if commits fail to push
