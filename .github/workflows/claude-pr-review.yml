@@ -297,12 +297,12 @@ jobs:
               event: 'APPROVE',
               body: `## ✅ BlazeCommerce Claude AI Review - Auto-Approved
 
-🤖 **Automated approval** - All quality gates passed:
-- ✅ No blocking (🔴 REQUIRED) issues found
-- ✅ All GitHub checks passing
-- ✅ Code meets BlazeCommerce standards for ${{ needs.claude-review.outputs.repo_type }}
+            🤖 **Automated approval** - All quality gates passed:
+            - ✅ No blocking (🔴 REQUIRED) issues found
+            - ✅ All GitHub checks passing
+            - ✅ Code meets BlazeCommerce standards for ${{ needs.claude-review.outputs.repo_type }}
 
-*This PR has been automatically approved by the BlazeCommerce Claude AI Review Bot.*`
+            *This PR has been automatically approved by the BlazeCommerce Claude AI Review Bot.*`
             });
 
             console.log('✅ PR approved successfully');

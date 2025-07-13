@@ -137,20 +137,20 @@ jobs:
 
         # SECURITY FIX: Validate semantic version format using secure temp script
         cat > temp_validate_version.js << 'EOF'
-const { isValidSemver } = require('./scripts/semver-utils');
-const version = process.env.VERSION;
+        const { isValidSemver } = require('./scripts/semver-utils');
+        const version = process.env.VERSION;
 
-try {
-  if (!isValidSemver(version)) {
-    console.error('❌ Invalid semantic version format:', version);
-    process.exit(1);
-  }
-  console.log('✅ Valid semantic version format');
-} catch (error) {
-  console.error('Error validating version:', error.message);
-  process.exit(1);
-}
-EOF
+        try {
+          if (!isValidSemver(version)) {
+            console.error('❌ Invalid semantic version format:', version);
+            process.exit(1);
+          }
+          console.log('✅ Valid semantic version format');
+        } catch (error) {
+          console.error('Error validating version:', error.message);
+          process.exit(1);
+        }
+        EOF
 
         # Set environment variable securely
         export VERSION="$VERSION"

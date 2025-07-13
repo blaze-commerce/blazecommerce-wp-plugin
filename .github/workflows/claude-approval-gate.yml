@@ -12,7 +12,7 @@ on:
 
 # Priority 2: Wait for Priority 1 (Claude Review) to complete before running
 concurrency:
-  group: priority-2-claude-approval-pr-${{ github.event.pull_request.number }}
+  group: priority-2-claude-approval-pr-${{ github.event.pull_request.number || github.event.number }}
   cancel-in-progress: false  # Don't cancel to ensure approval gate completion
 
 jobs:
