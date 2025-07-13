@@ -183,38 +183,76 @@ function testConflictResolution() {
  */
 function testWordPressTestScript() {
   console.log('   Testing WordPress test script...');
-  
+
   const scriptPath = path.join(__dirname, '..', 'bin', 'install-wp-tests.sh');
-  
+
   if (!fs.existsSync(scriptPath)) {
     return 'WordPress test script does not exist';
   }
-  
+
   // Check that the script is executable
   const stats = fs.statSync(scriptPath);
   if (!(stats.mode & parseInt('111', 8))) {
     return 'WordPress test script is not executable';
   }
-  
+
   // Check for enhanced error handling patterns
   const scriptContent = fs.readFileSync(scriptPath, 'utf8');
-  
+
   const requiredPatterns = [
     'SVN_RETRY_COUNT',
-    'DOWNLOAD_RETRY_COUNT', 
+    'DOWNLOAD_RETRY_COUNT',
     'DB_CONNECTION_RETRY',
     'FALLBACK:',
     'Enhanced',
-    'retry logic'
+    'retry logic',
+    'check_dependencies',
+    'command_exists',
+    'missing_deps'
   ];
-  
+
   for (const pattern of requiredPatterns) {
     if (!scriptContent.includes(pattern)) {
       return `Missing enhanced pattern: ${pattern}`;
     }
   }
-  
+
   console.log('   Enhanced error handling patterns found');
+  return true;
+}
+
+/**
+ * Test 7: Test GitHub Actions workflow improvements
+ */
+function testGitHubActionsWorkflow() {
+  console.log('   Testing GitHub Actions workflow improvements...');
+
+  const workflowPath = path.join(__dirname, '..', '.github', 'workflows', 'tests.yml');
+
+  if (!fs.existsSync(workflowPath)) {
+    return 'GitHub Actions workflow file does not exist';
+  }
+
+  const workflowContent = fs.readFileSync(workflowPath, 'utf8');
+
+  const requiredPatterns = [
+    'mysql-client',
+    'subversion',
+    'mysqladmin',
+    'bash -x bin/install-wp-tests.sh',
+    'CHECKING: Directory structure',
+    'CHECKING: SVN connectivity',
+    'CHECKING: Database connectivity',
+    'WordPress test environment verified'
+  ];
+
+  for (const pattern of requiredPatterns) {
+    if (!workflowContent.includes(pattern)) {
+      return `Missing workflow pattern: ${pattern}`;
+    }
+  }
+
+  console.log('   GitHub Actions workflow enhancements found');
   return true;
 }
 
@@ -251,6 +289,7 @@ runTest('Test 3: Version File Validation', testVersionFileValidation);
 runTest('Test 4: Conflict Resolution', testConflictResolution);
 runTest('Test 5: WordPress Test Script', testWordPressTestScript);
 runTest('Test 6: Package.json Scripts', testPackageJsonScripts);
+runTest('Test 7: GitHub Actions Workflow', testGitHubActionsWorkflow);
 
 // Summary
 console.log('📊 TEST SUMMARY');

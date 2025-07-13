@@ -6,15 +6,20 @@ This document details the comprehensive fixes implemented to resolve the failing
 
 ## Issues Identified
 
-### 1. Tests Workflow Failures (Run #16251684911)
+### 1. Tests Workflow Failures (Run #16251684911 and subsequent runs)
 - **Problem**: Multiple test matrix jobs failing at "Setup WordPress test environment" step
-- **Root Cause**: SVN connectivity issues, lack of retry mechanisms, poor error handling
-- **Impact**: All PHP/WordPress version combinations failing
+- **Root Cause**: Missing system dependencies (SVN, MySQL client tools), poor error handling
+- **Impact**: All PHP/WordPress version combinations failing across all test matrix jobs
 
-### 2. Auto Version Bump Workflow Failures (Run #16251684907)  
+### 2. Auto Version Bump Workflow Failures (Run #16251684907)
 - **Problem**: "Execute version bump" step failing
 - **Root Cause**: Missing function exports in `semver-utils.js`, specifically `getLastVersionTag`
 - **Impact**: Version management system completely broken
+
+### 3. Missing System Dependencies
+- **Problem**: GitHub Actions runners missing critical dependencies
+- **Root Cause**: Incomplete dependency installation in workflow
+- **Impact**: WordPress test environment setup failing consistently
 
 ## Implemented Fixes
 
@@ -44,31 +49,61 @@ module.exports = {
 };
 ```
 
-### 2. Enhanced WordPress Test Environment Setup
+### 2. Fixed Missing System Dependencies
+
+**File**: `.github/workflows/tests.yml`
+
+**Critical Fixes**:
+- **Added MySQL Client Tools**: `mysql-client` package installation
+- **Added MySQL Admin Tools**: `mysqladmin` for database health checks
+- **Enhanced SVN Installation**: Proper `subversion` package installation
+- **Added Archive Tools**: `unzip`, `tar` for file extraction
+- **Added HTTP Clients**: `curl`, `wget` for downloads
+- **Added Git**: Version control tools
+
+**Installation Command**:
+```bash
+sudo apt-get install -y \
+  subversion \
+  mysql-client \
+  curl \
+  wget \
+  unzip \
+  tar \
+  git
+```
+
+### 3. Enhanced WordPress Test Environment Setup
 
 **File**: `bin/install-wp-tests.sh`
 
 **Major Improvements**:
 
-#### A. SVN Download with Retry Logic
+#### A. Comprehensive Dependency Checking
+- Added `check_dependencies()` function
+- Validates all required tools before execution
+- Provides specific installation instructions for missing dependencies
+- Prevents execution with missing critical tools
+
+#### B. SVN Download with Retry Logic
 - Added 3-attempt retry mechanism for SVN operations
 - Enhanced error messages with specific troubleshooting steps
 - Fallback to trunk version if specific version fails
 - Added `--non-interactive --trust-server-cert` flags for CI environments
 
-#### B. WordPress Version Detection Enhancement
+#### C. WordPress Version Detection Enhancement
 - Improved version detection with HTTPS/HTTP fallback
 - Better JSON validation and parsing
 - Automatic fallback to trunk if version detection fails
 - Enhanced error messages for debugging
 
-#### C. WordPress Core Download Improvements
+#### D. WordPress Core Download Improvements
 - Added retry logic for core downloads (3 attempts)
 - File validation to ensure downloads are complete and valid
 - Better error reporting with specific URLs and archive names
 - Separate handling for nightly vs stable versions
 
-#### D. Database Connection Enhancement
+#### E. Database Connection Enhancement
 - Added database connectivity testing with retry logic
 - Automatic database recreation in CI environments
 - Better error messages for database connection issues
