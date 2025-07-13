@@ -168,6 +168,31 @@ jobs:
             console.log(`🎯 Repository Type: ${repoType}`);
             console.log(`📝 Using ${repoType} specific prompt for Claude AI review`);
 
+      - name: Validate Review Prompt
+        id: validate-prompt
+        run: |
+          PROMPT="${{ steps.prepare-context.outputs.review_prompt }}"
+
+          # Input validation for security
+          if [ -z "$PROMPT" ]; then
+            echo "❌ Error: Review prompt is empty"
+            exit 1
+          fi
+
+          # Check for potentially malicious content
+          if echo "$PROMPT" | grep -qE "(rm\s+-rf|sudo|eval|exec|system|shell_exec)"; then
+            echo "❌ Error: Review prompt contains potentially dangerous commands"
+            exit 1
+          fi
+
+          # Limit prompt length for security
+          if [ ${#PROMPT} -gt 50000 ]; then
+            echo "❌ Error: Review prompt exceeds maximum length (50000 characters)"
+            exit 1
+          fi
+
+          echo "✅ Review prompt validation passed"
+
       - name: Claude AI Review (Attempt 1)
         id: claude-review-1
         continue-on-error: true
@@ -344,31 +369,34 @@ jobs:
               console.log(`📋 No tracking file, using Claude output: blocking=${hasBlockingIssues}`);
             }
 
-            // Check if all GitHub checks are passing
-            const { data: checkRuns } = await github.rest.checks.listForRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: context.payload.pull_request.head.sha
-            });
-
-            const failedChecks = checkRuns.check_runs.filter(check =>
-              check.status === 'completed' && check.conclusion !== 'success' && check.conclusion !== 'skipped'
-            );
-
             // Check if Claude review succeeded
             const claudeReviewSucceeded = '${{ needs.claude-review.result }}' === 'success';
 
-            const shouldApprove = claudeReviewSucceeded && !hasBlockingIssues && failedChecks.length === 0;
+            // Auto-approval decision based ONLY on Claude's recommendations
+            // GitHub checks are handled separately by branch protection rules
+            const shouldApprove = claudeReviewSucceeded && !hasBlockingIssues;
 
             core.setOutput('should_approve', shouldApprove ? 'true' : 'false');
             core.setOutput('blocking_issues', hasBlockingIssues ? 'true' : 'false');
-            core.setOutput('failed_checks', failedChecks.length.toString());
             core.setOutput('claude_review_failed', claudeReviewSucceeded ? 'false' : 'true');
 
             console.log(`🎯 Auto-approval decision: ${shouldApprove ? 'APPROVE' : 'SKIP'}`);
             console.log(`   - Claude review succeeded: ${claudeReviewSucceeded}`);
             console.log(`   - Blocking issues: ${hasBlockingIssues}`);
-            console.log(`   - Failed checks: ${failedChecks.length}`);
+            console.log(`   - GitHub checks: Handled by branch protection rules`);
+
+      - name: Validate Token Permissions
+        if: steps.check-criteria.outputs.should_approve == 'true'
+        run: |
+          # Document required permissions for tokens:
+          # BOT_GITHUB_TOKEN: pull_requests:write, contents:read, metadata:read
+          # github.token: pull_requests:write (limited to current repository)
+
+          if [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "✅ Using BOT_GITHUB_TOKEN with enhanced permissions"
+          else
+            echo "⚠️ Using default github.token with limited permissions"
+          fi
 
       - name: Auto-Approve PR
         if: steps.check-criteria.outputs.should_approve == 'true'
@@ -401,7 +429,6 @@ jobs:
         with:
           script: |
             const blockingIssues = '${{ steps.check-criteria.outputs.blocking_issues }}' === 'true';
-            const failedChecks = parseInt('${{ steps.check-criteria.outputs.failed_checks }}');
             const claudeReviewFailed = '${{ steps.check-criteria.outputs.claude_review_failed }}' === 'true';
 
             let skipReason = '## ⏳ BlazeCommerce Claude AI Review - Approval Pending\n\n';
@@ -414,12 +441,10 @@ jobs:
               skipReason += '❌ **Blocking Issues Found**: This PR has 🔴 REQUIRED recommendations that must be addressed before approval.\n\n';
             }
 
-            if (failedChecks > 0) {
-              skipReason += `❌ **Failed Checks**: ${failedChecks} GitHub check(s) are failing and must pass before approval.\n\n`;
-            }
+            skipReason += '📋 **Note**: GitHub checks status is handled separately by branch protection rules.\n\n';
 
             if (!claudeReviewFailed) {
-              skipReason += '*Address the issues above and the bot will automatically approve when criteria are met.*';
+              skipReason += '*Address the Claude AI recommendations above and the bot will automatically approve when criteria are met.*';
             } else {
               skipReason += '*Manual review and approval required due to service issues.*';
             }

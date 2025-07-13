@@ -136,7 +136,9 @@ jobs:
         echo "📦 Release version: $VERSION"
 
         # SECURITY FIX: Validate semantic version format using secure temp script
-        cat > temp_validate_version.js << 'EOF'
+        TEMP_VALIDATE_FILE=$(mktemp "${TMPDIR:-/tmp}/validate_version.XXXXXXXXXX.js")
+        trap 'rm -f "$TEMP_VALIDATE_FILE"' EXIT
+        cat > "$TEMP_VALIDATE_FILE" << 'EOF'
         const { isValidSemver } = require('./scripts/semver-utils');
         const version = process.env.VERSION;
 
@@ -156,13 +158,9 @@ jobs:
         export VERSION="$VERSION"
 
         # Execute secure validation
-        if ! node temp_validate_version.js; then
-          rm -f temp_validate_version.js
+        if ! node "$TEMP_VALIDATE_FILE"; then
           exit 1
         fi
-
-        # Clean up temporary file
-        rm -f temp_validate_version.js
 
         # Check if it's a prerelease
         if echo "$VERSION" | grep -qE "\-"; then
