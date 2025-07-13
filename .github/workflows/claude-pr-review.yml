@@ -4,6 +4,12 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'hotfix/**'
+      - 'bugfix/**'
+      - 'enhancement/**'
     branches-ignore:
       - main
       - develop
@@ -19,15 +25,16 @@ on:
 # Prevent race conditions between concurrent workflow runs
 # Enable cancellation for faster response to new commits
 concurrency:
-  group: claude-review-${{ github.ref }}
+  group: claude-review-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   claude-review-official:
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && !contains(github.ref, 'refs/heads/main') && !contains(github.ref, 'refs/heads/develop')) ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'push' && github.ref_name != 'main' && github.ref_name != 'develop') ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: 15  # Increased timeout for better reliability
 
@@ -59,18 +66,26 @@ jobs:
           echo "🔍 Workflow Trigger Debug Information:"
           echo "Event: ${{ github.event_name }}"
           echo "Ref: ${{ github.ref }}"
+          echo "Ref Name: ${{ github.ref_name }}"
           echo "SHA: ${{ github.sha }}"
           echo "Actor: ${{ github.actor }}"
           echo "Repository: ${{ github.repository }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Run Number: ${{ github.run_number }}"
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "PR Number: ${{ github.event.number }}"
             echo "PR Action: ${{ github.event.action }}"
+            echo "PR Head Ref: ${{ github.head_ref }}"
+            echo "PR Base Ref: ${{ github.base_ref }}"
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             echo "Push to branch: ${{ github.ref_name }}"
             echo "Before SHA: ${{ github.event.before }}"
             echo "After SHA: ${{ github.event.after }}"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "Manual trigger - PR Number: ${{ github.event.inputs.pr_number }}"
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "Triggered by workflow run completion"
           fi
 
       - name: Check if PR Already Approved and Skip if Minimal Changes
@@ -866,7 +881,7 @@ jobs:
 
   auto-approve:
     needs: claude-review-official
-    if: always()
+    if: always() && needs.claude-review-official.result != 'cancelled'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -1945,35 +1960,5 @@ jobs:
               console.log(`❌ Failed to post skip approval comment: ${error.message}`);
             }
 
-  auto-approve:
-    needs: claude-review-official
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
 
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
 
-    steps:
-      - name: Trigger Auto-Approval Check
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          script: |
-            console.log('🔄 Auto-approval workflow triggered by successful Claude review');
-
-            // Get the PR number from the workflow run
-            const workflowRun = context.payload.workflow_run;
-            const prNumber = workflowRun.pull_requests[0]?.number;
-
-            if (!prNumber) {
-              console.log('❌ No PR number found in workflow run');
-              return;
-            }
-
-            console.log(`✅ Auto-approval check completed for PR #${prNumber}`);
-
-            // The actual auto-approval logic is handled in the claude-review-official job
-            // This job serves as a trigger point for workflow_run events
