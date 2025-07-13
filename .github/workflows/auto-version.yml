@@ -15,12 +15,13 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+      actions: read
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.AUTOMATION_TOKEN || secrets.BC_GITHUB_TOKEN }}
+        token: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
         fetch-depth: 0
 
     - name: Check if version bump is needed
@@ -115,8 +116,9 @@ jobs:
     - name: Configure Git
       if: steps.check_files.outputs.should_bump_version == 'true'
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        echo "✅ Git configured for automated commits"
 
     - name: Run version system tests
       if: steps.check_files.outputs.should_bump_version == 'true'
@@ -686,7 +688,21 @@ EOF
         VERSION=$(node -p "require('./package.json').version")
         echo "📝 Committing version bump to $VERSION..."
 
+        # Debug git status
+        echo "🔍 Git status before commit:"
+        git status --porcelain
+
+        # Add all changes
         git add .
+
+        # Verify there are changes to commit
+        if git diff --cached --quiet; then
+          echo "⚠️  No changes to commit after git add"
+          git status
+          exit 1
+        fi
+
+        # Create commit with detailed message
         git commit -m "chore(release): bump version to $VERSION [skip ci]
 
         🤖 Automated version bump
@@ -694,8 +710,27 @@ EOF
         🔄 Bump type: ${{ steps.bump_type.outputs.BUMP_TYPE }}
         📝 Updated files: package.json, blaze-wooless.php, blocks/package.json, docs/reference/changelog.md"
 
+        # Verify commit was created
+        if [ $? -ne 0 ]; then
+          echo "❌ Failed to create commit"
+          echo "🔍 Git status after failed commit:"
+          git status
+          exit 1
+        fi
+
+        echo "✅ Commit created successfully"
+        echo "🔍 Latest commit:"
+        git log --oneline -1
+
         echo "🚀 Pushing changes..."
-        git push
+        if ! git push; then
+          echo "❌ Failed to push changes"
+          echo "🔍 Git remote info:"
+          git remote -v
+          echo "🔍 Current branch:"
+          git branch --show-current
+          exit 1
+        fi
 
         echo "✅ Version bump completed and pushed successfully!"
 
