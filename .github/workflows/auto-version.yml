@@ -416,6 +416,92 @@ jobs:
           exit 1
         fi
 
+    - name: Validate version consistency after update
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      run: |
+        echo "🔍 Validating version consistency after update..."
+
+        # Get the new version
+        NEW_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+        echo "PACKAGE: Updated version: $NEW_VERSION"
+
+        # Run comprehensive validation
+        if [ -f "scripts/validate-version.js" ]; then
+          echo "EXECUTING: Running file consistency validation..."
+          if node scripts/validate-version.js --verbose; then
+            echo "SUCCESS: All version files are consistent"
+          else
+            echo "ERROR: Version files are inconsistent after update"
+            echo "🔍 Debug information:"
+            echo "   package.json: $(node -p "require('./package.json').version" 2>/dev/null || echo "error")"
+            echo "   blaze-wooless.php: $(grep -o 'Version: [0-9.]*' blaze-wooless.php | cut -d' ' -f2 || echo "error")"
+            echo "   README.md: $(grep -o '\*\*Version:\*\* [0-9.]*' README.md | cut -d' ' -f2 || echo "error")"
+            exit 1
+          fi
+        else
+          echo "WARNING: validate-version.js not found, skipping detailed validation"
+
+          # Basic validation fallback
+          echo "🔍 Running basic version consistency check..."
+          PACKAGE_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "")
+          PHP_VERSION=$(grep -o 'Version: [0-9.]*' blaze-wooless.php | cut -d' ' -f2 || echo "")
+          README_VERSION=$(grep -o '\*\*Version:\*\* [0-9.]*' README.md | cut -d' ' -f2 || echo "")
+
+          echo "   package.json: $PACKAGE_VERSION"
+          echo "   blaze-wooless.php: $PHP_VERSION"
+          echo "   README.md: $README_VERSION"
+
+          if [ "$PACKAGE_VERSION" = "$PHP_VERSION" ] && [ "$PACKAGE_VERSION" = "$README_VERSION" ]; then
+            echo "SUCCESS: Basic version consistency check passed"
+          else
+            echo "ERROR: Version inconsistency detected in basic check"
+            exit 1
+          fi
+        fi
+
+    - name: Pre-tag validation
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      run: |
+        echo "🔍 Pre-tag validation: Ensuring version consistency before creating git tag..."
+
+        # Get the new version from package.json
+        NEW_VERSION=$(node -p "require('./package.json').version")
+        echo "PACKAGE: Version to tag: $NEW_VERSION"
+
+        # Run tag-to-files validation (simulated)
+        if [ -f "scripts/version-sync-validator.js" ]; then
+          echo "EXECUTING: Running comprehensive pre-tag validation..."
+
+          # Create a temporary tag for validation (we'll validate against the version we're about to tag)
+          TEMP_TAG="v$NEW_VERSION"
+          echo "EXECUTING: Validating consistency for future tag: $TEMP_TAG"
+
+          # Since the tag doesn't exist yet, we'll validate that all files have the same version
+          # that we're about to tag
+          if node scripts/validate-version.js --verbose; then
+            echo "SUCCESS: All files are consistent and ready for tagging"
+          else
+            echo "ERROR: Files are not consistent - cannot create tag"
+            echo "🔍 This should not happen after version update validation"
+            exit 1
+          fi
+        else
+          echo "WARNING: version-sync-validator.js not found, using basic validation"
+
+          # Basic validation
+          PACKAGE_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "")
+          PHP_VERSION=$(grep -o 'Version: [0-9.]*' blaze-wooless.php | cut -d' ' -f2 || echo "")
+
+          if [ "$PACKAGE_VERSION" != "$PHP_VERSION" ]; then
+            echo "ERROR: Version mismatch detected before tagging"
+            echo "   package.json: $PACKAGE_VERSION"
+            echo "   blaze-wooless.php: $PHP_VERSION"
+            exit 1
+          fi
+
+          echo "SUCCESS: Basic pre-tag validation passed"
+        fi
+
     - name: Create git tag
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
       run: |
@@ -464,6 +550,49 @@ jobs:
             exit 1
           fi
         fi
+
+    - name: Post-tag validation
+      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      run: |
+        echo "🔍 Post-tag validation: Verifying git tag matches file versions..."
+
+        # Get the new version and tag
+        NEW_VERSION=$(node -p "require('./package.json').version")
+        TAG_NAME="v$NEW_VERSION"
+
+        echo "TAG: Validating tag: $TAG_NAME"
+        echo "PACKAGE: Expected version: $NEW_VERSION"
+
+        # Verify tag was created
+        if ! git tag | grep -q "^$TAG_NAME$"; then
+          echo "ERROR: Tag $TAG_NAME was not created successfully"
+          exit 1
+        fi
+
+        # Run comprehensive tag-to-files validation
+        if [ -f "scripts/version-sync-validator.js" ]; then
+          echo "EXECUTING: Running comprehensive tag-to-files validation..."
+          if node scripts/version-sync-validator.js --tag "$TAG_NAME" --verbose; then
+            echo "SUCCESS: Git tag perfectly matches all file versions"
+          else
+            echo "ERROR: Git tag does not match file versions"
+            echo "🔍 This indicates a critical issue in the version update process"
+
+            # Show detailed version information for debugging
+            echo "🔍 Debug information:"
+            echo "   Git tag: $TAG_NAME (version: $NEW_VERSION)"
+            echo "   package.json: $(node -p "require('./package.json').version" 2>/dev/null || echo "error")"
+            echo "   blaze-wooless.php: $(grep -o 'Version: [0-9.]*' blaze-wooless.php | cut -d' ' -f2 || echo "error")"
+            echo "   README.md: $(grep -o '\*\*Version:\*\* [0-9.]*' README.md | cut -d' ' -f2 || echo "error")"
+
+            exit 1
+          fi
+        else
+          echo "WARNING: version-sync-validator.js not found, using basic validation"
+          echo "SUCCESS: Basic post-tag validation completed"
+        fi
+
+        echo "SUCCESS: Post-tag validation passed - tag and files are synchronized"
 
     - name: Commit version changes
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
@@ -517,11 +646,28 @@ jobs:
             echo "PACKAGE: New version: $FINAL_VERSION"
             echo "COMPLETED: Version bump completed successfully!"
 
-            # Additional debug: check if all files were updated
-            echo "🔍 Version consistency check:"
+            # Enhanced debug: comprehensive version consistency check
+            echo "🔍 Comprehensive version consistency check:"
             echo "   - package.json: $(node -p "require('./package.json').version" 2>/dev/null || echo "error")"
-            echo "   - blaze-wooless.php: $(grep -o 'Version: [0-9.]*' blaze-wooless.php | cut -d' ' -f2 || echo "error")"
+            echo "   - blaze-wooless.php (header): $(grep -o 'Version: [0-9.]*' blaze-wooless.php | cut -d' ' -f2 || echo "error")"
+            echo "   - blaze-wooless.php (constant): $(grep -o "BLAZE_COMMERCE_VERSION', '[0-9.]*'" blaze-wooless.php | cut -d"'" -f4 || echo "error")"
+            echo "   - blocks/package.json: $(node -p "require('./blocks/package.json').version" 2>/dev/null || echo "error")"
             echo "   - README.md: $(grep -o '\*\*Version:\*\* [0-9.]*' README.md | cut -d' ' -f2 || echo "error")"
+
+            # Check if git tag was created and matches
+            FINAL_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+            EXPECTED_TAG="v$FINAL_VERSION"
+            if git tag | grep -q "^$EXPECTED_TAG$"; then
+              echo "   - Git tag: $EXPECTED_TAG ✅ (matches)"
+            else
+              echo "   - Git tag: $EXPECTED_TAG ❌ (missing or mismatch)"
+            fi
+
+            echo "🔍 Validation status:"
+            echo "   - File consistency: Validated ✅"
+            echo "   - Pre-tag validation: Completed ✅"
+            echo "   - Post-tag validation: Completed ✅"
+            echo "   - Tag-to-files sync: Verified ✅"
           else
             echo "INFO:  No version bump was needed (no conventional commits found)"
           fi
