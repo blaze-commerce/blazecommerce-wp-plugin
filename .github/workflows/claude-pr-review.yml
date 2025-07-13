@@ -112,6 +112,13 @@ jobs:
               const isApproved = approvedReviews.length > 0;
 
               console.log(`PR approval status: ${isApproved ? 'APPROVED' : 'NOT APPROVED'}`);
+              console.log(`Number of approved reviews: ${approvedReviews.length}`);
+
+              if (!isApproved) {
+                console.log('✅ PR not yet approved - proceeding with normal review');
+                core.setOutput('should_skip', 'false');
+                return;
+              }
 
               if (isApproved) {
                 // Check if recent changes are only workflow/config files
@@ -132,17 +139,36 @@ jobs:
                 const latestCommit = recentCommits.data[recentCommits.data.length - 1];
                 const commitMessage = latestCommit.commit.message.toLowerCase();
 
-                // Check if this is a workflow/config fix
-                const isWorkflowFix = commitMessage.includes('workflow') ||
-                                    commitMessage.includes('fix:') ||
-                                    commitMessage.includes('claude') ||
-                                    files.some(file => file.filename.startsWith('.github/workflows/'));
+                // Check if this is a minor workflow/config fix (not major workflow improvements)
+                const isMinorWorkflowFix = (
+                  // Only skip for specific minor workflow maintenance patterns
+                  (commitMessage.includes('chore:') && commitMessage.includes('workflow')) ||
+                  (commitMessage.includes('docs:') && commitMessage.includes('workflow')) ||
+                  (commitMessage.includes('fix:') && commitMessage.includes('claude') && commitMessage.includes('workflow')) ||
+                  // Or if it's specifically a Claude bot fix
+                  (commitMessage.includes('claude') && commitMessage.includes('bot')) ||
+                  // And only if files are limited to specific workflow maintenance (not major changes)
+                  (files.length <= 3 && files.every(file =>
+                    (file.filename.startsWith('.github/workflows/') &&
+                     !file.filename.includes('claude-pr-review') &&
+                     !file.filename.includes('auto-version') &&
+                     !file.filename.includes('release')) ||
+                    file.filename.startsWith('docs/') ||
+                    file.filename === 'README.md'
+                  ))
+                );
 
-                if (isWorkflowFix) {
-                  console.log('🔄 Detected workflow/config fix on approved PR - skipping review');
+                if (isMinorWorkflowFix) {
+                  console.log('🔄 Detected minor workflow/config maintenance on approved PR - skipping review');
+                  console.log(`📝 Commit message: ${commitMessage}`);
+                  console.log(`📁 Files changed: ${files.map(f => f.filename).join(', ')}`);
                   core.setOutput('should_skip', 'true');
-                  core.setOutput('skip_reason', 'workflow_fix_on_approved_pr');
+                  core.setOutput('skip_reason', 'minor_workflow_maintenance_on_approved_pr');
                   return;
+                } else {
+                  console.log('✅ Major workflow changes detected - proceeding with review');
+                  console.log(`📝 Commit message: ${commitMessage}`);
+                  console.log(`📁 Files changed: ${files.map(f => f.filename).join(', ')}`);
                 }
               }
 
