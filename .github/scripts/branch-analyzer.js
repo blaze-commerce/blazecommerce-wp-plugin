@@ -108,11 +108,34 @@ class BranchAnalyzer {
    * @param {Object} result - Analysis result
    */
   outputForGitHubActions(result) {
-    console.log(`prerelease_type=${result.prereleaseType}`);
-    console.log(`branch_name=${result.branchName}`);
-    console.log(`branch_type=${result.branchType}`);
-    console.log(`is_stable_release=${result.isStableRelease}`);
-    console.log(`reasoning=${result.reasoning}`);
+    const fs = require('fs');
+
+    // Prepare output data
+    const outputs = [
+      `prerelease_type=${result.prereleaseType}`,
+      `branch_name=${result.branchName}`,
+      `branch_type=${result.branchType}`,
+      `is_stable_release=${result.isStableRelease}`,
+      `reasoning=${result.reasoning}`
+    ];
+
+    // Write to GitHub Actions output file if available
+    if (process.env.GITHUB_OUTPUT) {
+      try {
+        outputs.forEach(output => {
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+        });
+        Logger.debug('Successfully wrote outputs to GITHUB_OUTPUT file');
+      } catch (error) {
+        Logger.error(`Failed to write to GITHUB_OUTPUT file: ${error.message}`);
+        // Fallback to stdout for backward compatibility
+        outputs.forEach(output => console.log(output));
+      }
+    } else {
+      // Fallback to stdout when GITHUB_OUTPUT is not available
+      Logger.debug('GITHUB_OUTPUT not available, using stdout');
+      outputs.forEach(output => console.log(output));
+    }
   }
 }
 

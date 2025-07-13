@@ -10,7 +10,8 @@
  */
 
 const fs = require('fs');
-const { Logger, handleError, handleWarning, ErrorCategory, ErrorSeverity } = require('./error-handler');
+const { Logger } = require('./file-change-analyzer');
+const { handleError, handleWarning, ErrorCategory, ErrorSeverity } = require('./error-handler');
 
 /**
  * Commit Parser Class
@@ -56,18 +57,31 @@ class CommitParser {
         const result = {
           isValid: true,
           type: match[1].toLowerCase(),
-        scope: match[2] ? match[2].slice(1, -1) : null,
-        description: match[3],
-        isConventional: true
+          scope: match[2] ? match[2].slice(1, -1) : null,
+          description: match[4],
+          isBreaking: match[3] === '!' || message.includes('BREAKING CHANGE'),
+          isConventional: true
+        };
+
+        Logger.debug(`Parsed conventional commit: ${result.type}${result.scope ? `(${result.scope})` : ''}`);
+        return result;
+      }
+
+      return {
+        type: 'unknown',
+        scope: null,
+        description: message,
+        isConventional: false
+      };
+    } catch (error) {
+      Logger.error(`Failed to parse commit message: ${error.message}`);
+      return {
+        type: 'unknown',
+        scope: null,
+        description: message,
+        isConventional: false
       };
     }
-    
-    return {
-      type: 'unknown',
-      scope: null,
-      description: message,
-      isConventional: false
-    };
   }
 
   /**
@@ -252,18 +266,18 @@ class CommitParser {
    * Main execution function
    */
   run() {
-    console.log('DEBUG: Starting commit analysis...');
-    
+    console.error('DEBUG: Starting commit analysis...');
+
     const analysis = this.analyzeCommits();
     const changelog = this.generateChangelog();
     const shouldSkip = this.shouldSkipVersionBump();
-    
-    console.log('ANALYSIS: Commit Analysis Results:');
-    console.log(`  Total Commits: ${analysis.totalCommits}`);
-    console.log(`  Conventional Commits: ${analysis.conventionalCommits}`);
-    console.log(`  Release Type: ${analysis.releaseType}`);
-    console.log(`  Skip Version: ${shouldSkip}`);
-    console.log(`  Skip CI: ${analysis.skipCI}`);
+
+    console.error('ANALYSIS: Commit Analysis Results:');
+    console.error(`  Total Commits: ${analysis.totalCommits}`);
+    console.error(`  Conventional Commits: ${analysis.conventionalCommits}`);
+    console.error(`  Release Type: ${analysis.releaseType}`);
+    console.error(`  Skip Version: ${shouldSkip}`);
+    console.error(`  Skip CI: ${analysis.skipCI}`);
     
     // Output for GitHub Actions
     if (process.env.GITHUB_OUTPUT) {
@@ -286,10 +300,10 @@ class CommitParser {
     if (changelog && process.env.GITHUB_WORKSPACE) {
       const changelogPath = `${process.env.GITHUB_WORKSPACE}/CHANGELOG_ENTRY.md`;
       fs.writeFileSync(changelogPath, changelog);
-      console.log(`NOTE: Changelog entry written to ${changelogPath}`);
+      console.error(`NOTE: Changelog entry written to ${changelogPath}`);
     }
-    
-    console.log('SUCCESS: Commit analysis completed successfully');
+
+    console.error('SUCCESS: Commit analysis completed successfully');
   }
 }
 

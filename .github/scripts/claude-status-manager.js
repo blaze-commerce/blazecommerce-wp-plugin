@@ -339,12 +339,35 @@ class ClaudeStatusUtils {
    * @param {Object} state - Workflow state
    */
   static outputForGitHubActions(state) {
-    console.log(`claude_review_state=${state.review.state}`);
-    console.log(`claude_approval_state=${state.approval.state}`);
-    console.log(`claude_needs_review=${state.needsReview}`);
-    console.log(`claude_can_merge=${state.canMerge}`);
-    console.log(`claude_review_exists=${state.review.exists}`);
-    console.log(`claude_approval_exists=${state.approval.exists}`);
+    const fs = require('fs');
+
+    // Prepare output data
+    const outputs = [
+      `claude_review_state=${state.review.state}`,
+      `claude_approval_state=${state.approval.state}`,
+      `claude_needs_review=${state.needsReview}`,
+      `claude_can_merge=${state.canMerge}`,
+      `claude_review_exists=${state.review.exists}`,
+      `claude_approval_exists=${state.approval.exists}`
+    ];
+
+    // Write to GitHub Actions output file if available
+    if (process.env.GITHUB_OUTPUT) {
+      try {
+        outputs.forEach(output => {
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+        });
+        Logger.debug('Successfully wrote outputs to GITHUB_OUTPUT file');
+      } catch (error) {
+        Logger.error(`Failed to write to GITHUB_OUTPUT file: ${error.message}`);
+        // Fallback to stdout for backward compatibility
+        outputs.forEach(output => console.log(output));
+      }
+    } else {
+      // Fallback to stdout when GITHUB_OUTPUT is not available
+      Logger.debug('GITHUB_OUTPUT not available, using stdout');
+      outputs.forEach(output => console.log(output));
+    }
   }
 }
 
