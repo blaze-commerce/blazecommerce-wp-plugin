@@ -56,6 +56,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --production
+
       - name: Determine Repository Type
         id: repo-context
         run: |
@@ -248,61 +257,41 @@ jobs:
 
       - name: Parse Claude Review and Update Tracking
         id: parse-review
+        run: |
+          echo "🔍 Processing Claude review with enhanced tracking..."
+
+          # Set environment variables for the script
+          export PR_NUMBER="${{ github.event.pull_request.number }}"
+          export CLAUDE_OUTPUT="${{ steps.review-success.outputs.review_response || '' }}"
+          export REPO_TYPE="${{ steps.prepare-context.outputs.repo_type }}"
+
+          # Run the enhanced Claude review processor
+          if node .github/scripts/claude-review-enhancer.js >> $GITHUB_OUTPUT; then
+            echo "✅ Claude review processing completed successfully"
+          else
+            echo "❌ Claude review processing failed, using fallback"
+            # Fallback to basic parsing
+            echo "has_blocking_issues=false" >> $GITHUB_OUTPUT
+            echo "required_count=0" >> $GITHUB_OUTPUT
+            echo "important_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Enhanced Claude Review Comment
+        if: steps.review-success.outputs.successful_attempt != 'none'
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const path = require('path');
+            const enhancedComment = `${{ steps.parse-review.outputs.enhanced_comment || steps.review-success.outputs.review_response }}`;
 
-            // Create tracking directory if it doesn't exist
-            const trackingDir = '.github/claude-tracking';
-            if (!fs.existsSync(trackingDir)) {
-              fs.mkdirSync(trackingDir, { recursive: true });
-            }
+            // Post the enhanced review comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: enhancedComment
+            });
 
-            // Parse Claude's review for REQUIRED and IMPORTANT items
-            const claudeOutput = `${{ steps.review-success.outputs.review_response || '' }}`;
-            const requiredItems = [];
-            const importantItems = [];
-
-            if (claudeOutput) {
-              const lines = claudeOutput.split('\n');
-              for (const line of lines) {
-                if (line.includes('🔴 REQUIRED')) {
-                  requiredItems.push(line.trim());
-                } else if (line.includes('🟡 IMPORTANT')) {
-                  importantItems.push(line.trim());
-                }
-              }
-            }
-
-            // Save tracking data
-            const trackingFile = path.join(trackingDir, `pr-${context.payload.pull_request.number}-recommendations.json`);
-            const trackingData = {
-              pr_number: context.payload.pull_request.number,
-              created_at: new Date().toISOString(),
-              repo_type: '${{ steps.prepare-context.outputs.repo_type }}',
-              total_recommendations: {
-                required: requiredItems.length,
-                important: importantItems.length
-              },
-              resolved_recommendations: {
-                required: [],
-                important: []
-              },
-              recommendations: {
-                required: requiredItems,
-                important: importantItems
-              }
-            };
-
-            fs.writeFileSync(trackingFile, JSON.stringify(trackingData, null, 2));
-
-            core.setOutput('required_count', requiredItems.length);
-            core.setOutput('important_count', importantItems.length);
-            core.setOutput('has_blocking_issues', requiredItems.length > 0 ? 'true' : 'false');
-
-            console.log(`📊 Found ${requiredItems.length} REQUIRED and ${importantItems.length} IMPORTANT items`);
+            console.log('📝 Posted enhanced Claude AI review comment');
 
       - name: Handle Claude AI Review Failure
         if: steps.review-success.outputs.successful_attempt == 'none'
