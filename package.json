@@ -1,75 +1,75 @@
 {
-  "name": "blazecommerce-wp-plugin",
-  "version": "1.12.0",
-  "description": "The official plugin that integrates your site with the Blaze Commerce service.",
-  "main": "blaze-wooless.php",
-  "scripts": {
-    "version:patch": "npm version patch --no-git-tag-version && npm run update-plugin-version",
-    "version:minor": "npm version minor --no-git-tag-version && npm run update-plugin-version",
-    "version:major": "npm version major --no-git-tag-version && npm run update-plugin-version",
-    "version:prerelease": "npm version prerelease --no-git-tag-version && npm run update-plugin-version",
-    "update-plugin-version": "node scripts/update-version.js",
-    "validate-version": "node scripts/validate-version.js",
-    "validate-version:verbose": "node scripts/validate-version.js --verbose",
-    "test:version-bump": "echo 'Testing version bump workflow'",
-    "build": "cd blocks && npm run build",
-    "build:blocks": "cd blocks && npm run build",
-    "release": "npm run build && node scripts/create-release.js",
-    "release:dry-run": "npm run build && node scripts/create-release.js --dry-run",
-    "changelog": "node scripts/update-changelog.js",
-    "changelog:dry-run": "node scripts/update-changelog.js --dry-run",
-    "changelog:verbose": "node scripts/update-changelog.js --verbose",
-    "changelog:technical": "node scripts/update-changelog.js --technical",
-    "changelog:grouped": "node scripts/update-changelog.js --group-by-scope",
-    "changelog:preview": "node scripts/update-changelog.js --dry-run --verbose --group-by-scope",
-    "version:check": "node -e \"console.log('Current version:', require('./package.json').version)\"",
-    "version:validate-all": "npm run validate-version && npm run build && echo '✅ All validations passed'",
-    "test:version-system": "node scripts/test-version-system.js",
-    "test:workflow-scenarios": "node scripts/test-workflow-scenarios.js",
-    "test:validation-flags": "node scripts/test-validation-flags.js",
-    "test:version-fix": "node scripts/test-version-fix.js",
-    "test:comprehensive-version": "node scripts/test-comprehensive-version-system.js",
-    "test:auto-increment": "node scripts/test-auto-increment.js",
-    "test:integration-version": "node scripts/test-integration-version-system.js",
-    "test:workflow-fixes": "node scripts/test-workflow-fixes.js",
-    "test:dependencies": "bash scripts/test-dependencies.sh",
-    "test:auto-version-workflow": "node scripts/test-auto-version-workflow.js",
-    "test:version-complete": "npm run test:version-system && npm run test:workflow-scenarios && npm run test:validation-flags && npm run test:version-fix && npm run test:comprehensive-version && npm run test:integration-version && npm run test:workflow-fixes",
-    "test:all-workflow-fixes": "npm run test:workflow-fixes && npm run test:dependencies && npm run test:auto-version-workflow",
-    "_comment": "CLAUDE AI REVIEW: Fixed duplicate prepare-release script from comment #3060465549",
-    "prepare-release": "npm run validate-version && npm run build && npm run changelog && echo '🚀 Release preparation complete'",
-    "prepare-release:quick": "npm run changelog && npm run build && git add .",
-    "validate-docs": "node scripts/validate-docs.js",
-    "docs:validate": "node scripts/validate-docs.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/blaze-commerce/blazecommerce-wp-plugin.git"
-  },
-  "keywords": [
-    "wordpress",
-    "plugin",
-    "woocommerce",
-    "blazecommerce",
-    "ecommerce"
-  ],
-  "author": "Blaze Commerce",
-  "license": "GPL-2.0-or-later",
-  "bugs": {
-    "url": "https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues"
-  },
-  "homepage": "https://www.blazecommerce.io",
-  "devDependencies": {
-    "jest": "^29.7.0",
-    "js-yaml": "^4.1.0",
-    "semver": "^7.5.4",
-    "node-fetch": "^2.6.7"
-  },
-  "engines": {
-    "node": ">=14.0.0",
-    "npm": ">=6.0.0"
-  }
+	"name": "blazecommerce-wp-plugin",
+	"version": "1.14.0",
+	"description": "The official plugin that integrates your site with the Blaze Commerce service.",
+	"main": "blaze-wooless.php",
+	"scripts": {
+		"version:patch": "npm version patch --no-git-tag-version && npm run update-plugin-version",
+		"version:minor": "npm version minor --no-git-tag-version && npm run update-plugin-version",
+		"version:major": "npm version major --no-git-tag-version && npm run update-plugin-version",
+		"version:prerelease": "npm version prerelease --no-git-tag-version && npm run update-plugin-version",
+		"update-plugin-version": "node scripts/update-version.js",
+		"validate-version": "node scripts/validate-version.js",
+		"validate-version:verbose": "node scripts/validate-version.js --verbose",
+		"test:version-bump": "echo 'Testing version bump workflow'",
+		"build": "cd blocks && npm run build",
+		"build:blocks": "cd blocks && npm run build",
+		"release": "npm run build && node scripts/create-release.js",
+		"release:dry-run": "npm run build && node scripts/create-release.js --dry-run",
+		"changelog": "node scripts/update-changelog.js",
+		"changelog:dry-run": "node scripts/update-changelog.js --dry-run",
+		"changelog:verbose": "node scripts/update-changelog.js --verbose",
+		"changelog:technical": "node scripts/update-changelog.js --technical",
+		"changelog:grouped": "node scripts/update-changelog.js --group-by-scope",
+		"changelog:preview": "node scripts/update-changelog.js --dry-run --verbose --group-by-scope",
+		"version:check": "node -e \"console.log('Current version:', require('./package.json').version)\"",
+		"version:validate-all": "npm run validate-version && npm run build && echo '✅ All validations passed'",
+		"test:version-system": "node scripts/test-version-system.js",
+		"test:workflow-scenarios": "node scripts/test-workflow-scenarios.js",
+		"test:validation-flags": "node scripts/test-validation-flags.js",
+		"test:version-fix": "node scripts/test-version-fix.js",
+		"test:comprehensive-version": "node scripts/test-comprehensive-version-system.js",
+		"test:auto-increment": "node scripts/test-auto-increment.js",
+		"test:integration-version": "node scripts/test-integration-version-system.js",
+		"test:workflow-fixes": "node scripts/test-workflow-fixes.js",
+		"test:dependencies": "bash scripts/test-dependencies.sh",
+		"test:auto-version-workflow": "node scripts/test-auto-version-workflow.js",
+		"test:version-complete": "npm run test:version-system && npm run test:workflow-scenarios && npm run test:validation-flags && npm run test:version-fix && npm run test:comprehensive-version && npm run test:integration-version && npm run test:workflow-fixes",
+		"test:all-workflow-fixes": "npm run test:workflow-fixes && npm run test:dependencies && npm run test:auto-version-workflow",
+		"_comment": "CLAUDE AI REVIEW: Fixed duplicate prepare-release script from comment #3060465549",
+		"prepare-release": "npm run validate-version && npm run build && npm run changelog && echo '🚀 Release preparation complete'",
+		"prepare-release:quick": "npm run changelog && npm run build && git add .",
+		"validate-docs": "node scripts/validate-docs.js",
+		"docs:validate": "node scripts/validate-docs.js",
+		"test": "jest",
+		"test:watch": "jest --watch",
+		"test:coverage": "jest --coverage"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/blaze-commerce/blazecommerce-wp-plugin.git"
+	},
+	"keywords": [
+		"wordpress",
+		"plugin",
+		"woocommerce",
+		"blazecommerce",
+		"ecommerce"
+	],
+	"author": "Blaze Commerce",
+	"license": "GPL-2.0-or-later",
+	"bugs": {
+		"url": "https://github.com/blaze-commerce/blazecommerce-wp-plugin/issues"
+	},
+	"homepage": "https://www.blazecommerce.io",
+	"devDependencies": {
+		"jest": "^29.7.0",
+		"js-yaml": "^4.1.0",
+		"semver": "^7.5.4",
+		"node-fetch": "^2.6.7"
+	},
+	"engines": {
+		"node": ">=14.0.0",
+		"npm": ">=6.0.0"
+	}
 }
