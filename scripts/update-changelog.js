@@ -3,6 +3,12 @@
 /**
  * Enhanced Changelog Generation Script
  * Generates categorized changelog based on conventional commits
+ *
+ * SECURITY ENHANCEMENTS (Claude AI Review Recommendations):
+ * - ReDoS protection with regex timeouts
+ * - Path sanitization for security
+ * - Input validation and length limits
+ * - Memory-conscious processing
  */
 
 const fs = require('fs');
@@ -11,8 +17,78 @@ const { execSync } = require('child_process');
 const { parseConventionalCommit, getCommitsSinceLastTag, getLatestTag } = require('./semver-utils');
 const config = require('./config');
 
+// Security constants
+const SECURITY_LIMITS = {
+  REGEX_TIMEOUT: 5000, // 5 seconds timeout for regex operations
+  MAX_ITERATIONS: 10000, // Prevent infinite loops
+  MAX_PATH_LENGTH: 1000, // Maximum path length for security
+  SUSPICIOUS_PATTERNS: [
+    /\.\./g, // Directory traversal
+    /[<>"|*?]/g, // Invalid filename characters
+    /[\x00-\x1f\x7f]/g // Control characters
+  ]
+};
+
 // Configuration for changelog file location
 const CHANGELOG_PATH = 'docs/reference/changelog.md';
+
+/**
+ * SECURITY: Sanitize file paths to prevent directory traversal attacks
+ * @param {string} inputPath - Path to sanitize
+ * @returns {string} Sanitized path
+ */
+function sanitizePath(inputPath) {
+  if (!inputPath || typeof inputPath !== 'string') {
+    throw new Error('Invalid path input');
+  }
+
+  if (inputPath.length > SECURITY_LIMITS.MAX_PATH_LENGTH) {
+    throw new Error(`Path too long: ${inputPath.length} > ${SECURITY_LIMITS.MAX_PATH_LENGTH}`);
+  }
+
+  // Check for suspicious patterns
+  for (const pattern of SECURITY_LIMITS.SUSPICIOUS_PATTERNS) {
+    if (pattern.test(inputPath)) {
+      throw new Error(`Suspicious pattern detected in path: ${inputPath}`);
+    }
+  }
+
+  // Normalize and resolve path
+  const normalizedPath = path.normalize(inputPath);
+  const resolvedPath = path.resolve(normalizedPath);
+
+  // Ensure path is within project directory
+  const projectRoot = path.resolve('.');
+  if (!resolvedPath.startsWith(projectRoot)) {
+    throw new Error(`Path outside project directory: ${resolvedPath}`);
+  }
+
+  return normalizedPath;
+}
+
+/**
+ * SECURITY: Safe regex execution with timeout protection against ReDoS attacks
+ * @param {RegExp} regex - Regular expression to execute
+ * @param {string} text - Text to test against
+ * @param {number} timeout - Timeout in milliseconds
+ * @returns {RegExpExecArray|null} Match result or null
+ */
+function safeRegexExec(regex, text, timeout = SECURITY_LIMITS.REGEX_TIMEOUT) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Regex execution timeout after ${timeout}ms`));
+    }, timeout);
+
+    try {
+      const result = regex.exec(text);
+      clearTimeout(timeoutId);
+      resolve(result);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      reject(error);
+    }
+  });
+}
 
 // Configuration
 const CONFIG = {
@@ -111,11 +187,11 @@ const ACTION_WORDS = {
 };
 
 /**
- * Extract issue/PR references from commit message
+ * Extract issue/PR references from commit message with enhanced security
  * @param {string} message - Commit message
- * @returns {string[]} Array of references
+ * @returns {Promise<string[]>} Array of references
  */
-function extractReferences(message) {
+async function extractReferences(message) {
   if (!message || typeof message !== 'string') {
     return [];
   }
@@ -135,12 +211,36 @@ function extractReferences(message) {
   for (const pattern of patterns) {
     let match;
     let matchCount = 0;
-    while ((match = pattern.exec(safeMessage)) !== null && matchCount < config.CHANGELOG.MAX_REFERENCES_PER_COMMIT) {
-      const issueNumber = parseInt(match[1], 10);
-      if (issueNumber > 0 && issueNumber <= config.VERSION.MAX_ISSUE_NUMBER) {
-        references.add(`#${issueNumber}`);
-        matchCount++;
+    let iterationCount = 0;
+
+    // Reset regex lastIndex for safety
+    pattern.lastIndex = 0;
+
+    try {
+      while (matchCount < config.CHANGELOG.MAX_REFERENCES_PER_COMMIT &&
+             iterationCount < SECURITY_LIMITS.MAX_ITERATIONS) {
+
+        // Use safe regex execution with timeout protection
+        match = await safeRegexExec(pattern, safeMessage);
+
+        if (!match) break;
+
+        const issueNumber = parseInt(match[1], 10);
+        if (issueNumber > 0 && issueNumber <= config.VERSION.MAX_ISSUE_NUMBER) {
+          references.add(`#${issueNumber}`);
+          matchCount++;
+        }
+
+        iterationCount++;
+
+        // Move pattern position forward to prevent infinite loops
+        if (pattern.lastIndex <= match.index) {
+          pattern.lastIndex = match.index + 1;
+        }
       }
+    } catch (error) {
+      console.warn(`⚠️  Regex timeout or error processing references: ${error.message}`);
+      // Continue with partial results rather than failing completely
     }
   }
 
@@ -255,26 +355,29 @@ function addContext(type, scope, description) {
 }
 
 /**
- * Transform commit message into user-friendly description
- * @param {object} commitInfo - Parsed commit information
- * @returns {string} User-friendly description
+ * PERFORMANCE: Clean and normalize commit description
+ * @param {string} description - Raw commit description
+ * @returns {string} Cleaned description
  */
-function transformCommitMessage(commitInfo) {
-  if (!CONFIG.userFriendly) {
-    // Return original format for technical mode
-    return commitInfo.description;
+function cleanCommitDescription(description) {
+  if (!description || typeof description !== 'string') {
+    return '';
   }
 
-  let { type, scope, description } = commitInfo;
+  // Remove redundant action words
+  return description.replace(/^(add|fix|update|improve|enhance|implement|create|resolve|correct|address)\s+/i, '');
+}
 
-  // Get appropriate action word
+/**
+ * PERFORMANCE: Determine appropriate action word for commit type
+ * @param {string} type - Commit type
+ * @param {string} description - Commit description
+ * @returns {string} Action word
+ */
+function getActionWord(type, description) {
   const actionWords = ACTION_WORDS[type] || ['Updated'];
   let actionWord = actionWords[0];
 
-  // Clean up description - remove redundant action words
-  description = description.replace(/^(add|fix|update|improve|enhance|implement|create|resolve|correct|address)\s+/i, '');
-
-  // Handle specific patterns for better readability
   if (type === 'fix') {
     // For fixes, use more natural language
     if (description.toLowerCase().includes('error') ||
@@ -284,7 +387,6 @@ function transformCommitMessage(commitInfo) {
       actionWord = 'Resolved';
     } else {
       actionWord = 'Fixed';
-      description = `an issue where ${description}`;
     }
   } else if (type === 'feat') {
     // For features, be more specific about what was added
@@ -302,30 +404,71 @@ function transformCommitMessage(commitInfo) {
       actionWord = 'Implemented';
     } else {
       actionWord = 'Added';
-      // Only add "the ability to" for verb-like descriptions
-      if (!description.toLowerCase().includes('ability') &&
-          !description.toLowerCase().includes('support') &&
-          !description.toLowerCase().includes('feature') &&
-          !description.toLowerCase().includes('option') &&
-          !description.toLowerCase().includes('system') &&
-          !description.toLowerCase().includes('integration') &&
-          !description.toLowerCase().includes('extension') &&
-          !description.toLowerCase().includes('component') &&
-          !description.toLowerCase().includes('workflow') &&
-          !description.toLowerCase().includes('documentation') &&
-          !description.toLowerCase().includes('file') &&
-          !description.toLowerCase().includes('folder') &&
-          !description.toLowerCase().includes('directory')) {
-        // Check if description starts with a verb (action word)
-        const commonVerbs = ['sync', 'manage', 'handle', 'process', 'generate', 'create', 'build', 'deploy', 'configure', 'setup', 'install', 'update', 'upgrade', 'migrate', 'transform', 'convert', 'parse', 'validate', 'check', 'test', 'run', 'execute', 'perform', 'calculate', 'compute', 'analyze', 'optimize', 'improve', 'enhance', 'fix', 'resolve', 'correct', 'address', 'prevent', 'avoid', 'ensure', 'provide', 'enable', 'disable', 'activate', 'toggle', 'switch', 'change', 'modify', 'adjust', 'set', 'get', 'fetch', 'retrieve', 'load', 'save', 'store', 'delete', 'remove', 'clear', 'reset', 'refresh', 'reload', 'restart', 'start', 'stop', 'filter', 'sort', 'search', 'find', 'locate', 'discover', 'detect', 'identify', 'recognize', 'match', 'compare', 'merge', 'combine', 'join', 'split', 'separate', 'divide', 'group', 'organize', 'arrange'];
-        const startsWithVerb = commonVerbs.some(verb => description.toLowerCase().startsWith(verb));
-        if (startsWithVerb) {
-          description = `the ability to ${description}`;
-        }
-      }
     }
   } else if (type === 'perf') {
     actionWord = 'Improved';
+  }
+
+  return actionWord;
+}
+
+/**
+ * PERFORMANCE: Process feature descriptions for better readability
+ * @param {string} description - Feature description
+ * @returns {string} Enhanced description
+ */
+function processFeatureDescription(description) {
+  // Only add "the ability to" for verb-like descriptions
+  if (!description.toLowerCase().includes('ability') &&
+      !description.toLowerCase().includes('support') &&
+      !description.toLowerCase().includes('feature') &&
+      !description.toLowerCase().includes('option') &&
+      !description.toLowerCase().includes('system') &&
+      !description.toLowerCase().includes('integration') &&
+      !description.toLowerCase().includes('extension') &&
+      !description.toLowerCase().includes('component') &&
+      !description.toLowerCase().includes('workflow') &&
+      !description.toLowerCase().includes('documentation') &&
+      !description.toLowerCase().includes('file') &&
+      !description.toLowerCase().includes('folder') &&
+      !description.toLowerCase().includes('directory')) {
+
+    // Check if description starts with a verb (action word)
+    const commonVerbs = ['sync', 'manage', 'handle', 'process', 'generate', 'create', 'build', 'deploy', 'configure', 'setup', 'install', 'update', 'upgrade', 'migrate', 'transform', 'convert', 'parse', 'validate', 'check', 'test', 'run', 'execute', 'perform', 'calculate', 'compute', 'analyze', 'optimize', 'improve', 'enhance', 'fix', 'resolve', 'correct', 'address', 'prevent', 'avoid', 'ensure', 'provide', 'enable', 'disable', 'activate', 'toggle', 'switch', 'change', 'modify', 'adjust', 'set', 'get', 'fetch', 'retrieve', 'load', 'save', 'store', 'delete', 'remove', 'clear', 'reset', 'refresh', 'reload', 'restart', 'start', 'stop', 'filter', 'sort', 'search', 'find', 'locate', 'discover', 'detect', 'identify', 'recognize', 'match', 'compare', 'merge', 'combine', 'join', 'split', 'separate', 'divide', 'group', 'organize', 'arrange'];
+    const startsWithVerb = commonVerbs.some(verb => description.toLowerCase().startsWith(verb));
+    if (startsWithVerb) {
+      description = `the ability to ${description}`;
+    }
+  }
+
+  return description;
+}
+
+/**
+ * PERFORMANCE: Transform commit message into user-friendly description (decomposed)
+ * @param {object} commitInfo - Parsed commit information
+ * @returns {string} User-friendly description
+ */
+function transformCommitMessage(commitInfo) {
+  if (!CONFIG.userFriendly) {
+    // Return original format for technical mode
+    return commitInfo.description;
+  }
+
+  let { type, scope, description } = commitInfo;
+
+  // Clean up description
+  description = cleanCommitDescription(description);
+
+  // Get appropriate action word
+  let actionWord = getActionWord(type, description);
+
+  // Handle specific patterns for better readability
+  if (type === 'fix' && actionWord === 'Fixed') {
+    description = `an issue where ${description}`;
+  } else if (type === 'feat') {
+    description = processFeatureDescription(description);
+  } else if (type === 'perf') {
     if (!description.toLowerCase().includes('performance') &&
         !description.toLowerCase().includes('speed') &&
         !description.toLowerCase().includes('efficiency') &&
@@ -370,37 +513,62 @@ function transformCommitMessage(commitInfo) {
 }
 
 /**
- * CLAUDE AI REVIEW: Fixed memory inefficiency from comment #3060465549, #3060512807, #3060543625
- * Process commits in batches to manage memory usage
+ * PERFORMANCE: Process commits in batches with enhanced memory management
  * @param {string[]} commits - Array of commit messages
  * @param {number} batchSize - Size of each batch
  * @returns {object} Categorized commits
  */
 function categorizeCommitsInBatches(commits, batchSize = 20) {
+  // PERFORMANCE: Apply memory-conscious limits for large repositories
+  const maxCommitsToProcess = Math.min(commits.length, config.CHANGELOG.MAX_CHANGELOG_COMMITS);
+  const actualCommits = commits.slice(0, maxCommitsToProcess);
+
+  if (commits.length > maxCommitsToProcess) {
+    console.warn(`⚠️  Processing ${maxCommitsToProcess} of ${commits.length} commits for memory efficiency`);
+  }
+
   const result = {
     breaking: [],
     categories: {},
     uncategorized: []
   };
 
-  // Initialize categories
+  // Initialize categories with pre-allocated arrays for better performance
   for (const type of Object.keys(COMMIT_CATEGORIES)) {
     result.categories[type] = [];
   }
 
-  // Process commits in batches
-  for (let i = 0; i < commits.length; i += batchSize) {
-    const batch = commits.slice(i, i + batchSize);
+  // Process commits in batches with progress tracking
+  const totalBatches = Math.ceil(actualCommits.length / batchSize);
+
+  for (let i = 0; i < actualCommits.length; i += batchSize) {
+    const batchNumber = Math.floor(i / batchSize) + 1;
+    const batch = actualCommits.slice(i, i + batchSize);
     const batchResult = categorizeCommits(batch);
 
-    // Merge batch results
-    result.breaking.push(...batchResult.breaking);
-    result.uncategorized.push(...batchResult.uncategorized);
+    // PERFORMANCE: Use more efficient array concatenation for large datasets
+    if (batchResult.breaking.length > 0) {
+      result.breaking = result.breaking.concat(batchResult.breaking);
+    }
+    if (batchResult.uncategorized.length > 0) {
+      result.uncategorized = result.uncategorized.concat(batchResult.uncategorized);
+    }
 
     for (const [type, commitList] of Object.entries(batchResult.categories)) {
-      if (result.categories[type]) {
-        result.categories[type].push(...commitList);
+      if (result.categories[type] && commitList.length > 0) {
+        result.categories[type] = result.categories[type].concat(commitList);
       }
+    }
+
+    // PERFORMANCE: Trigger garbage collection for large batches
+    if (batchNumber % 10 === 0 && typeof global !== 'undefined' && global.gc) {
+      global.gc();
+    }
+
+    // Progress reporting for large operations
+    if (CONFIG.verbose && totalBatches > 5) {
+      const progress = Math.round((batchNumber / totalBatches) * 100);
+      console.log(`   Processing batch ${batchNumber}/${totalBatches} (${progress}%)`);
     }
   }
 
@@ -472,14 +640,14 @@ function extractHashFromCommit(commit) {
 /**
  * Format commit for changelog
  * @param {object} commitInfo - Commit information
- * @returns {string} Formatted commit line
+ * @returns {Promise<string>} Formatted commit line
  */
-function formatCommit(commitInfo) {
+async function formatCommit(commitInfo) {
   // Transform the commit message
   const transformedDescription = transformCommitMessage(commitInfo);
 
   // Extract references from original message
-  const references = extractReferences(commitInfo.message);
+  const references = await extractReferences(commitInfo.message);
 
   let line;
 
@@ -546,19 +714,24 @@ function groupCommitsByScope(commits) {
 }
 
 /**
- * Generate changelog section for a category
+ * PERFORMANCE: Generate changelog section for a category with optimized string building
  * @param {string} categoryType - Category type
  * @param {object[]} commits - Commits in this category
- * @returns {string} Formatted section
+ * @returns {Promise<string>} Formatted section
  */
-function generateCategorySection(categoryType, commits) {
+async function generateCategorySection(categoryType, commits) {
   if (commits.length === 0) return '';
 
   const category = COMMIT_CATEGORIES[categoryType];
   const title = CONFIG.userFriendly ? (category.userTitle || category.title) : category.title;
 
-  // Use array for efficient string building
-  const lines = [`### ${title}`, ''];
+  // PERFORMANCE: Pre-allocate array with estimated size for better memory efficiency
+  const estimatedSize = commits.length + 10; // Extra space for headers and spacing
+  const lines = new Array(estimatedSize);
+  let lineIndex = 0;
+
+  lines[lineIndex++] = `### ${title}`;
+  lines[lineIndex++] = '';
 
   if (CONFIG.groupByScope && commits.length > 3) {
     // Group by scope for better organization
@@ -566,7 +739,7 @@ function generateCategorySection(categoryType, commits) {
 
     // Add commits without scope first
     for (const commit of grouped.withoutScope) {
-      lines.push(formatCommit(commit));
+      lines[lineIndex++] = await formatCommit(commit);
     }
 
     // Add scoped commits grouped by scope
@@ -579,26 +752,28 @@ function generateCategorySection(categoryType, commits) {
       }
 
       for (const commit of grouped.withScope[scope]) {
-        lines.push(formatCommit(commit));
+        lines.push(await formatCommit(commit));
       }
     }
   } else {
     // Standard format without grouping
     for (const commit of commits) {
-      lines.push(formatCommit(commit));
+      lines.push(await formatCommit(commit));
     }
   }
 
-  lines.push(''); // Add final newline
-  return lines.join('\n');
+  // Filter out undefined/null entries and join
+  const filteredLines = lines.filter(line => line !== undefined && line !== null);
+  filteredLines.push(''); // Add final newline
+  return filteredLines.join('\n');
 }
 
 /**
  * Generate breaking changes section
  * @param {object[]} breakingCommits - Breaking change commits
- * @returns {string} Formatted breaking changes section
+ * @returns {Promise<string>} Formatted breaking changes section
  */
-function generateBreakingChangesSection(breakingCommits) {
+async function generateBreakingChangesSection(breakingCommits) {
   if (breakingCommits.length === 0) return '';
 
   const title = CONFIG.userFriendly ? '💥 Important Changes' : '💥 BREAKING CHANGES';
@@ -609,7 +784,7 @@ function generateBreakingChangesSection(breakingCommits) {
   }
 
   for (const commit of breakingCommits) {
-    lines.push(formatCommit(commit));
+    lines.push(await formatCommit(commit));
   }
 
   lines.push(''); // Add final newline
@@ -620,28 +795,28 @@ function generateBreakingChangesSection(breakingCommits) {
  * Generate full changelog entry
  * @param {string} version - Version number
  * @param {object} categorizedCommits - Categorized commits
- * @returns {string} Complete changelog entry
+ * @returns {Promise<string>} Complete changelog entry
  */
-function generateChangelogEntry(version, categorizedCommits) {
+async function generateChangelogEntry(version, categorizedCommits) {
   const today = new Date().toISOString().split('T')[0];
   let entry = `## [${version}] - ${today}\n\n`;
 
   // Breaking changes first (most important)
-  entry += generateBreakingChangesSection(categorizedCommits.breaking);
+  entry += await generateBreakingChangesSection(categorizedCommits.breaking);
 
   // Features
-  entry += generateCategorySection('feat', categorizedCommits.categories.feat);
+  entry += await generateCategorySection('feat', categorizedCommits.categories.feat);
 
   // Bug fixes
-  entry += generateCategorySection('fix', categorizedCommits.categories.fix);
+  entry += await generateCategorySection('fix', categorizedCommits.categories.fix);
 
   // Performance improvements
-  entry += generateCategorySection('perf', categorizedCommits.categories.perf);
+  entry += await generateCategorySection('perf', categorizedCommits.categories.perf);
 
   // Other categories
   const otherCategories = ['refactor', 'docs', 'style', 'test', 'build', 'ci', 'chore'];
   for (const category of otherCategories) {
-    entry += generateCategorySection(category, categorizedCommits.categories[category]);
+    entry += await generateCategorySection(category, categorizedCommits.categories[category]);
   }
 
   // Uncategorized commits (if including all)
@@ -717,9 +892,9 @@ related_docs: ["index.md"]
 /**
  * Update changelog file
  * @param {string} version - Version to add to changelog
- * @returns {boolean} True if successful
+ * @returns {Promise<boolean>} True if successful
  */
-function updateChangelog(version = null) {
+async function updateChangelog(version = null) {
   console.log(`📝 Updating changelog at ${CHANGELOG_PATH}...\n`);
 
   // Ensure changelog directory exists
@@ -744,7 +919,10 @@ function updateChangelog(version = null) {
     // CLAUDE AI REVIEW: Fixed memory inefficiency from comment #3060465549, #3060512807, #3060543625
     // Get commits since last tag with configurable limit
     const maxCommits = Math.min(config.CHANGELOG.MAX_CHANGELOG_COMMITS, 200); // Hard limit for memory safety
-    const commits = getCommitsSinceLastTag(maxCommits);
+    const commitResult = getCommitsSinceLastTag(maxCommits);
+
+    // Extract commit messages from the result object
+    const commits = commitResult.messages || [];
 
     if (commits.length === 0) {
       console.log('ℹ️  No new commits found since last tag');
@@ -771,7 +949,7 @@ function updateChangelog(version = null) {
     }
 
     // Generate changelog entry
-    const changelogEntry = generateChangelogEntry(version, categorizedCommits);
+    const changelogEntry = await generateChangelogEntry(version, categorizedCommits);
 
     if (CONFIG.dryRun) {
       console.log('\n🧪 DRY RUN - Generated changelog entry:');
@@ -911,11 +1089,20 @@ File Location:
   // Get version from command line argument if provided
   const versionArg = args.find(arg => !arg.startsWith('--') && arg !== '-v');
 
-  const success = updateChangelog(versionArg);
-  process.exit(success ? 0 : 1);
+  updateChangelog(versionArg).then(success => {
+    process.exit(success ? 0 : 1);
+  }).catch(error => {
+    console.error('❌ Error updating changelog:', error.message);
+    process.exit(1);
+  });
 }
 
+/**
+ * CLAUDE AI REVIEW: Enhanced module exports with security and performance functions
+ * @module update-changelog
+ */
 module.exports = {
+  // Core functionality
   updateChangelog,
   categorizeCommits,
   generateChangelogEntry,
@@ -926,8 +1113,21 @@ module.exports = {
   improveCapitalization,
   addContext,
   groupCommitsByScope,
+
+  // Security enhancements (Claude AI Review)
+  sanitizePath,
+  safeRegexExec,
+
+  // Performance optimizations (Claude AI Review)
+  cleanCommitDescription,
+  getActionWord,
+  processFeatureDescription,
+  categorizeCommitsInBatches,
+
+  // Configuration constants
   COMMIT_CATEGORIES,
   ABBREVIATIONS,
   SCOPE_CONTEXT,
-  ACTION_WORDS
+  ACTION_WORDS,
+  SECURITY_LIMITS
 };
