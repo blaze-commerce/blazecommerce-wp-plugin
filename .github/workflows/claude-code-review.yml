@@ -57,33 +57,35 @@ jobs:
 
             3. **Implementation Verification**: Verify that any CRITICAL or REQUIRED issues from previous reviews have been addressed before considering approval.
 
-            IMPORTANT: You must end your review with a standardized verdict section using this EXACT format with brackets:
+            🚨 CRITICAL: You must end your review with a standardized verdict section using this EXACT format.
+
+            The automated approval system depends on this specific format. Use EXACTLY this structure:
 
             ### FINAL VERDICT
-            **Status**: [APPROVED]
+            **Status**: APPROVED
             **Merge Readiness**: READY TO MERGE
             **Recommendation**: Brief explanation of your decision
 
             OR
 
             ### FINAL VERDICT
-            **Status**: [CONDITIONAL APPROVAL]
+            **Status**: CONDITIONAL APPROVAL
             **Merge Readiness**: READY AFTER FIXES
             **Recommendation**: Brief explanation of your decision
 
             OR
 
             ### FINAL VERDICT
-            **Status**: [BLOCKED]
+            **Status**: BLOCKED
             **Merge Readiness**: NOT READY
             **Recommendation**: Brief explanation of your decision
 
             STATUS GUIDELINES:
-            - [APPROVED]: No critical issues found, all previous required changes implemented, code meets all standards
-            - [CONDITIONAL APPROVAL]: Minor improvements suggested but not blocking, previous required changes addressed
-            - [BLOCKED]: Critical issues that must be fixed before merge, OR required changes from previous reviews not implemented
+            - APPROVED: No critical issues found, all previous required changes implemented, code meets all standards
+            - CONDITIONAL APPROVAL: Minor improvements suggested but not blocking, previous required changes addressed
+            - BLOCKED: Critical issues that must be fixed before merge, OR required changes from previous reviews not implemented
 
-            The bracketed format [APPROVED], [CONDITIONAL APPROVAL], [BLOCKED] is required for automated detection.
+            ⚠️ IMPORTANT: Use the exact status values (APPROVED, CONDITIONAL APPROVAL, BLOCKED) without brackets or additional formatting. The automated system will detect these specific terms.
 
             Be constructive and helpful in your feedback.
 
