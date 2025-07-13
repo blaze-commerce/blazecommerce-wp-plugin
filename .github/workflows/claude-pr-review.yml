@@ -294,55 +294,115 @@ jobs:
       - name: Claude AI Review (Attempt 1)
         id: claude-review-1
         continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: "claude-3-5-sonnet-20241022"
+          direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
+          # Environment variables for WordPress/PHP development
+          claude_env: |
+            WP_ENV: development
+            PHP_VERSION: 8.1
+            REPO_TYPE: ${{ steps.prepare-context.outputs.repo_type }}
+            PR_NUMBER: ${{ github.event.pull_request.number || steps.detect-pr.outputs.pr_number || github.event.inputs.pr_number }}
+
+      - name: Claude AI Review Fallback (Attempt 1)
+        id: claude-review-1-fallback
+        if: steps.claude-review-1.outcome == 'failure'
+        continue-on-error: true
         run: |
-          echo "INFO: Attempting Claude AI review..."
+          echo "INFO: Claude AI API call failed, using fallback review..."
 
           # Check if API key is available
           if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
             echo "WARNING: ANTHROPIC_API_KEY not configured - using fallback review"
-            echo "response=Automated review temporarily unavailable. Manual review recommended." >> $GITHUB_OUTPUT
-            exit 0
+            echo "response=## BlazeCommerce Claude AI Review - Configuration Issue\n\n**ANTHROPIC_API_KEY Not Configured**\n\nThe Claude AI review service requires an API key to function. Please configure the ANTHROPIC_API_KEY secret in repository settings.\n\n### Manual Review Required\n- Please conduct manual code review\n- Verify all tests pass\n- Check for security issues\n- Ensure code follows project standards\n\n*Contact repository administrators to configure Claude AI integration.*" >> $GITHUB_OUTPUT
+          else
+            echo "WARNING: Claude AI API temporarily unavailable - using fallback review"
+            echo "response=## BlazeCommerce Claude AI Review - Service Unavailable\n\n**Claude AI Service Temporarily Unavailable**\n\nThe Claude AI review service is currently experiencing issues. This is typically temporary.\n\n### Manual Review Recommended\n- Please conduct manual code review\n- Verify all tests pass\n- Check for security issues\n- Ensure code follows project standards\n\n### Retry Options\n- Push a new commit to retry automatically\n- Check [Anthropic Status](https://status.anthropic.com/) for service updates\n\n*This is a temporary service issue and will resolve automatically.*" >> $GITHUB_OUTPUT
           fi
-
-          # For now, simulate a successful review with basic analysis
-          echo "SUCCESS: Claude AI review completed (simulated)"
-          echo "response=## Claude AI Review\n\n**Code Quality Check Passed**\n\nThis PR has been automatically reviewed. The code appears to follow standard practices.\n\n### Summary\n- No critical issues detected\n- Code structure is acceptable\n- Ready for manual review if needed\n\n*Note: This is a simplified review. For detailed analysis, manual review is recommended.*" >> $GITHUB_OUTPUT
 
       - name: Claude AI Review (Attempt 2 - Retry)
         id: claude-review-2
-        if: steps.claude-review-1.outcome == 'failure'
+        if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-1-fallback.outcome == 'failure'
+        continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: "claude-3-5-sonnet-20241022"
+          direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
+          # Environment variables for WordPress/PHP development
+          claude_env: |
+            WP_ENV: development
+            PHP_VERSION: 8.1
+            REPO_TYPE: ${{ steps.prepare-context.outputs.repo_type }}
+            PR_NUMBER: ${{ github.event.pull_request.number || steps.detect-pr.outputs.pr_number || github.event.inputs.pr_number }}
+
+      - name: Claude AI Review Fallback (Attempt 2)
+        id: claude-review-2-fallback
+        if: steps.claude-review-2.outcome == 'failure'
         continue-on-error: true
         run: |
-          echo "INFO: Retrying Claude AI review..."
-          echo "response=## Claude AI Review (Retry)\n\n**Fallback Review Completed**\n\nSecond attempt at automated review.\n\n### Status\n- Basic code validation passed\n- No obvious issues detected\n- Manual review recommended for thorough analysis\n\n*Automated review system is experiencing issues. Please proceed with manual review.*" >> $GITHUB_OUTPUT
+          echo "INFO: Claude AI API retry failed, using fallback review..."
+          echo "response=## BlazeCommerce Claude AI Review (Retry Attempt)\n\n**Claude AI Service Issues Persist**\n\nSecond attempt at Claude AI review also failed. This indicates a persistent service issue.\n\n### Status\n- Claude AI service experiencing extended issues\n- Manual review strongly recommended\n- This is not related to your code changes\n\n### Next Steps\n- Conduct thorough manual code review\n- Verify all tests pass\n- Check for security issues\n- Ensure code follows BlazeCommerce standards\n\n### Retry Options\n- Wait 15-30 minutes and push a new commit\n- Check [Anthropic Status](https://status.anthropic.com/) for updates\n\n*Extended service issues - manual review required.*" >> $GITHUB_OUTPUT
 
       - name: Claude AI Review (Attempt 3 - Final Retry)
         id: claude-review-3
         if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         continue-on-error: true
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: "claude-3-5-sonnet-20241022"
+          direct_prompt: ${{ steps.prepare-context.outputs.review_prompt }}
+          # Environment variables for WordPress/PHP development
+          claude_env: |
+            WP_ENV: development
+            PHP_VERSION: 8.1
+            REPO_TYPE: ${{ steps.prepare-context.outputs.repo_type }}
+            PR_NUMBER: ${{ github.event.pull_request.number || steps.detect-pr.outputs.pr_number || github.event.inputs.pr_number }}
+
+      - name: Claude AI Review Final Fallback (Attempt 3)
+        id: claude-review-3-fallback
+        if: steps.claude-review-3.outcome == 'failure'
+        continue-on-error: true
         run: |
-          echo "INFO: Final attempt at Claude AI review..."
-          echo "response=## Claude AI Review (Final Attempt)\n\n**Manual Review Required**\n\nAutomated review system is currently unavailable.\n\n### Recommendation\n- Please conduct manual code review\n- Verify all tests pass\n- Check for security issues\n- Ensure code follows project standards\n\n*This PR requires manual approval due to automated review system issues.*" >> $GITHUB_OUTPUT
+          echo "INFO: Final Claude AI attempt failed, using ultimate fallback..."
+          echo "response=## BlazeCommerce Claude AI Review (Final Attempt)\n\n**Manual Review Required - Service Unavailable**\n\nAll attempts to connect to Claude AI have failed. This indicates a significant service outage.\n\n### Status\n- ❌ Claude AI service completely unavailable\n- ⚠️ This is not related to your code changes\n- 🔄 Service will resume automatically when available\n\n### Required Actions\n- **Immediate**: Conduct thorough manual code review\n- **Verify**: All tests pass and code follows standards\n- **Security**: Check for potential security issues\n- **Standards**: Ensure BlazeCommerce coding standards compliance\n\n### Service Recovery\n- Monitor [Anthropic Status](https://status.anthropic.com/) for updates\n- Automatic retry will occur on next commit\n- Expected resolution: Usually within 1-4 hours\n\n*This PR requires manual approval due to extended Claude AI service outage.*" >> $GITHUB_OUTPUT
 
       - name: Determine Successful Review
         id: review-success
         run: |
+          # Check for successful Claude AI API calls first
           if [ "${{ steps.claude-review-1.outcome }}" = "success" ]; then
             echo "successful_attempt=1" >> $GITHUB_OUTPUT
             echo "review_response=${{ steps.claude-review-1.outputs.response }}" >> $GITHUB_OUTPUT
-            echo "SUCCESS: Claude AI Review succeeded on attempt 1"
+            echo "SUCCESS: Claude AI Review succeeded on attempt 1 (API)"
           elif [ "${{ steps.claude-review-2.outcome }}" = "success" ]; then
             echo "successful_attempt=2" >> $GITHUB_OUTPUT
             echo "review_response=${{ steps.claude-review-2.outputs.response }}" >> $GITHUB_OUTPUT
-            echo "SUCCESS: Claude AI Review succeeded on attempt 2"
+            echo "SUCCESS: Claude AI Review succeeded on attempt 2 (API)"
           elif [ "${{ steps.claude-review-3.outcome }}" = "success" ]; then
             echo "successful_attempt=3" >> $GITHUB_OUTPUT
             echo "review_response=${{ steps.claude-review-3.outputs.response }}" >> $GITHUB_OUTPUT
-            echo "SUCCESS: Claude AI Review succeeded on attempt 3"
+            echo "SUCCESS: Claude AI Review succeeded on attempt 3 (API)"
+          # Check for successful fallback responses
+          elif [ "${{ steps.claude-review-1-fallback.outcome }}" = "success" ]; then
+            echo "successful_attempt=1-fallback" >> $GITHUB_OUTPUT
+            echo "review_response=${{ steps.claude-review-1-fallback.outputs.response }}" >> $GITHUB_OUTPUT
+            echo "SUCCESS: Claude AI Review succeeded on attempt 1 (fallback)"
+          elif [ "${{ steps.claude-review-2-fallback.outcome }}" = "success" ]; then
+            echo "successful_attempt=2-fallback" >> $GITHUB_OUTPUT
+            echo "review_response=${{ steps.claude-review-2-fallback.outputs.response }}" >> $GITHUB_OUTPUT
+            echo "SUCCESS: Claude AI Review succeeded on attempt 2 (fallback)"
+          elif [ "${{ steps.claude-review-3-fallback.outcome }}" = "success" ]; then
+            echo "successful_attempt=3-fallback" >> $GITHUB_OUTPUT
+            echo "review_response=${{ steps.claude-review-3-fallback.outputs.response }}" >> $GITHUB_OUTPUT
+            echo "SUCCESS: Claude AI Review succeeded on attempt 3 (fallback)"
           else
             echo "successful_attempt=none" >> $GITHUB_OUTPUT
             echo "review_response=" >> $GITHUB_OUTPUT
-            echo "ERROR: All Claude AI Review attempts failed"
+            echo "ERROR: All Claude AI Review attempts and fallbacks failed"
           fi
 
       - name: Parse Claude Review and Update Progressive Tracking
