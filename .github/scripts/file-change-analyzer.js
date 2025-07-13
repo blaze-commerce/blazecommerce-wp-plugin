@@ -15,27 +15,28 @@ const path = require('path');
 
 /**
  * Standardized logging utility
+ * Note: Emojis removed to prevent GitHub Actions output formatting errors
  */
 class Logger {
   static info(message) {
-    console.log(`ℹ️  ${message}`);
+    console.log(`INFO: ${message}`);
   }
-  
+
   static success(message) {
-    console.log(`✅ ${message}`);
+    console.log(`SUCCESS: ${message}`);
   }
-  
+
   static warning(message) {
-    console.log(`⚠️  ${message}`);
+    console.log(`WARNING: ${message}`);
   }
-  
+
   static error(message) {
-    console.error(`❌ ${message}`);
+    console.error(`ERROR: ${message}`);
   }
-  
+
   static debug(message) {
     if (process.env.DEBUG === 'true') {
-      console.log(`🔍 DEBUG: ${message}`);
+      console.log(`DEBUG: ${message}`);
     }
   }
 }

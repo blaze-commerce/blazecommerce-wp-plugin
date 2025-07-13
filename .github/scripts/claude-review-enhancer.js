@@ -31,7 +31,7 @@ if (typeof fetch === 'undefined') {
     try {
       require('./fetch-fallback.js');
     } catch (fallbackError) {
-      console.warn('⚠️ No fetch implementation available - GitHub API features will be limited');
+      console.warn('WARNING: No fetch implementation available - GitHub API features will be limited');
     }
   }
 }
@@ -195,9 +195,9 @@ class ClaudeReviewEnhancer {
     // Clean the recommendation text for consistent hashing
     const cleanText = recommendation
       .replace(/^\d+\.\s*/, '') // Remove numbering
-      .replace(/✅.*?\n/g, '') // Remove status indicators
-      .replace(/⚠️.*?\n/g, '')
-      .replace(/⏳.*?\n/g, '')
+      .replace(/SUCCESS:.*?\n/g, '') // Remove status indicators
+      .replace(/WARNING:.*?\n/g, '')
+      .replace(/PENDING:.*?\n/g, '')
       .replace(/\*Applied:.*?\*/g, '') // Remove timestamps
       .trim();
 
@@ -290,19 +290,19 @@ class ClaudeReviewEnhancer {
     for (const line of lines) {
       const trimmedLine = line.trim();
       
-      if (trimmedLine.includes('🔴 REQUIRED')) {
+      if (trimmedLine.includes('CRITICAL: REQUIRED')) {
         if (currentItem && currentSection) {
           recommendations[currentSection].push(currentItem.trim());
         }
         currentSection = 'required';
         currentItem = trimmedLine;
-      } else if (trimmedLine.includes('🟡 IMPORTANT')) {
+      } else if (trimmedLine.includes('WARNING: IMPORTANT')) {
         if (currentItem && currentSection) {
           recommendations[currentSection].push(currentItem.trim());
         }
         currentSection = 'important';
         currentItem = trimmedLine;
-      } else if (trimmedLine.includes('🔵 SUGGESTIONS')) {
+      } else if (trimmedLine.includes('INFO: SUGGESTIONS')) {
         if (currentItem && currentSection) {
           recommendations[currentSection].push(currentItem.trim());
         }
@@ -341,7 +341,7 @@ class ClaudeReviewEnhancer {
     const timestamp = new Date().toISOString();
     const reviewDate = new Date().toLocaleString();
 
-    let comment = `## 🤖 BlazeCommerce Claude AI Review v${this.reviewVersion}\n\n`;
+    let comment = `## BOT: BlazeCommerce Claude AI Review v${this.reviewVersion}\n\n`;
     comment += `**Review Timestamp**: ${reviewDate}\n`;
     comment += `**Repository Type**: ${trackingData?.repo_type || 'general'}\n`;
     comment += `**Commit SHA**: \`${this.currentSha?.substring(0, 7) || 'unknown'}\`\n`;
@@ -353,15 +353,15 @@ class ClaudeReviewEnhancer {
       const totalNew = analysis.new.required.length + analysis.new.important.length;
       const totalPersistent = analysis.persistent.required.length + analysis.persistent.important.length;
 
-      comment += `### 🎯 Progress Summary\n\n`;
+      comment += `### TARGET: Progress Summary\n\n`;
       comment += `| Status | Count | Description |\n`;
       comment += `|--------|-------|-------------|\n`;
-      comment += `| ✅ **Resolved** | ${totalResolved} | Issues addressed since last review |\n`;
-      comment += `| 🆕 **New** | ${totalNew} | New issues identified in this review |\n`;
-      comment += `| ⏳ **Persistent** | ${totalPersistent} | Issues still requiring attention |\n\n`;
+      comment += `| SUCCESS: **Resolved** | ${totalResolved} | Issues addressed since last review |\n`;
+      comment += `| NEW: **New** | ${totalNew} | New issues identified in this review |\n`;
+      comment += `| PENDING: **Persistent** | ${totalPersistent} | Issues still requiring attention |\n\n`;
 
       if (totalResolved > 0) {
-        comment += `🎉 **Great progress!** ${totalResolved} recommendation(s) have been successfully addressed.\n\n`;
+        comment += `COMPLETED: **Great progress!** ${totalResolved} recommendation(s) have been successfully addressed.\n\n`;
       }
     }
 
@@ -372,29 +372,29 @@ class ClaudeReviewEnhancer {
       const resolvedRequired = analysis?.resolved.required.length || 0;
       const resolvedImportant = analysis?.resolved.important.length || 0;
 
-      comment += `### 📊 Overall Implementation Status\n\n`;
+      comment += `### ANALYSIS: Overall Implementation Status\n\n`;
       comment += `| Category | Current | Resolved This Update | Status |\n`;
       comment += `|----------|---------|---------------------|--------|\n`;
-      comment += `| 🔴 **REQUIRED** | ${currentRequired} | ${resolvedRequired} | ${currentRequired === 0 ? '✅ All Clear' : '⚠️ Needs Attention'} |\n`;
-      comment += `| 🟡 **IMPORTANT** | ${currentImportant} | ${resolvedImportant} | ${currentImportant === 0 ? '✅ All Clear' : '⏳ Recommended'} |\n\n`;
+      comment += `| CRITICAL: **REQUIRED** | ${currentRequired} | ${resolvedRequired} | ${currentRequired === 0 ? 'SUCCESS: All Clear' : 'WARNING: Needs Attention'} |\n`;
+      comment += `| WARNING: **IMPORTANT** | ${currentImportant} | ${resolvedImportant} | ${currentImportant === 0 ? 'SUCCESS: All Clear' : 'PENDING: Recommended'} |\n\n`;
     }
 
     // Show resolved issues first (if any)
     if (analysis && (analysis.resolved.required.length > 0 || analysis.resolved.important.length > 0)) {
-      comment += `### ✅ Recently Resolved Issues\n\n`;
+      comment += `### SUCCESS: Recently Resolved Issues\n\n`;
 
       if (analysis.resolved.required.length > 0) {
-        comment += `#### 🔴 REQUIRED Issues Resolved:\n`;
+        comment += `#### CRITICAL: REQUIRED Issues Resolved:\n`;
         analysis.resolved.required.forEach((item, index) => {
-          comment += `${index + 1}. ✅ **RESOLVED** - ${item.text}\n`;
+          comment += `${index + 1}. SUCCESS: **RESOLVED** - ${item.text}\n`;
           comment += `   *Resolved at: ${new Date(item.resolvedAt).toLocaleString()}*\n\n`;
         });
       }
 
       if (analysis.resolved.important.length > 0) {
-        comment += `#### 🟡 IMPORTANT Issues Resolved:\n`;
+        comment += `#### WARNING: IMPORTANT Issues Resolved:\n`;
         analysis.resolved.important.forEach((item, index) => {
-          comment += `${index + 1}. ✅ **RESOLVED** - ${item.text}\n`;
+          comment += `${index + 1}. SUCCESS: **RESOLVED** - ${item.text}\n`;
           comment += `   *Resolved at: ${new Date(item.resolvedAt).toLocaleString()}*\n\n`;
         });
       }
@@ -402,18 +402,18 @@ class ClaudeReviewEnhancer {
 
     // Add current REQUIRED issues
     if (recommendations.required.length > 0) {
-      comment += `### 🔴 REQUIRED Issues (Must Fix Before Merge)\n\n`;
+      comment += `### CRITICAL: REQUIRED Issues (Must Fix Before Merge)\n\n`;
       recommendations.required.forEach((item, index) => {
         const isNew = analysis?.new.required.some(newItem => newItem.index === index);
         const isPersistent = analysis?.persistent.required.some(persistentItem => persistentItem.index === index);
 
-        let status = '⚠️ **PENDING**';
+        let status = 'WARNING: **PENDING**';
         let badge = '';
 
         if (isNew) {
-          badge = ' 🆕 **NEW**';
+          badge = ' NEW: **NEW**';
         } else if (isPersistent) {
-          badge = ' 🔄 **PERSISTENT**';
+          badge = ' RETRY: **PERSISTENT**';
         }
 
         comment += `${index + 1}. ${status}${badge}\n`;
@@ -423,18 +423,18 @@ class ClaudeReviewEnhancer {
 
     // Add current IMPORTANT issues
     if (recommendations.important.length > 0) {
-      comment += `### 🟡 IMPORTANT Improvements (Recommended)\n\n`;
+      comment += `### WARNING: IMPORTANT Improvements (Recommended)\n\n`;
       recommendations.important.forEach((item, index) => {
         const isNew = analysis?.new.important.some(newItem => newItem.index === index);
         const isPersistent = analysis?.persistent.important.some(persistentItem => persistentItem.index === index);
 
-        let status = '⏳ **PENDING**';
+        let status = 'PENDING: **PENDING**';
         let badge = '';
 
         if (isNew) {
-          badge = ' 🆕 **NEW**';
+          badge = ' NEW: **NEW**';
         } else if (isPersistent) {
-          badge = ' 🔄 **PERSISTENT**';
+          badge = ' RETRY: **PERSISTENT**';
         }
 
         comment += `${index + 1}. ${status}${badge}\n`;
@@ -443,7 +443,7 @@ class ClaudeReviewEnhancer {
     }
 
     if (recommendations.suggestions.length > 0) {
-      comment += `### 🔵 SUGGESTIONS (Optional)\n\n`;
+      comment += `### INFO: SUGGESTIONS (Optional)\n\n`;
       recommendations.suggestions.forEach((item, index) => {
         comment += `${index + 1}. ${item}\n\n`;
       });
@@ -451,7 +451,7 @@ class ClaudeReviewEnhancer {
 
     // Add footer with instructions
     comment += `---\n\n`;
-    comment += `### 📋 Next Steps\n\n`;
+    comment += `### SUMMARY: Next Steps\n\n`;
     
     if (recommendations.required.length > 0) {
       const pendingRequired = trackingData ? 
@@ -459,9 +459,9 @@ class ClaudeReviewEnhancer {
         recommendations.required.length;
       
       if (pendingRequired > 0) {
-        comment += `❌ **${pendingRequired} REQUIRED issue(s) must be addressed before this PR can be approved.**\n\n`;
+        comment += `ERROR: **${pendingRequired} REQUIRED issue(s) must be addressed before this PR can be approved.**\n\n`;
       } else {
-        comment += `✅ **All REQUIRED issues have been addressed!**\n\n`;
+        comment += `SUCCESS: **All REQUIRED issues have been addressed!**\n\n`;
       }
     }
 
@@ -471,23 +471,23 @@ class ClaudeReviewEnhancer {
         recommendations.important.length;
       
       if (pendingImportant > 0) {
-        comment += `⏳ **${pendingImportant} IMPORTANT improvement(s) are recommended but not required for approval.**\n\n`;
+        comment += `PENDING: **${pendingImportant} IMPORTANT improvement(s) are recommended but not required for approval.**\n\n`;
       }
     }
 
-    comment += `### 🔄 Auto-Approval Status\n\n`;
+    comment += `### RETRY: Auto-Approval Status\n\n`;
     const hasBlockingIssues = recommendations.required.length > 0 && 
       (!trackingData || trackingData.resolved_recommendations.required.length < recommendations.required.length);
     
     if (hasBlockingIssues) {
-      comment += `🚫 **Auto-approval blocked** - REQUIRED issues must be resolved first.\n\n`;
+      comment += ` **Auto-approval blocked** - REQUIRED issues must be resolved first.\n\n`;
     } else {
-      comment += `✅ **Ready for auto-approval** - No blocking issues found.\n\n`;
+      comment += `SUCCESS: **Ready for auto-approval** - No blocking issues found.\n\n`;
     }
 
     comment += `*This review will automatically update when changes are pushed. The PR will be auto-approved once all REQUIRED issues are resolved.*\n\n`;
     comment += `---\n`;
-    comment += `*🤖 Generated by BlazeCommerce Claude AI Review Bot v2.0*`;
+    comment += `*BOT: Generated by BlazeCommerce Claude AI Review Bot v2.0*`;
 
     return comment;
   }
@@ -668,7 +668,7 @@ class ClaudeReviewEnhancer {
         success: false,
         error: error.message,
         enhancedComment: claudeOutput, // Fallback to original
-        hasBlockingIssues: claudeOutput.includes('🔴 REQUIRED'),
+        hasBlockingIssues: claudeOutput.includes('CRITICAL: REQUIRED'),
         progressMade: false,
         reviewVersion: this.reviewVersion
       };

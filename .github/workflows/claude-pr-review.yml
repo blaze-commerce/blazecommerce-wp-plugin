@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: Debug Workflow Trigger
         run: |
-          echo "🔍 DEBUG: Priority 1 Claude AI Review triggered successfully!"
+          echo "DEBUG: Priority 1 Claude AI Review triggered successfully!"
           echo "Event: ${{ github.event_name }}"
           echo "Action: ${{ github.event.action }}"
           echo "PR Number: ${{ github.event.pull_request.number }}"
@@ -52,10 +52,10 @@ jobs:
       - name: Validate Organization
         run: |
           if [[ "${{ github.repository_owner }}" != "blaze-commerce" ]]; then
-            echo "❌ This workflow is only for blaze-commerce repositories"
+            echo "ERROR: This workflow is only for blaze-commerce repositories"
             exit 1
           fi
-          echo "✅ Organization validation passed"
+          echo "SUCCESS: Organization validation passed"
 
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -70,11 +70,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          echo "🔍 Installing Node.js dependencies..."
+          echo "INFO: Installing Node.js dependencies..."
 
           # Check if package.json exists
           if [ ! -f "package.json" ]; then
-            echo "⚠️ No package.json found, creating minimal one for workflow dependencies..."
+            echo "WARNING: No package.json found, creating minimal one for workflow dependencies..."
             cat > package.json << 'EOF'
           {
             "name": "github-workflow-dependencies",
@@ -91,7 +91,7 @@ jobs:
 
           # Install dependencies
           npm install --production --no-audit --no-fund
-          echo "✅ Node.js dependencies installed successfully"
+          echo "SUCCESS: Node.js dependencies installed successfully"
 
       - name: Initialize Claude Status
         env:
@@ -99,7 +99,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          echo "🔄 Initializing Claude AI review status..."
+          echo "INFO: Initializing Claude AI review status..."
           node .github/scripts/claude-status-manager.js start-review
 
       - name: Determine Repository Type
@@ -107,16 +107,16 @@ jobs:
         run: |
           if [[ -f "package.json" && -d "src" ]]; then
             echo "repo_type=nextjs-frontend" >> $GITHUB_OUTPUT
-            echo "🎯 Detected: Next.js Frontend Repository"
+            echo "INFO: Detected Next.js Frontend Repository"
           elif [[ -f "blaze-wooless.php" || -f "*.php" ]]; then
             echo "repo_type=wordpress-plugin" >> $GITHUB_OUTPUT
-            echo "🎯 Detected: WordPress Plugin Repository"
+            echo "INFO: Detected WordPress Plugin Repository"
           elif [[ -f "style.css" && -f "functions.php" ]]; then
             echo "repo_type=wordpress-child-theme" >> $GITHUB_OUTPUT
-            echo "🎯 Detected: WordPress Child Theme Repository"
+            echo "INFO: Detected WordPress Child Theme Repository"
           else
             echo "repo_type=general" >> $GITHUB_OUTPUT
-            echo "🎯 Detected: General Repository"
+            echo "INFO: Detected General Repository"
           fi
 
       - name: Prepare BlazeCommerce Context
@@ -143,9 +143,9 @@ jobs:
                 - Bundle size optimization and code splitting
 
                 Provide categorized feedback:
-                🔴 REQUIRED - Critical issues that must be fixed
-                🟡 IMPORTANT - Significant improvements needed
-                🔵 SUGGESTIONS - Optional enhancements
+                CRITICAL: REQUIRED - Critical issues that must be fixed
+                WARNING: IMPORTANT - Significant improvements needed
+                INFO: SUGGESTIONS - Optional enhancements
 
                 Focus on actionable feedback that helps improve code quality, security, and maintainability.`,
 
@@ -167,9 +167,9 @@ jobs:
                 - WooCommerce integration best practices
 
                 Provide categorized feedback:
-                🔴 REQUIRED - Critical issues that must be fixed
-                🟡 IMPORTANT - Significant improvements needed
-                🔵 SUGGESTIONS - Optional enhancements
+                CRITICAL: REQUIRED - Critical issues that must be fixed
+                WARNING: IMPORTANT - Significant improvements needed
+                INFO: SUGGESTIONS - Optional enhancements
 
                 Focus on actionable feedback that helps improve code quality, security, and maintainability.`,
 
@@ -188,9 +188,9 @@ jobs:
                 - Asset optimization and loading
 
                 Provide categorized feedback:
-                🔴 REQUIRED - Critical issues that must be fixed
-                🟡 IMPORTANT - Significant improvements needed
-                🔵 SUGGESTIONS - Optional enhancements
+                CRITICAL: REQUIRED - Critical issues that must be fixed
+                WARNING: IMPORTANT - Significant improvements needed
+                INFO: SUGGESTIONS - Optional enhancements
 
                 Focus on actionable feedback that helps improve code quality, security, and maintainability.`,
 
@@ -205,9 +205,9 @@ jobs:
                 - Testing considerations
 
                 Provide categorized feedback:
-                🔴 REQUIRED - Critical issues that must be fixed
-                🟡 IMPORTANT - Significant improvements needed
-                🔵 SUGGESTIONS - Optional enhancements
+                CRITICAL: REQUIRED - Critical issues that must be fixed
+                WARNING: IMPORTANT - Significant improvements needed
+                INFO: SUGGESTIONS - Optional enhancements
 
                 Focus on actionable feedback that helps improve code quality, security, and maintainability.`
             };
@@ -216,8 +216,8 @@ jobs:
             core.setOutput('review_prompt', reviewPrompt);
             core.setOutput('repo_type', repoType);
 
-            console.log(`🎯 Repository Type: ${repoType}`);
-            console.log(`📝 Using ${repoType} specific prompt for Claude AI review`);
+            console.log(`TARGET: Repository Type: ${repoType}`);
+            console.log(`NOTE: Using ${repoType} specific prompt for Claude AI review`);
 
       - name: Validate Review Prompt
         id: validate-prompt
@@ -226,56 +226,56 @@ jobs:
 
           # Input validation for security
           if [ -z "$PROMPT" ]; then
-            echo "❌ Error: Review prompt is empty"
+            echo "ERROR: Error: Review prompt is empty"
             exit 1
           fi
 
           # Check for potentially malicious content
           if echo "$PROMPT" | grep -qE "(rm\s+-rf|sudo|eval|exec|system|shell_exec)"; then
-            echo "❌ Error: Review prompt contains potentially dangerous commands"
+            echo "ERROR: Error: Review prompt contains potentially dangerous commands"
             exit 1
           fi
 
           # Limit prompt length for security
           if [ ${#PROMPT} -gt 50000 ]; then
-            echo "❌ Error: Review prompt exceeds maximum length (50000 characters)"
+            echo "ERROR: Error: Review prompt exceeds maximum length (50000 characters)"
             exit 1
           fi
 
-          echo "✅ Review prompt validation passed"
+          echo "SUCCESS: Review prompt validation passed"
 
       - name: Claude AI Review (Attempt 1)
         id: claude-review-1
         continue-on-error: true
         run: |
-          echo "🤖 Attempting Claude AI review..."
+          echo "INFO: Attempting Claude AI review..."
 
           # Check if API key is available
           if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
-            echo "⚠️ ANTHROPIC_API_KEY not configured - using fallback review"
+            echo "WARNING: ANTHROPIC_API_KEY not configured - using fallback review"
             echo "response=Automated review temporarily unavailable. Manual review recommended." >> $GITHUB_OUTPUT
             exit 0
           fi
 
           # For now, simulate a successful review with basic analysis
-          echo "✅ Claude AI review completed (simulated)"
-          echo "response=## 🤖 Claude AI Review\n\n✅ **Code Quality Check Passed**\n\nThis PR has been automatically reviewed. The code appears to follow standard practices.\n\n### Summary\n- No critical issues detected\n- Code structure is acceptable\n- Ready for manual review if needed\n\n*Note: This is a simplified review. For detailed analysis, manual review is recommended.*" >> $GITHUB_OUTPUT
+          echo "SUCCESS: Claude AI review completed (simulated)"
+          echo "response=## Claude AI Review\n\n**Code Quality Check Passed**\n\nThis PR has been automatically reviewed. The code appears to follow standard practices.\n\n### Summary\n- No critical issues detected\n- Code structure is acceptable\n- Ready for manual review if needed\n\n*Note: This is a simplified review. For detailed analysis, manual review is recommended.*" >> $GITHUB_OUTPUT
 
       - name: Claude AI Review (Attempt 2 - Retry)
         id: claude-review-2
         if: steps.claude-review-1.outcome == 'failure'
         continue-on-error: true
         run: |
-          echo "🔄 Retrying Claude AI review..."
-          echo "response=## 🤖 Claude AI Review (Retry)\n\n✅ **Fallback Review Completed**\n\nSecond attempt at automated review.\n\n### Status\n- Basic code validation passed\n- No obvious issues detected\n- Manual review recommended for thorough analysis\n\n*Automated review system is experiencing issues. Please proceed with manual review.*" >> $GITHUB_OUTPUT
+          echo "INFO: Retrying Claude AI review..."
+          echo "response=## Claude AI Review (Retry)\n\n**Fallback Review Completed**\n\nSecond attempt at automated review.\n\n### Status\n- Basic code validation passed\n- No obvious issues detected\n- Manual review recommended for thorough analysis\n\n*Automated review system is experiencing issues. Please proceed with manual review.*" >> $GITHUB_OUTPUT
 
       - name: Claude AI Review (Attempt 3 - Final Retry)
         id: claude-review-3
         if: steps.claude-review-1.outcome == 'failure' && steps.claude-review-2.outcome == 'failure'
         continue-on-error: true
         run: |
-          echo "🔄 Final attempt at Claude AI review..."
-          echo "response=## 🤖 Claude AI Review (Final Attempt)\n\n⚠️ **Manual Review Required**\n\nAutomated review system is currently unavailable.\n\n### Recommendation\n- Please conduct manual code review\n- Verify all tests pass\n- Check for security issues\n- Ensure code follows project standards\n\n*This PR requires manual approval due to automated review system issues.*" >> $GITHUB_OUTPUT
+          echo "INFO: Final attempt at Claude AI review..."
+          echo "response=## Claude AI Review (Final Attempt)\n\n**Manual Review Required**\n\nAutomated review system is currently unavailable.\n\n### Recommendation\n- Please conduct manual code review\n- Verify all tests pass\n- Check for security issues\n- Ensure code follows project standards\n\n*This PR requires manual approval due to automated review system issues.*" >> $GITHUB_OUTPUT
 
       - name: Determine Successful Review
         id: review-success
@@ -283,19 +283,19 @@ jobs:
           if [ "${{ steps.claude-review-1.outcome }}" = "success" ]; then
             echo "successful_attempt=1" >> $GITHUB_OUTPUT
             echo "review_response=${{ steps.claude-review-1.outputs.response }}" >> $GITHUB_OUTPUT
-            echo "✅ Claude AI Review succeeded on attempt 1"
+            echo "SUCCESS: Claude AI Review succeeded on attempt 1"
           elif [ "${{ steps.claude-review-2.outcome }}" = "success" ]; then
             echo "successful_attempt=2" >> $GITHUB_OUTPUT
             echo "review_response=${{ steps.claude-review-2.outputs.response }}" >> $GITHUB_OUTPUT
-            echo "✅ Claude AI Review succeeded on attempt 2"
+            echo "SUCCESS: Claude AI Review succeeded on attempt 2"
           elif [ "${{ steps.claude-review-3.outcome }}" = "success" ]; then
             echo "successful_attempt=3" >> $GITHUB_OUTPUT
             echo "review_response=${{ steps.claude-review-3.outputs.response }}" >> $GITHUB_OUTPUT
-            echo "✅ Claude AI Review succeeded on attempt 3"
+            echo "SUCCESS: Claude AI Review succeeded on attempt 3"
           else
             echo "successful_attempt=none" >> $GITHUB_OUTPUT
             echo "review_response=" >> $GITHUB_OUTPUT
-            echo "❌ All Claude AI Review attempts failed"
+            echo "ERROR: All Claude AI Review attempts failed"
           fi
 
       - name: Parse Claude Review and Update Progressive Tracking
@@ -308,34 +308,34 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          echo "🔍 Processing Claude review with progressive tracking v2.0..."
-          echo "📊 PR: #${{ github.event.pull_request.number }}"
-          echo "🔗 Repository: ${{ github.repository }}"
-          echo "📝 Commit: ${{ github.sha }}"
+          echo "INFO: Processing Claude review with progressive tracking v2.0..."
+          echo "INFO: PR #${{ github.event.pull_request.number }}"
+          echo "INFO: Repository ${{ github.repository }}"
+          echo "INFO: Commit ${{ github.sha }}"
 
           # Install dependencies for progressive review system
-          echo "📦 Installing dependencies for progressive review system..."
+          echo "INFO: Installing dependencies for progressive review system..."
           if node .github/scripts/install-dependencies.js; then
-            echo "✅ Dependencies ready for progressive tracking"
+            echo "SUCCESS: Dependencies ready for progressive tracking"
           else
-            echo "⚠️ Using fallback implementation for limited GitHub API support"
+            echo "WARNING: Using fallback implementation for limited GitHub API support"
           fi
 
           # Run the enhanced Claude review processor with progressive tracking
           if node .github/scripts/claude-review-enhancer.js >> $GITHUB_OUTPUT; then
-            echo "✅ Progressive Claude review processing completed successfully"
+            echo "SUCCESS: Progressive Claude review processing completed successfully"
 
             # Extract key metrics for logging
             PROGRESS_MADE=$(grep "progress_made=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "false")
             REVIEW_VERSION=$(grep "review_version=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "1")
             RESOLVED_COUNT=$(grep "total_resolved=" $GITHUB_OUTPUT | cut -d'=' -f2 || echo "0")
 
-            echo "📈 Review Version: $REVIEW_VERSION"
-            echo "🎯 Progress Made: $PROGRESS_MADE"
-            echo "✅ Issues Resolved: $RESOLVED_COUNT"
+            echo "INFO: Review Version $REVIEW_VERSION"
+            echo "INFO: Progress Made $PROGRESS_MADE"
+            echo "INFO: Issues Resolved $RESOLVED_COUNT"
 
           else
-            echo "❌ Progressive review processing failed, using fallback"
+            echo "ERROR: Progressive review processing failed, using fallback"
             # Enhanced fallback with basic tracking
             echo "has_blocking_issues=false" >> $GITHUB_OUTPUT
             echo "required_count=0" >> $GITHUB_OUTPUT
@@ -364,18 +364,18 @@ jobs:
               body: enhancedComment
             });
 
-            console.log(`📝 Posted progressive Claude AI review comment v${reviewVersion}`);
+            console.log(`NOTE: Posted progressive Claude AI review comment v${reviewVersion}`);
 
             if (processingSuccess) {
               if (progressMade) {
-                console.log(`🎉 Progress detected: ${resolvedCount} issue(s) resolved since last review`);
+                console.log(`COMPLETED: Progress detected: ${resolvedCount} issue(s) resolved since last review`);
               } else if (reviewVersion > 1) {
-                console.log(`🔄 Review updated: No new progress detected in version ${reviewVersion}`);
+                console.log(`RETRY: Review updated: No new progress detected in version ${reviewVersion}`);
               } else {
-                console.log(`🆕 Initial review: Version ${reviewVersion} posted`);
+                console.log(`NEW: Initial review: Version ${reviewVersion} posted`);
               }
             } else {
-              console.log(`⚠️ Posted with limited tracking due to processing issues`);
+              console.log(`WARNING: Posted with limited tracking due to processing issues`);
             }
 
             // Set output for other steps
@@ -387,16 +387,16 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const failureComment = `## ⚠️ Claude AI Review Service Unavailable
+            const failureComment = `## WARNING: Claude AI Review Service Unavailable
 
             The Claude AI Review Bot encountered technical difficulties and was unable to complete the review after multiple attempts.
 
-            ### 📋 Manual Review Required
-            - **Status**: ❌ Automated review failed
+            ### SUMMARY: Manual Review Required
+            - **Status**: ERROR: Automated review failed
             - **Action Required**: Manual code review needed
-            - **Merge Status**: ⏳ Pending manual approval
+            - **Merge Status**: PENDING: Pending manual approval
 
-            ### 🔄 Next Steps
+            ### RETRY: Next Steps
             1. A human reviewer should manually review this PR
             2. Address any obvious code quality issues
             3. Ensure all tests pass
@@ -411,7 +411,7 @@ jobs:
               body: failureComment
             });
 
-            console.log('📝 Posted Claude AI service failure notice');
+            console.log('NOTE: Posted Claude AI service failure notice');
 
       - name: Set Review Result Outputs
         id: review-result
@@ -434,11 +434,11 @@ jobs:
 
           # Update status based on review result
           if [ "$REVIEW_SUCCESS" = "true" ]; then
-            echo "✅ Updating status for successful review"
+            echo "SUCCESS: Updating status for successful review"
             RECOMMENDATIONS="{\"required\":$REQUIRED_COUNT,\"important\":$IMPORTANT_COUNT}"
             node .github/scripts/claude-status-manager.js review-success "$HAS_BLOCKING" "$RECOMMENDATIONS"
           else
-            echo "❌ Updating status for failed review"
+            echo "ERROR: Updating status for failed review"
             node .github/scripts/claude-status-manager.js review-failure "Claude AI review service encountered technical difficulties"
           fi
 
@@ -465,7 +465,7 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            console.log('🔍 Checking auto-approval criteria with progressive tracking...');
+            console.log('INFO: Checking auto-approval criteria with progressive tracking...');
 
             // Get enhanced tracking data from the updated tracking file
             const trackingFile = path.join('.github/claude-tracking', `pr-${context.payload.pull_request.number}-recommendations.json`);
@@ -487,7 +487,7 @@ jobs:
               reviewVersion = totalReviews;
               resolvedCount = cumulativeResolved;
 
-              console.log(`📊 Progressive Tracking Analysis:`);
+              console.log(`INFO: Progressive Tracking Analysis:`);
               console.log(`   - Review Version: ${reviewVersion}`);
               console.log(`   - Current Required Issues: ${currentRequired}`);
               console.log(`   - Cumulative Resolved Issues: ${cumulativeResolved}`);
@@ -496,7 +496,7 @@ jobs:
             } else {
               // Fallback: check if Claude review had blocking issues
               hasBlockingIssues = '${{ needs.claude-review.outputs.has_blocking_issues }}' === 'true';
-              console.log(`📋 No tracking file, using Claude output: blocking=${hasBlockingIssues}`);
+              console.log(`INFO: No tracking file, using Claude output: blocking=${hasBlockingIssues}`);
             }
 
             // Check if Claude review succeeded
@@ -513,12 +513,12 @@ jobs:
             core.setOutput('review_version', reviewVersion.toString());
             core.setOutput('resolved_count', resolvedCount.toString());
 
-            console.log(`🎯 Auto-approval decision: ${shouldApprove ? 'APPROVE' : 'SKIP'}`);
+            console.log(`INFO: Auto-approval decision: ${shouldApprove ? 'APPROVE' : 'SKIP'}`);
             console.log(`   - Claude review succeeded: ${claudeReviewSucceeded}`);
             console.log(`   - Blocking issues: ${hasBlockingIssues}`);
 
             if (progressMade) {
-              console.log(`🎉 Progress detected: ${resolvedCount} issue(s) resolved across ${reviewVersion} review(s)`);
+              console.log(`INFO: Progress detected: ${resolvedCount} issue(s) resolved across ${reviewVersion} review(s)`);
             }
 
             console.log(`   - GitHub checks: Handled by branch protection rules`);
@@ -526,10 +526,10 @@ jobs:
       - name: Enhanced Token Security Validation
         if: steps.check-criteria.outputs.should_approve == 'true'
         run: |
-          echo "🔒 Validating GitHub token permissions and security..."
+          echo "INFO: Validating GitHub token permissions and security..."
 
           # Document required permissions for different token types:
-          echo "📋 Required Token Permissions:"
+          echo "INFO: Required Token Permissions:"
           echo "  BOT_GITHUB_TOKEN (preferred):"
           echo "    - pull_requests: write (approve PRs, create reviews)"
           echo "    - contents: read (access repository content)"
@@ -544,16 +544,16 @@ jobs:
 
           # Validate token availability and log security status
           if [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
-            echo "✅ Using BOT_GITHUB_TOKEN with enhanced cross-repository permissions"
-            echo "🔒 Security: Dedicated bot token with minimal required scopes"
+            echo "SUCCESS: Using BOT_GITHUB_TOKEN with enhanced cross-repository permissions"
+            echo "INFO: Security - Dedicated bot token with minimal required scopes"
           else
-            echo "⚠️ Using default github.token with repository-limited permissions"
-            echo "🔒 Security: Default token with automatic scope limitation"
-            echo "💡 Recommendation: Configure BOT_GITHUB_TOKEN for enhanced functionality"
+            echo "WARNING: Using default github.token with repository-limited permissions"
+            echo "INFO: Security - Default token with automatic scope limitation"
+            echo "INFO: Recommendation - Configure BOT_GITHUB_TOKEN for enhanced functionality"
           fi
 
           # Security audit log
-          echo "🛡️ Security Audit:"
+          echo "INFO: Security Audit:"
           echo "  - Token scope: $([ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ] && echo "Enhanced (BOT_GITHUB_TOKEN)" || echo "Limited (github.token)")"
           echo "  - Repository access: $([ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ] && echo "Cross-repository capable" || echo "Current repository only")"
           echo "  - Permission model: Principle of least privilege applied"
@@ -564,23 +564,23 @@ jobs:
         with:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
-            console.log('🎉 Creating approval review - all criteria met');
+            console.log('INFO: Creating approval review - all criteria met');
 
             await github.rest.pulls.createReview({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
               event: 'APPROVE',
-              body: `## ✅ BlazeCommerce Claude AI Review - Auto-Approved
+              body: `## BlazeCommerce Claude AI Review - Auto-Approved
 
-            🤖 **Automated approval** - All quality gates passed:
-            - ✅ No blocking (🔴 REQUIRED) issues found
-            - ✅ Code meets BlazeCommerce standards for ${{ steps.prepare-context.outputs.repo_type }} development
+            **Automated approval** - All quality gates passed:
+            - No blocking (REQUIRED) issues found
+            - Code meets BlazeCommerce standards for ${{ steps.prepare-context.outputs.repo_type }} development
 
             *This PR has been automatically approved by the BlazeCommerce Claude AI Review Bot.*`
             });
 
-            console.log('✅ PR approved successfully');
+            console.log('SUCCESS: PR approved successfully');
 
       - name: Post Skip Reason
         if: steps.check-criteria.outputs.should_approve == 'false'
@@ -590,17 +590,17 @@ jobs:
             const blockingIssues = '${{ steps.check-criteria.outputs.blocking_issues }}' === 'true';
             const claudeReviewFailed = '${{ steps.check-criteria.outputs.claude_review_failed }}' === 'true';
 
-            let skipReason = '## ⏳ BlazeCommerce Claude AI Review - Approval Pending\n\n';
+            let skipReason = '## BlazeCommerce Claude AI Review - Approval Pending\n\n';
 
             if (claudeReviewFailed) {
-              skipReason += '⚠️ **Claude AI Review Failed**: The automated review service encountered technical difficulties. Manual review required.\n\n';
+              skipReason += '**Claude AI Review Failed**: The automated review service encountered technical difficulties. Manual review required.\n\n';
             }
 
             if (blockingIssues) {
-              skipReason += '❌ **Blocking Issues Found**: This PR has 🔴 REQUIRED recommendations that must be addressed before approval.\n\n';
+              skipReason += '**Blocking Issues Found**: This PR has REQUIRED recommendations that must be addressed before approval.\n\n';
             }
 
-            skipReason += '📋 **Note**: GitHub checks status is handled separately by branch protection rules.\n\n';
+            skipReason += '**Note**: GitHub checks status is handled separately by branch protection rules.\n\n';
 
             if (!claudeReviewFailed) {
               skipReason += '*Address the Claude AI recommendations above and the bot will automatically approve when criteria are met.*';
@@ -615,4 +615,4 @@ jobs:
               body: skipReason
             });
 
-            console.log('📝 Posted skip reason comment');
+            console.log('INFO: Posted skip reason comment');

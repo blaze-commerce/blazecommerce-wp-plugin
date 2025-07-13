@@ -26,7 +26,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            console.log('🔍 Checking Priority 2 workflow completion...');
+            console.log('DEBUG: Checking Priority 2 workflow completion...');
 
             // Get all workflow runs for this commit
             const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -46,9 +46,9 @@ jobs:
               );
 
               if (workflow) {
-                console.log(`✅ ${workflowName} completed with status: ${workflow.conclusion}`);
+                console.log(`SUCCESS: ${workflowName} completed with status: ${workflow.conclusion}`);
               } else {
-                console.log(`⏳ ${workflowName} not yet completed`);
+                console.log(`PENDING: ${workflowName} not yet completed`);
                 allCompleted = false;
               }
             }
@@ -82,22 +82,22 @@ jobs:
 
     - name: Install dependencies
       run: |
-        echo "🔍 Installing Node.js dependencies for version management..."
+        echo "DEBUG: Installing Node.js dependencies for version management..."
 
         # Check if package.json exists
         if [ ! -f "package.json" ]; then
-          echo "❌ package.json not found"
+          echo "ERROR: package.json not found"
           exit 1
         fi
 
         # Install dependencies with error handling
         npm install --no-audit --no-fund
-        echo "✅ Node.js dependencies installed successfully"
+        echo "SUCCESS: Node.js dependencies installed successfully"
 
     - name: Check if version bump is needed
       id: check_files
       run: |
-        echo "🔍 Running file change analysis..."
+        echo "DEBUG: Running file change analysis..."
 
         # Set environment variables for the script
         export GITHUB_EVENT_BEFORE="${{ github.event.before }}"
@@ -105,7 +105,7 @@ jobs:
 
         # Check if the script exists
         if [ ! -f ".github/scripts/file-change-analyzer.js" ]; then
-          echo "⚠️ File change analyzer script not found, using fallback logic..."
+          echo "WARNING: File change analyzer script not found, using fallback logic..."
 
           # Simple fallback: check if any significant files changed
           if [ -n "$GITHUB_EVENT_BEFORE" ] && [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
@@ -121,13 +121,13 @@ jobs:
             echo "should_bump_version=true" >> $GITHUB_OUTPUT
             echo "change_reason=First push or no before commit" >> $GITHUB_OUTPUT
           fi
-          echo "✅ Fallback file change analysis completed"
+          echo "SUCCESS: Fallback file change analysis completed"
         else
           # Run the extracted file change analyzer
           if node .github/scripts/file-change-analyzer.js >> $GITHUB_OUTPUT; then
-            echo "✅ File change analysis completed successfully"
+            echo "SUCCESS: File change analysis completed successfully"
           else
-            echo "❌ File change analysis failed"
+            echo "ERROR: File change analysis failed"
             exit 1
           fi
         fi
@@ -137,39 +137,39 @@ jobs:
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        echo "✅ Git configured for automated commits"
+        echo "SUCCESS: Git configured for automated commits"
 
     - name: Run version system tests
       if: steps.check_files.outputs.should_bump_version == 'true'
       run: |
-        echo "🧪 Running version system tests..."
+        echo "TESTING: Running version system tests..."
 
         # Check if test script exists before running
         if npm run test:version-system --silent 2>/dev/null; then
-          echo "✅ Version system tests passed"
+          echo "SUCCESS: Version system tests passed"
         elif [ $? -eq 127 ] || ! npm run | grep -q "test:version-system"; then
-          echo "⚠️  test:version-system script not found, running fallback validation..."
+          echo "WARNING:  test:version-system script not found, running fallback validation..."
 
           # Fallback: Basic validation of core functions
           node -e "
             try {
               const semver = require('./scripts/semver-utils');
-              console.log('✅ semver-utils module loads successfully');
+              console.log('SUCCESS: semver-utils module loads successfully');
 
               // Test basic functions exist
               if (typeof semver.incrementVersion !== 'function') throw new Error('incrementVersion function missing');
               if (typeof semver.findNextAvailableVersion !== 'function') throw new Error('findNextAvailableVersion function missing');
               if (typeof semver.tagExists !== 'function') throw new Error('tagExists function missing');
 
-              console.log('✅ Core functions are available');
-              console.log('✅ Fallback validation passed');
+              console.log('SUCCESS: Core functions are available');
+              console.log('SUCCESS: Fallback validation passed');
             } catch (error) {
-              console.error('❌ Fallback validation failed:', error.message);
+              console.error('ERROR: Fallback validation failed:', error.message);
               process.exit(1);
             }
           "
         else
-          echo "❌ Version system tests failed. Aborting version bump."
+          echo "ERROR: Version system tests failed. Aborting version bump."
           echo "   Exit code: $?"
           echo "   Please check test implementation and dependencies"
           exit 1
@@ -179,11 +179,11 @@ jobs:
       if: steps.check_files.outputs.should_bump_version == 'true'
       id: version_validation
       run: |
-        echo "🔍 Running version validation..."
+        echo "DEBUG: Running version validation..."
 
         # Check if the script exists
         if [ ! -f ".github/scripts/version-validator.js" ]; then
-          echo "⚠️ Version validator script not found, using fallback logic..."
+          echo "WARNING: Version validator script not found, using fallback logic..."
 
           # Simple fallback: get version from package.json
           if [ -f "package.json" ]; then
@@ -191,17 +191,17 @@ jobs:
             echo "package_version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
             echo "version_mismatch=false" >> $GITHUB_OUTPUT
             echo "last_tag=" >> $GITHUB_OUTPUT
-            echo "✅ Fallback version validation completed"
+            echo "SUCCESS: Fallback version validation completed"
           else
-            echo "❌ No package.json found"
+            echo "ERROR: No package.json found"
             exit 1
           fi
         else
           # Run the extracted version validator
           if node .github/scripts/version-validator.js >> $GITHUB_OUTPUT; then
-            echo "✅ Version validation completed successfully"
+            echo "SUCCESS: Version validation completed successfully"
           else
-            echo "❌ Version validation failed"
+            echo "ERROR: Version validation failed"
             exit 1
           fi
         fi
@@ -210,14 +210,14 @@ jobs:
       if: steps.check_files.outputs.should_bump_version == 'true'
       id: prerelease_type
       run: |
-        echo "🌿 Running branch analysis..."
+        echo "BRANCH: Running branch analysis..."
 
         # Set environment variables for the script
         export GITHUB_REF="${{ github.ref }}"
 
         # Check if the script exists
         if [ ! -f ".github/scripts/branch-analyzer.js" ]; then
-          echo "⚠️ Branch analyzer script not found, using fallback logic..."
+          echo "WARNING: Branch analyzer script not found, using fallback logic..."
 
           # Simple fallback: determine prerelease type from branch name
           BRANCH_NAME=$(echo "$GITHUB_REF" | sed 's|refs/heads/||')
@@ -235,13 +235,13 @@ jobs:
             echo "prerelease_type=alpha" >> $GITHUB_OUTPUT
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
           fi
-          echo "✅ Fallback branch analysis completed"
+          echo "SUCCESS: Fallback branch analysis completed"
         else
           # Run the extracted branch analyzer
           if node .github/scripts/branch-analyzer.js >> $GITHUB_OUTPUT; then
-            echo "✅ Branch analysis completed successfully"
+            echo "SUCCESS: Branch analysis completed successfully"
           else
-            echo "❌ Branch analysis failed"
+            echo "ERROR: Branch analysis failed"
             exit 1
           fi
         fi
@@ -250,7 +250,7 @@ jobs:
       if: steps.check_files.outputs.should_bump_version == 'true'
       id: bump_type
       run: |
-        echo "🔍 Running commit analysis for bump type..."
+        echo "DEBUG: Running commit analysis for bump type..."
 
         # Set environment variables for the script
         export VERSION_MISMATCH="${{ steps.version_validation.outputs.version_mismatch }}"
@@ -260,7 +260,7 @@ jobs:
 
         # Check if the script exists
         if [ ! -f ".github/scripts/bump-type-analyzer.js" ]; then
-          echo "⚠️ Bump type analyzer script not found, using fallback logic..."
+          echo "WARNING: Bump type analyzer script not found, using fallback logic..."
 
           # Simple fallback: determine bump type from recent commits
           if [ "$VERSION_MISMATCH" = "true" ]; then
@@ -284,13 +284,13 @@ jobs:
               echo "reason=Default patch bump" >> $GITHUB_OUTPUT
             fi
           fi
-          echo "✅ Fallback bump type analysis completed"
+          echo "SUCCESS: Fallback bump type analysis completed"
         else
           # Run the extracted bump type analyzer
           if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG" >> $GITHUB_OUTPUT; then
-            echo "✅ Bump type analysis completed successfully"
+            echo "SUCCESS: Bump type analysis completed successfully"
           else
-            echo "❌ Bump type analysis failed"
+            echo "ERROR: Bump type analysis failed"
             exit 1
           fi
         fi
@@ -298,7 +298,7 @@ jobs:
     - name: Execute version bump
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
       run: |
-        echo "🚀 Executing version bump..."
+        echo "EXECUTING: Executing version bump..."
 
         # Set environment variables for the script
         export BUMP_TYPE="${{ steps.bump_type.outputs.bump_type }}"
@@ -307,16 +307,16 @@ jobs:
 
         # Run the version update script
         if node scripts/update-version.js; then
-          echo "✅ Version bump completed successfully"
+          echo "SUCCESS: Version bump completed successfully"
         else
-          echo "❌ Version bump failed"
+          echo "ERROR: Version bump failed"
           exit 1
         fi
 
     - name: Create git tag
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
       run: |
-        echo "🏷️ Creating git tag..."
+        echo "TAG: Creating git tag..."
 
         # Get the new version from package.json
         NEW_VERSION=$(node -p "require('./package.json').version")
@@ -326,12 +326,12 @@ jobs:
         git tag "$TAG_NAME"
         git push origin "$TAG_NAME"
 
-        echo "✅ Created and pushed tag: $TAG_NAME"
+        echo "SUCCESS: Created and pushed tag: $TAG_NAME"
 
     - name: Commit version changes
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
       run: |
-        echo "📝 Committing version changes..."
+        echo "NOTE: Committing version changes..."
 
         # Get the new version for commit message
         NEW_VERSION=$(node -p "require('./package.json').version")
@@ -347,17 +347,17 @@ jobs:
         git commit -m "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]"
         git push
 
-        echo "✅ Version changes committed and pushed"
+        echo "SUCCESS: Version changes committed and pushed"
 
     - name: Workflow Summary
       if: always()
       run: |
-        echo "📋 Auto Version Bump Workflow Summary"
+        echo "SUMMARY: Auto Version Bump Workflow Summary"
         echo "======================================"
 
         if [ "${{ steps.check_files.outputs.should_bump_version }}" = "true" ]; then
-          echo "✅ Version bump was processed"
-          echo "🔄 Bump type: ${{ steps.bump_type.outputs.bump_type || 'none' }}"
+          echo "SUCCESS: Version bump was processed"
+          echo "RETRY: Bump type: ${{ steps.bump_type.outputs.bump_type || 'none' }}"
           if [ "${{ steps.bump_type.outputs.bump_type }}" != "none" ] && [ -n "${{ steps.bump_type.outputs.bump_type }}" ]; then
             # Safely get the final version with error handling
             if [ -f "package.json" ]; then
@@ -365,19 +365,19 @@ jobs:
             else
               FINAL_VERSION="unknown (package.json not found)"
             fi
-            echo "📦 New version: $FINAL_VERSION"
-            echo "🎉 Version bump completed successfully!"
+            echo "PACKAGE: New version: $FINAL_VERSION"
+            echo "COMPLETED: Version bump completed successfully!"
           else
-            echo "ℹ️  No version bump was needed (no conventional commits found)"
+            echo "INFO:  No version bump was needed (no conventional commits found)"
           fi
         else
-          echo "⏭️  Version bump was skipped"
-          echo "📁 Reason: Only ignored files were changed"
-          echo "ℹ️  This is normal behavior - no version bump needed for:"
-          echo "   • Documentation changes"
-          echo "   • CI/CD configuration updates"
-          echo "   • Development tooling changes"
-          echo "   • Auto-generated files"
+          echo "SKIPPED:  Version bump was skipped"
+          echo "FILES: Reason: Only ignored files were changed"
+          echo "INFO:  This is normal behavior - no version bump needed for:"
+          echo "   - Documentation changes"
+          echo "   - CI/CD configuration updates"
+          echo "   - Development tooling changes"
+          echo "   - Auto-generated files"
           echo ""
-          echo "✅ Workflow completed successfully (no action required)"
+          echo "SUCCESS: Workflow completed successfully (no action required)"
         fi

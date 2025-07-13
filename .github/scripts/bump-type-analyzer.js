@@ -125,9 +125,9 @@ class BumpTypeAnalyzer {
     try {
       Logger.info('Analyzing commits for version bump type...');
       Logger.info('Commit Analysis Strategy:');
-      Logger.info('  • Normal operation: Analyze commits since last matching git tag');
-      Logger.info('  • Version mismatch: Use limited analysis to avoid historical features');
-      Logger.info('  • No tags found: Analyze recent commits with fallback limits');
+      Logger.info('  - Normal operation: Analyze commits since last matching git tag');
+      Logger.info('  - Version mismatch: Use limited analysis to avoid historical features');
+      Logger.info('  - No tags found: Analyze recent commits with fallback limits');
 
       const commits = this.getCommitsForAnalysis(hasMismatch, lastTag);
       
@@ -186,12 +186,12 @@ class BumpTypeAnalyzer {
       Logger.info(`Bump type determined: ${bumpType.toUpperCase()}`);
       Logger.info(`Reasoning: ${reason}`);
       Logger.info(`Analysis summary:`);
-      Logger.info(`  • Total commits: ${analysis.totalCommits}`);
-      Logger.info(`  • Conventional commits: ${analysis.conventionalCommits}`);
-      Logger.info(`  • Breaking changes: ${analysis.breakingChanges}`);
-      Logger.info(`  • Features: ${analysis.features}`);
-      Logger.info(`  • Fixes: ${analysis.fixes}`);
-      Logger.info(`  • Other: ${analysis.other}`);
+      Logger.info(`  - Total commits: ${analysis.totalCommits}`);
+      Logger.info(`  - Conventional commits: ${analysis.conventionalCommits}`);
+      Logger.info(`  - Breaking changes: ${analysis.breakingChanges}`);
+      Logger.info(`  - Features: ${analysis.features}`);
+      Logger.info(`  - Fixes: ${analysis.fixes}`);
+      Logger.info(`  - Other: ${analysis.other}`);
 
       return {
         bumpType,

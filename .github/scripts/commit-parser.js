@@ -252,13 +252,13 @@ class CommitParser {
    * Main execution function
    */
   run() {
-    console.log('🔍 Starting commit analysis...');
+    console.log('DEBUG: Starting commit analysis...');
     
     const analysis = this.analyzeCommits();
     const changelog = this.generateChangelog();
     const shouldSkip = this.shouldSkipVersionBump();
     
-    console.log('📊 Commit Analysis Results:');
+    console.log('ANALYSIS: Commit Analysis Results:');
     console.log(`  Total Commits: ${analysis.totalCommits}`);
     console.log(`  Conventional Commits: ${analysis.conventionalCommits}`);
     console.log(`  Release Type: ${analysis.releaseType}`);
@@ -286,10 +286,10 @@ class CommitParser {
     if (changelog && process.env.GITHUB_WORKSPACE) {
       const changelogPath = `${process.env.GITHUB_WORKSPACE}/CHANGELOG_ENTRY.md`;
       fs.writeFileSync(changelogPath, changelog);
-      console.log(`📝 Changelog entry written to ${changelogPath}`);
+      console.log(`NOTE: Changelog entry written to ${changelogPath}`);
     }
     
-    console.log('✅ Commit analysis completed successfully');
+    console.log('SUCCESS: Commit analysis completed successfully');
   }
 }
 

@@ -52,26 +52,26 @@ jobs:
     
     - name: Install Composer dependencies
       run: |
-        echo "🔍 Installing Composer dependencies..."
+        echo "DEBUG: Installing Composer dependencies..."
         echo "PHP Version: $(php --version)"
         echo "Composer Version: $(composer --version)"
 
         # Validate composer.json exists and is valid
         if [ ! -f "composer.json" ]; then
-          echo "❌ composer.json not found"
+          echo "ERROR: composer.json not found"
           exit 1
         fi
 
-        echo "✅ composer.json found, validating..."
+        echo "SUCCESS: composer.json found, validating..."
 
         # Configure composer for security
         composer config --global allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
 
         # Remove lock file if it exists and is problematic
         if [ -f "composer.lock" ]; then
-          echo "🔄 Checking composer.lock status..."
+          echo "RETRY: Checking composer.lock status..."
           if ! composer validate --no-check-publish --no-check-all; then
-            echo "⚠️ composer.lock is out of sync, regenerating..."
+            echo "WARNING: composer.lock is out of sync, regenerating..."
             rm composer.lock
           fi
         fi
@@ -79,17 +79,17 @@ jobs:
         # Install dependencies with better error handling
         composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
 
-        echo "✅ Composer dependencies installed successfully"
+        echo "SUCCESS: Composer dependencies installed successfully"
     
     - name: Setup WordPress test environment
       run: |
-        echo "🔍 Setting up WordPress test environment..."
+        echo "DEBUG: Setting up WordPress test environment..."
         echo "WordPress Version: ${{ matrix.wordpress-version }}"
         echo "PHP Version: ${{ matrix.php-version }}"
 
         # Validate test script exists
         if [ ! -f "bin/install-wp-tests.sh" ]; then
-          echo "❌ WordPress test installation script not found"
+          echo "ERROR: WordPress test installation script not found"
           exit 1
         fi
 
@@ -99,7 +99,7 @@ jobs:
         # Install WordPress test environment with better error handling
         bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ matrix.wordpress-version }}
 
-        echo "✅ WordPress test environment setup complete"
+        echo "SUCCESS: WordPress test environment setup complete"
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib
         WP_CORE_DIR: /tmp/wordpress/
@@ -113,29 +113,29 @@ jobs:
     
     - name: Run PHPUnit tests
       run: |
-        echo "🧪 Running PHPUnit tests..."
+        echo "TESTING: Running PHPUnit tests..."
         echo "PHP Version: ${{ matrix.php-version }}"
         echo "WordPress Version: ${{ matrix.wordpress-version }}"
 
         # Validate PHPUnit configuration
         if [ ! -f "phpunit.xml" ]; then
-          echo "❌ phpunit.xml not found"
+          echo "ERROR: phpunit.xml not found"
           exit 1
         fi
 
         # Validate PHPUnit binary exists
         if [ ! -f "vendor/bin/phpunit" ]; then
-          echo "❌ PHPUnit binary not found in vendor/bin/"
+          echo "ERROR: PHPUnit binary not found in vendor/bin/"
           echo "Available files in vendor/bin/:"
           ls -la vendor/bin/ || echo "vendor/bin/ directory not found"
           exit 1
         fi
 
         # Run tests with comprehensive error handling
-        echo "🚀 Executing PHPUnit tests..."
+        echo "EXECUTING: Executing PHPUnit tests..."
         vendor/bin/phpunit --configuration phpunit.xml --coverage-clover=coverage.xml --verbose
 
-        echo "✅ PHPUnit tests completed successfully"
+        echo "SUCCESS: PHPUnit tests completed successfully"
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib
         WP_CORE_DIR: /tmp/wordpress/
@@ -172,62 +172,62 @@ jobs:
     
     - name: Install Composer dependencies
       run: |
-        echo "🔍 Installing Composer dependencies for code quality checks..."
+        echo "DEBUG: Installing Composer dependencies for code quality checks..."
 
         # Configure composer for security
         composer config --global allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
 
         # Remove lock file if it exists and is problematic
         if [ -f "composer.lock" ]; then
-          echo "🔄 Checking composer.lock status..."
+          echo "RETRY: Checking composer.lock status..."
           if ! composer validate --no-check-publish --no-check-all; then
-            echo "⚠️ composer.lock is out of sync, regenerating..."
+            echo "WARNING: composer.lock is out of sync, regenerating..."
             rm composer.lock
           fi
         fi
 
         # Install dependencies
         composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
-        echo "✅ Composer dependencies installed successfully"
+        echo "SUCCESS: Composer dependencies installed successfully"
     
     - name: Run PHP_CodeSniffer
       run: |
-        echo "🔍 Running PHP_CodeSniffer..."
+        echo "DEBUG: Running PHP_CodeSniffer..."
 
         # Check if PHPCS is available
         if [ ! -f "vendor/bin/phpcs" ]; then
-          echo "❌ PHP_CodeSniffer not found in vendor/bin/"
+          echo "ERROR: PHP_CodeSniffer not found in vendor/bin/"
           exit 1
         fi
 
         # Run PHPCS with better error handling
-        echo "🚀 Executing PHP_CodeSniffer..."
+        echo "EXECUTING: Executing PHP_CodeSniffer..."
         vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=vendor/,tests/coverage/ . --report=summary
 
-        echo "✅ PHP_CodeSniffer completed"
+        echo "SUCCESS: PHP_CodeSniffer completed"
       continue-on-error: true
     
     - name: Run PHPStan
       run: |
-        echo "🔍 Running PHPStan static analysis..."
+        echo "DEBUG: Running PHPStan static analysis..."
 
         # Check if PHPStan is available
         if [ ! -f "vendor/bin/phpstan" ]; then
-          echo "❌ PHPStan not found in vendor/bin/"
+          echo "ERROR: PHPStan not found in vendor/bin/"
           exit 1
         fi
 
         # Check if app directory exists
         if [ ! -d "app/" ]; then
-          echo "❌ app/ directory not found"
+          echo "ERROR: app/ directory not found"
           exit 1
         fi
 
         # Run PHPStan with better error handling
-        echo "🚀 Executing PHPStan analysis..."
+        echo "EXECUTING: Executing PHPStan analysis..."
         vendor/bin/phpstan analyse --level=5 app/ --no-progress
 
-        echo "✅ PHPStan analysis completed"
+        echo "SUCCESS: PHPStan analysis completed"
       continue-on-error: true
     
   test-coverage:
@@ -250,31 +250,31 @@ jobs:
     
     - name: Install Composer dependencies
       run: |
-        echo "🔍 Installing Composer dependencies for test coverage..."
+        echo "DEBUG: Installing Composer dependencies for test coverage..."
 
         # Configure composer for security
         composer config --global allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
 
         # Remove lock file if it exists and is problematic
         if [ -f "composer.lock" ]; then
-          echo "🔄 Checking composer.lock status..."
+          echo "RETRY: Checking composer.lock status..."
           if ! composer validate --no-check-publish --no-check-all; then
-            echo "⚠️ composer.lock is out of sync, regenerating..."
+            echo "WARNING: composer.lock is out of sync, regenerating..."
             rm composer.lock
           fi
         fi
 
         # Install dependencies
         composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
-        echo "✅ Composer dependencies installed successfully"
+        echo "SUCCESS: Composer dependencies installed successfully"
     
     - name: Setup WordPress test environment
       run: |
-        echo "🔍 Setting up WordPress test environment for coverage..."
+        echo "DEBUG: Setting up WordPress test environment for coverage..."
 
         # Validate test script exists
         if [ ! -f "bin/install-wp-tests.sh" ]; then
-          echo "❌ WordPress test installation script not found"
+          echo "ERROR: WordPress test installation script not found"
           exit 1
         fi
 
@@ -282,23 +282,23 @@ jobs:
         chmod +x bin/install-wp-tests.sh
         bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest
 
-        echo "✅ WordPress test environment setup complete"
+        echo "SUCCESS: WordPress test environment setup complete"
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib
         WP_CORE_DIR: /tmp/wordpress/
     
     - name: Generate coverage report
       run: |
-        echo "📊 Generating test coverage report..."
+        echo "ANALYSIS: Generating test coverage report..."
 
         # Ensure coverage directory exists
         mkdir -p tests/coverage/html
 
         # Generate coverage report with error handling
-        echo "🚀 Running PHPUnit with coverage..."
+        echo "EXECUTING: Running PHPUnit with coverage..."
         vendor/bin/phpunit --configuration phpunit.xml --coverage-html=tests/coverage/html --coverage-text --verbose
 
-        echo "✅ Coverage report generated successfully"
+        echo "SUCCESS: Coverage report generated successfully"
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib
         WP_CORE_DIR: /tmp/wordpress/
@@ -308,10 +308,10 @@ jobs:
         COVERAGE=$(vendor/bin/phpunit --configuration phpunit.xml --coverage-text | grep "Lines:" | grep -o '[0-9]\+\.[0-9]\+%' | head -1 | sed 's/%//')
         echo "Coverage: $COVERAGE%"
         if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-          echo "❌ Coverage $COVERAGE% is below required 80%"
+          echo "ERROR: Coverage $COVERAGE% is below required 80%"
           exit 1
         else
-          echo "✅ Coverage $COVERAGE% meets requirement"
+          echo "SUCCESS: Coverage $COVERAGE% meets requirement"
         fi
       env:
         WP_TESTS_DIR: /tmp/wordpress-tests-lib

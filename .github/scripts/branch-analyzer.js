@@ -58,26 +58,26 @@ class BranchAnalyzer {
     // Branch-based prerelease strategy
     if (this.branchName.startsWith('feature/')) {
       prereleaseType = 'alpha';
-      reasoning = 'Feature branch detected → alpha prerelease';
-      Logger.info('🔬 Feature branch detected → alpha prerelease');
+      reasoning = 'Feature branch detected  alpha prerelease';
+      Logger.info(' Feature branch detected  alpha prerelease');
     } else if (this.branchName === 'develop') {
       prereleaseType = 'beta';
-      reasoning = 'Develop branch detected → beta prerelease';
-      Logger.info('🧪 Develop branch detected → beta prerelease');
+      reasoning = 'Develop branch detected  beta prerelease';
+      Logger.info('TESTING: Develop branch detected  beta prerelease');
     } else if (this.branchName.startsWith('release/')) {
       prereleaseType = 'rc';
-      reasoning = 'Release branch detected → release candidate';
-      Logger.info('🚀 Release branch detected → release candidate');
+      reasoning = 'Release branch detected  release candidate';
+      Logger.info('EXECUTING: Release branch detected  release candidate');
     } else if (this.branchName === 'main' || this.branchName === 'master') {
       prereleaseType = '';
-      reasoning = 'Main branch detected → stable release';
+      reasoning = 'Main branch detected  stable release';
       isStableRelease = true;
-      Logger.info('📦 Main branch detected → stable release');
+      Logger.info('PACKAGE: Main branch detected  stable release');
     } else {
       prereleaseType = '';
-      reasoning = 'Other branch detected → stable release';
+      reasoning = 'Other branch detected  stable release';
       isStableRelease = true;
-      Logger.info('🔧 Other branch detected → stable release');
+      Logger.info('CONFIG: Other branch detected  stable release');
     }
 
     return {

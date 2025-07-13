@@ -25,27 +25,27 @@ class ValidationResults {
   pass(test, message) {
     this.passed++;
     this.results.push({ test, status: 'PASS', message });
-    console.log(`✅ ${test}: ${message}`);
+    console.log(`SUCCESS: ${test}: ${message}`);
   }
 
   fail(test, message) {
     this.failed++;
     this.results.push({ test, status: 'FAIL', message });
-    console.log(`❌ ${test}: ${message}`);
+    console.log(`ERROR: ${test}: ${message}`);
   }
 
   warn(test, message) {
     this.warnings++;
     this.results.push({ test, status: 'WARN', message });
-    console.log(`⚠️  ${test}: ${message}`);
+    console.log(`WARNING:  ${test}: ${message}`);
   }
 
   summary() {
-    console.log('\n📊 Validation Summary:');
-    console.log(`✅ Passed: ${this.passed}`);
-    console.log(`❌ Failed: ${this.failed}`);
-    console.log(`⚠️  Warnings: ${this.warnings}`);
-    console.log(`📋 Total: ${this.results.length}`);
+    console.log('\nANALYSIS: Validation Summary:');
+    console.log(`SUCCESS: Passed: ${this.passed}`);
+    console.log(`ERROR: Failed: ${this.failed}`);
+    console.log(`WARNING:  Warnings: ${this.warnings}`);
+    console.log(`SUMMARY: Total: ${this.results.length}`);
     
     return this.failed === 0;
   }
@@ -95,7 +95,7 @@ class WorkflowOptimizationValidator {
    * Validate extracted scripts exist
    */
   validateExtractedScripts() {
-    console.log('\n🔍 Validating Extracted Scripts...');
+    console.log('\nDEBUG: Validating Extracted Scripts...');
 
     const requiredScripts = [
       '.github/scripts/file-change-analyzer.js',
@@ -120,7 +120,7 @@ class WorkflowOptimizationValidator {
    * Validate workflow complexity reduction
    */
   validateWorkflowComplexity() {
-    console.log('\n🔍 Validating Workflow Complexity...');
+    console.log('\nDEBUG: Validating Workflow Complexity...');
 
     const autoVersionPath = '.github/workflows/auto-version.yml';
     if (this.fileExists(autoVersionPath)) {
@@ -149,7 +149,7 @@ class WorkflowOptimizationValidator {
    * Validate priority dependencies
    */
   validatePriorityDependencies() {
-    console.log('\n🔍 Validating Priority Dependencies...');
+    console.log('\nDEBUG: Validating Priority Dependencies...');
 
     const workflows = [
       { file: '.github/workflows/claude-pr-review.yml', priority: 1 },
@@ -181,7 +181,7 @@ class WorkflowOptimizationValidator {
    * Validate error handling
    */
   validateErrorHandling() {
-    console.log('\n🔍 Validating Error Handling...');
+    console.log('\nDEBUG: Validating Error Handling...');
 
     const errorHandlerPath = '.github/scripts/error-handler.js';
     if (this.fileExists(errorHandlerPath)) {
@@ -219,7 +219,7 @@ class WorkflowOptimizationValidator {
    * Validate Claude review enhancement
    */
   validateClaudeEnhancement() {
-    console.log('\n🔍 Validating Claude Review Enhancement...');
+    console.log('\nDEBUG: Validating Claude Review Enhancement...');
 
     const enhancerPath = '.github/scripts/claude-review-enhancer.js';
     if (this.fileExists(enhancerPath)) {
@@ -247,7 +247,7 @@ class WorkflowOptimizationValidator {
    * Validate unit tests
    */
   validateUnitTests() {
-    console.log('\n🔍 Validating Unit Tests...');
+    console.log('\nDEBUG: Validating Unit Tests...');
 
     const testPath = '.github/scripts/tests/workflow-scripts.test.js';
     if (this.fileExists(testPath)) {
@@ -270,7 +270,7 @@ class WorkflowOptimizationValidator {
    * Validate repository variables usage
    */
   validateRepositoryVariables() {
-    console.log('\n🔍 Validating Repository Variables...');
+    console.log('\nDEBUG: Validating Repository Variables...');
 
     const workflows = [
       '.github/workflows/auto-version.yml',
@@ -294,7 +294,7 @@ class WorkflowOptimizationValidator {
    * Run all validations
    */
   async validate() {
-    console.log('🔍 Starting Workflow Optimization Validation...');
+    console.log('DEBUG: Starting Workflow Optimization Validation...');
     console.log('================================================');
 
     this.validateExtractedScripts();
@@ -309,9 +309,9 @@ class WorkflowOptimizationValidator {
     const success = this.results.summary();
 
     if (success) {
-      console.log('\n🎉 All validations passed! Workflow optimization is complete.');
+      console.log('\nCOMPLETED: All validations passed! Workflow optimization is complete.');
     } else {
-      console.log('\n⚠️  Some validations failed. Please review the issues above.');
+      console.log('\nWARNING:  Some validations failed. Please review the issues above.');
     }
 
     return success;
@@ -326,7 +326,7 @@ if (require.main === module) {
   validator.validate().then(success => {
     process.exit(success ? 0 : 1);
   }).catch(error => {
-    console.error('❌ Validation failed:', error);
+    console.error('ERROR: Validation failed:', error);
     process.exit(1);
   });
 }
