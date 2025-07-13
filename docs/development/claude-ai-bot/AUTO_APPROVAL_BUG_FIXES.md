@@ -16,15 +16,21 @@ This document details the critical bug fixes implemented to resolve incorrect au
 **Issue**: Auto-approval used OR conditions allowing approval when Claude review succeeded regardless of recommendations.
 **Impact**: Any PR with a successful Claude review would be approved, even with pending critical issues.
 
-### Bug #3: False Status Reporting
+### Bug #3: False Status Reporting (CRITICAL FIX)
 **Location**: `.github/workflows/claude-pr-review.yml` status reporting logic
-**Issue**: Status messages hardcoded "✅ All addressed (or none found)" for REQUIRED items regardless of actual status.
-**Impact**: Users received misleading feedback about recommendation status, making it difficult to understand why auto-approval was blocked.
+**Issue**: Status messages showed "⚠️ Status unknown" because `all_required_addressed` and `all_important_addressed` outputs were only set in the approval path, not in disapproval or skip approval paths.
+**Impact**: Users received misleading "Status unknown" messages instead of accurate counts of pending recommendations.
+**Root Cause**: Missing `core.setOutput()` calls for status variables in non-approval workflow paths.
 
 ### Bug #4: Inadequate Security Validation
 **Location**: Comment parsing and regex patterns
 **Issue**: Insufficient input validation and regex patterns vulnerable to injection or false matches.
 **Impact**: Potential security vulnerabilities and unreliable recommendation parsing.
+
+### Bug #5: Missing Token Validation
+**Location**: Workflow authentication
+**Issue**: No validation of GitHub token permissions and scope before executing approval logic.
+**Impact**: Potential failures due to insufficient token permissions without clear error messages.
 
 ## ✅ Fixes Implemented
 
@@ -72,15 +78,24 @@ if (claudeReviewSuccess &&
     importantRecommendationsStatus.allAddressed) {
 ```
 
-### 4. Fixed Status Reporting Logic
-**Before (Hardcoded)**:
+### 4. Fixed Status Reporting Logic (CRITICAL FIX)
+**Problem**: Status showed "⚠️ Status unknown" because outputs weren't set in all workflow paths.
+
+**Before (Missing Outputs)**:
 ```javascript
-- **REQUIRED Items**: ✅ All addressed (or none found)
+// Only set in approval path - missing in disapproval/skip paths
+core.setOutput('all_required_addressed', requiredRecommendationsStatus.allAddressed.toString());
 ```
 
-**After (Dynamic)**:
+**After (Complete Coverage)**:
 ```javascript
-- **REQUIRED Items**: ${pendingRequiredCount > 0 ? `❌ ${pendingRequiredCount} pending` : (allRequiredAddressed ? '✅ All addressed' : '⚠️ Status unknown')}
+// Now set in ALL workflow paths:
+// 1. Approval path ✅
+// 2. Disapproval path ✅ (FIXED)
+// 3. Skip approval path ✅ (FIXED)
+// 4. Failed checks path ✅ (FIXED)
+core.setOutput('all_required_addressed', requiredRecommendationsStatus.allAddressed.toString());
+core.setOutput('all_important_addressed', importantRecommendationsStatus.allAddressed.toString());
 ```
 
 ### 5. Added Security Enhancements
@@ -99,11 +114,26 @@ if (claudeReviewSuccess &&
 - Structured logging with timestamps and actor information
 - Enhanced debugging information for troubleshooting
 
-### 8. Added Concurrency Controls
+### 8. Added Token Validation
+- GitHub token authentication validation before workflow execution
+- Proper error handling for authentication failures
+- Enhanced security through token scope verification
+
+### 9. Added Performance Monitoring
+- Processing time tracking in audit logs
+- Workflow run ID and repository tracking
+- Enhanced debugging information for performance analysis
+
+### 10. Added Dry-Run Mode Support
+- Environment variable `CLAUDE_BOT_DRY_RUN=true` for testing
+- Safe testing of approval logic without actual approvals
+- Enhanced logging for dry-run scenarios
+
+### 11. Added Concurrency Controls
 - Workflow concurrency controls to prevent race conditions
 - Proper handling of concurrent workflow runs
 
-### 9. Updated Documentation
+### 12. Updated Documentation
 - Updated auto-approval criteria descriptions in workflow comments
 - Modified status messages to reflect accurate recommendation status
 - Updated related documentation files with new security features
