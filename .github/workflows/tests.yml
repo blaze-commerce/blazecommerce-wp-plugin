@@ -141,7 +141,7 @@ jobs:
         WP_CORE_DIR: /tmp/wordpress/
     
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         file: ./coverage.xml
         flags: unittests
@@ -149,7 +149,7 @@ jobs:
         fail_ci_if_error: false
     
     - name: Archive test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: test-results-php${{ matrix.php-version }}-wp${{ matrix.wordpress-version }}
