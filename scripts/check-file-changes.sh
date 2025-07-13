@@ -91,20 +91,30 @@ check_with_git_pathspec() {
 
 # Main function
 main() {
-    local changed_files="$1"
+    local changed_files_input="$1"
     local performance_mode=false
-    
+
     # Parse arguments
     if [ $# -lt 1 ]; then
         usage
     fi
-    
+
     if [ $# -gt 1 ] && [ "$2" = "--performance-mode" ]; then
         performance_mode=true
     fi
-    
+
     log "🔍 Starting file change analysis..."
-    
+
+    # Handle stdin input vs direct file list
+    local changed_files=""
+    if [ "$changed_files_input" = "/dev/stdin" ]; then
+        # Read from stdin
+        changed_files=$(cat)
+    else
+        # Use provided file list
+        changed_files="$changed_files_input"
+    fi
+
     # Validate input
     if [ -z "$changed_files" ]; then
         log "⚠️  No changed files provided - skipping action"
@@ -141,12 +151,40 @@ main() {
     local should_skip=true
     local ignored_count=0
     local non_ignored_count=0
-    
-    # Use null-terminated strings for robust filename handling
-    while IFS= read -r -d '' file; do
+
+    # Process files line by line (newline-separated)
+    # Disable error handling for the loop to prevent early exit
+    set +e
+    set +o pipefail
+
+    while IFS= read -r file; do
         [ -z "$file" ] && continue
-        
-        if check_file_against_patterns "$file" "${IGNORE_PATTERNS[@]}"; then
+
+        # Check if file should be ignored
+        local file_ignored=false
+        for pattern in "${IGNORE_PATTERNS[@]}"; do
+            # Handle directory patterns (ending with /)
+            if [[ "$pattern" == */ ]]; then
+                if [[ "$file" == "$pattern"* ]]; then
+                    file_ignored=true
+                    break
+                fi
+            # Handle exact file matches
+            elif [[ "$file" == "$pattern" ]]; then
+                file_ignored=true
+                break
+            # Handle file basename matches (file in any directory)
+            elif [[ "$file" == */"$pattern" ]]; then
+                file_ignored=true
+                break
+            # Handle file extension patterns
+            elif [[ "$pattern" == .* ]] && [[ "${file##*/}" == "$pattern" ]]; then
+                file_ignored=true
+                break
+            fi
+        done
+
+        if [ "$file_ignored" = true ]; then
             log "⏭️  File '$file' is ignored"
             ((ignored_count++))
         else
@@ -154,7 +192,11 @@ main() {
             should_skip=false
             ((non_ignored_count++))
         fi
-    done < <(printf '%s\0' $changed_files)
+    done <<< "$changed_files"
+
+    # Re-enable error handling
+    set -e
+    set -o pipefail
     
     # Summary
     log "📊 Analysis complete:"

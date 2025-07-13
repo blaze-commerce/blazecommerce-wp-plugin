@@ -2,36 +2,66 @@
 # Shared ignore patterns for GitHub workflows
 # This script outputs the list of file patterns that should be ignored
 # for version bumping and release creation purposes.
+#
+# These patterns match files that are development/configuration related
+# and should NOT trigger version bumps when changed.
 
 cat << 'EOF'
-CHANGELOG.md
-package.json
-package-lock.json
-blaze-wooless.php
-blocks/package.json
+# Development & Tooling
+.augment/
+.claude/
 .github/
+.vscode/
+.idea/
 scripts/
+bin/
+setup-templates/
+
+# Testing & Quality Assurance
 tests/
 test/
-bin/
-docs/
-CONTRIBUTING.md
-TODO
-IMPLEMENTATION_SUMMARY.md
-VERSION_BUMP_BEHAVIOR_EXPLANATION.md
-CHANGELOG_VERSION_FIX.md
 phpunit.xml
 jest.config.js
 github-workflows-tests.yml
-test.html
-composer.lock
+
+# Dependencies & Build Configuration
 vendor/
-blocks/yarn.lock
+node_modules/
+composer.json
+composer.lock
+package.json
+package-lock.json
+blocks/package.json
 blocks/package-lock.json
+blocks/yarn.lock
+
+# Documentation & Configuration
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+DOCUMENTATION_GUIDELINES.md
+license.txt
 .gitignore
+.augmentignore
+.augment-guidelines
 .editorconfig
+
+# System & Temporary Files
 .DS_Store
-.augment/
-.claude/
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+
+# IDE-specific files
+*.sublime-project
+*.sublime-workspace
 .vscode/
+.idea/
 EOF
