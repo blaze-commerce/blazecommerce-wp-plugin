@@ -50,32 +50,6 @@ jobs:
             - Test coverage
             Be constructive and helpful in your feedback.
 
-            IMPORTANT: Follow the standardized format in CLAUDE.md for auto-approval workflow integration.
-
-            You MUST follow the exact structure specified in CLAUDE.md:
-
-            1. Start with: "### Claude AI PR Review Complete"
-            2. Use these exact section headers:
-               - **STRENGTHS**
-               - **AREAS FOR IMPROVEMENT**
-               - **CRITICAL ISSUES**
-               - **PERFORMANCE CONSIDERATIONS**
-               - **SECURITY ASSESSMENT**
-            3. End with the Final Verdict section using exact format:
-               **Status**: [APPROVED | CONDITIONAL APPROVAL | BLOCKED]
-               **Merge Readiness**: [READY TO MERGE | READY AFTER FIXES | NOT READY]
-
-            Focus your review on:
-            - WordPress plugin security best practices
-            - WooCommerce integration patterns
-            - Performance optimization for large catalogs
-            - Code quality and maintainability
-            - Potential breaking changes
-
-            Use APPROVED only when no critical issues exist.
-            Use BLOCKED for security vulnerabilities, breaking changes, or critical bugs.
-            Use CONDITIONAL APPROVAL for non-blocking improvements only.
-
           # Optional: Customize review based on file types
           # direct_prompt: |
           #   Review this PR focusing on:
