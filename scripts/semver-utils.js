@@ -1326,6 +1326,14 @@ function getLatestTag() {
 }
 
 /**
+ * Get the last version tag (alias for getLatestTag for backward compatibility)
+ * @returns {string|null} Latest version tag or null if no tags exist
+ */
+function getLastVersionTag() {
+  return getLatestTag();
+}
+
+/**
  * Streaming commit processor for large repositories (Claude AI recommendation)
  * Processes commits in batches to avoid memory issues
  * @param {number} batchSize - Size of each batch
@@ -1860,6 +1868,7 @@ module.exports = {
   getCurrentVersion,
   tagExists,
   getLatestTag,
+  getLastVersionTag, // Added missing export
   getCommitsSinceLastTag,
   getCommitsSinceLastTagStreaming, // Claude AI recommendation: streaming support
   calculateNextVersion,
