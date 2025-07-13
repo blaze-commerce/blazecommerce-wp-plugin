@@ -9,11 +9,16 @@ on:
         description: 'PR number to review'
         required: false
 
+# Prevent race conditions by ensuring only one security gate runs at a time per PR
+concurrency:
+  group: security-gate-pr-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
 jobs:
   claude-review-secure:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+
     permissions:
       contents: read
       pull-requests: write
@@ -29,7 +34,7 @@ jobs:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             console.log('🔒 Claude AI Review Bot - Secure Version with Security Gates');
-            
+
             // Get PR number
             let prNumber;
             if (context.eventName === 'pull_request') {
@@ -37,13 +42,31 @@ jobs:
             } else if (context.eventName === 'workflow_dispatch') {
               prNumber = '${{ github.event.inputs.pr_number }}';
             }
-            
+
             if (!prNumber) {
               console.log('❌ No PR number found');
               return;
             }
-            
+
             console.log(`🔍 Performing secure review of PR #${prNumber}`);
+
+            // RACE CONDITION PREVENTION: Check for recent reviews from this bot
+            const recentReviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 10
+            });
+
+            const recentBotReviews = recentReviews.data.filter(review =>
+              review.user.login === 'blazecommerce-claude-ai' &&
+              new Date(review.submitted_at) > new Date(Date.now() - 60000) // Last 60 seconds
+            );
+
+            if (recentBotReviews.length > 0) {
+              console.log(`⚠️ Found ${recentBotReviews.length} recent bot reviews, skipping to prevent duplicates`);
+              return;
+            }
             
             // SECURITY GATE 1: Parse Claude review comments for REQUIRED/IMPORTANT items with resolution tracking
             async function parseClaudeReviewComments() {
