@@ -1,0 +1,130 @@
+name: "✅ Claude AI Auto-Approval"
+
+on:
+  workflow_run:
+    workflows: ["🤖 Priority 2: Claude AI Code Review"]
+    types: [completed]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to evaluate'
+        required: true
+        type: string
+
+jobs:
+  claude-auto-approval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Determine PR Number and Trigger
+        id: get-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let prNumber = null;
+            let shouldRun = false;
+            
+            console.log('Event: ' + context.eventName);
+            
+            if (context.eventName === 'workflow_run') {
+              console.log('WORKFLOW_RUN trigger detected');
+              if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
+                prNumber = context.payload.workflow_run.pull_requests[0].number;
+                shouldRun = true;
+                console.log('Found PR from workflow_run: ' + prNumber);
+              }
+            } else if (context.eventName === 'issue_comment') {
+              console.log('ISSUE_COMMENT trigger detected');
+              const comment = context.payload.comment;
+              if (comment && comment.body) {
+                const isClaudeBot = comment.user.login === 'claude[bot]' || 
+                                   comment.user.login.includes('claude') ||
+                                   comment.user.login === 'blazecommerce-claude-ai';
+                const hasFinalVerdict = comment.body.includes('FINAL VERDICT');
+                const isPR = context.payload.issue && context.payload.issue.pull_request;
+                
+                console.log('User: ' + comment.user.login);
+                console.log('Is Claude bot: ' + isClaudeBot);
+                console.log('Has FINAL VERDICT: ' + hasFinalVerdict);
+                console.log('Is PR: ' + isPR);
+                
+                if (isClaudeBot && hasFinalVerdict && isPR) {
+                  prNumber = context.payload.issue.number;
+                  shouldRun = true;
+                  console.log('Found Claude FINAL VERDICT in PR: ' + prNumber);
+                }
+              }
+            } else if (context.eventName === 'workflow_dispatch') {
+              console.log('WORKFLOW_DISPATCH trigger detected');
+              prNumber = parseInt(context.payload.inputs.pr_number);
+              shouldRun = true;
+              console.log('Manual trigger for PR: ' + prNumber);
+            }
+            
+            console.log('Final result - PR: ' + prNumber + ', Should run: ' + shouldRun);
+            core.setOutput('pr_number', prNumber ? prNumber.toString() : '');
+            core.setOutput('should_run', shouldRun.toString());
+
+      - name: Evaluate Claude AI Approval
+        if: steps.get-pr.outputs.should_run == 'true'
+        id: evaluate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ steps.get-pr.outputs.pr_number }}';
+            console.log('Evaluating Claude approval for PR #' + prNumber);
+            
+            // Get comments on the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(prNumber)
+            });
+            
+            // Look for Claude's final verdict (most recent first)
+            let claudeApproval = null;
+            for (const comment of comments.reverse()) {
+              const isClaudeBot = comment.user.login === 'claude[bot]' || 
+                                 comment.user.login.includes('claude') ||
+                                 comment.user.login === 'blazecommerce-claude-ai';
+              
+              if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
+                console.log('Found Claude FINAL VERDICT comment from: ' + comment.user.login);
+                
+                if (comment.body.includes('Status: APPROVED')) {
+                  claudeApproval = 'APPROVED';
+                  console.log('Claude status: APPROVED');
+                } else if (comment.body.includes('Status: BLOCKED')) {
+                  claudeApproval = 'BLOCKED';
+                  console.log('Claude status: BLOCKED');
+                } else if (comment.body.includes('Status: CONDITIONAL')) {
+                  claudeApproval = 'CONDITIONAL';
+                  console.log('Claude status: CONDITIONAL');
+                }
+                break;
+              }
+            }
+            
+            if (claudeApproval === 'APPROVED') {
+              console.log('✅ Auto-approving PR #' + prNumber + ' based on Claude AI approval');
+              
+              // Auto-approve the PR
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: parseInt(prNumber),
+                event: 'APPROVE',
+                body: '✅ **Auto-approved by Claude AI**\n\nClaude AI has reviewed this PR and provided approval. This automated approval is based on Claude\'s comprehensive security and code quality analysis.\n\n**Status:** APPROVED by Claude AI\n**Trigger:** ' + context.eventName
+              });
+              
+              console.log('✅ Successfully auto-approved PR #' + prNumber);
+              core.setOutput('result', 'APPROVED');
+            } else if (claudeApproval === 'BLOCKED') {
+              console.log('❌ PR #' + prNumber + ' blocked by Claude AI - manual review required');
+              core.setOutput('result', 'BLOCKED');
+            } else {
+              console.log('⏳ PR #' + prNumber + ' - no clear Claude approval found, manual review required');
+              core.setOutput('result', 'PENDING');
+            }
