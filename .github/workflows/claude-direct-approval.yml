@@ -111,21 +111,21 @@ jobs:
                 repo: context.repo.repo,
                 pull_number: prNumber,
                 event: 'APPROVE',
-                body: `🤖 **Auto-approved by Claude AI Approval Gate**
+                body: `🤖 Auto-approved by Claude AI Approval Gate
 
-This PR has been automatically approved based on Claude AI's review showing **Status: APPROVED**.
+This PR has been automatically approved based on Claude AI review showing Status: APPROVED.
 
-**Claude Review Reference:**
+Claude Review Reference:
 - Comment ID: ${latestClaudeComment.id}
 - Comment Date: ${latestClaudeComment.created_at}
 - Comment Author: ${latestClaudeComment.user.login}
 
-**Approval Details:**
+Approval Details:
 - Auto-approval triggered by: ${context.actor}
 - Workflow run: ${context.runId}
 - Commit SHA: ${context.sha}
 
-✅ This PR is ready for merge (subject to other branch protection rules).`
+This PR is ready for merge (subject to other branch protection rules).`
               });
               
               console.log('✅ SUCCESS: Approval review created!');
@@ -139,16 +139,16 @@ This PR has been automatically approved based on Claude AI's review showing **St
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: `🎉 **Claude AI Auto-Approval Successful!**
+                body: `🎉 Claude AI Auto-Approval Successful!
 
-@blazecommerce-claude-ai has automatically approved this PR based on Claude's review showing **Status: APPROVED**.
+@blazecommerce-claude-ai has automatically approved this PR based on Claude review showing Status: APPROVED.
 
-**Next Steps:**
-- ✅ PR is now approved by Claude AI
-- 🔄 Other required checks (if any) must still pass
-- 🚀 PR is ready for merge once all requirements are met
+Next Steps:
+- PR is now approved by Claude AI
+- Other required checks (if any) must still pass
+- PR is ready for merge once all requirements are met
 
-*This is an automated action by the Claude AI Approval Gate workflow.*`
+This is an automated action by the Claude AI Approval Gate workflow.`
               });
               
               console.log('🎉 DIRECT APPROVAL PROCESS COMPLETED SUCCESSFULLY!');
@@ -167,7 +167,7 @@ This PR has been automatically approved based on Claude AI's review showing **St
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: prNumber,
-                  body: `❌ **Claude AI Auto-Approval Failed**
+                  body: `❌ Claude AI Auto-Approval Failed
 
 There was an error during the auto-approval process:
 
@@ -175,12 +175,12 @@ There was an error during the auto-approval process:
 ${error.message}
 \`\`\`
 
-**Troubleshooting:**
+Troubleshooting:
 - Check that BOT_GITHUB_TOKEN has sufficient permissions
 - Verify the PR is in a valid state for approval
 - Check workflow logs for detailed error information
 
-*This is an automated error report by the Claude AI Approval Gate workflow.*`
+This is an automated error report by the Claude AI Approval Gate workflow.`
                 });
               } catch (commentError) {
                 console.error('❌ Failed to create error comment:', commentError.message);
