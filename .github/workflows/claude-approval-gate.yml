@@ -1,6 +1,11 @@
 name: "✅ Priority 3: Claude AI Approval Gate"
 
 on:
+  workflow_run:
+    workflows: ["🤖 Priority 2: Claude AI Code Review"]
+    types: [completed]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -9,14 +14,156 @@ on:
         type: string
 
 jobs:
-  test-basic:
+  check-trigger:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      trigger_reason: ${{ steps.check.outputs.trigger_reason }}
     steps:
-      - name: Test Basic Functionality
-        run: |
-          echo "Testing basic workflow functionality"
-          echo "PR Number: ${{ github.event.inputs.pr_number }}"
-          echo "Event: ${{ github.event_name }}"
+      - name: Check Trigger Conditions
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let shouldRun = false;
+            let prNumber = null;
+            let triggerReason = '';
+
+            console.log('Event type: ' + context.eventName);
+
+            if (context.eventName === 'workflow_run') {
+              console.log('WORKFLOW_RUN: Checking workflow completion...');
+
+              if (context.payload.workflow_run && context.payload.workflow_run.conclusion) {
+                shouldRun = true;
+
+                if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
+                  prNumber = context.payload.workflow_run.pull_requests[0].number;
+                }
+
+                triggerReason = 'Claude review workflow ' + context.payload.workflow_run.conclusion;
+                console.log('WORKFLOW_RUN: PR #' + prNumber + ', Status: ' + context.payload.workflow_run.conclusion);
+              }
+            } else if (context.eventName === 'issue_comment') {
+              console.log('ISSUE_COMMENT: Checking for Claude FINAL VERDICT...');
+
+              const comment = context.payload.comment;
+              if (!comment || !comment.body) {
+                console.log('No comment body found');
+                return;
+              }
+
+              const isClaudeBot = comment.user.login === 'claude[bot]' ||
+                                 comment.user.login.includes('claude') ||
+                                 comment.user.login === 'blazecommerce-claude-ai';
+
+              const hasFinalVerdict = comment.body.includes('FINAL VERDICT') ||
+                                     comment.body.includes('### FINAL VERDICT');
+
+              const isPR = context.payload.issue && context.payload.issue.pull_request;
+
+              console.log('User: ' + comment.user.login);
+              console.log('Is Claude bot: ' + isClaudeBot);
+              console.log('Has FINAL VERDICT: ' + hasFinalVerdict);
+              console.log('Is PR: ' + isPR);
+
+              if (isClaudeBot && hasFinalVerdict && isPR) {
+                shouldRun = true;
+                prNumber = context.payload.issue.number;
+                triggerReason = 'Claude posted FINAL VERDICT comment';
+                console.log('ISSUE_COMMENT: Claude FINAL VERDICT found in PR #' + prNumber);
+              } else {
+                console.log('ISSUE_COMMENT: Not a Claude FINAL VERDICT comment');
+              }
+            } else if (context.eventName === 'workflow_dispatch') {
+              console.log('WORKFLOW_DISPATCH: Manual trigger...');
+              shouldRun = true;
+              prNumber = parseInt(context.payload.inputs.pr_number);
+              triggerReason = 'Manual workflow dispatch';
+              console.log('WORKFLOW_DISPATCH: Manual trigger for PR #' + prNumber);
+            }
+
+            console.log('RESULT: Event=' + context.eventName + ', ShouldRun=' + shouldRun + ', PR=' + prNumber + ', Reason=' + triggerReason);
+
+            core.setOutput('should_run', shouldRun.toString());
+            core.setOutput('pr_number', prNumber ? prNumber.toString() : '');
+            core.setOutput('trigger_reason', triggerReason);
+
+  claude-approval-evaluation:
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Evaluate Claude AI Approval
+        id: evaluate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
+            console.log('Evaluating PR #' + prNumber + ' for Claude AI approval');
+
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNumber)
+            });
+
+            // Get comments on the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(prNumber)
+            });
+
+            // Look for Claude's final verdict
+            let claudeApproval = null;
+            for (const comment of comments.reverse()) {
+              const isClaudeBot = comment.user.login === 'claude[bot]' ||
+                                 comment.user.login.includes('claude') ||
+                                 comment.user.login === 'blazecommerce-claude-ai';
+
+              if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
+                console.log('Found Claude FINAL VERDICT comment');
+
+                if (comment.body.includes('Status: APPROVED')) {
+                  claudeApproval = 'APPROVED';
+                } else if (comment.body.includes('Status: BLOCKED')) {
+                  claudeApproval = 'BLOCKED';
+                } else if (comment.body.includes('Status: CONDITIONAL')) {
+                  claudeApproval = 'CONDITIONAL';
+                }
+                break;
+              }
+            }
+
+            console.log('Claude approval status: ' + claudeApproval);
+
+            if (claudeApproval === 'APPROVED') {
+              // Auto-approve the PR
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: parseInt(prNumber),
+                event: 'APPROVE',
+                body: '✅ **Auto-approved by Claude AI Approval Gate**\n\nClaude AI has reviewed this PR and provided approval. This automated approval is based on Claude\'s security and code quality analysis.\n\n**Trigger:** ' + '${{ needs.check-trigger.outputs.trigger_reason }}' + '\n**Status:** APPROVED by Claude AI'
+              });
+
+              console.log('✅ PR #' + prNumber + ' auto-approved by Claude AI Approval Gate');
+              core.setOutput('result', 'APPROVED');
+            } else if (claudeApproval === 'BLOCKED') {
+              console.log('❌ PR #' + prNumber + ' blocked by Claude AI - manual review required');
+              core.setOutput('result', 'BLOCKED');
+            } else {
+              console.log('⏳ PR #' + prNumber + ' - no clear Claude approval found, manual review required');
+              core.setOutput('result', 'PENDING');
+            }
 
   # Wait for Priority 1 workflow completion before proceeding
   wait-for-claude-review:
