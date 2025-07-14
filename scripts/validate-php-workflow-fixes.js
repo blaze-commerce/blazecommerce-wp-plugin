@@ -242,9 +242,9 @@ class PHPWorkflowValidator {
         this.log('\n🎯 PHP WORKFLOW VALIDATION REPORT', 'info');
         this.log('='.repeat(60), 'info');
         
-        this.log(`✅ Successes: ${this.successes.length}`, 'success');
-        this.log(`⚠️ Warnings: ${this.warnings.length}`, 'warning');
-        this.log(`❌ Errors: ${this.errors.length}`, 'error');
+        this.log(`✅ Successes: ${this.successes.length}`, 'info');
+        this.log(`⚠️ Warnings: ${this.warnings.length}`, 'info');
+        this.log(`❌ Errors: ${this.errors.length}`, 'info');
         
         if (this.errors.length > 0) {
             this.log('\nCritical Issues:', 'error');
@@ -272,13 +272,17 @@ class PHPWorkflowValidator {
         this.validateDocumentation();
         
         const success = this.generateReport();
-        
-        if (success) {
+
+        if (success && this.warnings.length === 0) {
             this.log('\n🎉 Validation completed successfully!', 'success');
             this.log('The PHP workflow fixes are properly implemented and ready for testing.', 'info');
             process.exit(0);
+        } else if (success && this.warnings.length > 0) {
+            this.log('\n✅ Validation completed with minor warnings!', 'success');
+            this.log('The PHP workflow fixes are implemented and ready for testing.', 'info');
+            process.exit(0);
         } else {
-            this.log('\n⚠️ Validation completed with issues!', 'warning');
+            this.log('\n❌ Validation completed with critical errors!', 'error');
             this.log('Please review and address the errors before proceeding.', 'info');
             process.exit(1);
         }
