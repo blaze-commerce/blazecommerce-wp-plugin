@@ -279,10 +279,8 @@ jobs:
                                       comment.user.login.includes('claude');
 
                   const hasClaudeContent = comment.body && (
-                    comment.body.includes('Claude AI') ||
                     comment.body.includes('FINAL VERDICT') ||
-                    comment.body.includes('### FINAL VERDICT') ||
-                    (comment.body.includes('Status') && comment.body.includes('APPROVED'))
+                    comment.body.includes('### FINAL VERDICT')
                   );
 
                   const isRelevant = isClaudeUser || hasClaudeContent;
@@ -637,10 +635,8 @@ jobs:
                                     comment.user.login.includes('claude');
 
                 const hasClaudeContent = comment.body && (
-                  comment.body.includes('Claude AI') ||
                   comment.body.includes('FINAL VERDICT') ||
-                  comment.body.includes('### FINAL VERDICT') ||
-                  (comment.body.includes('Status') && comment.body.includes('APPROVED'))
+                  comment.body.includes('### FINAL VERDICT')
                 );
 
                 const isRelevant = isClaudeUser || hasClaudeContent;
@@ -799,17 +795,22 @@ jobs:
                   console.log('   Comment preview:', comment.body.substring(0, 500) + '...');
                   console.log('   Attempting content-based analysis as fallback...');
 
-                  // Fallback: Content-based analysis if no explicit status found
-                  const commentLower = comment.body.toLowerCase();
-                  if (commentLower.includes('approved') && !commentLower.includes('not approved') && !commentLower.includes('blocked')) {
-                    console.log('✅ FALLBACK: Found "approved" in comment content');
-                    claudeApprovalStatus = 'approved';
-                  } else if (commentLower.includes('blocked') || commentLower.includes('rejected')) {
-                    console.log('❌ FALLBACK: Found "blocked" or "rejected" in comment content');
-                    claudeApprovalStatus = 'blocked';
-                    hasRequiredIssues = true;
+                  // STRICT: Only approve if comment contains FINAL VERDICT section
+                  if (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT')) {
+                    const commentLower = comment.body.toLowerCase();
+                    if (commentLower.includes('approved') && !commentLower.includes('not approved') && !commentLower.includes('blocked')) {
+                      console.log('✅ FALLBACK: Found "approved" in FINAL VERDICT comment');
+                      claudeApprovalStatus = 'approved';
+                    } else if (commentLower.includes('blocked') || commentLower.includes('rejected')) {
+                      console.log('❌ FALLBACK: Found "blocked" or "rejected" in FINAL VERDICT comment');
+                      claudeApprovalStatus = 'blocked';
+                      hasRequiredIssues = true;
+                    } else {
+                      console.log('⚠️ FALLBACK: No clear approval/rejection indicators in FINAL VERDICT');
+                      claudeApprovalStatus = 'unknown';
+                    }
                   } else {
-                    console.log('⚠️ FALLBACK: No clear approval/rejection indicators found');
+                    console.log('⚠️ SKIPPING: Comment does not contain FINAL VERDICT - ignoring for approval');
                     claudeApprovalStatus = 'unknown';
                   }
                 }
@@ -825,15 +826,15 @@ jobs:
                   }
                 }
 
-                // Fallback: Check for legacy patterns if standardized format not found
-                if (claudeApprovalStatus === 'unknown') {
+                // STRICT: Only use legacy patterns if comment contains FINAL VERDICT
+                if (claudeApprovalStatus === 'unknown' && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
                   if (comment.body.match(/CRITICAL:\s*REQUIRED|REQUIRED.*issues?|must\s+be\s+fixed|critical\s+bugs?/i)) {
                     hasRequiredIssues = true;
                     claudeApprovalStatus = 'blocked';
-                    console.log('Found REQUIRED issues using legacy pattern matching');
+                    console.log('Found REQUIRED issues using legacy pattern matching in FINAL VERDICT');
                   } else if (comment.body.match(/no\s+critical\s+issues|ready\s+to\s+merge|looks\s+good/i)) {
                     claudeApprovalStatus = 'approved';
-                    console.log('Found approval indicators using legacy pattern matching');
+                    console.log('Found approval indicators using legacy pattern matching in FINAL VERDICT');
                   }
                 }
 
