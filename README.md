@@ -2,7 +2,7 @@
 
 The official plugin that integrates your WordPress/WooCommerce site with the Blaze Commerce service.
 
-**Version:** 1.5.1
+**Version:** 1.14.1
 **Author:** Blaze Commerce
 **Plugin URI:** https://www.blazecommerce.io
 **Author URI:** https://www.blazecommerce.io
@@ -10,6 +10,8 @@ The official plugin that integrates your WordPress/WooCommerce site with the Bla
 ## Description
 
 Blaze Commerce is a powerful WordPress plugin that provides seamless integration between your WooCommerce store and the Blaze Commerce headless commerce platform. The plugin features advanced Typesense search integration, collection aliasing for zero-downtime syncing, comprehensive settings management, and extensive customization options.
+
+<!-- Testing automatic version bump system - this comment verifies workflow functionality -->
 
 ## Key Features
 
@@ -20,6 +22,8 @@ Blaze Commerce is a powerful WordPress plugin that provides seamless integration
 - **Extension Support**: Built-in support for popular WooCommerce extensions
 - **GraphQL Integration**: Enhanced GraphQL support for headless commerce
 - **Performance Optimization**: Caching, batch processing, and memory optimization
+
+<!-- Note: This plugin requires proper configuration of WooCommerce and GraphQL dependencies -->
 
 ## Requirements
 
@@ -32,14 +36,34 @@ Blaze Commerce is a powerful WordPress plugin that provides seamless integration
 
 ## Installation
 
+For detailed installation and configuration instructions, see our [Installation Guide](docs/setup/installation-and-configuration.md).
+
+**Quick Start:**
 1. Upload the plugin files to `/wp-content/plugins/blaze-commerce/`
 2. Activate the plugin through the 'Plugins' screen in WordPress
 3. Configure your Typesense settings in the admin panel
 4. Run initial data sync using WP-CLI commands
 
+## Documentation
+
+Our documentation is organized into the following categories:
+
+- **[Setup & Installation](docs/setup/)** - Installation guides and initial configuration
+- **[Features](docs/features/)** - Detailed feature documentation and user guides
+- **[API Documentation](docs/api/)** - Technical API references and integration guides
+- **[Development](docs/development/)** - Developer workflows, automation, and coding guidelines
+- **[Reference](docs/reference/)** - Changelog, legal documents, and reference materials
+- **[Troubleshooting](docs/troubleshooting/)** - Problem-solving guides and common issues
+
+For documentation standards and contribution guidelines, see [Documentation Standards](docs/DOCUMENTATION_STANDARDS.md).
+
+📋 **[Documentation Organization Summary](docs/DOCUMENTATION_ORGANIZATION_SUMMARY.md)** - Overview of the recent documentation reorganization project and improvements.
+
 ## Configuration
 
-### Typesense Settings
+For complete configuration instructions, see our [Installation and Configuration Guide](docs/setup/installation-and-configuration.md).
+
+### Quick Configuration
 
 Configure your Typesense connection in the WordPress admin:
 
@@ -65,7 +89,17 @@ For detailed information about the aliasing system, see: [Typesense Aliases Docu
 
 The plugin provides comprehensive WP-CLI commands for data synchronization:
 
-### Product Sync
+### All Collections Sync
+
+```bash
+wp bc-sync collections --all      # Sync all collections in order: site_info, products, taxonomy, menu, page_and_post, navigation
+```
+
+This command syncs all Typesense collections in the specified order with comprehensive timing and summary statistics.
+
+### Individual Collection Sync
+
+#### Product Sync
 
 ```bash
 wp bc-sync product --all          # Sync all products including variations
@@ -73,37 +107,39 @@ wp bc-sync product --variants     # Sync product variants only
 wp bc-sync product --nonvariants  # Sync non-variant products only
 ```
 
-### Taxonomy Sync
+#### Taxonomy Sync
 
 ```bash
 wp bc-sync taxonomy --all         # Sync all taxonomies
 ```
 
-### Page and Post Sync
+#### Page and Post Sync
 
 ```bash
 wp bc-sync page_and_post --all    # Sync all pages and posts
 ```
 
-### Menu Sync
+#### Menu Sync
 
 ```bash
 wp bc-sync menu --all             # Sync all menus
 ```
 
-### Navigation Sync
+#### Navigation Sync
 
 ```bash
 wp bc-sync navigation --all       # Sync wp_navigation posts
 ```
 
-### Site Info Sync
+#### Site Info Sync
 
 ```bash
 wp bc-sync site_info --all        # Sync site information
 ```
 
-### Alias Management
+### Management Commands
+
+#### Alias Management
 
 ```bash
 wp bc-sync alias --list                    # List all aliases
@@ -112,7 +148,7 @@ wp bc-sync alias --cleanup=product         # Clean up old collections
 wp bc-sync alias --force-alias=product     # Force create alias
 ```
 
-### Cache Management
+#### Cache Management
 
 ```bash
 wp bc-sync cache                   # Show cache statistics

@@ -76,7 +76,12 @@ class GeneralSettings extends BaseSettings {
 	 */
 	public function redirect_non_admin_user() {
 
+<<<<<<< HEAD
 		$is_local = array_key_exists( 'HTTP_X_FORWARDED_HOST', $_SERVER ) && strpos( $_SERVER['HTTP_X_FORWARDED_HOST'], 'localhost' ) !== false;
+=======
+		$forwarded_host = isset( $_SERVER['HTTP_X_FORWARDED_HOST'] ) ? sanitize_text_field( $_SERVER['HTTP_X_FORWARDED_HOST'] ) : '';
+		$is_local = strpos( $forwarded_host, 'localhost' ) !== false;
+>>>>>>> main
 		if ( isset( $_REQUEST['no-redirect'] ) || $is_local ) {
 			return;
 		}
@@ -102,19 +107,21 @@ class GeneralSettings extends BaseSettings {
 			exit;
 		}
 
-		$is_my_account_page = strpos( $_SERVER['REQUEST_URI'], 'my-account' ) !== false;
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( $_SERVER['REQUEST_URI'] ) : '';
+		$is_my_account_page = strpos( $request_uri, 'my-account' ) !== false;
 		$exclude_page_redirect_to_frontend = apply_filters( 'blaze_wooless_exclude_page_redirect_to_frontend', is_checkout() );
 		if ( $exclude_page_redirect_to_frontend || $is_my_account_page ) {
 			//Since the page is excluded from redirecting to frontend then we just end the function here
 			return;
 		}
 
-		$has_cart_in_url = strpos( $_SERVER['SERVER_NAME'], 'cart.' ) !== false;
+		$server_name = isset( $_SERVER['SERVER_NAME'] ) ? sanitize_text_field( $_SERVER['SERVER_NAME'] ) : '';
+		$has_cart_in_url = strpos( $server_name, 'cart.' ) !== false;
 		$from_vercel_proxy_request = isset( $_SERVER['HTTP_X_VERCEL_PROXY_SIGNATURE'] ) ? true : false;
 
 		// if the url has cart. on it and the request is not from vercel then we redirect it to frontend page without cart in the url
 		if ( $has_cart_in_url && ! $from_vercel_proxy_request ) {
-			wp_redirect( $this->remove_cart_from_url( home_url( $_SERVER['REQUEST_URI'] ) ) );
+			wp_redirect( $this->remove_cart_from_url( home_url( $request_uri ) ) );
 			exit;
 		}
 
@@ -233,6 +240,14 @@ class GeneralSettings extends BaseSettings {
 							'description' => 'Live site domain. (e.g. website.com.au)'
 						),
 					),
+					array(
+						'id' => 'klaviyo_api_key',
+						'label' => 'Klaviyo API Key',
+						'type' => 'password',
+						'args' => array(
+							'description' => 'Klaviyo API key for integration. Leave empty to disable Klaviyo tracking.'
+						),
+					),
 				)
 			),
 		);
@@ -302,6 +317,21 @@ class GeneralSettings extends BaseSettings {
 
 	public function section_callback() {
 		echo '<p>Select which areas of content you wish to display.</p>';
+	}
+
+	public function field_callback_password( $args ) {
+		// Add capability check for sensitive API key fields
+		if ( isset( $args['id'] ) && in_array( $args['id'], array( 'klaviyo_api_key', 'typesense_api_key' ) ) ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				echo '<p><em>You do not have sufficient permissions to access this setting.</em></p>';
+				return;
+			}
+		}
+
+		$value = $this->get_option( $args['id'] );
+		$html = '<input type="password" id="' . $args['id'] . '" name="' . $this->option_key . '[' . $args['id'] . ']" value="' . sanitize_text_field( $value ) . '" />';
+		$html .= $this->render_field_description( $args );
+		echo $html;
 	}
 
 	public function footer_callback() {

@@ -48,3 +48,50 @@ Thumbs.db
 *.mov
 *.wmv
 
+# Documentation images - exclude from Git tracking
+# Images in docs directory should be managed separately to reduce repository size
+#
+# Recommended alternatives for documentation images:
+# - External hosting: GitHub Pages, CDN, or cloud storage services
+# - Documentation platforms: GitBook, Notion, or similar platforms
+# - Asset repositories: Separate dedicated repositories for media assets
+# - Local development: Images can still be used locally for development
+#
+# Migration strategy for existing large images:
+# - Consider moving existing large images to external hosting
+# - Update documentation links to reference external URLs
+# - Use image optimization tools to reduce file sizes where possible
+docs/**/*.jpg
+docs/**/*.jpeg
+docs/**/*.png
+docs/**/*.gif
+docs/**/*.webp
+docs/**/*.svg
+docs/**/*.bmp
+docs/**/*.ico
+docs/**/*.tiff
+docs/**/*.tif
+# Uppercase variants for broader coverage
+docs/**/*.JPG
+docs/**/*.JPEG
+docs/**/*.PNG
+docs/**/*.GIF
+docs/**/*.SVG
+docs/**/*.BMP
+docs/**/*.ICO
+docs/**/*.TIFF
+docs/**/*.TIF
+# Additional modern image formats
+docs/**/*.webm
+docs/**/*.avif
+docs/**/*.heic
+docs/**/*.WEBM
+docs/**/*.AVIF
+docs/**/*.HEIC
+
+# Version synchronization backup files
+# These are created by the version fix scripts and should not be committed
+.backup/
+*.backup
+backup-*/
+

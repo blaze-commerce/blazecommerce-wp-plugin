@@ -1,0 +1,546 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.TEST_TIMEOUT || 20 }}
+
+    strategy:
+      # Prevent cancellation of other jobs when one fails
+      fail-fast: false
+      matrix:
+        # Fixed PHP version matrix - use string format for consistency
+        php-version: ['7.4', '8.0', '8.1']
+        # Updated WordPress versions for better compatibility
+        wordpress-version: [latest, '6.3', '6.2']
+    
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        echo "DEBUG: Installing system dependencies for WordPress testing..."
+
+        # Update package list
+        sudo apt-get update -qq
+
+        # Install all required dependencies in one command for efficiency
+        echo "INSTALLING: Required system dependencies..."
+        sudo apt-get install -y \
+          subversion \
+          mysql-client \
+          curl \
+          wget \
+          unzip \
+          tar \
+          git
+
+        # Verify all critical dependencies
+        echo "VERIFYING: Checking all required dependencies..."
+
+        # Check SVN (Subversion) - Critical for WordPress test files
+        if ! command -v svn &> /dev/null; then
+          echo "ERROR: SVN installation failed - svn command not found"
+          exit 1
+        fi
+        echo "SUCCESS: SVN installed successfully - $(svn --version --quiet)"
+
+        # Check MySQL client tools - Critical for database operations
+        if ! command -v mysql &> /dev/null; then
+          echo "ERROR: mysql client not found"
+          exit 1
+        fi
+        echo "SUCCESS: mysql client available - $(mysql --version)"
+
+        if ! command -v mysqladmin &> /dev/null; then
+          echo "ERROR: mysqladmin command not found"
+          exit 1
+        fi
+        echo "SUCCESS: mysqladmin available - $(mysqladmin --version)"
+
+        # Check HTTP clients
+        if ! command -v curl &> /dev/null && ! command -v wget &> /dev/null; then
+          echo "ERROR: Neither curl nor wget is available"
+          exit 1
+        fi
+        echo "SUCCESS: HTTP client available - $(command -v curl &> /dev/null && echo "curl $(curl --version | head -1)" || echo "wget $(wget --version | head -1)")"
+
+        # Check archive tools
+        if ! command -v unzip &> /dev/null; then
+          echo "ERROR: unzip command not found"
+          exit 1
+        fi
+        echo "SUCCESS: unzip available - $(unzip -v | head -1)"
+
+        if ! command -v tar &> /dev/null; then
+          echo "ERROR: tar command not found"
+          exit 1
+        fi
+        echo "SUCCESS: tar available - $(tar --version | head -1)"
+
+        # Check git (usually available but verify)
+        if ! command -v git &> /dev/null; then
+          echo "ERROR: git command not found"
+          exit 1
+        fi
+        echo "SUCCESS: git available - $(git --version)"
+
+        echo "SUCCESS: All system dependencies verified successfully"
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, mysql, mysqli, pdo_mysql, bcmath, soap, intl, gd, exif, iconv
+        coverage: xdebug
+    
+    - name: Cache Composer packages
+      id: composer-cache
+      uses: actions/cache@v4
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-${{ matrix.php-version }}-
+    
+    - name: Install Composer dependencies
+      run: |
+        echo "DEBUG: Installing Composer dependencies..."
+        echo "PHP Version: $(php --version)"
+        echo "Composer Version: $(composer --version)"
+
+        # Validate composer.json exists and is valid
+        if [ ! -f "composer.json" ]; then
+          echo "ERROR: composer.json not found"
+          exit 1
+        fi
+
+        echo "SUCCESS: composer.json found, validating..."
+
+        # Configure composer for security
+        composer config --global allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+
+        # Remove lock file if it exists and is problematic
+        if [ -f "composer.lock" ]; then
+          echo "RETRY: Checking composer.lock status..."
+          if ! composer validate --no-check-publish --no-check-all; then
+            echo "WARNING: composer.lock is out of sync, regenerating..."
+            rm composer.lock
+          fi
+        fi
+
+        # Install dependencies with better error handling
+        composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+
+        echo "SUCCESS: Composer dependencies installed successfully"
+    
+    - name: Setup WordPress test environment
+      run: |
+        echo "DEBUG: Setting up WordPress test environment..."
+        echo "WordPress Version: ${{ matrix.wordpress-version }}"
+        echo "PHP Version: ${{ matrix.php-version }}"
+
+        # Validate test script exists
+        if [ ! -f "bin/install-wp-tests.sh" ]; then
+          echo "ERROR: WordPress test installation script not found"
+          exit 1
+        fi
+
+        # Make script executable
+        chmod +x bin/install-wp-tests.sh
+
+        # Wait for MySQL service to be ready
+        echo "WAITING: Ensuring MySQL service is ready..."
+        for i in {1..30}; do
+          if mysql -h 127.0.0.1 -P 3306 -u root -proot -e "SELECT 1" &> /dev/null; then
+            echo "SUCCESS: MySQL service is ready"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "ERROR: MySQL service failed to start within 30 seconds"
+            exit 1
+          fi
+          echo "WAITING: MySQL not ready yet, attempt $i/30..."
+          sleep 1
+        done
+
+        # Install WordPress test environment with comprehensive error handling
+        echo "EXECUTING: Running WordPress test environment setup..."
+        echo "PARAMETERS: DB=wordpress_test, USER=root, HOST=127.0.0.1:3306, WP_VERSION=${{ matrix.wordpress-version }}"
+
+        # Run with verbose output for debugging
+        if ! bash -x bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ matrix.wordpress-version }}; then
+          echo "ERROR: WordPress test environment setup failed"
+          echo "DEBUG: Performing comprehensive diagnostics..."
+
+          # Check if directories were created
+          echo "CHECKING: Directory structure..."
+          if [ ! -d "/tmp/wordpress-tests-lib" ]; then
+            echo "ERROR: WordPress tests library directory not created"
+          else
+            echo "SUCCESS: WordPress tests library directory exists"
+            ls -la /tmp/wordpress-tests-lib/ || echo "Cannot list directory contents"
+          fi
+
+          if [ ! -d "/tmp/wordpress" ]; then
+            echo "ERROR: WordPress core directory not created"
+          else
+            echo "SUCCESS: WordPress core directory exists"
+            ls -la /tmp/wordpress/ || echo "Cannot list directory contents"
+          fi
+
+          # Check SVN connectivity
+          echo "CHECKING: SVN connectivity..."
+          if ! svn info https://develop.svn.wordpress.org/trunk/ &> /dev/null; then
+            echo "ERROR: Cannot connect to WordPress SVN repository"
+          else
+            echo "SUCCESS: SVN connectivity verified"
+          fi
+
+          # Check database connectivity
+          echo "CHECKING: Database connectivity..."
+          if ! mysql -h 127.0.0.1 -P 3306 -u root -proot -e "SELECT 1" &> /dev/null; then
+            echo "ERROR: Cannot connect to database"
+          else
+            echo "SUCCESS: Database connectivity verified"
+          fi
+
+          # Show recent system logs for debugging
+          echo "DEBUG: Recent system logs..."
+          sudo journalctl --no-pager -n 20 || echo "Cannot access system logs"
+
+          exit 1
+        fi
+
+        echo "SUCCESS: WordPress test environment setup complete"
+      env:
+        WP_TESTS_DIR: /tmp/wordpress-tests-lib
+        WP_CORE_DIR: /tmp/wordpress/
+    
+    - name: Install WooCommerce for testing
+      run: |
+        cd /tmp/wordpress/wp-content/plugins
+        wget https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip
+        unzip woocommerce.latest-stable.zip
+        rm woocommerce.latest-stable.zip
+    
+    - name: Run PHPUnit tests
+      run: |
+        echo "TESTING: Running PHPUnit tests..."
+        echo "PHP Version: ${{ matrix.php-version }}"
+        echo "WordPress Version: ${{ matrix.wordpress-version }}"
+
+        # Validate test environment
+        echo "VALIDATING: Test environment setup..."
+
+        # Check PHPUnit configuration
+        if [ ! -f "phpunit.xml" ]; then
+          echo "ERROR: phpunit.xml not found"
+          exit 1
+        fi
+        echo "SUCCESS: phpunit.xml found"
+
+        # Check PHPUnit binary
+        if [ ! -f "vendor/bin/phpunit" ]; then
+          echo "ERROR: PHPUnit binary not found in vendor/bin/"
+          echo "Available files in vendor/bin/:"
+          ls -la vendor/bin/ || echo "vendor/bin/ directory not found"
+          exit 1
+        fi
+        echo "SUCCESS: PHPUnit binary found"
+
+        # Verify WordPress test environment
+        if [ ! -f "/tmp/wordpress-tests-lib/includes/bootstrap.php" ]; then
+          echo "ERROR: WordPress test bootstrap not found"
+          echo "Expected: /tmp/wordpress-tests-lib/includes/bootstrap.php"
+          ls -la /tmp/wordpress-tests-lib/includes/ || echo "WordPress test includes directory not found"
+          exit 1
+        fi
+        echo "SUCCESS: WordPress test environment verified"
+
+        # Verify test bootstrap
+        if [ ! -f "tests/bootstrap.php" ]; then
+          echo "ERROR: Test bootstrap not found"
+          exit 1
+        fi
+        echo "SUCCESS: Test bootstrap found"
+
+        # Run tests with comprehensive error handling
+        echo "EXECUTING: Executing PHPUnit tests..."
+        if ! vendor/bin/phpunit --configuration phpunit.xml --coverage-clover=coverage.xml --verbose; then
+          echo "ERROR: PHPUnit tests failed"
+          echo "DEBUG: Test environment information..."
+          echo "WP_TESTS_DIR: ${WP_TESTS_DIR}"
+          echo "WP_CORE_DIR: ${WP_CORE_DIR}"
+          ls -la /tmp/wordpress-tests-lib/ || echo "Cannot list WordPress tests directory"
+          ls -la /tmp/wordpress/ || echo "Cannot list WordPress core directory"
+          exit 1
+        fi
+
+        echo "SUCCESS: PHPUnit tests completed successfully"
+      env:
+        WP_TESTS_DIR: /tmp/wordpress-tests-lib
+        WP_CORE_DIR: /tmp/wordpress/
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+    
+    - name: Archive test results
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: test-results-php${{ matrix.php-version }}-wp${{ matrix.wordpress-version }}
+        path: |
+          tests/coverage/
+          phpunit.xml
+    
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: 8.1
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, mysql, mysqli, pdo_mysql, bcmath, soap, intl, gd, exif, iconv
+    
+    - name: Install Composer dependencies
+      run: |
+        echo "DEBUG: Installing Composer dependencies for code quality checks..."
+
+        # Configure composer for security
+        composer config --global allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+
+        # Remove lock file if it exists and is problematic
+        if [ -f "composer.lock" ]; then
+          echo "RETRY: Checking composer.lock status..."
+          if ! composer validate --no-check-publish --no-check-all; then
+            echo "WARNING: composer.lock is out of sync, regenerating..."
+            rm composer.lock
+          fi
+        fi
+
+        # Install dependencies
+        composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+        echo "SUCCESS: Composer dependencies installed successfully"
+    
+    - name: Run PHP_CodeSniffer
+      run: |
+        echo "DEBUG: Running PHP_CodeSniffer..."
+
+        # Check if PHPCS is available
+        if [ ! -f "vendor/bin/phpcs" ]; then
+          echo "ERROR: PHP_CodeSniffer not found in vendor/bin/"
+          exit 1
+        fi
+
+        # Run PHPCS with better error handling
+        echo "EXECUTING: Executing PHP_CodeSniffer..."
+        vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=vendor/,tests/coverage/ . --report=summary
+
+        echo "SUCCESS: PHP_CodeSniffer completed"
+      continue-on-error: true
+    
+    - name: Run PHPStan
+      run: |
+        echo "DEBUG: Running PHPStan static analysis..."
+
+        # Check if PHPStan is available
+        if [ ! -f "vendor/bin/phpstan" ]; then
+          echo "ERROR: PHPStan not found in vendor/bin/"
+          exit 1
+        fi
+
+        # Check if app directory exists
+        if [ ! -d "app/" ]; then
+          echo "ERROR: app/ directory not found"
+          exit 1
+        fi
+
+        # Run PHPStan with better error handling
+        echo "EXECUTING: Executing PHPStan analysis..."
+        vendor/bin/phpstan analyse --level=5 app/ --no-progress
+
+        echo "SUCCESS: PHPStan analysis completed"
+      continue-on-error: true
+    
+  test-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ vars.TEST_COVERAGE_TIMEOUT || 10 }}
+    # Run coverage even if some test matrix jobs fail
+    needs: test
+    if: always()
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        echo "DEBUG: Installing system dependencies for test coverage..."
+
+        # Update package list and install all required dependencies
+        sudo apt-get update -qq
+        sudo apt-get install -y \
+          subversion \
+          mysql-client \
+          curl \
+          wget \
+          unzip \
+          tar \
+          git
+
+        # Verify critical dependencies
+        echo "VERIFYING: Checking required dependencies..."
+
+        if ! command -v svn &> /dev/null; then
+          echo "ERROR: SVN installation failed"
+          exit 1
+        fi
+        echo "SUCCESS: SVN installed - $(svn --version --quiet)"
+
+        if ! command -v mysql &> /dev/null; then
+          echo "ERROR: mysql client not found"
+          exit 1
+        fi
+        echo "SUCCESS: mysql client available - $(mysql --version)"
+
+        if ! command -v mysqladmin &> /dev/null; then
+          echo "ERROR: mysqladmin command not found"
+          exit 1
+        fi
+        echo "SUCCESS: mysqladmin available - $(mysqladmin --version)"
+
+        echo "SUCCESS: All dependencies verified for test coverage"
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: 8.1
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, mysql, mysqli, pdo_mysql, bcmath, soap, intl, gd, exif, iconv
+        coverage: xdebug
+    
+    - name: Install Composer dependencies
+      run: |
+        echo "DEBUG: Installing Composer dependencies for test coverage..."
+
+        # Configure composer for security
+        composer config --global allow-plugins.dealerdirect/phpcodesniffer-composer-installer true
+
+        # Remove lock file if it exists and is problematic
+        if [ -f "composer.lock" ]; then
+          echo "RETRY: Checking composer.lock status..."
+          if ! composer validate --no-check-publish --no-check-all; then
+            echo "WARNING: composer.lock is out of sync, regenerating..."
+            rm composer.lock
+          fi
+        fi
+
+        # Install dependencies
+        composer install --prefer-dist --no-progress --no-interaction --optimize-autoloader
+        echo "SUCCESS: Composer dependencies installed successfully"
+    
+    - name: Setup WordPress test environment
+      run: |
+        echo "DEBUG: Setting up WordPress test environment for coverage..."
+
+        # Validate test script exists
+        if [ ! -f "bin/install-wp-tests.sh" ]; then
+          echo "ERROR: WordPress test installation script not found"
+          exit 1
+        fi
+
+        # Make script executable
+        chmod +x bin/install-wp-tests.sh
+
+        # Wait for MySQL service to be ready (using default MySQL service)
+        echo "WAITING: Ensuring MySQL service is ready..."
+        for i in {1..30}; do
+          if mysql -h 127.0.0.1 -P 3306 -u root -proot -e "SELECT 1" &> /dev/null; then
+            echo "SUCCESS: MySQL service is ready"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "ERROR: MySQL service failed to start within 30 seconds"
+            exit 1
+          fi
+          echo "WAITING: MySQL not ready yet, attempt $i/30..."
+          sleep 1
+        done
+
+        # Install WordPress test environment with error handling
+        echo "EXECUTING: Running WordPress test environment setup..."
+        if ! bash bin/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest; then
+          echo "ERROR: WordPress test environment setup failed"
+          exit 1
+        fi
+
+        echo "SUCCESS: WordPress test environment setup complete"
+      env:
+        WP_TESTS_DIR: /tmp/wordpress-tests-lib
+        WP_CORE_DIR: /tmp/wordpress/
+    
+    - name: Generate coverage report
+      run: |
+        echo "ANALYSIS: Generating test coverage report..."
+
+        # Ensure coverage directory exists
+        mkdir -p tests/coverage/html
+
+        # Generate coverage report with error handling
+        echo "EXECUTING: Running PHPUnit with coverage..."
+        vendor/bin/phpunit --configuration phpunit.xml --coverage-html=tests/coverage/html --coverage-text --verbose
+
+        echo "SUCCESS: Coverage report generated successfully"
+      env:
+        WP_TESTS_DIR: /tmp/wordpress-tests-lib
+        WP_CORE_DIR: /tmp/wordpress/
+    
+    - name: Check coverage threshold
+      run: |
+        COVERAGE=$(vendor/bin/phpunit --configuration phpunit.xml --coverage-text | grep "Lines:" | grep -o '[0-9]\+\.[0-9]\+%' | head -1 | sed 's/%//')
+        echo "Coverage: $COVERAGE%"
+        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          echo "ERROR: Coverage $COVERAGE% is below required 80%"
+          exit 1
+        else
+          echo "SUCCESS: Coverage $COVERAGE% meets requirement"
+        fi
+      env:
+        WP_TESTS_DIR: /tmp/wordpress-tests-lib
+        WP_CORE_DIR: /tmp/wordpress/

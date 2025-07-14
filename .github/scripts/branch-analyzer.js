@@ -1,0 +1,158 @@
+#!/usr/bin/env node
+
+/**
+ * Branch Analyzer
+ * Determines prerelease type based on branch name
+ * Supports feature, develop, release, and main branches
+ * 
+ * @author BlazeCommerce Workflow Optimization
+ * @version 1.0.0
+ */
+
+const { Logger } = require('./file-change-analyzer');
+
+/**
+ * Branch Analyzer Class
+ */
+class BranchAnalyzer {
+  constructor() {
+    this.branchName = this.getCurrentBranch();
+  }
+
+  /**
+   * Get current branch name from environment or git
+   * @returns {string} Current branch name
+   */
+  getCurrentBranch() {
+    // Try GitHub environment first
+    if (process.env.GITHUB_REF) {
+      return process.env.GITHUB_REF.replace('refs/heads/', '');
+    }
+
+    // Try command line argument
+    if (process.argv[2]) {
+      return process.argv[2];
+    }
+
+    // Fallback to git command
+    try {
+      const { execSync } = require('child_process');
+      return execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8' }).trim();
+    } catch (error) {
+      Logger.warning(`Could not determine branch name: ${error.message}`);
+      return 'unknown';
+    }
+  }
+
+  /**
+   * Determine prerelease type based on branch name
+   * @returns {Object} Analysis result with prerelease type and reasoning
+   */
+  analyze() {
+    Logger.info(`Determining prerelease type based on branch: ${this.branchName}`);
+
+    let prereleaseType = '';
+    let reasoning = '';
+    let isStableRelease = false;
+
+    // Branch-based prerelease strategy
+    if (this.branchName.startsWith('feature/')) {
+      prereleaseType = 'alpha';
+      reasoning = 'Feature branch detected  alpha prerelease';
+      Logger.info(' Feature branch detected  alpha prerelease');
+    } else if (this.branchName === 'develop') {
+      prereleaseType = 'beta';
+      reasoning = 'Develop branch detected  beta prerelease';
+      Logger.info('TESTING: Develop branch detected  beta prerelease');
+    } else if (this.branchName.startsWith('release/')) {
+      prereleaseType = 'rc';
+      reasoning = 'Release branch detected  release candidate';
+      Logger.info('EXECUTING: Release branch detected  release candidate');
+    } else if (this.branchName === 'main' || this.branchName === 'master') {
+      prereleaseType = '';
+      reasoning = 'Main branch detected  stable release';
+      isStableRelease = true;
+      Logger.info('PACKAGE: Main branch detected  stable release');
+    } else {
+      prereleaseType = '';
+      reasoning = 'Other branch detected  stable release';
+      isStableRelease = true;
+      Logger.info('CONFIG: Other branch detected  stable release');
+    }
+
+    return {
+      branchName: this.branchName,
+      prereleaseType,
+      reasoning,
+      isStableRelease,
+      branchType: this.getBranchType()
+    };
+  }
+
+  /**
+   * Get branch type category
+   * @returns {string} Branch type category
+   */
+  getBranchType() {
+    if (this.branchName.startsWith('feature/')) return 'feature';
+    if (this.branchName === 'develop') return 'develop';
+    if (this.branchName.startsWith('release/')) return 'release';
+    if (this.branchName === 'main' || this.branchName === 'master') return 'main';
+    if (this.branchName.startsWith('hotfix/')) return 'hotfix';
+    if (this.branchName.startsWith('bugfix/')) return 'bugfix';
+    return 'other';
+  }
+
+  /**
+   * Output results in GitHub Actions format
+   * @param {Object} result - Analysis result
+   */
+  outputForGitHubActions(result) {
+    const fs = require('fs');
+
+    // Prepare output data
+    const outputs = [
+      `prerelease_type=${result.prereleaseType}`,
+      `branch_name=${result.branchName}`,
+      `branch_type=${result.branchType}`,
+      `is_stable_release=${result.isStableRelease}`,
+      `reasoning=${result.reasoning}`
+    ];
+
+    // Write to GitHub Actions output file if available
+    if (process.env.GITHUB_OUTPUT) {
+      try {
+        outputs.forEach(output => {
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `${output}\n`);
+        });
+        Logger.debug('Successfully wrote outputs to GITHUB_OUTPUT file');
+      } catch (error) {
+        Logger.error(`Failed to write to GITHUB_OUTPUT file: ${error.message}`);
+        // Fallback to stdout for backward compatibility
+        outputs.forEach(output => console.log(output));
+      }
+    } else {
+      // Fallback to stdout when GITHUB_OUTPUT is not available
+      Logger.debug('GITHUB_OUTPUT not available, using stdout');
+      outputs.forEach(output => console.log(output));
+    }
+  }
+}
+
+/**
+ * Main execution
+ */
+if (require.main === module) {
+  try {
+    const analyzer = new BranchAnalyzer();
+    const result = analyzer.analyze();
+    analyzer.outputForGitHubActions(result);
+    
+    process.exit(0);
+  } catch (error) {
+    Logger.error(`Script execution failed: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+module.exports = { BranchAnalyzer };
