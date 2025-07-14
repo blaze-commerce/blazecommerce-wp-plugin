@@ -93,7 +93,14 @@ jobs:
               if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
                 console.log('Found Claude FINAL VERDICT comment from: ' + comment.user.login);
                 console.log('Comment created at: ' + comment.created_at);
-                console.log('Comment excerpt: ' + comment.body.substring(comment.body.indexOf('FINAL VERDICT'), comment.body.indexOf('FINAL VERDICT') + 200));
+
+                // Safe excerpt extraction
+                const verdictIndex = comment.body.indexOf('FINAL VERDICT');
+                if (verdictIndex !== -1) {
+                  console.log('Comment excerpt: ' + comment.body.substring(verdictIndex, verdictIndex + 200));
+                } else {
+                  console.log('Comment excerpt: ' + comment.body.substring(0, 200) + '...');
+                }
 
                 // Check for status with flexible formatting (handles markdown bold)
                 if (comment.body.includes('Status**: APPROVED') || comment.body.includes('Status: APPROVED')) {
