@@ -1,8 +1,8 @@
-name: "✅ Priority 3: Claude AI Approval Gate"
+name: "✅ Priority 2: Claude AI Approval Gate"
 
 # This workflow creates a required status check that only passes when Claude AI has approved the PR
 # Use this with GitHub Branch Protection Rules to block merging until Claude AI approval
-# Priority 3: Runs after Claude AI Review (Priority 2) completes and evaluates official Claude App feedback
+# Priority 2: Runs after Claude AI Review (Priority 1) completes and evaluates official Claude App feedback
 
 on:
   pull_request:
@@ -12,12 +12,12 @@ on:
   issue_comment:
     types: [created]
   workflow_run:
-    workflows: ["🤖 Priority 2: Claude AI Code Review"]
+    workflows: ["Priority 1: Claude AI Code Review"]
     types: [completed]
 
-# Priority 3: Wait for Priority 2 (Claude AI Code Review) to complete before running
+# Priority 2: Wait for Priority 1 (Claude AI Code Review) to complete before running
 concurrency:
-  group: priority-3-claude-approval-pr-${{ github.event.pull_request.number || github.event.number }}
+  group: priority-2-claude-approval-pr-${{ github.event.pull_request.number || github.event.number }}
   cancel-in-progress: false  # Don't cancel to ensure approval gate completion
 
 jobs:
@@ -71,7 +71,7 @@ jobs:
             core.setOutput('pr_number', prNumber?.toString() || '');
             core.setOutput('trigger_reason', triggerReason);
 
-  # Wait for Priority 2 (Claude AI Code Review) to complete before proceeding
+  # Wait for Priority 1 workflow completion before proceeding
   wait-for-claude-review:
     needs: [check-trigger]
     if: needs.check-trigger.outputs.should_run == 'true'
@@ -139,7 +139,7 @@ jobs:
                   });
 
                   const claudeReviewRun = workflowRuns.workflow_runs.find(run =>
-                    run.name === '🤖 Priority 2: Claude AI Code Review' &&
+                    run.name === 'Priority 1: Claude AI Code Review' &&
                     (run.head_branch?.includes(`pr-${prNumber}`) ||
                      run.display_title?.includes(`#${prNumber}`) ||
                      run.pull_requests?.some(pr => pr.number == prNumber))
@@ -669,62 +669,149 @@ jobs:
               for (const comment of claudeAppComments) {
                 claudeReviewContent += comment.body + '\n\n';
 
-                // Check for standardized Final Verdict section with enhanced detection
+                // Enhanced debugging - show full comment structure
                 console.log('🔍 AUTO-APPROVAL: SEARCHING FOR FINAL VERDICT SECTION...');
+                console.log('📄 Comment ID:', comment.id);
+                console.log('📄 Comment author:', comment.user.login);
                 console.log('📄 Comment body length:', comment.body.length);
                 console.log('📄 Comment contains "FINAL VERDICT":', comment.body.includes('FINAL VERDICT'));
                 console.log('📄 Comment contains "Status":', comment.body.includes('Status'));
+                console.log('📄 Comment contains "**Status**":', comment.body.includes('**Status**'));
 
-                // Show relevant part of comment for debugging
+                // Show relevant part of comment for debugging with more context
                 const finalVerdictIndex = comment.body.indexOf('FINAL VERDICT');
                 if (finalVerdictIndex !== -1) {
-                  const relevantSection = comment.body.substring(finalVerdictIndex, finalVerdictIndex + 300);
-                  console.log('📄 FINAL VERDICT SECTION:', relevantSection);
-                }
+                  const relevantSection = comment.body.substring(finalVerdictIndex, finalVerdictIndex + 500);
+                  console.log('📄 FINAL VERDICT SECTION (500 chars):', relevantSection);
 
-                // Primary detection for bracketed format [APPROVED]
-                console.log('🔍 AUTO-APPROVAL: Testing Pattern 1: Bracketed format [APPROVED]');
-                let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
-                let detectionMethod = 'bracketed';
-                console.log('🔍 AUTO-APPROVAL: Pattern 1 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
-
-                // Fallback to plain text format APPROVED
-                if (!finalVerdictMatch) {
-                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 2: Plain text format APPROVED');
-                  finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([A-Z\s]+)(?:\*\*|\n)/i);
-                  detectionMethod = 'plain-text';
-                  console.log('🔍 AUTO-APPROVAL: Pattern 2 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
-                }
-
-                // Additional fallback for any status after "Status:"
-                if (!finalVerdictMatch) {
-                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 3: Loose match for any Status');
-                  finalVerdictMatch = comment.body.match(/\*\*Status\*\*:\s*([A-Z\s]+?)(?:\s*\*\*|\s*\n)/i);
-                  detectionMethod = 'loose-match';
-                  console.log('🔍 AUTO-APPROVAL: Pattern 3 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
-                }
-
-                if (finalVerdictMatch) {
-                  const status = finalVerdictMatch[1].trim();
-                  console.log(`Found Final Verdict status: "${status}" using ${detectionMethod} detection`);
-
-                  // Handle both bracketed format [APPROVED] and plain text APPROVED
-                  if (status === 'APPROVED' || (status.includes('APPROVED') && !status.includes('CONDITIONAL'))) {
-                    claudeApprovalStatus = 'approved';
-                    console.log('✅ Claude approved the PR');
-                  } else if (status === 'BLOCKED' || status.includes('BLOCKED')) {
-                    claudeApprovalStatus = 'blocked';
-                    hasRequiredIssues = true;
-                    console.log('❌ Claude blocked the PR');
-                  } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL')) {
-                    claudeApprovalStatus = 'conditional';
-                    console.log('⚠️ Claude conditionally approved the PR');
-                  } else {
-                    console.log(`❓ Unknown status format: "${status}"`);
+                  // Show the exact status line for debugging
+                  const statusMatch = relevantSection.match(/\*\*Status\*\*:.*$/m);
+                  if (statusMatch) {
+                    console.log('📄 EXACT STATUS LINE:', statusMatch[0]);
                   }
                 } else {
-                  console.log('❌ No FINAL VERDICT status found in comment');
-                  console.log('Comment preview:', comment.body.substring(0, 500) + '...');
+                  // If no FINAL VERDICT section, show first 200 chars for debugging
+                  console.log('📄 COMMENT START (200 chars):', comment.body.substring(0, 200));
+                }
+
+                // COMPREHENSIVE PATTERN MATCHING FOR CLAUDE'S APPROVAL FORMAT
+                console.log('🔍 AUTO-APPROVAL: Starting comprehensive pattern matching...');
+                let finalVerdictMatch = null;
+                let detectionMethod = 'none';
+
+                // Pattern 1: Bracketed format [APPROVED] - Original expected format
+                console.log('🔍 AUTO-APPROVAL: Testing Pattern 1: Bracketed format [APPROVED]');
+                finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+                if (finalVerdictMatch) {
+                  detectionMethod = 'bracketed';
+                  console.log('✅ AUTO-APPROVAL: Pattern 1 MATCHED:', finalVerdictMatch[1]);
+                } else {
+                  console.log('❌ AUTO-APPROVAL: Pattern 1 NO MATCH');
+                }
+
+                // Pattern 2: Claude's actual format - **Status**: APPROVED followed by newline and **
+                if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 2: Claude actual format (**Status**: APPROVED\\n**)');
+                  finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([A-Z\s]+?)\s*\n\*\*/i);
+                  if (finalVerdictMatch) {
+                    detectionMethod = 'claude-actual-format';
+                    console.log('✅ AUTO-APPROVAL: Pattern 2 MATCHED:', finalVerdictMatch[1]);
+                  } else {
+                    console.log('❌ AUTO-APPROVAL: Pattern 2 NO MATCH');
+                  }
+                }
+
+                // Pattern 3: Simple status detection - **Status**: APPROVED (any ending)
+                if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 3: Simple status detection');
+                  finalVerdictMatch = comment.body.match(/\*\*Status\*\*:\s*([A-Z\s]+?)(?:\s*\n|\s*\*\*|$)/i);
+                  if (finalVerdictMatch) {
+                    detectionMethod = 'simple-status';
+                    console.log('✅ AUTO-APPROVAL: Pattern 3 MATCHED:', finalVerdictMatch[1]);
+                  } else {
+                    console.log('❌ AUTO-APPROVAL: Pattern 3 NO MATCH');
+                  }
+                }
+
+                // Pattern 4: Broad detection - any Status: APPROVED pattern
+                if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 4: Broad status detection');
+                  finalVerdictMatch = comment.body.match(/Status\*?\*?:\s*([A-Z\s]+?)(?:\s*\n|\s*\*|$)/i);
+                  if (finalVerdictMatch) {
+                    detectionMethod = 'broad-detection';
+                    console.log('✅ AUTO-APPROVAL: Pattern 4 MATCHED:', finalVerdictMatch[1]);
+                  } else {
+                    console.log('❌ AUTO-APPROVAL: Pattern 4 NO MATCH');
+                  }
+                }
+
+                // Pattern 5: Case-insensitive fallback
+                if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 5: Case-insensitive fallback');
+                  if (comment.body.toLowerCase().includes('status') && comment.body.toLowerCase().includes('approved')) {
+                    // Extract the word after "status"
+                    const caseInsensitiveMatch = comment.body.match(/status[^:]*:\s*([a-z\s]+?)(?:\s*\n|\s*\*|$)/i);
+                    if (caseInsensitiveMatch && caseInsensitiveMatch[1].toLowerCase().includes('approved')) {
+                      finalVerdictMatch = [null, caseInsensitiveMatch[1]];
+                      detectionMethod = 'case-insensitive-fallback';
+                      console.log('✅ AUTO-APPROVAL: Pattern 5 MATCHED:', finalVerdictMatch[1]);
+                    } else {
+                      console.log('❌ AUTO-APPROVAL: Pattern 5 NO MATCH');
+                    }
+                  } else {
+                    console.log('❌ AUTO-APPROVAL: Pattern 5 NO MATCH - no status/approved keywords');
+                  }
+                }
+
+                // ENHANCED STATUS PROCESSING WITH COMPREHENSIVE LOGGING
+                if (finalVerdictMatch) {
+                  const rawStatus = finalVerdictMatch[1];
+                  const status = rawStatus.trim();
+                  console.log(`🎯 FOUND FINAL VERDICT STATUS!`);
+                  console.log(`   Raw status: "${rawStatus}"`);
+                  console.log(`   Trimmed status: "${status}"`);
+                  console.log(`   Detection method: ${detectionMethod}`);
+                  console.log(`   Status length: ${status.length}`);
+                  console.log(`   Status includes APPROVED: ${status.includes('APPROVED')}`);
+                  console.log(`   Status includes CONDITIONAL: ${status.includes('CONDITIONAL')}`);
+                  console.log(`   Status includes BLOCKED: ${status.includes('BLOCKED')}`);
+
+                  // Enhanced status classification with case-insensitive matching
+                  const statusUpper = status.toUpperCase();
+
+                  if (statusUpper === 'APPROVED' || (statusUpper.includes('APPROVED') && !statusUpper.includes('CONDITIONAL'))) {
+                    claudeApprovalStatus = 'approved';
+                    console.log('✅ CLASSIFICATION: Claude APPROVED the PR');
+                  } else if (statusUpper === 'BLOCKED' || statusUpper.includes('BLOCKED')) {
+                    claudeApprovalStatus = 'blocked';
+                    hasRequiredIssues = true;
+                    console.log('❌ CLASSIFICATION: Claude BLOCKED the PR');
+                  } else if (statusUpper === 'CONDITIONAL APPROVAL' || statusUpper.includes('CONDITIONAL')) {
+                    claudeApprovalStatus = 'conditional';
+                    console.log('✅ CLASSIFICATION: Claude CONDITIONALLY APPROVED the PR');
+                  } else {
+                    claudeApprovalStatus = 'unknown';
+                    console.log(`⚠️ CLASSIFICATION: Unknown status: "${status}"`);
+                    console.log(`   Will attempt fallback approval logic based on content analysis`);
+                  }
+                } else {
+                  console.log('❌ NO FINAL VERDICT STATUS FOUND in comment');
+                  console.log('   Comment preview:', comment.body.substring(0, 500) + '...');
+                  console.log('   Attempting content-based analysis as fallback...');
+
+                  // Fallback: Content-based analysis if no explicit status found
+                  const commentLower = comment.body.toLowerCase();
+                  if (commentLower.includes('approved') && !commentLower.includes('not approved') && !commentLower.includes('blocked')) {
+                    console.log('✅ FALLBACK: Found "approved" in comment content');
+                    claudeApprovalStatus = 'approved';
+                  } else if (commentLower.includes('blocked') || commentLower.includes('rejected')) {
+                    console.log('❌ FALLBACK: Found "blocked" or "rejected" in comment content');
+                    claudeApprovalStatus = 'blocked';
+                    hasRequiredIssues = true;
+                  } else {
+                    console.log('⚠️ FALLBACK: No clear approval/rejection indicators found');
+                    claudeApprovalStatus = 'unknown';
+                  }
                 }
 
                 // Also check for Critical Issues section content
@@ -777,30 +864,51 @@ jobs:
                 return;
               }
 
-              // Decision logic based on standardized Claude review format
-              console.log('🔍 DECISION LOGIC DEBUG:');
-              console.log(`   claudeApprovalStatus: "${claudeApprovalStatus}"`);
-              console.log(`   hasRequiredIssues: ${hasRequiredIssues}`);
-              console.log(`   claudeReviewContent length: ${claudeReviewContent.length}`);
+              // ENHANCED DECISION LOGIC WITH COMPREHENSIVE LOGGING
+              console.log('🎯 FINAL DECISION LOGIC ANALYSIS:');
+              console.log('=' .repeat(60));
+              console.log(`📊 APPROVAL STATUS: "${claudeApprovalStatus}"`);
+              console.log(`🚨 HAS REQUIRED ISSUES: ${hasRequiredIssues}`);
+              console.log(`📝 REVIEW CONTENT LENGTH: ${claudeReviewContent.length} characters`);
+              console.log(`🔍 TOTAL CLAUDE COMMENTS ANALYZED: ${claudeAppComments.length}`);
+              console.log('=' .repeat(60));
+
+              // Decision tree with detailed logging
+              let finalDecision = false;
+              let decisionReason = '';
 
               if (claudeApprovalStatus === 'approved' && !hasRequiredIssues) {
-                console.log('✅ SUCCESS: Claude approved with APPROVED status - eligible for auto-approval');
-                core.setOutput('should_approve', 'true');
-                core.setOutput('reason', 'Claude approved with APPROVED status and no critical issues');
-                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
+                finalDecision = true;
+                decisionReason = 'Claude approved with APPROVED status and no critical issues';
+                console.log('✅ DECISION: AUTO-APPROVE - Claude explicitly approved with no issues');
               } else if (claudeApprovalStatus === 'conditional' && !hasRequiredIssues) {
-                console.log('✅ SUCCESS: Claude conditionally approved with CONDITIONAL APPROVAL - eligible for auto-approval');
-                core.setOutput('should_approve', 'true');
-                core.setOutput('reason', 'Claude conditionally approved with CONDITIONAL APPROVAL and no critical issues');
-                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
+                finalDecision = true;
+                decisionReason = 'Claude conditionally approved with CONDITIONAL APPROVAL and no critical issues';
+                console.log('✅ DECISION: AUTO-APPROVE - Claude conditionally approved with no issues');
+              } else if (claudeApprovalStatus === 'unknown' && !hasRequiredIssues) {
+                finalDecision = true;
+                decisionReason = 'No explicit status found but no critical issues detected in Claude review';
+                console.log('✅ DECISION: AUTO-APPROVE - Fallback approval (no status found but no issues)');
               } else if (claudeApprovalStatus === 'blocked' || hasRequiredIssues) {
-                console.log('❌ BLOCKED: Claude blocked with BLOCKED status or critical issues found - cannot auto-approve');
-                core.setOutput('should_approve', 'false');
-                core.setOutput('reason', 'Claude blocked with BLOCKED status or critical issues found');
-              } else if (!hasRequiredIssues) {
-                console.log('✅ SUCCESS: No critical issues found - eligible for auto-approval');
-                core.setOutput('should_approve', 'true');
-                core.setOutput('reason', 'No critical issues found in Claude review');
+                finalDecision = false;
+                decisionReason = 'Claude blocked with BLOCKED status or critical issues found';
+                console.log('❌ DECISION: BLOCK - Claude explicitly blocked or critical issues found');
+              } else {
+                finalDecision = false;
+                decisionReason = `Uncertain approval status: ${claudeApprovalStatus}, hasIssues: ${hasRequiredIssues}`;
+                console.log('❌ DECISION: BLOCK - Uncertain status, defaulting to safe (no approval)');
+              }
+
+              console.log('🎯 FINAL DECISION SUMMARY:');
+              console.log(`   SHOULD APPROVE: ${finalDecision}`);
+              console.log(`   REASON: ${decisionReason}`);
+              console.log('=' .repeat(60));
+
+              core.setOutput('should_approve', finalDecision.toString());
+              core.setOutput('reason', decisionReason);
+              if (finalDecision) {
+                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
+              }
                 core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
               } else {
                 console.log('❌ BLOCKED: Critical issues found - cannot auto-approve');
@@ -831,12 +939,16 @@ jobs:
             const shouldApprove = '${{ steps.evaluate-review.outputs.should_approve }}';
             const reason = '${{ steps.evaluate-review.outputs.reason }}';
 
-            console.log(`🚀 AUTO-APPROVAL STEP EXECUTING!`);
-            console.log(`   PR Number: ${prNumber}`);
-            console.log(`   Should Approve: ${shouldApprove}`);
-            console.log(`   Reason: ${reason}`);
-            console.log(`🚀 EXECUTING APPROVAL API CALL...`);
-            console.log(`📡 API Call: POST /repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNumber}/reviews`);
+            console.log('🚀 AUTO-APPROVAL STEP EXECUTING!');
+            console.log('=' .repeat(80));
+            console.log(`📋 PR NUMBER: ${prNumber}`);
+            console.log(`✅ SHOULD APPROVE: ${shouldApprove}`);
+            console.log(`📝 REASON: ${reason}`);
+            console.log(`🔑 TOKEN: ${process.env.GITHUB_TOKEN ? 'Present' : 'Missing'}`);
+            console.log(`📡 API ENDPOINT: POST /repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNumber}/reviews`);
+            console.log(`🎯 EVENT TYPE: APPROVE`);
+            console.log('=' .repeat(80));
+            console.log('🚀 EXECUTING APPROVAL API CALL...');
 
             try {
               const approvalResponse = await github.rest.pulls.createReview({
