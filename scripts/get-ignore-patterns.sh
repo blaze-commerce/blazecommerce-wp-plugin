@@ -16,14 +16,13 @@ cat << 'EOF'
 scripts/
 bin/
 setup-templates/
-
+docs/
 # Testing & Quality Assurance
 tests/
 test/
 phpunit.xml
 jest.config.js
 github-workflows-tests.yml
-
 # Dependencies & Build Configuration (excluding dependency files that should trigger version bumps)
 vendor/
 node_modules/
@@ -33,7 +32,6 @@ composer.lock
 package-lock.json
 blocks/package-lock.json
 blocks/yarn.lock
-
 # Documentation & Configuration
 README.md
 CHANGELOG.md
@@ -44,7 +42,6 @@ license.txt
 .augmentignore
 .augment-guidelines
 .editorconfig
-
 # System & Temporary Files
 .DS_Store
 Thumbs.db
@@ -57,7 +54,6 @@ desktop.ini
 *~
 *.bak
 *.orig
-
 # IDE-specific files
 *.sublime-project
 *.sublime-workspace
