@@ -9,8 +9,8 @@ on:
     types: [opened, synchronize, reopened]
   pull_request_review:
     types: [submitted, dismissed]
-  issue_comment:
-    types: [created]
+  # issue_comment:  # DISABLED: Causing premature auto-approval on Claude 'working' comments
+  #   types: [created]
   workflow_run:
     workflows: ["🤖 Priority 2: Claude AI Code Review"]
     types: [completed]
@@ -56,14 +56,16 @@ jobs:
                 prNumber = prMatch ? parseInt(prMatch[1]) : null;
                 triggerReason = `Claude review workflow ${context.payload.workflow_run.conclusion}`;
               }
-            } else if (context.eventName === 'issue_comment') {
-              const comment = context.payload.comment.body.toLowerCase();
-              if (comment.includes('@claude') && context.payload.issue.pull_request) {
-                shouldRun = true;
-                prNumber = context.payload.issue.number;
-                triggerReason = '@claude mention in comment';
-              }
             }
+            // DISABLED: issue_comment trigger removed to prevent premature auto-approval
+            // else if (context.eventName === 'issue_comment') {
+            //   const comment = context.payload.comment.body.toLowerCase();
+            //   if (comment.includes('@claude') && context.payload.issue.pull_request) {
+            //     shouldRun = true;
+            //     prNumber = context.payload.issue.number;
+            //     triggerReason = '@claude mention in comment';
+            //   }
+            // }
 
             console.log(`Event: ${context.eventName}, Should run: ${shouldRun}, PR: ${prNumber}, Reason: ${triggerReason}`);
 
