@@ -215,14 +215,11 @@ jobs:
             let validClaudeComment = null;
 
             for (const comment of comments.reverse()) {
-              // CORRECTED: Proper Claude bot detection
-              // claude[bot] is Anthropic's official GitHub App
-              // blazecommerce-automation-bot[bot] is our automation bot (currently doing reviews due to config issue)
-              const isClaudeBot = comment.user.login === 'claude[bot]' ||
-                                 comment.user.login.includes('claude') ||
-                                 comment.user.login === 'blazecommerce-claude-ai' ||
-                                 (comment.user.login === 'blazecommerce-automation-bot[bot]' &&
-                                  comment.body.includes('Claude AI PR Review Complete'));
+              // STANDARDIZED: Custom Claude implementation detection
+              // We use blazecommerce-automation-bot[bot] for both review and approval
+              // This provides consistent branding and full workflow control
+              const isClaudeBot = comment.user.login === 'blazecommerce-automation-bot[bot]' &&
+                                 comment.body.includes('Claude AI PR Review Complete');
 
               if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
                 const commentDate = new Date(comment.created_at);
