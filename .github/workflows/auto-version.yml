@@ -1,4 +1,4 @@
-name: "🔢 Priority 3: Auto Version Bump"
+name: "🔢 Priority 4: Auto Version Bump"
 
 on:
   push:
@@ -8,25 +8,26 @@ on:
       - 'feature/**'
       - 'release/**'
 
-# Priority 3: Post-merge workflow - runs after PR workflows complete
+# Priority 4: Post-approval workflow - runs ONLY after PR is approved and Priority 3 completes
 concurrency:
-  group: priority-3-auto-version-${{ github.repository }}
+  group: priority-4-auto-version-${{ github.repository }}
   cancel-in-progress: false  # Don't cancel to ensure version consistency
 
 jobs:
-  # Wait for Priority 2 (Claude Approval Gate) to complete before proceeding
-  wait-for-priority-2:
+  # Wait for Priority 3 (Claude Approval Gate) to complete before proceeding
+  wait-for-priority-3:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ vars.PRIORITY_DEPENDENCY_TIMEOUT || 5 }}
     outputs:
-      priority-2-completed: ${{ steps.check-dependencies.outputs.all_dependencies_completed }}
+      priority-3-completed: ${{ steps.check-dependencies.outputs.all_dependencies_completed }}
+      pr-approved: ${{ steps.check-approval.outputs.approved }}
     steps:
-      - name: Check Priority 2 Dependencies
+      - name: Check Priority 3 Dependencies
         id: check-dependencies
         uses: actions/github-script@v7
         with:
           script: |
-            console.log('DEBUG: Checking Priority 2 workflow completion...');
+            console.log('DEBUG: Checking Priority 3 workflow completion...');
 
             // Get all workflow runs for this commit
             const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -36,11 +37,11 @@ jobs:
               status: 'completed'
             });
 
-            // Look for completed Priority 2 workflows
-            const priority2Workflows = ['Priority 2: Claude AI Approval Gate'];
+            // Look for completed Priority 3 workflows
+            const priority3Workflows = ['✅ Priority 3: Claude AI Approval Gate'];
             let allCompleted = true;
 
-            for (const workflowName of priority2Workflows) {
+            for (const workflowName of priority3Workflows) {
               const workflow = workflowRuns.workflow_runs.find(run =>
                 run.name === workflowName && run.head_sha === context.sha
               );
@@ -54,6 +55,49 @@ jobs:
             }
 
             core.setOutput('all_dependencies_completed', allCompleted.toString());
+
+      - name: Check PR Approval Status
+        id: check-approval
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('DEBUG: Checking PR approval status...');
+
+            // Get PR number from commit
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha
+            });
+
+            if (prs.length === 0) {
+              console.log('INFO: No PR associated with this commit - proceeding with version bump');
+              core.setOutput('approved', 'true');
+              return;
+            }
+
+            const pr = prs[0];
+            console.log(`INFO: Checking approval status for PR #${pr.number}`);
+
+            // Check for @blazecommerce-claude-ai approval
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            const claudeApproval = reviews.find(review =>
+              review.user.login === 'blazecommerce-claude-ai' &&
+              review.state === 'APPROVED'
+            );
+
+            if (claudeApproval) {
+              console.log('SUCCESS: PR is approved by @blazecommerce-claude-ai');
+              core.setOutput('approved', 'true');
+            } else {
+              console.log('WARNING: PR is not yet approved by @blazecommerce-claude-ai');
+              core.setOutput('approved', 'false');
+            }
 
   # Job that runs on feature branches to provide feedback but skip version operations
   feature-branch-info:
@@ -83,11 +127,12 @@ jobs:
           echo "SUCCESS: Feature branch validation completed"
 
   version-bump:
-    needs: [wait-for-priority-2]
+    needs: [wait-for-priority-3]
     runs-on: ubuntu-latest
     timeout-minutes: ${{ vars.AUTO_VERSION_TIMEOUT || 20 }}
     if: |
       github.ref == 'refs/heads/main' &&
+      needs.wait-for-priority-3.outputs.pr-approved == 'true' &&
       !contains(github.event.head_commit.message, '[skip ci]') &&
       !contains(github.event.head_commit.message, 'chore(release)') &&
       !contains(github.event.head_commit.message, '[no version]')
@@ -104,6 +149,13 @@ jobs:
       with:
         token: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
         fetch-depth: 0
+
+    - name: Pull Latest Changes to Prevent Version Conflicts
+      run: |
+        echo "INFO: Pulling latest changes to prevent version conflicts..."
+        git fetch origin main
+        git reset --hard origin/main
+        echo "SUCCESS: Repository updated to latest main branch"
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -130,9 +182,45 @@ jobs:
       run: |
         echo "DEBUG: Running file change analysis..."
 
-        # Set environment variables for the script
-        export GITHUB_EVENT_BEFORE="${{ github.event.before }}"
-        export DEBUG="${{ vars.DEBUG_MODE || 'false' }}"
+        # COMPREHENSIVE SECURITY: Advanced token exposure prevention
+        echo "🔒 SECURITY: Implementing secure environment variable handling"
+
+        # Create isolated environment for sensitive operations
+        set +x  # Disable command echoing to prevent token leakage in logs
+
+        # Multi-layer input validation and sanitization
+        GITHUB_EVENT_BEFORE_RAW="${{ github.event.before }}"
+        DEBUG_MODE_RAW="${{ vars.DEBUG_MODE || 'false' }}"
+
+        # Comprehensive validation with multiple security checks
+        if [[ -z "$GITHUB_EVENT_BEFORE_RAW" ]]; then
+          echo "🚨 SECURITY: Empty GITHUB_EVENT_BEFORE, using safe default"
+          export GITHUB_EVENT_BEFORE="0000000000000000000000000000000000000000"
+        elif [[ ${#GITHUB_EVENT_BEFORE_RAW} -ne 40 ]]; then
+          echo "🚨 SECURITY: Invalid GITHUB_EVENT_BEFORE length (${#GITHUB_EVENT_BEFORE_RAW}), expected 40"
+          export GITHUB_EVENT_BEFORE="0000000000000000000000000000000000000000"
+        elif [[ "$GITHUB_EVENT_BEFORE_RAW" =~ ^[a-f0-9]{40}$ ]]; then
+          export GITHUB_EVENT_BEFORE="$GITHUB_EVENT_BEFORE_RAW"
+          echo "✅ SECURITY: GITHUB_EVENT_BEFORE validation passed"
+        else
+          echo "🚨 SECURITY: GITHUB_EVENT_BEFORE contains invalid characters, using safe default"
+          export GITHUB_EVENT_BEFORE="0000000000000000000000000000000000000000"
+        fi
+
+        # Secure debug mode validation
+        if [[ "$DEBUG_MODE_RAW" =~ ^(true|false)$ ]]; then
+          export DEBUG="$DEBUG_MODE_RAW"
+          echo "✅ SECURITY: DEBUG mode validation passed: $DEBUG"
+        else
+          export DEBUG="false"
+          echo "🚨 SECURITY: Invalid DEBUG_MODE value, defaulting to false"
+        fi
+
+        # Additional security: Clear potentially sensitive variables
+        unset GITHUB_EVENT_BEFORE_RAW DEBUG_MODE_RAW
+
+        # Re-enable command echoing for non-sensitive operations
+        set -x
 
         # Check if the script exists
         if [ ! -f ".github/scripts/file-change-analyzer.js" ]; then
