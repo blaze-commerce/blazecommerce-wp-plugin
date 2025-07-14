@@ -182,9 +182,24 @@ jobs:
       run: |
         echo "DEBUG: Running file change analysis..."
 
-        # Set environment variables for the script
-        export GITHUB_EVENT_BEFORE="${{ github.event.before }}"
-        export DEBUG="${{ vars.DEBUG_MODE || 'false' }}"
+        # SECURITY FIX: Sanitize environment variables to prevent token exposure
+        GITHUB_EVENT_BEFORE_RAW="${{ github.event.before }}"
+        DEBUG_MODE_RAW="${{ vars.DEBUG_MODE || 'false' }}"
+
+        # Validate and sanitize inputs
+        if [[ "$GITHUB_EVENT_BEFORE_RAW" =~ ^[a-f0-9]{40}$ ]]; then
+          export GITHUB_EVENT_BEFORE="$GITHUB_EVENT_BEFORE_RAW"
+        else
+          export GITHUB_EVENT_BEFORE="0000000000000000000000000000000000000000"
+          echo "WARNING: Invalid GITHUB_EVENT_BEFORE format, using default"
+        fi
+
+        if [[ "$DEBUG_MODE_RAW" =~ ^(true|false)$ ]]; then
+          export DEBUG="$DEBUG_MODE_RAW"
+        else
+          export DEBUG="false"
+          echo "WARNING: Invalid DEBUG_MODE value, using false"
+        fi
 
         # Check if the script exists
         if [ ! -f ".github/scripts/file-change-analyzer.js" ]; then
