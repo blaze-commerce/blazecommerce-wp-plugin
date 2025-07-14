@@ -1,6 +1,5 @@
 <?php
 
-
 namespace BlazeWooless\Features;
 
 class Authentication {
