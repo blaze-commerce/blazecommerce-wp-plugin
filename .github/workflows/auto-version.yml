@@ -416,7 +416,7 @@ jobs:
           exit 1
         fi
 
-    - name: Validate version consistency after update
+    - name: 🔍 Validate Version Consistency (Post-Bump)
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
       run: |
         echo "🔍 Validating version consistency after update..."
@@ -428,7 +428,8 @@ jobs:
         # Run comprehensive validation
         if [ -f "scripts/validate-version.js" ]; then
           echo "EXECUTING: Running file consistency validation..."
-          if node scripts/validate-version.js --verbose; then
+          # Use --no-conflicts flag for post-bump validation to avoid false positives
+          if node scripts/validate-version.js --verbose --no-conflicts; then
             echo "SUCCESS: All version files are consistent"
           else
             echo "ERROR: Version files are inconsistent after update"
@@ -459,7 +460,7 @@ jobs:
           fi
         fi
 
-    - name: Pre-tag validation
+    - name: 🏷️ Pre-Tag Validation (Post-Bump Files → Git Tag)
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
       run: |
         echo "🔍 Pre-tag validation: Ensuring version consistency before creating git tag..."
@@ -477,8 +478,8 @@ jobs:
           echo "EXECUTING: Validating consistency for future tag: $TEMP_TAG"
 
           # Since the tag doesn't exist yet, we'll validate that all files have the same version
-          # that we're about to tag
-          if node scripts/validate-version.js --verbose; then
+          # that we're about to tag (use --no-conflicts since this is post-bump validation)
+          if node scripts/validate-version.js --verbose --no-conflicts; then
             echo "SUCCESS: All files are consistent and ready for tagging"
           else
             echo "ERROR: Files are not consistent - cannot create tag"

@@ -7,10 +7,19 @@ This document describes the enhanced version synchronization system that ensures
 The version synchronization system prevents issues like the v1.14.1 release where git tags were created but version files were not properly synchronized. It provides:
 
 - **Comprehensive validation** of version consistency across all files
-- **Automatic detection** of version mismatches between git tags and files  
+- **Automatic detection** of version mismatches between git tags and files
 - **Automatic resolution** of version conflicts (optional)
+- **Context-aware validation** for pre-bump and post-bump scenarios
+- **GitHub Actions integration** with proper workflow validation
 - **Detailed logging** and error reporting for debugging
 - **Safe rollback** capabilities with backup creation
+
+### Recent Fixes (v1.14.1 Issue Resolution)
+
+This system specifically addresses the v1.14.1 release issue where:
+- **Problem**: Git tag `v1.14.1` was created but all files still contained `1.14.0`
+- **Root Cause**: GitHub Actions workflows failed due to post-bump validation incorrectly flagging success as failure
+- **Solution**: Context-aware validation with `--no-conflicts` flag for post-bump scenarios
 
 ## Components
 
@@ -283,3 +292,154 @@ Add these steps to existing workflows:
   if: failure()
   run: node scripts/fix-version-mismatch.js ${{ env.TARGET_VERSION }}
 ```
+
+## GitHub Actions Workflow Fixes
+
+### Context-Aware Validation
+
+The workflows now use context-aware validation to distinguish between pre-bump and post-bump scenarios:
+
+#### Pre-Bump Validation
+```yaml
+# Standard validation with conflict checking
+- name: 🔍 Validate Current Version
+  run: node scripts/validate-version.js --verbose
+```
+
+#### Post-Bump Validation
+```yaml
+# Post-bump validation without conflict checking
+- name: 🔍 Validate Version Consistency (Post-Bump)
+  run: node scripts/validate-version.js --verbose --no-conflicts
+```
+
+### Auto-Version Workflow Fixes
+
+The auto-version workflow has been updated to:
+
+1. **Use `--no-conflicts` flag** for post-bump validation steps
+2. **Prevent false positive failures** when validating after version updates
+3. **Provide clear step names** indicating validation context
+4. **Include detailed error reporting** for debugging
+
+### Release Workflow Integration
+
+The release workflow includes:
+
+1. **Semantic version validation** using `scripts/semver-utils.js`
+2. **Tag-to-files synchronization** validation before release creation
+3. **Comprehensive error handling** with detailed logging
+
+### New NPM Scripts for Workflows
+
+```bash
+# Post-bump validation (no conflict checking)
+npm run validate-version:post-bump
+
+# Automatic resolution
+npm run fix-version-mismatch:auto
+
+# No-conflicts validation
+npm run validate-version:no-conflicts
+```
+
+## Enhanced Error Handling
+
+The validation scripts now provide actionable error messages with specific commands to resolve issues:
+
+### Improved Error Messages
+
+When validation fails, you'll see:
+
+```
+❌ Version validation failed. Please fix the issues above.
+
+🔧 QUICK FIXES:
+   • Run: npm run fix-version-mismatch:auto
+   • Or: node scripts/validate-version.js --apply-resolution
+
+📚 DOCUMENTATION:
+   • See: docs/version-synchronization.md
+   • Troubleshooting: docs/version-synchronization.md#troubleshooting
+```
+
+### Common Error Scenarios
+
+#### Version Mismatch Between Files
+```bash
+# Quick fix
+npm run fix-version-mismatch:auto
+
+# Manual fix to specific version
+node scripts/fix-version-mismatch.js 1.14.1 --verbose
+```
+
+#### Post-Bump Validation Failures
+```bash
+# Use no-conflicts validation
+npm run validate-version:post-bump
+
+# Or directly
+node scripts/validate-version.js --verbose --no-conflicts
+```
+
+#### Tag-to-Files Synchronization Issues
+```bash
+# Check synchronization
+npm run validate-version-sync:verbose
+
+# Fix automatically
+npm run fix-version-mismatch:auto
+```
+
+## Troubleshooting
+
+### Workflow Validation Failures
+
+#### Problem: Auto-version workflow fails on post-bump validation
+**Solution**: Ensure the workflow uses `--no-conflicts` flag:
+```yaml
+- name: 🔍 Validate Version Consistency (Post-Bump)
+  run: node scripts/validate-version.js --verbose --no-conflicts
+```
+
+#### Problem: "Version conflicts detected" after successful version bump
+**Cause**: Using standard validation instead of post-bump validation
+**Solution**: Use the correct validation context:
+```bash
+# Wrong (will fail after version bump)
+npm run validate-version
+
+# Correct (for post-bump scenarios)
+npm run validate-version:post-bump
+```
+
+#### Problem: Git tag exists but files show different version
+**Solution**: Use automatic resolution:
+```bash
+# Analyze the issue
+npm run validate-version-sync:verbose
+
+# Fix automatically
+npm run fix-version-mismatch:auto
+
+# Or fix to specific version
+node scripts/fix-version-mismatch.js [VERSION] --verbose
+```
+
+### Common Issues and Solutions
+
+| Issue | Command | Description |
+|-------|---------|-------------|
+| Version mismatch | `npm run fix-version-mismatch:auto` | Automatically resolve version conflicts |
+| Post-bump validation fails | `npm run validate-version:post-bump` | Use no-conflicts validation |
+| Need detailed analysis | `npm run validate-version:verbose` | Get comprehensive validation report |
+| Tag-files sync issues | `npm run validate-version-sync:verbose` | Check tag-to-files synchronization |
+| Workflow debugging | Check workflow logs | Look for context-aware validation steps |
+
+### Getting Help
+
+1. **Check Documentation**: This file contains comprehensive usage examples
+2. **Run Verbose Mode**: Add `--verbose` to any validation command for detailed output
+3. **Use Analysis Mode**: `node scripts/validate-version.js --analyze` for comprehensive analysis
+4. **Check Workflow Logs**: GitHub Actions logs show detailed validation steps
