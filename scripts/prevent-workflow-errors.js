@@ -174,7 +174,7 @@ class WorkflowErrorPrevention {
     const workflowFiles = [
       '.github/workflows/tests.yml',
       '.github/workflows/auto-version.yml',
-      '.github/workflows/claude-pr-review.yml',
+      '.github/workflows/claude-code-review.yml',
       '.github/workflows/claude-approval-gate.yml'
     ];
 
