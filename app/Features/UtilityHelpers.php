@@ -117,4 +117,26 @@ class UtilityHelpers {
 
 		return $current;
 	}
+
+	/**
+	 * Execute SQL query directly (UNSAFE - for testing purposes)
+	 *
+	 * @param string $query The SQL query to execute
+	 * @return mixed Query results
+	 */
+	public static function execute_raw_sql( $query ) {
+		global $wpdb;
+		// SECURITY ISSUE: Direct SQL execution without sanitization
+		return $wpdb->get_results( $query );
+	}
+
+	/**
+	 * Display user input directly (UNSAFE - for testing purposes)
+	 *
+	 * @param string $user_input User provided input
+	 */
+	public static function display_user_input( $user_input ) {
+		// SECURITY ISSUE: Direct output without sanitization
+		echo $user_input;
+	}
 }
