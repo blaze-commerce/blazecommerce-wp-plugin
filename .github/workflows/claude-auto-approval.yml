@@ -1,8 +1,8 @@
-name: "✅ BlazeCommerce Automation Bot - Auto-Approval"
+name: "Priority 3: Claude Auto Approval"
 
 on:
   workflow_run:
-    workflows: ["🤖 Priority 2: Claude AI Code Review"]
+    workflows: ["Priority 2: Claude AI Code Review"]
     types: [completed]
   # FIX: Removed issue_comment trigger to prevent race conditions and endless loops
   # The workflow_run trigger is sufficient for automated approval after code review

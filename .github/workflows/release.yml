@@ -1,4 +1,4 @@
-name: "🚀 Priority 5: Create Release"
+name: "Priority 5: Create Release"
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
             });
 
             // Look for completed Priority 4 workflows
-            const priority4Workflows = ['🔢 Priority 4: Auto Version Bump'];
+            const priority4Workflows = ['Priority 4: Auto Version Bump'];
             let allCompleted = true;
 
             for (const workflowName of priority4Workflows) {
