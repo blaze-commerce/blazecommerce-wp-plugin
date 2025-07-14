@@ -2,7 +2,7 @@
 
 The official plugin that integrates your WordPress/WooCommerce site with the Blaze Commerce service.
 
-**Version:** 1.11.0
+**Version:** 1.14.0
 **Author:** Blaze Commerce
 **Plugin URI:** https://www.blazecommerce.io
 **Author URI:** https://www.blazecommerce.io
@@ -22,6 +22,8 @@ Blaze Commerce is a powerful WordPress plugin that provides seamless integration
 - **Extension Support**: Built-in support for popular WooCommerce extensions
 - **GraphQL Integration**: Enhanced GraphQL support for headless commerce
 - **Performance Optimization**: Caching, batch processing, and memory optimization
+
+<!-- Note: This plugin requires proper configuration of WooCommerce and GraphQL dependencies -->
 
 ## Requirements
 
