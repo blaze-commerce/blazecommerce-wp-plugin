@@ -845,12 +845,25 @@ jobs:
 
                   // Enhanced BLOCKED detection patterns with multiple variations
                   const blockedPatterns = [
+                    // Standard BLOCKED patterns
                     /Status\*?\*?:\s*(.*?(?:BLOCKED|NOT APPROVED|REJECTED|NOT READY|NEEDS WORK|CHANGES REQUIRED).*?)(?:\s*\n|\s*\*|$)/i,
                     /Status\*?\*?:\s*(BLOCKED.*?)(?:\s*\n|\s*\*|$)/i,
                     /Status\*?\*?:\s*(NOT\s+APPROVED.*?)(?:\s*\n|\s*\*|$)/i,
                     /Status\*?\*?:\s*(REJECTED.*?)(?:\s*\n|\s*\*|$)/i,
+
+                    // Claude-specific BLOCKED patterns
+                    /\*\*Status\*\*:\s*BLOCKED/i,
+                    /Status:\s*BLOCKED/i,
+                    /FINAL\s+VERDICT.*?Status.*?BLOCKED/is,
+                    /BLOCKED.*?Merge\s+Readiness.*?NOT\s+READY/is,
+
+                    // Critical issue patterns
                     /Status\*?\*?:\s*(.*?CRITICAL.*?REQUIRED.*?)(?:\s*\n|\s*\*|$)/i,
-                    /Status\*?\*?:\s*(.*?MUST.*?FIX.*?)(?:\s*\n|\s*\*|$)/i
+                    /Status\*?\*?:\s*(.*?MUST.*?FIX.*?)(?:\s*\n|\s*\*|$)/i,
+
+                    // NOT READY patterns
+                    /Merge\s+Readiness.*?NOT\s+READY/is,
+                    /NOT\s+READY.*?Recommendation/is
                   ];
 
                   for (let i = 0; i < blockedPatterns.length; i++) {
@@ -968,14 +981,39 @@ jobs:
                   if (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT')) {
                     const commentLower = comment.body.toLowerCase();
 
+                    // SPECIAL CASE: Check for Claude's specific BLOCKED format
+                    if (commentLower.includes('status**: blocked') ||
+                        commentLower.includes('merge readiness**: not ready') ||
+                        commentLower.includes('recommendation**: this pr') ||
+                        (commentLower.includes('final verdict') && commentLower.includes('blocked'))) {
+                      console.log('🚨 FALLBACK: Found Claude-specific BLOCKED format in FINAL VERDICT');
+                      claudeApprovalStatus = 'blocked';
+                      hasRequiredIssues = true;
+                      return; // Exit early to prevent further processing
+                    }
+
                     // PRIORITY 1: COMPREHENSIVE BLOCKED status detection
                     const blockedKeywords = [
+                      // Standard BLOCKED keywords
                       'blocked', 'not ready', 'rejected', 'not approved',
                       'status: blocked', 'status**: blocked', 'needs work',
                       'changes required', 'critical required', 'must fix',
                       'blocking issues', 'cannot approve', 'security issues',
                       'critical bugs', 'major issues', 'serious concerns',
-                      'unacceptable', 'dangerous', 'vulnerable'
+                      'unacceptable', 'dangerous', 'vulnerable',
+
+                      // Claude-specific BLOCKED patterns
+                      'merge readiness**: not ready',
+                      'merge readiness: not ready',
+                      'status**: blocked',
+                      'final verdict**',
+                      'recommendation**: this pr',
+                      'critical gap',
+                      'implementation verification failed',
+                      'documentation-implementation gap',
+                      'unresolved security vulnerabilities',
+                      'critical system failure',
+                      'complete failure of the security review process'
                     ];
 
                     const hasBlockedKeyword = blockedKeywords.some(keyword =>
@@ -1108,6 +1146,7 @@ jobs:
               let finalDecision = false;
               let decisionReason = '';
 
+              // CRITICAL FIX: Only approve on explicit APPROVED or CONDITIONAL status
               if (claudeApprovalStatus === 'approved' && !hasRequiredIssues) {
                 finalDecision = true;
                 decisionReason = 'Claude approved with APPROVED status and no critical issues';
@@ -1116,18 +1155,16 @@ jobs:
                 finalDecision = true;
                 decisionReason = 'Claude conditionally approved with CONDITIONAL APPROVAL and no critical issues';
                 console.log('✅ DECISION: AUTO-APPROVE - Claude conditionally approved with no issues');
-              } else if (claudeApprovalStatus === 'unknown' && !hasRequiredIssues) {
-                finalDecision = true;
-                decisionReason = 'No explicit status found but no critical issues detected in Claude review';
-                console.log('✅ DECISION: AUTO-APPROVE - Fallback approval (no status found but no issues)');
               } else if (claudeApprovalStatus === 'blocked' || hasRequiredIssues) {
                 finalDecision = false;
                 decisionReason = 'Claude blocked with BLOCKED status or critical issues found';
                 console.log('❌ DECISION: BLOCK - Claude explicitly blocked or critical issues found');
               } else {
+                // SECURITY FIX: No fallback approval - only explicit APPROVED/CONDITIONAL allowed
                 finalDecision = false;
-                decisionReason = `Uncertain approval status: ${claudeApprovalStatus}, hasIssues: ${hasRequiredIssues}`;
-                console.log('❌ DECISION: BLOCK - Uncertain status, defaulting to safe (no approval)');
+                decisionReason = `Uncertain or unknown approval status: ${claudeApprovalStatus}, hasIssues: ${hasRequiredIssues}`;
+                console.log('❌ DECISION: BLOCK - No explicit approval status found, defaulting to safe (no approval)');
+                console.log('🔒 SECURITY: Removed unsafe fallback approval for unknown status');
               }
 
               // ADDITIONAL VALIDATION: Verify review completion before approval

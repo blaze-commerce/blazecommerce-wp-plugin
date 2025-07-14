@@ -226,6 +226,25 @@ runTest('Enhanced Review Completion Validation', () => {
   return hasCompletionValidation;
 });
 
+// Test 17: Critical Auto-Approval Logic Fix
+runTest('Unsafe Fallback Approval Removed', () => {
+  const hasUnsafeFallback = claudeApprovalGate.includes('No explicit status found but no critical issues detected');
+  const hasSafeFix = claudeApprovalGate.includes('No fallback approval - only explicit APPROVED/CONDITIONAL allowed') &&
+                     claudeApprovalGate.includes('Removed unsafe fallback approval for unknown status');
+
+  return !hasUnsafeFallback && hasSafeFix;
+});
+
+// Test 18: Enhanced Claude-Specific BLOCKED Detection
+runTest('Claude-Specific BLOCKED Pattern Detection', () => {
+  const hasClaudePatterns = claudeApprovalGate.includes('Claude-specific BLOCKED patterns') &&
+                           claudeApprovalGate.includes('merge readiness**: not ready') &&
+                           claudeApprovalGate.includes('implementation verification failed') &&
+                           claudeApprovalGate.includes('Found Claude-specific BLOCKED format');
+
+  return hasClaudePatterns;
+});
+
 // Final Results
 console.log('\n' + '=' .repeat(60));
 console.log('🎯 VALIDATION RESULTS SUMMARY:');
@@ -243,7 +262,10 @@ if (testResults.failed === 0) {
   console.log('   - ReDoS attacks');
   console.log('   - Incomplete review approval');
   console.log('   - BLOCKED status misclassification');
+  console.log('   - Unsafe fallback approval logic');
+  console.log('   - Claude-specific BLOCKED format bypass');
   console.log('✅ Production-ready with defense-in-depth security implementation.');
+  console.log('🚨 CRITICAL FIX: Auto-approval system malfunction resolved.');
   process.exit(0);
 } else {
   console.log('\n⚠️ SOME TESTS FAILED - REVIEW REQUIRED');
