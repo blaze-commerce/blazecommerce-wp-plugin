@@ -97,6 +97,52 @@ const existingBotApproval = existingReviews.find(review => {
    - Expected: Auto-approval should wait up to 5 minutes
    - Expected: Should not timeout prematurely
 
+## Bot Architecture Issue Identified
+
+**Problem:** During testing, we discovered that `blazecommerce-automation-bot[bot]` is performing BOTH code review AND approval, which breaks the intended separation of concerns.
+
+**Expected Architecture:**
+- `claude[bot]` or `blazecommerce-claude-ai` → Performs code review
+- `blazecommerce-automation-bot[bot]` → Performs auto-approval based on Claude's review
+
+**Current Issue:**
+- `blazecommerce-automation-bot[bot]` → Performing both review and approval
+
+**Root Cause:** The `anthropics/claude-code-action@beta` is using the default workflow token instead of a dedicated Claude token.
+
+**Fix Applied:**
+1. Added `github_token: ${{ secrets.CLAUDE_GITHUB_TOKEN || github.token }}` to Claude action
+2. Added temporary bot detection logic to handle current state
+3. Added TODO to remove temporary logic once proper token is configured
+
+## Claude Action Compatibility Issue
+
+**New Issue Discovered:** The `anthropics/claude-code-action@beta` does not support `workflow_run` trigger events.
+
+**Error:** "Unsupported event type: workflow_run"
+
+**Root Cause:** Claude action expects `pull_request` events for direct PR context access, but our timing fix requires `workflow_run` events.
+
+**Solution Implemented:** Hybrid trigger approach:
+1. **`pull_request` events** → Run Claude action with full PR context
+2. **`workflow_run` events** → Handle timing control without running Claude action
+3. **Conditional job execution** → Claude job only runs on `pull_request` events
+
+**Code Changes:**
+```yaml
+# Hybrid trigger support
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]  # For Claude action
+  workflow_run:
+    workflows: ["Priority 1: Claude Direct Approval"]
+    types: [completed]  # For timing control
+
+# Conditional Claude job
+claude-review:
+  if: needs.validate-workflow-sequence.outputs.should_run == 'true' && github.event_name == 'pull_request'
+```
+
 ## Monitoring
 
 The enhanced workflow now provides detailed logging including:
@@ -104,8 +150,10 @@ The enhanced workflow now provides detailed logging including:
 - Claude review timestamp verification
 - Stale review detection messages
 - Workflow synchronization status
+- Bot authentication verification
 
 Look for these log messages to verify proper operation:
 - `✅ Comment is AFTER latest commit - valid for approval`
 - `❌ Comment is BEFORE latest commit - ignoring stale review`
 - `🔄 Claude review workflow is still running - waiting for completion`
+- `🤖 Claude review detected from: [bot-name]` (should be claude[bot], not blazecommerce-automation-bot)
