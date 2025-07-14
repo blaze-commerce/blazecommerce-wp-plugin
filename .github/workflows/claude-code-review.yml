@@ -1,0 +1,112 @@
+name: "Priority 1: Claude AI Code Review"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    # Optional: Only run on specific file changes
+    # paths:
+    #   - "src/**/*.ts"
+    #   - "src/**/*.tsx"
+    #   - "src/**/*.js"
+    #   - "src/**/*.jsx"
+
+jobs:
+  claude-review:
+    # Optional: Filter by PR author
+    # if: |
+    #   github.event.pull_request.user.login == 'external-contributor' ||
+    #   github.event.pull_request.user.login == 'new-developer' ||
+    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
+          # model: "claude-opus-4-20250514"
+
+          # Direct prompt for automated review (no @claude mention needed)
+          direct_prompt: |
+            Please review this pull request and provide comprehensive feedback on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security concerns
+            - Test coverage
+
+            CRITICAL INSTRUCTIONS FOR STATUS DETERMINATION:
+
+            1. **Review Previous Feedback**: If this PR has previous Claude review comments, check if the required changes from those reviews have been properly implemented in the new commits.
+
+            2. **Do NOT mark as APPROVED**: If required changes from previous reviews haven't been implemented, even if the new code looks good in isolation.
+
+            3. **Implementation Verification**: Verify that any CRITICAL or REQUIRED issues from previous reviews have been addressed before considering approval.
+
+            🚨 CRITICAL: You must end your review with a standardized verdict section using this EXACT format.
+
+            The automated approval system depends on this specific format. Use EXACTLY this structure:
+
+            ### FINAL VERDICT
+            **Status**: APPROVED
+            **Merge Readiness**: READY TO MERGE
+            **Recommendation**: Brief explanation of your decision
+
+            OR
+
+            ### FINAL VERDICT
+            **Status**: CONDITIONAL APPROVAL
+            **Merge Readiness**: READY AFTER FIXES
+            **Recommendation**: Brief explanation of your decision
+
+            OR
+
+            ### FINAL VERDICT
+            **Status**: BLOCKED
+            **Merge Readiness**: NOT READY
+            **Recommendation**: Brief explanation of your decision
+
+            STATUS GUIDELINES:
+            - APPROVED: No critical issues found, all previous required changes implemented, code meets all standards
+            - CONDITIONAL APPROVAL: Minor improvements suggested but not blocking, previous required changes addressed
+            - BLOCKED: Critical issues that must be fixed before merge, OR required changes from previous reviews not implemented
+
+            ⚠️ IMPORTANT: Use the exact status values (APPROVED, CONDITIONAL APPROVAL, BLOCKED) without brackets or additional formatting. The automated system will detect these specific terms.
+
+            Be constructive and helpful in your feedback.
+
+          # Optional: Customize review based on file types
+          # direct_prompt: |
+          #   Review this PR focusing on:
+          #   - For TypeScript files: Type safety and proper interface usage
+          #   - For API endpoints: Security, input validation, and error handling
+          #   - For React components: Performance, accessibility, and best practices
+          #   - For tests: Coverage, edge cases, and test quality
+
+          # Optional: Different prompts for different authors
+          # direct_prompt: |
+          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
+          #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
+          #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
+
+          # Optional: Add specific tools for running tests or linting
+          # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
+
+          # Optional: Skip review for certain conditions
+          # if: |
+          #   !contains(github.event.pull_request.title, '[skip-review]') &&
+          #   !contains(github.event.pull_request.title, '[WIP]')
