@@ -181,24 +181,115 @@ jobs:
 
           # Direct prompt for automated review (no @claude mention needed)
           direct_prompt: |
-            Please review this pull request and provide comprehensive feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            Please review this pull request with comprehensive feedback focusing on WordPress/WooCommerce plugin development standards:
 
-            CRITICAL INSTRUCTIONS FOR STATUS DETERMINATION:
+            ## 🔍 **WordPress/WooCommerce Specific Review**
 
-            1. **Review Previous Feedback**: If this PR has previous Claude review comments, check if the required changes from those reviews have been properly implemented in the new commits.
+            ### **WordPress Coding Standards**
+            - Verify compliance with WordPress PHP Coding Standards
+            - Check PSR-4 namespace usage (`BlazeWooless\` namespace)
+            - Validate proper WordPress hook/filter implementation
+            - Review WordPress database operations (`$wpdb->prepare()` usage)
 
-            2. **Do NOT mark as APPROVED**: If required changes from previous reviews haven't been implemented, even if the new code looks good in isolation.
+            ### **WooCommerce Integration**
+            - Validate WooCommerce API usage patterns
+            - Check product data handling security
+            - Review cart/session management
+            - Verify payment gateway integration security
 
-            3. **Implementation Verification**: Verify that any CRITICAL or REQUIRED issues from previous reviews have been addressed before considering approval.
+            ## 🔒 **Security Review (WordPress-Specific)**
 
-            🚨 CRITICAL: You must end your review with a standardized verdict section using this EXACT format.
+            ### **Input/Output Security**
+            - Check for unsanitized `$_GET`/`$_POST` parameters
+            - Verify proper output escaping (`esc_html()`, `esc_attr()`, `esc_url()`)
+            - Validate input sanitization (`sanitize_text_field()`, etc.)
+            - Review direct echo of user input
 
-            The automated approval system depends on this specific format. Use EXACTLY this structure:
+            ### **WordPress Security Patterns**
+            - Verify CSRF protection (`wp_verify_nonce()`)
+            - Check capability validation (`current_user_can()`)
+            - Review SQL injection prevention (`$wpdb->prepare()`)
+            - Validate file upload security
+            - Check remote request security (`wp_remote_get/post()`)
+
+            ### **Plugin Security**
+            - Review plugin activation/deactivation hooks
+            - Check admin interface security
+            - Validate AJAX endpoint security
+            - Review REST API endpoint security
+
+            ## ⚡ **Performance & Optimization**
+
+            ### **Database Operations**
+            - Review query efficiency and optimization
+            - Check for N+1 query problems
+            - Validate proper indexing usage
+            - Review caching implementation
+
+            ### **WordPress Performance**
+            - Check for proper WordPress caching usage
+            - Review asset optimization (CSS/JS)
+            - Validate image optimization
+            - Check memory usage impact
+
+            ## 📚 **Documentation & Standards**
+
+            ### **Code Documentation**
+            - Verify PHPDoc compliance for all public methods
+            - Check inline comments for complex logic
+            - Review class and function documentation
+
+            ### **Project Documentation**
+            - Check if README updates are needed
+            - Verify changelog entries for user-facing changes
+            - Review API documentation updates
+            - Validate feature documentation updates
+
+            ## 🧪 **Testing & Quality**
+
+            ### **WordPress Testing**
+            - Review WordPress environment testing
+            - Check WooCommerce compatibility testing
+            - Validate plugin dependency testing
+            - Review unit test coverage
+
+            ### **Integration Testing**
+            - Check GraphQL API integration
+            - Review Typesense integration
+            - Validate third-party plugin compatibility
+
+            ## 🌐 **Compliance & Accessibility**
+
+            ### **Regulatory Compliance**
+            - Review GDPR/CCPA compliance for data handling
+            - Check PCI DSS requirements for payment features
+            - Validate data retention policies
+
+            ### **Accessibility**
+            - Review WCAG 2.1 AA compliance
+            - Check keyboard navigation
+            - Validate screen reader compatibility
+
+            ## 🔄 **Backward Compatibility**
+
+            ### **WordPress/PHP Compatibility**
+            - Verify minimum WordPress version support
+            - Check PHP version compatibility
+            - Review deprecated function usage
+            - Validate plugin dependency requirements
+
+            ## 📋 **Previous Review Implementation Check**
+
+            **CRITICAL**: If this PR has previous Claude review comments, verify that:
+            1. All REQUIRED (🔴) issues have been properly addressed
+            2. IMPORTANT (🟡) recommendations have been implemented or acknowledged
+            3. Code changes align with previous feedback
+
+            **Do NOT approve** if required changes from previous reviews haven't been implemented.
+
+            ## 🎯 **FINAL VERDICT FORMAT**
+
+            You MUST end your review with this EXACT format:
 
             ### FINAL VERDICT
             **Status**: APPROVED
@@ -219,14 +310,14 @@ jobs:
             **Merge Readiness**: NOT READY
             **Recommendation**: Brief explanation of your decision
 
-            STATUS GUIDELINES:
-            - APPROVED: No critical issues found, all previous required changes implemented, code meets all standards
-            - CONDITIONAL APPROVAL: Minor improvements suggested but not blocking, previous required changes addressed
-            - BLOCKED: Critical issues that must be fixed before merge, OR required changes from previous reviews not implemented
+            **STATUS GUIDELINES:**
+            - **APPROVED**: No critical issues, WordPress/WooCommerce standards met, previous issues resolved
+            - **CONDITIONAL APPROVAL**: Minor improvements suggested, standards mostly met
+            - **BLOCKED**: Critical security/compatibility issues, WordPress standards violations, or unresolved previous issues
 
             ⚠️ IMPORTANT: Use the exact status values (APPROVED, CONDITIONAL APPROVAL, BLOCKED) without brackets or additional formatting. The automated system will detect these specific terms.
 
-            Be constructive and helpful in your feedback.
+            Focus on WordPress/WooCommerce plugin best practices and be constructive in feedback.
 
           # Optional: Customize review based on file types
           # direct_prompt: |
