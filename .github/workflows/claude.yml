@@ -9,6 +9,12 @@ on:
     types: [opened, assigned]
   pull_request_review:
     types: [submitted]
+  workflow_dispatch:  # Added for manual testing
+    inputs:
+      issue_number:
+        description: 'Issue or PR number to process'
+        required: false
+        type: string
 
 jobs:
   claude:
@@ -24,9 +30,37 @@ jobs:
       issues: write
       id-token: write
     steps:
+      - name: Generate GitHub App Token
+        id: app_token
+        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        env:
+          BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+          BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Verify Authentication
+        run: |
+          echo "🔐 AUTHENTICATION STATUS:"
+          if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+            echo "✅ GitHub App token generated successfully"
+            echo "🤖 Using BlazeCommerce Automation Bot authentication"
+          elif [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "⚠️ Using BOT_GITHUB_TOKEN fallback"
+          else
+            echo "⚠️ Using default github.token"
+          fi
+          echo "📊 Repository: ${{ github.repository }}"
+          echo "🎯 Event: ${{ github.event_name }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           fetch-depth: 1
 
       - name: Run Claude Code
@@ -34,6 +68,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
 
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
