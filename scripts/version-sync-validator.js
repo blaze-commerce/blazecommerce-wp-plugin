@@ -360,6 +360,15 @@ if (require.main === module) {
     if (result.mismatches.length > 0) {
       console.log(`   Found ${result.mismatches.length} version mismatch(es)`);
       console.log('   Run with --verbose for detailed report');
+
+      console.log('\n🔧 QUICK FIXES:');
+      console.log('   • Fix automatically: npm run fix-version-mismatch:auto');
+      console.log('   • Fix to specific version: node scripts/fix-version-mismatch.js [VERSION]');
+      console.log('   • Detailed analysis: npm run validate-version-sync:verbose');
+
+      console.log('\n📚 HELP:');
+      console.log('   • Documentation: docs/version-synchronization.md');
+      console.log('   • Examples: docs/version-synchronization.md#usage');
     }
 
     if (result.errors.length > 0) {

@@ -35,7 +35,7 @@
     "test:validation-flags": "node scripts/test-validation-flags.js",
     "test:version-fix": "node scripts/test-version-fix.js",
     "test:comprehensive-version": "node scripts/test-comprehensive-version-system.js",
-    "test:auto-increment": "node scripts/test-auto-increment.js",
+
     "test:integration-version": "node scripts/test-integration-version-system.js",
     "test:workflow-fixes": "node scripts/test-workflow-fixes.js",
     "test:dependencies": "bash scripts/test-dependencies.sh",
