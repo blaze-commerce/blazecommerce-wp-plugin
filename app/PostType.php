@@ -21,7 +21,7 @@ class PostType {
 
 
 
-	public static function initiliaze_default_home_page() {
+	public static function initialize_default_home_page() {
 		global $wpdb;
 
 		$post_name = 'blazecommerce-homepage';
