@@ -289,25 +289,24 @@ jobs:
                 // Auto-approve the PR with comprehensive error handling and commit tracking
                 console.log('🚀 Attempting to create approval review for current commit...');
 
+                const approvalBody = '✅ **Auto-approved by BlazeCommerce Automation Bot**\n\n' +
+                  'Claude AI has reviewed this PR and provided approval. This automated approval is based on Claude\'s comprehensive security and code quality analysis.\n\n' +
+                  '**Status:** APPROVED by Claude AI\n' +
+                  '**Automation:** BlazeCommerce Automation Bot\n' +
+                  '**Trigger:** ' + context.eventName + ' (FIXED: issue_comment, not workflow_run)\n' +
+                  '**Commit SHA:** ' + latestCommitSha + '\n' +
+                  '**Claude Review Date:** ' + validClaudeComment.created_at + '\n' +
+                  '**Commit Date:** ' + actualCommitDate.toISOString() + '\n' +
+                  '**Timestamp:** ' + new Date().toISOString() + '\n' +
+                  '**Race Condition Fix:** Auto-approval triggered by Claude comment posting, not workflow completion\n\n' +
+                  '🔍 **Verification:** This approval is specifically for commit ' + latestCommitSha.substring(0, 7) + ' and was issued only after Claude AI completed its review of the current changes.';
+
                 const approvalResult = await github.rest.pulls.createReview({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   pull_number: parseInt(prNumber),
                   event: 'APPROVE',
-                  body: `✅ **Auto-approved by BlazeCommerce Automation Bot**
-
-Claude AI has reviewed this PR and provided approval. This automated approval is based on Claude's comprehensive security and code quality analysis.
-
-**Status:** APPROVED by Claude AI
-**Automation:** BlazeCommerce Automation Bot
-**Trigger:** ${context.eventName} (FIXED: issue_comment, not workflow_run)
-**Commit SHA:** ${latestCommitSha}
-**Claude Review Date:** ${validClaudeComment.created_at}
-**Commit Date:** ${actualCommitDate.toISOString()}
-**Timestamp:** ${new Date().toISOString()}
-**Race Condition Fix:** Auto-approval triggered by Claude comment posting, not workflow completion
-
-🔍 **Verification:** This approval is specifically for commit ${latestCommitSha.substring(0, 7)} and was issued only after Claude AI completed its review of the current changes.`
+                  body: approvalBody
                 });
 
                 console.log('✅ Successfully created approval review!');
