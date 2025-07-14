@@ -21,6 +21,7 @@
     "test:github-app": "node scripts/test-github-app-auth.js",
     "test:token-auth": "node scripts/test-token-auth.js",
     "test:automation-bot": "node scripts/test-automation-bot.js",
+    "test:release-auth": "node scripts/test-release-workflow-auth.js",
     "build": "cd blocks && npm run build",
     "build:blocks": "cd blocks && npm run build",
     "release": "npm run build && node scripts/create-release.js",
