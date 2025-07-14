@@ -600,12 +600,14 @@ jobs:
         with:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
-            const prNumber = ${{ needs.check-trigger.outputs.pr_number }};
+            // SECURITY FIX: Proper input sanitization to prevent script injection
+            const prNumberRaw = '${{ needs.check-trigger.outputs.pr_number }}';
+            const prNumber = parseInt(prNumberRaw, 10);
 
-            if (!prNumber) {
-              console.log('ERROR: Could not determine PR number');
+            if (!prNumber || isNaN(prNumber) || prNumber <= 0) {
+              console.log('ERROR: Invalid PR number provided:', prNumberRaw);
               core.setOutput('should_approve', 'false');
-              core.setOutput('reason', 'No PR number found');
+              core.setOutput('reason', 'Invalid PR number');
               return;
             }
 
@@ -622,30 +624,51 @@ jobs:
 
               console.log(`📊 TOTAL COMMENTS FOUND: ${comments.data.length}`);
 
-              // Enhanced Claude comment detection - look for any comment with FINAL VERDICT
+              // ENHANCED: Strict Claude comment detection with working comment filtering
               const claudeAppComments = comments.data.filter(comment => {
+                // SECURITY FIX: Enhanced authentication verification
                 const isClaudeUser = comment.user.login === 'claude[bot]' ||
                                     comment.user.login === 'claude' ||
-                                    comment.user.login.includes('claude');
+                                    (comment.user.login.includes('claude') && comment.user.type === 'Bot');
 
-                const hasClaudeContent = comment.body && (
+                // CRITICAL: Must have FINAL VERDICT section to be considered a complete review
+                const hasFinalVerdict = comment.body && (
                   comment.body.includes('FINAL VERDICT') ||
                   comment.body.includes('### FINAL VERDICT')
                 );
 
-                const isRelevant = isClaudeUser || hasClaudeContent;
+                // FILTER OUT: Working/intermediate comments that don't contain final verdict
+                const isWorkingComment = comment.body && (
+                  comment.body.includes('Claude is working') ||
+                  comment.body.includes('Claude Code is working') ||
+                  comment.body.includes('working…') ||
+                  comment.body.includes('Review in Progress') ||
+                  comment.body.includes('PR Review in Progress') ||
+                  comment.body.includes('Analysis Progress') ||
+                  comment.body.includes('Tasks:') && !hasFinalVerdict
+                );
 
-                if (isRelevant) {
-                  console.log(`🎯 FOUND RELEVANT COMMENT: User=${comment.user.login}, HasFinalVerdict=${comment.body.includes('FINAL VERDICT')}`);
+                // Only accept comments that are from Claude AND have final verdict AND are not working comments
+                const isValidFinalReview = isClaudeUser && hasFinalVerdict && !isWorkingComment;
+
+                if (isClaudeUser && !hasFinalVerdict) {
+                  console.log(`⚠️ FILTERED OUT: Claude comment without FINAL VERDICT (likely working comment)`);
+                }
+                if (isWorkingComment) {
+                  console.log(`⚠️ FILTERED OUT: Working/intermediate comment detected`);
+                }
+                if (isValidFinalReview) {
+                  console.log(`🎯 FOUND VALID FINAL REVIEW: User=${comment.user.login}, HasFinalVerdict=true, NotWorking=true`);
                 }
 
-                return isRelevant;
+                return isValidFinalReview;
               });
 
               if (claudeAppComments.length === 0) {
-                console.log('❌ AUTO-APPROVAL: No Claude App review found yet - waiting');
+                console.log('❌ AUTO-APPROVAL: No valid Claude final review found yet');
+                console.log('   Waiting for Claude to complete review with FINAL VERDICT section');
                 core.setOutput('should_approve', 'false');
-                core.setOutput('reason', 'No Claude App review found');
+                core.setOutput('reason', 'No complete Claude review with FINAL VERDICT found');
                 return;
               }
 
@@ -789,15 +812,25 @@ jobs:
                   console.log('   Comment preview:', comment.body.substring(0, 500) + '...');
                   console.log('   Attempting content-based analysis as fallback...');
 
-                  // STRICT: Only approve if comment contains FINAL VERDICT section
+                  // ENHANCED FALLBACK: Strict content analysis for FINAL VERDICT only
                   if (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT')) {
                     const commentLower = comment.body.toLowerCase();
-                    if (commentLower.includes('approved') && !commentLower.includes('not approved') && !commentLower.includes('blocked')) {
-                      console.log('✅ FALLBACK: Found "approved" in FINAL VERDICT comment');
-                      claudeApprovalStatus = 'approved';
-                    } else if (commentLower.includes('blocked') || commentLower.includes('rejected')) {
-                      console.log('❌ FALLBACK: Found "blocked" or "rejected" in FINAL VERDICT comment');
+
+                    // PRIORITY 1: Check for explicit BLOCKED status first
+                    if (commentLower.includes('blocked') || commentLower.includes('not ready') ||
+                        commentLower.includes('rejected') || commentLower.includes('status: blocked') ||
+                        commentLower.includes('status**: blocked')) {
+                      console.log('❌ FALLBACK: Found BLOCKED indicators in FINAL VERDICT');
                       claudeApprovalStatus = 'blocked';
+                      hasRequiredIssues = true;
+                    }
+                    // PRIORITY 2: Only check for approved if not already blocked
+                    else if (commentLower.includes('approved') && !commentLower.includes('not approved')) {
+                      console.log('✅ FALLBACK: Found "approved" in FINAL VERDICT (no blocking indicators)');
+                      claudeApprovalStatus = 'approved';
+                    } else {
+                      console.log('⚠️ FALLBACK: Unclear status in FINAL VERDICT - defaulting to unknown');
+                      claudeApprovalStatus = 'unknown';
                       hasRequiredIssues = true;
                     } else {
                       console.log('⚠️ FALLBACK: No clear approval/rejection indicators in FINAL VERDICT');
@@ -903,20 +936,18 @@ jobs:
               core.setOutput('reason', decisionReason);
               if (finalDecision) {
                 core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
-              }
-                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
               } else {
-                console.log('❌ BLOCKED: Critical issues found - cannot auto-approve');
-                core.setOutput('should_approve', 'false');
-                core.setOutput('reason', 'Critical issues found in Claude review');
+                core.setOutput('claude_review_summary', 'Review blocked due to critical issues');
               }
 
-              // CRITICAL DEBUG: Show final decision
-              const finalDecision = (claudeApprovalStatus === 'approved' && !hasRequiredIssues) ||
-                                   (claudeApprovalStatus === 'conditional' && !hasRequiredIssues) ||
-                                   (!hasRequiredIssues);
-              console.log(`🎯 FINAL DECISION: should_approve = ${finalDecision}`);
-              console.log(`🎯 DECISION REASON: claudeApprovalStatus="${claudeApprovalStatus}", hasRequiredIssues=${hasRequiredIssues}`);
+              // COMPREHENSIVE DEBUG: Show final decision with all factors
+              console.log(`🎯 FINAL DECISION SUMMARY:`);
+              console.log(`   should_approve = ${finalDecision}`);
+              console.log(`   claudeApprovalStatus = "${claudeApprovalStatus}"`);
+              console.log(`   hasRequiredIssues = ${hasRequiredIssues}`);
+              console.log(`   decisionReason = "${decisionReason}"`);
+              console.log(`   Total comments analyzed = ${claudeAppComments.length}`);
+              console.log('🔒 SECURITY: Auto-approval decision based on strict FINAL VERDICT parsing only');
 
             } catch (error) {
               console.error(`ERROR: Failed to evaluate Claude review: ${error.message}`);
