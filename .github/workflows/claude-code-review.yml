@@ -10,6 +10,12 @@ on:
     types: [completed]  # For timing control and approval gate
   pull_request_review:
     types: [submitted, dismissed]  # For review updates
+  workflow_dispatch:  # Added for manual testing and debugging
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: string
 
 # Priority 2: Handles both pull_request (Claude action) and workflow_run (timing control) events
 # Concurrency control ensures proper sequencing regardless of trigger type
@@ -179,9 +185,37 @@ jobs:
           echo "⏰ EXECUTION TIME: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "=" | tr -d '\n' | head -c 60; echo
 
+      - name: Generate GitHub App Token
+        id: app_token
+        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        env:
+          BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+          BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Verify Authentication
+        run: |
+          echo "🔐 AUTHENTICATION STATUS:"
+          if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+            echo "✅ GitHub App token generated successfully"
+            echo "🤖 Using BlazeCommerce Automation Bot authentication"
+          elif [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "⚠️ Using BOT_GITHUB_TOKEN fallback"
+          else
+            echo "⚠️ Using default github.token"
+          fi
+          echo "📊 Repository: ${{ github.repository }}"
+          echo "🎯 Event: ${{ github.event_name }}"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           fetch-depth: 1
 
       - name: Run Claude Code Review
@@ -191,9 +225,10 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # CRITICAL FIX: Use dedicated Claude token to ensure comments appear from claude[bot]
-          # This prevents confusion where blazecommerce-automation-bot performs both review and approval
-          github_token: ${{ secrets.CLAUDE_GITHUB_TOKEN || github.token }}
+          # ENHANCED: Multi-tier token authentication for maximum compatibility
+          # Priority: CLAUDE_GITHUB_TOKEN > app_token > BOT_GITHUB_TOKEN > default token
+          # This ensures proper bot authentication while maintaining fallback options
+          github_token: ${{ secrets.CLAUDE_GITHUB_TOKEN || steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
 
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
