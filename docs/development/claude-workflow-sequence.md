@@ -133,6 +133,45 @@ graph TD
 4. **✅ Approval Enforcement**: Auto-version only runs after explicit PR approval
 5. **✅ Version Conflict Prevention**: Both auto-version and release pull latest changes
 
+## Workflow Dependency Fixes (2025-07-14)
+
+### **Critical Issue Identified in PR #352**: Dual Trigger System
+
+**Problem**: Priority 2 (Claude AI Code Review) had dual triggers that bypassed Priority 1 dependency:
+
+```yaml
+# PROBLEMATIC: Dual trigger system
+on:
+  pull_request:                    # ← IMMEDIATE TRIGGER (bypassed dependency)
+    types: [opened, synchronize]
+  workflow_run:                    # ← DEPENDENCY TRIGGER (intended)
+    workflows: ["🔍 Priority 1: Claude Direct Approval"]
+    types: [completed]
+```
+
+**Root Cause**: When PR was created, `pull_request` trigger fired immediately, allowing Priority 2 to run before Priority 1.
+
+### **Solution Applied**: Strict Dependency Enforcement
+
+**Fixed Configuration**:
+```yaml
+# FIXED: Single dependency trigger only
+on:
+  workflow_run:                    # ← ONLY DEPENDENCY TRIGGER
+    workflows: ["🔍 Priority 1: Claude Direct Approval"]
+    types: [completed]
+  pull_request_review:             # ← ADDED FOR REVIEW UPDATES
+    types: [submitted, dismissed]
+```
+
+**Key Improvements**:
+
+1. **✅ Removed Dual Triggers**: Eliminated `pull_request` trigger that bypassed dependencies
+2. **✅ Enhanced Validation**: Added strict Priority 1 completion validation
+3. **✅ Explicit Outputs**: Priority 1 now provides success/failure status for downstream workflows
+4. **✅ Comprehensive Logging**: Detailed workflow sequence logging for debugging
+5. **✅ Sequence Validation**: Each workflow validates previous priority completion
+
 ### **Critical Implementation Requirements**:
 
 1. **Workflow Dependencies**:
