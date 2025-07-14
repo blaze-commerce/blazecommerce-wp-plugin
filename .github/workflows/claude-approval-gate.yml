@@ -1,4 +1,4 @@
-name: "✅ BlazeCommerce Automation Bot - Auto-Approval"
+name: "✅ Priority 3: Claude AI Approval Gate"
 
 on:
   workflow_run:
@@ -13,8 +13,13 @@ on:
         required: true
         type: string
 
+# Priority 3: Claude AI Approval Gate - runs after Priority 2 completes
+concurrency:
+  group: priority-3-claude-approval-pr-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false  # Don't cancel to ensure approval gate completion
+
 jobs:
-  claude-auto-approval:
+  claude-approval-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
