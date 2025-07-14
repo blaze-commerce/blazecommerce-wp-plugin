@@ -1,0 +1,36 @@
+name: "🧪 Test Claude Approval"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to test'
+        required: true
+        type: string
+
+jobs:
+  test-approval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Basic Workflow
+        run: |
+          echo "Testing Claude approval workflow"
+          echo "PR Number: ${{ github.event.inputs.pr_number }}"
+          echo "This workflow should start successfully"
+          
+      - name: Test GitHub Script
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('Testing GitHub script functionality');
+            console.log('Event: ' + context.eventName);
+            console.log('PR Number: ' + context.payload.inputs.pr_number);
+            
+            // Test basic API call
+            const { data: repo } = await github.rest.repos.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            console.log('Repository: ' + repo.full_name);
+            console.log('Test completed successfully');
