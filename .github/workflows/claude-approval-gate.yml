@@ -215,8 +215,9 @@ jobs:
             let validClaudeComment = null;
 
             for (const comment of comments.reverse()) {
-              // TEMPORARY FIX: Accept reviews from blazecommerce-automation-bot until CLAUDE_GITHUB_TOKEN is configured
-              // TODO: Remove blazecommerce-automation-bot detection once proper Claude token is set up
+              // CORRECTED: Proper Claude bot detection
+              // claude[bot] is Anthropic's official GitHub App
+              // blazecommerce-automation-bot[bot] is our automation bot (currently doing reviews due to config issue)
               const isClaudeBot = comment.user.login === 'claude[bot]' ||
                                  comment.user.login.includes('claude') ||
                                  comment.user.login === 'blazecommerce-claude-ai' ||

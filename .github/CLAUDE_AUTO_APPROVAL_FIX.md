@@ -108,12 +108,13 @@ const existingBotApproval = existingReviews.find(review => {
 **Current Issue:**
 - `blazecommerce-automation-bot[bot]` → Performing both review and approval
 
-**Root Cause:** The `anthropics/claude-code-action@beta` is using the default workflow token instead of a dedicated Claude token.
+**Root Cause:** Misunderstanding of Claude authentication - Claude uses its own GitHub App, not our tokens.
 
-**Fix Applied:**
-1. Added `github_token: ${{ secrets.CLAUDE_GITHUB_TOKEN || github.token }}` to Claude action
-2. Added temporary bot detection logic to handle current state
-3. Added TODO to remove temporary logic once proper token is configured
+**Corrected Understanding:**
+1. Claude action authenticates through Anthropic's official GitHub App
+2. Comments appear as `claude[bot]` when properly configured
+3. The `github_token` parameter is only for custom GitHub Apps (not needed for Claude)
+4. Current issue: Claude comments appearing as `blazecommerce-automation-bot[bot]` due to workflow configuration
 
 ## Claude Action Compatibility Issue
 

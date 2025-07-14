@@ -225,10 +225,9 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # ENHANCED: Multi-tier token authentication for maximum compatibility
-          # Priority: CLAUDE_GITHUB_TOKEN > app_token > BOT_GITHUB_TOKEN > default token
-          # This ensures proper bot authentication while maintaining fallback options
-          github_token: ${{ secrets.CLAUDE_GITHUB_TOKEN || steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
+          # CORRECTED: Claude action uses its own GitHub App authentication
+          # The github_token parameter is only needed for custom GitHub Apps
+          # Claude will authenticate as claude[bot] through Anthropic's official GitHub App
 
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
