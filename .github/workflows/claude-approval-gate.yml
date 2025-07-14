@@ -4,10 +4,12 @@ name: "Priority 3: Claude AI Approval Gate"
 # This workflow now ensures Claude AI has reviewed the LATEST commit before approving
 # Fixes issue where auto-approval was based on stale reviews from previous commits
 
+# TEMPORARILY DISABLED: Auto-approval causing race conditions
+# Re-enable after fixing the timing issue completely
 on:
-  workflow_run:
-    workflows: ["Priority 2: Claude AI Code Review"]
-    types: [completed]
+  # workflow_run:
+  #   workflows: ["Priority 2: Claude AI Code Review"]
+  #   types: [completed]
   # FIX: Removed issue_comment trigger to prevent race conditions and endless loops
   # The workflow_run trigger is sufficient for automated approval after code review
   workflow_dispatch:
