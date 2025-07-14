@@ -1,4 +1,4 @@
-name: "Priority 3: Claude AI Approval Gate"
+name: "Priority 3: Claude AI Approval Gate (Fixed Race Condition)"
 
 # CRITICAL FIX: Enhanced workflow to prevent premature auto-approval
 # This workflow now ensures Claude AI has reviewed the LATEST commit before approving
@@ -55,6 +55,11 @@ jobs:
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
+            console.log('🚨 CRITICAL DEBUG: AUTO-APPROVAL WORKFLOW TRIGGERED');
+            console.log(`📋 EVENT TYPE: ${context.eventName}`);
+            console.log(`📅 TIMESTAMP: ${new Date().toISOString()}`);
+            console.log('🎯 EXPECTED: issue_comment (with FINAL VERDICT from Claude)');
+
             let prNumber = null;
             let shouldRun = false;
 
@@ -76,14 +81,8 @@ jobs:
               console.error(`❌ Authentication error: ${authError.message}`);
             }
             
-            if (context.eventName === 'workflow_run') {
-              console.log('WORKFLOW_RUN trigger detected');
-              if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
-                prNumber = context.payload.workflow_run.pull_requests[0].number;
-                shouldRun = true;
-                console.log('Found PR from workflow_run: ' + prNumber);
-              }
-            } else if (context.eventName === 'issue_comment') {
+            // REMOVED: workflow_run trigger completely eliminated to prevent race conditions
+            if (context.eventName === 'issue_comment') {
               console.log('ISSUE_COMMENT trigger detected');
               const comment = context.payload.comment;
               if (comment && comment.body) {
@@ -111,10 +110,15 @@ jobs:
                 }
               }
             } else if (context.eventName === 'workflow_dispatch') {
-              console.log('WORKFLOW_DISPATCH trigger detected');
+              console.log('🔧 WORKFLOW_DISPATCH trigger detected (manual execution)');
               prNumber = parseInt(context.payload.inputs.pr_number);
               shouldRun = true;
-              console.log('Manual trigger for PR: ' + prNumber);
+              console.log(`🎯 Manual trigger for PR: ${prNumber}`);
+            } else {
+              console.log(`❌ UNSUPPORTED EVENT TYPE: ${context.eventName}`);
+              console.log('✅ SUPPORTED EVENTS: issue_comment (with FINAL VERDICT), workflow_dispatch');
+              console.log('🚫 REMOVED SUPPORT: workflow_run (caused race conditions)');
+              shouldRun = false;
             }
             
             console.log('Final result - PR: ' + prNumber + ', Should run: ' + shouldRun);
@@ -503,11 +507,12 @@ Claude AI has reviewed this PR and provided approval. This automated approval is
 
 **Status:** APPROVED by Claude AI
 **Automation:** BlazeCommerce Automation Bot
-**Trigger:** ${context.eventName}
+**Trigger:** ${context.eventName} (FIXED: issue_comment, not workflow_run)
 **Commit SHA:** ${latestCommitSha}
 **Claude Review Date:** ${validClaudeComment.created_at}
 **Commit Date:** ${actualCommitDate.toISOString()}
 **Timestamp:** ${new Date().toISOString()}
+**Race Condition Fix:** Auto-approval triggered by Claude comment posting, not workflow completion
 
 🔍 **Verification:** This approval is specifically for commit ${latestCommitSha.substring(0, 7)} and was issued only after Claude AI completed its review of the current changes.`
                 });
