@@ -92,14 +92,17 @@ jobs:
               
               if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
                 console.log('Found Claude FINAL VERDICT comment from: ' + comment.user.login);
-                
-                if (comment.body.includes('Status: APPROVED')) {
+                console.log('Comment created at: ' + comment.created_at);
+                console.log('Comment excerpt: ' + comment.body.substring(comment.body.indexOf('FINAL VERDICT'), comment.body.indexOf('FINAL VERDICT') + 200));
+
+                // Check for status with flexible formatting (handles markdown bold)
+                if (comment.body.includes('Status**: APPROVED') || comment.body.includes('Status: APPROVED')) {
                   claudeApproval = 'APPROVED';
                   console.log('Claude status: APPROVED');
-                } else if (comment.body.includes('Status: BLOCKED')) {
+                } else if (comment.body.includes('Status**: BLOCKED') || comment.body.includes('Status: BLOCKED')) {
                   claudeApproval = 'BLOCKED';
                   console.log('Claude status: BLOCKED');
-                } else if (comment.body.includes('Status: CONDITIONAL')) {
+                } else if (comment.body.includes('Status**: CONDITIONAL') || comment.body.includes('Status: CONDITIONAL')) {
                   claudeApproval = 'CONDITIONAL';
                   console.log('Claude status: CONDITIONAL');
                 }
