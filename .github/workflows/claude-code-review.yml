@@ -225,9 +225,9 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # CORRECTED: Claude action uses its own GitHub App authentication
-          # The github_token parameter is only needed for custom GitHub Apps
-          # Claude will authenticate as claude[bot] through Anthropic's official GitHub App
+          # CUSTOM IMPLEMENTATION: Use our GitHub App for consistent branding
+          # This ensures comments appear as blazecommerce-automation-bot[bot]
+          github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
 
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
           # model: "claude-opus-4-20250514"
