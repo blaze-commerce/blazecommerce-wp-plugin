@@ -7,8 +7,8 @@ name: "✅ Priority 3: Claude AI Approval Gate"
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  pull_request_review:
-    types: [submitted, dismissed]
+  # pull_request_review:  # DISABLED: Causing premature auto-approval on Claude review events
+  #   types: [submitted, dismissed]
   # issue_comment:  # DISABLED: Causing premature auto-approval on Claude 'working' comments
   #   types: [created]
   workflow_run:
@@ -43,10 +43,6 @@ jobs:
               shouldRun = true;
               prNumber = context.payload.pull_request.number;
               triggerReason = `PR ${context.payload.action}`;
-            } else if (context.eventName === 'pull_request_review') {
-              shouldRun = true;
-              prNumber = context.payload.pull_request.number;
-              triggerReason = `Review ${context.payload.action}`;
             } else if (context.eventName === 'workflow_run') {
               if (context.payload.workflow_run.conclusion) {
                 shouldRun = true;
