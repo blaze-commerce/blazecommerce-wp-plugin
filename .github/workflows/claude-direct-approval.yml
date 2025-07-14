@@ -1,10 +1,16 @@
-name: 🚀 Claude Direct Auto-Approval
+name: 🔍 Priority 1: Claude Direct Approval
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
   issue_comment:
     types: [created]
+
+# Priority 1: Highest priority - must run BEFORE Claude code review to initialize approval process
+# Simplified dependencies to prevent race conditions
+concurrency:
+  group: priority-1-claude-direct-approval-pr-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false  # Don't cancel to ensure approval initialization completion
 
 jobs:
   claude-direct-approval:
@@ -40,19 +46,27 @@ jobs:
           script: |
             const prNumber = ${{ steps.get-pr.outputs.pr_number }};
             
-            console.log('🚀 DIRECT CLAUDE APPROVAL: Starting for PR #' + prNumber);
-            
+            console.log('🔍 PRIORITY 1: CLAUDE DIRECT APPROVAL STARTING');
+            console.log('=' .repeat(60));
+            console.log(`📋 PR NUMBER: ${prNumber}`);
+            console.log(`🎯 WORKFLOW: Priority 1 - Direct Approval (runs first)`);
+            console.log(`🔑 TOKEN: ${process.env.GITHUB_TOKEN ? 'Present' : 'Missing'}`);
+            console.log('=' .repeat(60));
+
             try {
-              // Step 1: Get all comments for the PR
-              console.log('📥 Fetching all comments for PR #' + prNumber);
+              // Step 1: Get all comments for the PR with enhanced logging
+              console.log('📥 STEP 1: Fetching all comments for PR #' + prNumber);
               const comments = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
                 per_page: 100
               });
-              
-              console.log(`📊 Total comments found: ${comments.data.length}`);
+
+              console.log(`📊 TOTAL COMMENTS FOUND: ${comments.data.length}`);
+              if (comments.data.length === 0) {
+                console.log('⚠️ NO COMMENTS FOUND - This may be a new PR without Claude review yet');
+              }
               
               // Step 2: Find Claude's latest comment with "Status: APPROVED"
               let claudeApprovalFound = false;
