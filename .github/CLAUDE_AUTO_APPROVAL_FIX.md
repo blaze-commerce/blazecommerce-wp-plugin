@@ -195,3 +195,39 @@ Look for these log messages to verify proper operation:
 6. Evaluate Claude approval → Only approve if all checks pass
 
 This multi-layered approach ensures Claude has sufficient time to post comments before any approval occurs.
+
+## Final Race Condition Fix (issue_comment Trigger)
+
+**ULTIMATE SOLUTION:** Changed trigger from `workflow_run` to `issue_comment` to eliminate race condition entirely.
+
+### **New Trigger Mechanism:**
+```yaml
+on:
+  issue_comment:
+    types: [created]
+  # Only trigger when Claude posts FINAL VERDICT comment
+  if: |
+    contains(github.event.comment.body, 'FINAL VERDICT') &&
+    github.event.comment.user.login == 'blazecommerce-automation-bot[bot]'
+```
+
+### **Why This Eliminates Race Conditions:**
+1. **Trigger AFTER comment posting** - Not when workflow completes
+2. **Immediate PR context** - Direct access to PR number from comment
+3. **No workflow completion delay** - Triggers exactly when Claude finishes
+4. **Perfect timing** - Auto-approval happens only after Claude posts review
+
+### **Enhanced Safeguards:**
+1. **3-minute minimum wait** - Increased from 2 minutes
+2. **30-second comment gap** - Minimum time between commit and comment
+3. **Detailed timing logs** - Comprehensive timing validation
+4. **Multiple validation layers** - Comment verification + timing checks
+
+### **New Workflow Sequence:**
+1. Claude completes review → Posts comment with FINAL VERDICT
+2. **issue_comment trigger** → Auto-approval workflow starts
+3. **Timing validation** → Ensures comment is after latest commit
+4. **3-minute minimum wait** → Enforced from commit time
+5. **Final approval** → Only if all timing checks pass
+
+**Result:** Zero race conditions - auto-approval only happens AFTER Claude posts review comment.
