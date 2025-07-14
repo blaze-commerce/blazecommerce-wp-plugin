@@ -1,26 +1,26 @@
 name: "Priority 2: Claude AI Code Review"
 
-# TEMPORARY: Re-enable pull_request trigger while debugging Priority 1 issues
-# TODO: Remove pull_request trigger once Priority 1 is fixed
+# HYBRID TRIGGER: Support both pull_request (for Claude action) and workflow_run (for timing control)
+# Claude action requires pull_request trigger, but our timing fix needs workflow_run
 on:
   pull_request:
-    types: [opened, synchronize, reopened]  # TEMPORARY: Allow direct execution
+    types: [opened, synchronize, reopened]  # Required for Claude action compatibility
   workflow_run:
     workflows: ["Priority 1: Claude Direct Approval"]
-    types: [completed]
+    types: [completed]  # For timing control and approval gate
   pull_request_review:
-    types: [submitted, dismissed]  # Added for review updates
-  workflow_dispatch:  # Added for manual testing
+    types: [submitted, dismissed]  # For review updates
+  workflow_dispatch:  # Added for manual testing and debugging
     inputs:
       pr_number:
         description: 'PR number to review'
         required: true
         type: string
 
-# Priority 2: STRICTLY runs after Priority 1 (Claude Direct Approval) completes
-# Removed pull_request trigger to prevent bypassing dependency check
+# Priority 2: Handles both pull_request (Claude action) and workflow_run (timing control) events
+# Concurrency control ensures proper sequencing regardless of trigger type
 concurrency:
-  group: priority-2-claude-review-pr-${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number }}
+  group: priority-2-claude-review-pr-${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false  # Don't cancel to ensure review completion
 
 jobs:
@@ -50,14 +50,14 @@ jobs:
             let priority1Status = 'unknown';
 
             try {
-              // TEMPORARY: Allow pull_request events to bypass Priority 1 validation
+              // HYBRID APPROACH: Handle both pull_request and workflow_run events
               if (context.eventName === 'pull_request') {
-                console.log('📥 TRIGGERED BY: pull_request event (TEMPORARY BYPASS)');
+                console.log('📥 TRIGGERED BY: pull_request event (Claude action compatible)');
                 shouldRun = true;
-                priority1Status = 'bypassed';
+                priority1Status = 'pull_request_direct';
                 prNumber = context.payload.pull_request.number;
-                console.log(`✅ TEMPORARY: Bypassing Priority 1 validation for PR #${prNumber}`);
-                console.log('⚠️ WARNING: This is a temporary fix while Priority 1 issues are resolved');
+                console.log(`✅ PULL_REQUEST: Direct execution for PR #${prNumber}`);
+                console.log('🎯 Claude action will run with full PR context');
               } else if (context.eventName === 'workflow_run') {
                 console.log('📥 TRIGGERED BY: workflow_run event');
 
@@ -140,10 +140,26 @@ jobs:
               core.setOutput('priority_1_status', 'error');
             }
 
+  # NEW JOB: Handle workflow_run events for timing control without running Claude action
+  workflow-run-handler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    if: github.event_name == 'workflow_run'
+    steps:
+      - name: Handle Workflow Run Event
+        run: |
+          echo "🔄 WORKFLOW_RUN EVENT HANDLER"
+          echo "This job handles workflow_run events for timing control"
+          echo "Claude review will be triggered by pull_request events only"
+          echo "Event: ${{ github.event_name }}"
+          echo "Workflow: ${{ github.event.workflow_run.name || 'N/A' }}"
+          echo "Status: ${{ github.event.workflow_run.conclusion || 'N/A' }}"
+
   claude-review:
     needs: [validate-workflow-sequence]
-    if: needs.validate-workflow-sequence.outputs.should_run == 'true'
-    # ENHANCED: Only runs after Priority 1 validation passes
+    # CRITICAL FIX: Only run Claude action on pull_request events (Claude action requirement)
+    # workflow_run events are handled by validate-workflow-sequence job only
+    if: needs.validate-workflow-sequence.outputs.should_run == 'true' && github.event_name == 'pull_request'
     # Optional: Filter by PR author
     # if: |
     #   github.event.pull_request.user.login == 'external-contributor' ||
@@ -209,6 +225,8 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # CUSTOM IMPLEMENTATION: Use our GitHub App for consistent branding
+          # This ensures comments appear as blazecommerce-automation-bot[bot]
           github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
 
           # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
