@@ -1,4 +1,4 @@
-name: "✅ Claude AI Auto-Approval"
+name: "✅ BlazeCommerce Automation Bot - Auto-Approval"
 
 on:
   workflow_run:
@@ -17,25 +17,44 @@ jobs:
   claude-auto-approval:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      # Required permissions for GitHub App authentication and PR approval
+      contents: read           # Read repository content
+      pull-requests: write     # Create approval reviews
+      actions: read           # Read workflow run information
     steps:
+      - name: Generate GitHub App Token
+        id: app_token
+        if: secrets.BC_GITHUB_APP_ID && secrets.BC_GITHUB_APP_PRIVATE_KEY
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
       - name: Determine PR Number and Trigger
         id: get-pr
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
             let prNumber = null;
             let shouldRun = false;
 
-            console.log('🔍 CLAUDE AUTO-APPROVAL WORKFLOW - AUTHENTICATION FIX');
+            console.log('🔍 BLAZECOMMERCE AUTOMATION BOT - AUTO-APPROVAL WORKFLOW');
             console.log('=' .repeat(60));
             console.log('Event: ' + context.eventName);
-            console.log('🔐 Authentication: Using BOT_GITHUB_TOKEN for @blazecommerce-claude-ai');
+            console.log('🔐 Authentication: Using GitHub App or BOT_GITHUB_TOKEN fallback');
 
             // Verify authentication
             try {
               const { data: user } = await github.rest.users.getAuthenticated();
               console.log(`✅ Authenticated as: ${user.login} (${user.type})`);
+              if (user.type === 'Bot') {
+                console.log('🤖 Using GitHub App authentication');
+              } else {
+                console.log('🔑 Using personal access token authentication');
+              }
             } catch (authError) {
               console.error(`❌ Authentication error: ${authError.message}`);
             }
@@ -84,7 +103,7 @@ jobs:
         id: evaluate
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
             const prNumber = '${{ steps.get-pr.outputs.pr_number }}';
             console.log('Evaluating Claude approval for PR #' + prNumber);
@@ -132,7 +151,7 @@ jobs:
             
             if (claudeApproval === 'APPROVED') {
               console.log('✅ Auto-approving PR #' + prNumber + ' based on Claude AI approval');
-              console.log('🔐 Authentication: Using BOT_GITHUB_TOKEN for @blazecommerce-claude-ai');
+              console.log('🔐 Authentication: Using BlazeCommerce Automation Bot');
               console.log('📋 Repository: ' + context.repo.owner + '/' + context.repo.repo);
               console.log('🎯 PR Number: ' + prNumber);
 
@@ -147,7 +166,8 @@ jobs:
                 });
 
                 const existingBotApproval = existingReviews.find(review =>
-                  review.user.login === 'blazecommerce-claude-ai' &&
+                  (review.user.login === 'blazecommerce-claude-ai' ||
+                   (review.user.type === 'Bot' && review.user.login.includes('blazecommerce-automation'))) &&
                   review.state === 'APPROVED'
                 );
 
@@ -171,7 +191,7 @@ jobs:
                   repo: context.repo.repo,
                   pull_number: parseInt(prNumber),
                   event: 'APPROVE',
-                  body: '✅ **Auto-approved by Claude AI**\n\nClaude AI has reviewed this PR and provided approval. This automated approval is based on Claude\'s comprehensive security and code quality analysis.\n\n**Status:** APPROVED by Claude AI\n**Trigger:** ' + context.eventName + '\n**Timestamp:** ' + new Date().toISOString()
+                  body: '✅ **Auto-approved by BlazeCommerce Automation Bot**\n\nClaude AI has reviewed this PR and provided approval. This automated approval is based on Claude\'s comprehensive security and code quality analysis.\n\n**Status:** APPROVED by Claude AI\n**Automation:** BlazeCommerce Automation Bot\n**Trigger:** ' + context.eventName + '\n**Timestamp:** ' + new Date().toISOString()
                 });
 
                 console.log('✅ Successfully created approval review!');
@@ -188,7 +208,8 @@ jobs:
                 });
 
                 const botApproval = reviews.find(review =>
-                  review.user.login === 'blazecommerce-claude-ai' &&
+                  (review.user.login === 'blazecommerce-claude-ai' ||
+                   (review.user.type === 'Bot' && review.user.login.includes('blazecommerce-automation'))) &&
                   review.state === 'APPROVED'
                 );
 

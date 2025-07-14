@@ -79,7 +79,7 @@ jobs:
             const pr = prs[0];
             console.log(`INFO: Checking approval status for PR #${pr.number}`);
 
-            // Check for @blazecommerce-claude-ai approval
+            // Check for BlazeCommerce Automation Bot approval
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -87,15 +87,16 @@ jobs:
             });
 
             const claudeApproval = reviews.find(review =>
-              review.user.login === 'blazecommerce-claude-ai' &&
+              (review.user.login === 'blazecommerce-claude-ai' ||
+               review.user.type === 'Bot' && review.user.login.includes('blazecommerce-automation')) &&
               review.state === 'APPROVED'
             );
 
             if (claudeApproval) {
-              console.log('SUCCESS: PR is approved by @blazecommerce-claude-ai');
+              console.log('SUCCESS: PR is approved by BlazeCommerce Automation Bot');
               core.setOutput('approved', 'true');
             } else {
-              console.log('WARNING: PR is not yet approved by @blazecommerce-claude-ai');
+              console.log('WARNING: PR is not yet approved by BlazeCommerce Automation Bot');
               core.setOutput('approved', 'false');
             }
 
@@ -144,10 +145,20 @@ jobs:
       # Security: All other permissions explicitly denied (no issues, packages, etc.)
 
     steps:
+    - name: Generate GitHub App Token
+      id: app_token
+      if: secrets.BC_GITHUB_APP_ID && secrets.BC_GITHUB_APP_PRIVATE_KEY
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+        private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ github.event.repository.name }}
+
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
+        token: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
         fetch-depth: 0
 
     - name: Pull Latest Changes to Prevent Version Conflicts
@@ -628,10 +639,25 @@ jobs:
           if git tag "$TAG_NAME"; then
             echo "✅ Tag created locally: $TAG_NAME"
 
-            if git push origin "$TAG_NAME"; then
-              echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+            # Push tag with GitHub App token (preferred) or admin token fallback
+            if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+              echo "INFO: Using GitHub App token to push tag"
+              if git push https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git "$TAG_NAME"; then
+                echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+              else
+                echo "ERROR: Failed to push tag to remote with GitHub App token"
+                exit 1
+              fi
+            elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
+              echo "INFO: Using admin token fallback to push tag"
+              if git push https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "$TAG_NAME"; then
+                echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+              else
+                echo "ERROR: Failed to push tag to remote with admin token"
+                exit 1
+              fi
             else
-              echo "ERROR: Failed to push tag to remote"
+              echo "ERROR: No suitable token available for tag push"
               exit 1
             fi
           else
@@ -706,7 +732,18 @@ jobs:
 
         # Create commit with conventional format
         git commit -m "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]"
-        git push
+
+        # Push with GitHub App token (preferred) or admin token fallback
+        if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+          echo "INFO: Using GitHub App token for push"
+          git push https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git HEAD:main
+        elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
+          echo "INFO: Using admin token fallback for push"
+          git push https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+        else
+          echo "ERROR: No suitable token available for push"
+          exit 1
+        fi
 
         echo "SUCCESS: Version changes committed and pushed"
 
