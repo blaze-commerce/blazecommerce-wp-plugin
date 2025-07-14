@@ -45,17 +45,128 @@ jobs:
           MYSQL_USER: wp_user
           MYSQL_PASSWORD: wp_password
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          # Enhanced MySQL 8.0 configuration for better compatibility
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+          MYSQL_CHARSET: utf8mb4
+          MYSQL_COLLATION: utf8mb4_unicode_ci
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping --silent"
-          --health-interval=10s
-          --health-timeout=10s
-          --health-retries=5
-          --health-start-period=30s
+          --health-cmd="mysqladmin ping --silent --host=127.0.0.1 --port=3306 --user=root --password=root"
+          --health-interval=5s
+          --health-timeout=15s
+          --health-retries=10
+          --health-start-period=60s
           --default-authentication-plugin=mysql_native_password
+          --character-set-server=utf8mb4
+          --collation-server=utf8mb4_unicode_ci
+          --innodb-buffer-pool-size=256M
+          --max-connections=100
+          --wait-timeout=28800
+          --interactive-timeout=28800
     
     steps:
+    - name: Validate container services
+      run: |
+        echo " CONTAINER VALIDATION: Checking service initialization..."
+        echo " PHP Version: ${{ matrix.php-version }}"
+        echo " WordPress Version: ${{ matrix.wordpress-version }}"
+        echo " Debug Mode: ${{ github.event.inputs.debug_mode || 'false' }}"
+
+        # Enhanced container service validation with comprehensive diagnostics
+        echo " CHECKING: Docker container services status..."
+
+        # Wait for MySQL service with enhanced diagnostics
+        MYSQL_READY=false
+        MAX_ATTEMPTS=120  # 2 minutes with 1-second intervals
+
+        for i in $(seq 1 $MAX_ATTEMPTS); do
+          echo " ATTEMPT: $i/$MAX_ATTEMPTS - Testing MySQL service availability..."
+
+          # Test multiple connection methods for robustness
+          if mysqladmin ping -h 127.0.0.1 -P 3306 -u root -proot --silent 2>/dev/null; then
+            echo " SUCCESS: MySQL service is responding (attempt $i)"
+            MYSQL_READY=true
+            break
+          fi
+
+          # Enhanced diagnostics every 15 attempts (15 seconds)
+          if [ $((i % 15)) -eq 0 ]; then
+            echo " DIAGNOSTIC: MySQL service status (attempt $i/$MAX_ATTEMPTS)..."
+
+            # Check if MySQL port is accessible
+            if nc -z 127.0.0.1 3306 2>/dev/null; then
+              echo " PORT CHECK: MySQL port 3306 is accessible"
+            else
+              echo " PORT CHECK: MySQL port 3306 is not accessible"
+            fi
+
+            # Check Docker container status
+            echo " CONTAINER STATUS: Checking MySQL container..."
+            docker ps --filter "ancestor=mysql:8.0" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+
+            # Check container logs for errors
+            echo " CONTAINER LOGS: Recent MySQL container logs..."
+            docker logs $(docker ps -q --filter "ancestor=mysql:8.0") --tail 10 2>/dev/null || true
+
+            # Test basic network connectivity
+            echo " NETWORK TEST: Basic connectivity check..."
+            ping -c 1 127.0.0.1 >/dev/null 2>&1 && echo " Localhost connectivity: OK" || echo " Localhost connectivity: FAILED"
+          fi
+
+          # Progressive wait strategy
+          if [ $i -le 30 ]; then
+            sleep 1  # First 30 seconds: check every second
+          elif [ $i -le 60 ]; then
+            sleep 2  # Next 30 seconds: check every 2 seconds
+          else
+            sleep 3  # After 60 seconds: check every 3 seconds
+          fi
+        done
+
+        if [ "$MYSQL_READY" != "true" ]; then
+          echo " FATAL: MySQL service failed to start within $MAX_ATTEMPTS attempts"
+          echo " FINAL DIAGNOSTICS: Complete container and network status..."
+
+          # Final comprehensive diagnostics
+          echo " Docker containers:"
+          docker ps -a || true
+          echo " Network interfaces:"
+          ip addr show || ifconfig || true
+          echo " Port listeners:"
+          netstat -tlnp | grep :3306 || ss -tlnp | grep :3306 || true
+          echo " MySQL container logs (last 50 lines):"
+          docker logs $(docker ps -aq --filter "ancestor=mysql:8.0") --tail 50 2>/dev/null || true
+
+          exit 1
+        fi
+
+        # Verify database connectivity and basic operations
+        echo " VERIFICATION: Testing database connectivity and operations..."
+
+        # Test basic connection
+        if ! mysql -h 127.0.0.1 -P 3306 -u root -proot -e "SELECT 1 as test;" 2>/dev/null; then
+          echo " ERROR: Cannot execute basic SQL queries"
+          exit 1
+        fi
+        echo " SUCCESS: Basic SQL queries working"
+
+        # Test database creation capabilities
+        if ! mysql -h 127.0.0.1 -P 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS test_validation_db; DROP DATABASE test_validation_db;" 2>/dev/null; then
+          echo " ERROR: Cannot create/drop test databases"
+          exit 1
+        fi
+        echo " SUCCESS: Database creation/deletion working"
+
+        # Verify WordPress test database exists
+        if mysql -h 127.0.0.1 -P 3306 -u root -proot -e "USE wordpress_test; SELECT 1;" 2>/dev/null; then
+          echo " SUCCESS: WordPress test database is accessible"
+        else
+          echo " WARNING: WordPress test database not found, will be created during setup"
+        fi
+
+        echo " SUCCESS: All container services validated and ready"
+
     - name: Checkout code
       uses: actions/checkout@v4
       with:
@@ -1326,17 +1437,98 @@ jobs:
           MYSQL_USER: wp_user
           MYSQL_PASSWORD: wp_password
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          # Enhanced MySQL 8.0 configuration for better compatibility
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+          MYSQL_CHARSET: utf8mb4
+          MYSQL_COLLATION: utf8mb4_unicode_ci
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping --silent"
-          --health-interval=10s
-          --health-timeout=10s
-          --health-retries=5
-          --health-start-period=30s
+          --health-cmd="mysqladmin ping --silent --host=127.0.0.1 --port=3306 --user=root --password=root"
+          --health-interval=5s
+          --health-timeout=15s
+          --health-retries=10
+          --health-start-period=60s
           --default-authentication-plugin=mysql_native_password
+          --character-set-server=utf8mb4
+          --collation-server=utf8mb4_unicode_ci
+          --innodb-buffer-pool-size=256M
+          --max-connections=100
+          --wait-timeout=28800
+          --interactive-timeout=28800
 
     steps:
+    - name: Validate container services
+      run: |
+        echo " CONTAINER VALIDATION: Checking service initialization for coverage job..."
+        echo " Debug Mode: ${{ github.event.inputs.debug_mode || 'false' }}"
+
+        # Enhanced container service validation for coverage job
+        echo " CHECKING: Docker container services status..."
+
+        # Wait for MySQL service with enhanced diagnostics
+        MYSQL_READY=false
+        MAX_ATTEMPTS=120  # 2 minutes with 1-second intervals
+
+        for i in $(seq 1 $MAX_ATTEMPTS); do
+          echo " ATTEMPT: $i/$MAX_ATTEMPTS - Testing MySQL service availability..."
+
+          # Test multiple connection methods for robustness
+          if mysqladmin ping -h 127.0.0.1 -P 3306 -u root -proot --silent 2>/dev/null; then
+            echo " SUCCESS: MySQL service is responding (attempt $i)"
+            MYSQL_READY=true
+            break
+          fi
+
+          # Enhanced diagnostics every 15 attempts (15 seconds)
+          if [ $((i % 15)) -eq 0 ]; then
+            echo " DIAGNOSTIC: MySQL service status (attempt $i/$MAX_ATTEMPTS)..."
+
+            # Check if MySQL port is accessible
+            if nc -z 127.0.0.1 3306 2>/dev/null; then
+              echo " PORT CHECK: MySQL port 3306 is accessible"
+            else
+              echo " PORT CHECK: MySQL port 3306 is not accessible"
+            fi
+
+            # Check Docker container status
+            echo " CONTAINER STATUS: Checking MySQL container..."
+            docker ps --filter "ancestor=mysql:8.0" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true
+          fi
+
+          # Progressive wait strategy
+          if [ $i -le 30 ]; then
+            sleep 1  # First 30 seconds: check every second
+          elif [ $i -le 60 ]; then
+            sleep 2  # Next 30 seconds: check every 2 seconds
+          else
+            sleep 3  # After 60 seconds: check every 3 seconds
+          fi
+        done
+
+        if [ "$MYSQL_READY" != "true" ]; then
+          echo " FATAL: MySQL service failed to start within $MAX_ATTEMPTS attempts"
+          echo " FINAL DIAGNOSTICS: Complete container and network status..."
+
+          # Final comprehensive diagnostics
+          echo " Docker containers:"
+          docker ps -a || true
+          echo " MySQL container logs (last 50 lines):"
+          docker logs $(docker ps -aq --filter "ancestor=mysql:8.0") --tail 50 2>/dev/null || true
+
+          exit 1
+        fi
+
+        # Verify database connectivity
+        echo " VERIFICATION: Testing database connectivity..."
+
+        # Test basic connection
+        if ! mysql -h 127.0.0.1 -P 3306 -u root -proot -e "SELECT 1 as test;" 2>/dev/null; then
+          echo " ERROR: Cannot execute basic SQL queries"
+          exit 1
+        fi
+        echo " SUCCESS: Database connectivity verified for coverage job"
+
     - name: Checkout code
       uses: actions/checkout@v4
       with:
