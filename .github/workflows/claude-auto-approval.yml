@@ -4,8 +4,8 @@ on:
   workflow_run:
     workflows: ["🤖 Priority 2: Claude AI Code Review"]
     types: [completed]
-  issue_comment:
-    types: [created]
+  # FIX: Removed issue_comment trigger to prevent race conditions and endless loops
+  # The workflow_run trigger is sufficient for automated approval after code review
   workflow_dispatch:
     inputs:
       pr_number:
@@ -137,6 +137,32 @@ jobs:
               console.log('🎯 PR Number: ' + prNumber);
 
               try {
+                // FIX: Check for existing bot approvals BEFORE creating new ones to prevent duplicates
+                console.log('🔍 Checking for existing bot approvals...');
+
+                const { data: existingReviews } = await github.rest.pulls.listReviews({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: parseInt(prNumber)
+                });
+
+                const existingBotApproval = existingReviews.find(review =>
+                  review.user.login === 'blazecommerce-claude-ai' &&
+                  review.state === 'APPROVED'
+                );
+
+                if (existingBotApproval) {
+                  console.log('✅ Bot approval already exists - skipping duplicate');
+                  console.log('📊 Existing Review ID: ' + existingBotApproval.id);
+                  console.log('📅 Existing Review Created: ' + existingBotApproval.submitted_at);
+                  console.log('🔗 Existing Review URL: ' + existingBotApproval.html_url);
+
+                  core.setOutput('result', 'ALREADY_APPROVED');
+                  core.setOutput('review_id', existingBotApproval.id);
+                  core.setOutput('review_url', existingBotApproval.html_url);
+                  return;
+                }
+
                 // Auto-approve the PR with comprehensive error handling
                 console.log('🚀 Attempting to create approval review...');
 
