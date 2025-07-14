@@ -147,7 +147,10 @@ jobs:
     steps:
     - name: Generate GitHub App Token
       id: app_token
-      if: secrets.BC_GITHUB_APP_ID && secrets.BC_GITHUB_APP_PRIVATE_KEY
+      if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+      env:
+        BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+        BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
       uses: actions/create-github-app-token@v1
       with:
         app-id: ${{ secrets.BC_GITHUB_APP_ID }}
