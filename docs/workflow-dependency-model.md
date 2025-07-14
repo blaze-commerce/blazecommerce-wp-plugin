@@ -212,6 +212,108 @@ on:
 - ✅ **Scalable Architecture**: Easy to add new workflows with proper dependencies
 - ✅ **Audit Trail**: Complete logging for compliance
 
+## Priority 1 Workflow Configuration Fixes (2025-07-14)
+
+### **Critical Issues Identified and Fixed**
+
+#### **Issue #1: Concurrency Group Expression Failure**
+
+**Problem**: The concurrency group expression could fail if both `github.event.pull_request.number` and `github.event.issue.number` were null.
+
+**Before (Problematic)**:
+```yaml
+concurrency:
+  group: priority-1-claude-direct-approval-pr-${{ github.event.pull_request.number || github.event.issue.number }}
+```
+
+**After (Fixed)**:
+```yaml
+concurrency:
+  group: priority-1-claude-direct-approval-pr-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+```
+
+#### **Issue #2: Insufficient Permissions**
+
+**Problem**: Workflow had `issues: read` but needed `issues: write` to create comments.
+
+**Before (Problematic)**:
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read  # ← INSUFFICIENT
+```
+
+**After (Fixed)**:
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write  # ← FIXED: Need write permission to create comments
+```
+
+#### **Issue #3: Missing Token Fallback**
+
+**Problem**: Workflow only used `BOT_GITHUB_TOKEN` without fallback to `GITHUB_TOKEN`.
+
+**Before (Problematic)**:
+```yaml
+github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+```
+
+**After (Fixed)**:
+```yaml
+github-token: ${{ secrets.BOT_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+```
+
+#### **Issue #4: Priority 3 Workflow Naming**
+
+**Problem**: Priority 3 workflow was still named "Priority 2".
+
+**Before (Problematic)**:
+```yaml
+name: "✅ Priority 2: Claude AI Approval Gate"
+```
+
+**After (Fixed)**:
+```yaml
+name: "✅ Priority 3: Claude AI Approval Gate"
+```
+
+#### **Issue #5: Missing Comprehensive Debugging**
+
+**Added**: Comprehensive debugging information to identify exact failure points:
+- Environment variable validation
+- Secret availability checks
+- Input parameter validation
+- Prerequisite validation step
+
+### **Enhanced Error Handling**
+
+**Added robust validation**:
+```yaml
+- name: Validate Workflow Prerequisites
+  run: |
+    # Check if we have a valid PR number
+    PR_NUMBER="${{ steps.get-pr.outputs.pr_number }}"
+    if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+      echo "❌ ERROR: No valid PR number found"
+      exit 1
+    fi
+```
+
+**Added JavaScript validation**:
+```javascript
+// Validate inputs
+if (!prNumber || prNumber === 'null' || prNumber === null) {
+  throw new Error(`Invalid PR number: ${prNumber}`);
+}
+
+if (!process.env.GITHUB_TOKEN) {
+  throw new Error('No GitHub token available');
+}
+```
+
 ## Related Documentation
 
 - [Claude Workflow Sequence](./development/claude-workflow-sequence.md)
@@ -220,7 +322,8 @@ on:
 
 ---
 
-**Document Version**: 1.0  
-**Created**: 2025-07-14  
-**Author**: BlazeCommerce Development Team  
+**Document Version**: 1.1
+**Created**: 2025-07-14
+**Updated**: 2025-07-14 (Priority 1 Configuration Fixes)
+**Author**: BlazeCommerce Development Team
 **Related PR**: [#352](https://github.com/blaze-commerce/blazecommerce-wp-plugin/pull/352)
