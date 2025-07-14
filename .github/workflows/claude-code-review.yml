@@ -170,8 +170,9 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        # SECURITY FIX: Use specific version hash instead of unstable @beta tag
-        uses: anthropics/claude-code-action@v1.0.0
+        # INTENTIONAL EXCEPTION: @beta tag preserved for Claude functionality
+        # This is required for proper Claude code review integration
+        uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 

@@ -771,33 +771,46 @@ jobs:
                   }
                 }
 
-                // Pattern 4: Broad detection - any Status: APPROVED pattern
+                // Pattern 4: BLOCKED status priority detection - check for BLOCKED first
                 if (!finalVerdictMatch) {
-                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 4: Broad status detection');
-                  finalVerdictMatch = comment.body.match(/Status\*?\*?:\s*([A-Z\s]+?)(?:\s*\n|\s*\*|$)/i);
-                  if (finalVerdictMatch) {
-                    detectionMethod = 'broad-detection';
-                    console.log('✅ AUTO-APPROVAL: Pattern 4 MATCHED:', finalVerdictMatch[1]);
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 4: BLOCKED status priority detection');
+                  const blockedMatch = comment.body.match(/Status\*?\*?:\s*(.*?(?:BLOCKED|NOT APPROVED|REJECTED|NOT READY).*?)(?:\s*\n|\s*\*|$)/i);
+                  if (blockedMatch) {
+                    finalVerdictMatch = [null, blockedMatch[1]];
+                    detectionMethod = 'blocked-priority-detection';
+                    console.log('🚨 AUTO-APPROVAL: Pattern 4 BLOCKED DETECTED:', finalVerdictMatch[1]);
                   } else {
-                    console.log('❌ AUTO-APPROVAL: Pattern 4 NO MATCH');
+                    console.log('❌ AUTO-APPROVAL: Pattern 4 NO BLOCKED STATUS');
                   }
                 }
 
-                // Pattern 5: Case-insensitive fallback
+                // Pattern 5: Broad detection - any Status: APPROVED pattern (only if not blocked)
                 if (!finalVerdictMatch) {
-                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 5: Case-insensitive fallback');
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 5: Broad status detection');
+                  finalVerdictMatch = comment.body.match(/Status\*?\*?:\s*([A-Z\s]+?)(?:\s*\n|\s*\*|$)/i);
+                  if (finalVerdictMatch) {
+                    detectionMethod = 'broad-detection';
+                    console.log('✅ AUTO-APPROVAL: Pattern 5 MATCHED:', finalVerdictMatch[1]);
+                  } else {
+                    console.log('❌ AUTO-APPROVAL: Pattern 5 NO MATCH');
+                  }
+                }
+
+                // Pattern 6: Case-insensitive fallback
+                if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 6: Case-insensitive fallback');
                   if (comment.body.toLowerCase().includes('status') && comment.body.toLowerCase().includes('approved')) {
                     // Extract the word after "status"
                     const caseInsensitiveMatch = comment.body.match(/status[^:]*:\s*([a-z\s]+?)(?:\s*\n|\s*\*|$)/i);
                     if (caseInsensitiveMatch && caseInsensitiveMatch[1].toLowerCase().includes('approved')) {
                       finalVerdictMatch = [null, caseInsensitiveMatch[1]];
                       detectionMethod = 'case-insensitive-fallback';
-                      console.log('✅ AUTO-APPROVAL: Pattern 5 MATCHED:', finalVerdictMatch[1]);
+                      console.log('✅ AUTO-APPROVAL: Pattern 6 MATCHED:', finalVerdictMatch[1]);
                     } else {
-                      console.log('❌ AUTO-APPROVAL: Pattern 5 NO MATCH');
+                      console.log('❌ AUTO-APPROVAL: Pattern 6 NO MATCH');
                     }
                   } else {
-                    console.log('❌ AUTO-APPROVAL: Pattern 5 NO MATCH - no status/approved keywords');
+                    console.log('❌ AUTO-APPROVAL: Pattern 6 NO MATCH - no status/approved keywords');
                   }
                 }
 
@@ -814,22 +827,32 @@ jobs:
                   console.log(`   Status includes CONDITIONAL: ${status.includes('CONDITIONAL')}`);
                   console.log(`   Status includes BLOCKED: ${status.includes('BLOCKED')}`);
 
-                  // Enhanced status classification with case-insensitive matching
+                  // CRITICAL FIX: Enhanced status classification with BLOCKED priority
                   const statusUpper = status.toUpperCase();
 
-                  if (statusUpper === 'APPROVED' || (statusUpper.includes('APPROVED') && !statusUpper.includes('CONDITIONAL'))) {
-                    claudeApprovalStatus = 'approved';
-                    console.log('✅ CLASSIFICATION: Claude APPROVED the PR');
-                  } else if (statusUpper === 'BLOCKED' || statusUpper.includes('BLOCKED')) {
+                  // PRIORITY 1: Check for BLOCKED status FIRST (takes precedence over everything)
+                  if (statusUpper === 'BLOCKED' || statusUpper.includes('BLOCKED') ||
+                      statusUpper.includes('NOT APPROVED') || statusUpper.includes('REJECTED')) {
                     claudeApprovalStatus = 'blocked';
                     hasRequiredIssues = true;
-                    console.log('❌ CLASSIFICATION: Claude BLOCKED the PR');
-                  } else if (statusUpper === 'CONDITIONAL APPROVAL' || statusUpper.includes('CONDITIONAL')) {
+                    console.log('❌ CLASSIFICATION: Claude BLOCKED the PR (PRIORITY 1)');
+                    console.log(`   BLOCKED indicators found in: "${status}"`);
+                  }
+                  // PRIORITY 2: Check for CONDITIONAL approval (before general approval)
+                  else if (statusUpper === 'CONDITIONAL APPROVAL' || statusUpper.includes('CONDITIONAL')) {
                     claudeApprovalStatus = 'conditional';
-                    console.log('✅ CLASSIFICATION: Claude CONDITIONALLY APPROVED the PR');
-                  } else {
+                    console.log('✅ CLASSIFICATION: Claude CONDITIONALLY APPROVED the PR (PRIORITY 2)');
+                  }
+                  // PRIORITY 3: Check for APPROVED only if not blocked or conditional
+                  else if (statusUpper === 'APPROVED' || (statusUpper.includes('APPROVED') && !statusUpper.includes('NOT'))) {
+                    claudeApprovalStatus = 'approved';
+                    console.log('✅ CLASSIFICATION: Claude APPROVED the PR (PRIORITY 3)');
+                    console.log(`   APPROVED confirmed in: "${status}"`);
+                  }
+                  // PRIORITY 4: Unknown status - default to safe (no approval)
+                  else {
                     claudeApprovalStatus = 'unknown';
-                    console.log(`⚠️ CLASSIFICATION: Unknown status: "${status}"`);
+                    console.log(`⚠️ CLASSIFICATION: Unknown status: "${status}" (PRIORITY 4 - SAFE DEFAULT)`);
                     console.log(`   Will attempt fallback approval logic based on content analysis`);
                   }
                 } else {
@@ -857,9 +880,6 @@ jobs:
                       console.log('⚠️ FALLBACK: Unclear status in FINAL VERDICT - defaulting to unknown');
                       claudeApprovalStatus = 'unknown';
                       hasRequiredIssues = true;
-                    } else {
-                      console.log('⚠️ FALLBACK: No clear approval/rejection indicators in FINAL VERDICT');
-                      claudeApprovalStatus = 'unknown';
                     }
                   } else {
                     console.log('⚠️ SKIPPING: Comment does not contain FINAL VERDICT - ignoring for approval');
