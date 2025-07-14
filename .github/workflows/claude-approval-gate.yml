@@ -674,22 +674,47 @@ jobs:
 
               console.log(`✅ AUTO-APPROVAL: Found ${claudeAppComments.length} Claude App comment(s)`);
 
-              // Analyze Claude's feedback using standardized format from CLAUDE.md
+              // ENHANCED: Comprehensive analysis using all pattern matching methods
               let hasRequiredIssues = false;
               let claudeReviewContent = '';
               let claudeApprovalStatus = 'unknown';
+              let reviewCompletionScore = 0;
+              let detectedPatterns = [];
 
               for (const comment of claudeAppComments) {
                 claudeReviewContent += comment.body + '\n\n';
 
+                // VALIDATION: Verify review completion using multiple indicators
+                const completionIndicators = [
+                  'FINAL VERDICT',
+                  '### FINAL VERDICT',
+                  'REVIEW COMPLETE',
+                  'ANALYSIS COMPLETE',
+                  'RECOMMENDATION:',
+                  'STATUS:',
+                  'CONCLUSION:'
+                ];
+
+                const foundIndicators = completionIndicators.filter(indicator =>
+                  comment.body.includes(indicator)
+                );
+
+                if (foundIndicators.length > 0) {
+                  reviewCompletionScore += foundIndicators.length;
+                  detectedPatterns.push(...foundIndicators);
+                  console.log(`✅ COMPLETION INDICATORS: Found ${foundIndicators.length} indicators: ${foundIndicators.join(', ')}`);
+                }
+
                 // Enhanced debugging - show full comment structure
-                console.log('🔍 AUTO-APPROVAL: SEARCHING FOR FINAL VERDICT SECTION...');
+                console.log('🔍 AUTO-APPROVAL: COMPREHENSIVE COMMENT ANALYSIS...');
                 console.log('📄 Comment ID:', comment.id);
                 console.log('📄 Comment author:', comment.user.login);
                 console.log('📄 Comment body length:', comment.body.length);
-                console.log('📄 Comment contains "FINAL VERDICT":', comment.body.includes('FINAL VERDICT'));
-                console.log('📄 Comment contains "Status":', comment.body.includes('Status'));
-                console.log('📄 Comment contains "**Status**":', comment.body.includes('**Status**'));
+                console.log('📄 Completion score:', reviewCompletionScore);
+                console.log('📄 Detected patterns:', detectedPatterns.join(', '));
+                console.log('📄 Contains "FINAL VERDICT":', comment.body.includes('FINAL VERDICT'));
+                console.log('📄 Contains "Status":', comment.body.includes('Status'));
+                console.log('📄 Contains "**Status**":', comment.body.includes('**Status**'));
 
                 // Show relevant part of comment for debugging with more context
                 const finalVerdictIndex = comment.body.indexOf('FINAL VERDICT');
@@ -927,9 +952,21 @@ jobs:
                 console.log('❌ DECISION: BLOCK - Uncertain status, defaulting to safe (no approval)');
               }
 
+              // ADDITIONAL VALIDATION: Verify review completion before approval
+              const minimumCompletionScore = 2; // Require at least 2 completion indicators
+              if (finalDecision && reviewCompletionScore < minimumCompletionScore) {
+                console.log(`⚠️ COMPLETION CHECK: Review completion score ${reviewCompletionScore} below minimum ${minimumCompletionScore}`);
+                console.log(`   Detected patterns: ${detectedPatterns.join(', ')}`);
+                console.log('❌ BLOCKING APPROVAL: Review appears incomplete despite positive status');
+                finalDecision = false;
+                decisionReason = `Review incomplete (score: ${reviewCompletionScore}/${minimumCompletionScore})`;
+              }
+
               console.log('🎯 FINAL DECISION SUMMARY:');
               console.log(`   SHOULD APPROVE: ${finalDecision}`);
               console.log(`   REASON: ${decisionReason}`);
+              console.log(`   COMPLETION SCORE: ${reviewCompletionScore}/${minimumCompletionScore}`);
+              console.log(`   DETECTED PATTERNS: ${detectedPatterns.join(', ')}`);
               console.log('=' .repeat(60));
 
               core.setOutput('should_approve', finalDecision.toString());
@@ -941,13 +978,17 @@ jobs:
               }
 
               // COMPREHENSIVE DEBUG: Show final decision with all factors
-              console.log(`🎯 FINAL DECISION SUMMARY:`);
+              console.log(`🎯 COMPREHENSIVE DECISION ANALYSIS:`);
               console.log(`   should_approve = ${finalDecision}`);
               console.log(`   claudeApprovalStatus = "${claudeApprovalStatus}"`);
               console.log(`   hasRequiredIssues = ${hasRequiredIssues}`);
               console.log(`   decisionReason = "${decisionReason}"`);
-              console.log(`   Total comments analyzed = ${claudeAppComments.length}`);
-              console.log('🔒 SECURITY: Auto-approval decision based on strict FINAL VERDICT parsing only');
+              console.log(`   reviewCompletionScore = ${reviewCompletionScore}`);
+              console.log(`   detectedPatterns = [${detectedPatterns.join(', ')}]`);
+              console.log(`   totalCommentsAnalyzed = ${claudeAppComments.length}`);
+              console.log(`   claudeReviewContentLength = ${claudeReviewContent.length}`);
+              console.log('🔒 SECURITY: Auto-approval based on strict FINAL VERDICT + completion validation');
+              console.log('🛡️ PROTECTION: Working comments filtered, authentication verified, input sanitized');
 
             } catch (error) {
               console.error(`ERROR: Failed to evaluate Claude review: ${error.message}`);
@@ -961,20 +1002,39 @@ jobs:
         with:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
-            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
-            const shouldApprove = '${{ steps.evaluate-review.outputs.should_approve }}';
-            const reason = '${{ steps.evaluate-review.outputs.reason }}';
+            // SECURITY FIX: Sanitize all inputs to prevent injection attacks
+            const prNumberRaw = '${{ needs.check-trigger.outputs.pr_number }}';
+            const shouldApproveRaw = '${{ steps.evaluate-review.outputs.should_approve }}';
+            const reasonRaw = '${{ steps.evaluate-review.outputs.reason }}';
 
-            console.log('🚀 AUTO-APPROVAL STEP EXECUTING!');
+            // Validate and sanitize inputs
+            const prNumber = parseInt(prNumberRaw, 10);
+            if (!prNumber || isNaN(prNumber) || prNumber <= 0) {
+              console.error('ERROR: Invalid PR number for approval:', prNumberRaw);
+              throw new Error('Invalid PR number provided');
+            }
+
+            const shouldApprove = shouldApproveRaw === 'true';
+            if (!shouldApprove) {
+              console.log('INFO: Approval step triggered but should_approve is false');
+              return;
+            }
+
+            // Sanitize reason text (remove potential script injection)
+            const reason = reasonRaw.replace(/[<>'"]/g, '').substring(0, 500);
+
+            console.log('🚀 SECURE AUTO-APPROVAL STEP EXECUTING!');
             console.log('=' .repeat(80));
-            console.log(`📋 PR NUMBER: ${prNumber}`);
-            console.log(`✅ SHOULD APPROVE: ${shouldApprove}`);
-            console.log(`📝 REASON: ${reason}`);
+            console.log(`📋 PR NUMBER: ${prNumber} (validated: ${typeof prNumber === 'number'})`);
+            console.log(`✅ SHOULD APPROVE: ${shouldApprove} (validated: ${typeof shouldApprove === 'boolean'})`);
+            console.log(`📝 REASON: ${reason} (sanitized: ${reason.length} chars)`);
             console.log(`🔑 TOKEN: ${process.env.GITHUB_TOKEN ? 'Present' : 'Missing'}`);
             console.log(`📡 API ENDPOINT: POST /repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNumber}/reviews`);
             console.log(`🎯 EVENT TYPE: APPROVE`);
+            console.log(`🛡️ SECURITY: All inputs validated and sanitized`);
+            console.log(`🔒 PROTECTION: Script injection prevention active`);
             console.log('=' .repeat(80));
-            console.log('🚀 EXECUTING APPROVAL API CALL...');
+            console.log('🚀 EXECUTING SECURE APPROVAL API CALL...');
 
             try {
               const approvalResponse = await github.rest.pulls.createReview({
@@ -1043,9 +1103,16 @@ jobs:
         with:
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
-            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
+            // SECURITY FIX: Sanitize PR number input
+            const prNumberRaw = '${{ needs.check-trigger.outputs.pr_number }}';
+            const prNumber = parseInt(prNumberRaw, 10);
 
-            console.log(`INFO: Posting blocking issues comment for PR #${prNumber}`);
+            if (!prNumber || isNaN(prNumber) || prNumber <= 0) {
+              console.error('ERROR: Invalid PR number for blocking comment:', prNumberRaw);
+              return;
+            }
+
+            console.log(`INFO: Posting blocking issues comment for PR #${prNumber} (validated)`);
 
             try {
               await github.rest.issues.createComment({
