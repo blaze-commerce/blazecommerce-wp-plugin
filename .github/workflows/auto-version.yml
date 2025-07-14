@@ -147,16 +147,21 @@ jobs:
     steps:
     - name: Generate GitHub App Token
       id: app_token
-      if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
-      env:
-        BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
-        BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+      if: secrets.BC_GITHUB_APP_ID && secrets.BC_GITHUB_APP_PRIVATE_KEY
       uses: actions/create-github-app-token@v1
       with:
         app-id: ${{ secrets.BC_GITHUB_APP_ID }}
         private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
         owner: ${{ github.repository_owner }}
         repositories: ${{ github.event.repository.name }}
+        # Ensure the token has bypass permissions for branch protection
+        permissions: >-
+          {
+            "contents": "write",
+            "metadata": "read",
+            "pull_requests": "write",
+            "actions": "read"
+          }
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -268,9 +273,16 @@ jobs:
     - name: Configure Git
       if: steps.check_files.outputs.should_bump_version == 'true'
       run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        echo "SUCCESS: Git configured for automated commits"
+        # Use GitHub App identity if available, otherwise fall back to github-actions bot
+        if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+          git config --local user.email "blazecommerce-automation[bot]@users.noreply.github.com"
+          git config --local user.name "BlazeCommerce Automation Bot"
+          echo "SUCCESS: Git configured for BlazeCommerce Automation Bot"
+        else
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          echo "SUCCESS: Git configured for GitHub Actions bot"
+        fi
 
     - name: Run version system tests
       if: steps.check_files.outputs.should_bump_version == 'true'
@@ -644,8 +656,9 @@ jobs:
 
             # Push tag with GitHub App token (preferred) or admin token fallback
             if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-              echo "INFO: Using GitHub App token to push tag"
-              if git push https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git "$TAG_NAME"; then
+              echo "INFO: Using GitHub App token to push tag (with bypass permissions)"
+              git remote set-url origin https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git
+              if git push origin "$TAG_NAME"; then
                 echo "SUCCESS: Created and pushed tag: $TAG_NAME"
               else
                 echo "ERROR: Failed to push tag to remote with GitHub App token"
@@ -653,7 +666,8 @@ jobs:
               fi
             elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
               echo "INFO: Using admin token fallback to push tag"
-              if git push https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "$TAG_NAME"; then
+              git remote set-url origin https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+              if git push origin "$TAG_NAME"; then
                 echo "SUCCESS: Created and pushed tag: $TAG_NAME"
               else
                 echo "ERROR: Failed to push tag to remote with admin token"
@@ -738,11 +752,14 @@ jobs:
 
         # Push with GitHub App token (preferred) or admin token fallback
         if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-          echo "INFO: Using GitHub App token for push"
-          git push https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git HEAD:main
+          echo "INFO: Using GitHub App token for push (with bypass permissions)"
+          # Set the remote URL with the GitHub App token
+          git remote set-url origin https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:main
         elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
           echo "INFO: Using admin token fallback for push"
-          git push https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          git remote set-url origin https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:main
         else
           echo "ERROR: No suitable token available for push"
           exit 1
