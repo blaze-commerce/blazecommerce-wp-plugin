@@ -128,14 +128,49 @@ class FileChangeAnalyzer {
    */
   shouldIgnoreFile(filePath) {
     return this.ignorePatterns.some(pattern => {
-      // Convert glob pattern to regex
-      const regexPattern = pattern
-        .replace(/\./g, '\\.')
-        .replace(/\*/g, '.*')
-        .replace(/\?/g, '.');
-      
-      const regex = new RegExp(`^${regexPattern}$`);
-      return regex.test(filePath);
+      const trimmedPattern = pattern.trim();
+
+      // Skip empty patterns and comments
+      if (!trimmedPattern || trimmedPattern.startsWith('#')) {
+        return false;
+      }
+
+      // Handle directory patterns (ending with /)
+      if (trimmedPattern.endsWith('/')) {
+        // Directory pattern should match any file starting with the directory path
+        return filePath.startsWith(trimmedPattern);
+      }
+
+      // Handle exact file matches
+      if (filePath === trimmedPattern) {
+        return true;
+      }
+
+      // Handle file basename matches (file in any directory)
+      if (filePath.endsWith('/' + trimmedPattern)) {
+        return true;
+      }
+
+      // Handle file extension patterns (starting with .)
+      if (trimmedPattern.startsWith('.') && !trimmedPattern.includes('/')) {
+        const fileName = filePath.split('/').pop();
+        if (fileName === trimmedPattern) {
+          return true;
+        }
+      }
+
+      // Handle glob patterns with wildcards
+      if (trimmedPattern.includes('*')) {
+        const regexPattern = trimmedPattern
+          .replace(/\./g, '\\.')
+          .replace(/\*/g, '.*')
+          .replace(/\?/g, '.');
+
+        const regex = new RegExp(`^${regexPattern}$`);
+        return regex.test(filePath);
+      }
+
+      return false;
     });
   }
 
