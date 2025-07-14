@@ -18,6 +18,9 @@
     "fix-version-mismatch": "node scripts/fix-version-mismatch.js",
     "fix-version-mismatch:auto": "node scripts/validate-version.js --apply-resolution",
     "test:version-bump": "echo 'Testing version bump workflow'",
+    "test:github-app": "node scripts/test-github-app-auth.js",
+    "test:token-auth": "node scripts/test-token-auth.js",
+    "test:automation-bot": "node scripts/test-automation-bot.js",
     "build": "cd blocks && npm run build",
     "build:blocks": "cd blocks && npm run build",
     "release": "npm run build && node scripts/create-release.js",
@@ -71,7 +74,9 @@
     "jest": "^29.7.0",
     "js-yaml": "^4.1.0",
     "semver": "^7.5.4",
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^2.6.7",
+    "@octokit/auth-app": "^6.0.1",
+    "@octokit/rest": "^20.0.2"
   },
   "engines": {
     "node": ">=14.0.0",
