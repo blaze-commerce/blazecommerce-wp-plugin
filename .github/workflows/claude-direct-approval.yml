@@ -1,4 +1,4 @@
-name: 🔍 Priority 1: Claude Direct Approval
+name: "Priority 1: Claude Direct Approval"
 
 # SIMPLIFIED: Basic triggers only to test workflow execution
 on:

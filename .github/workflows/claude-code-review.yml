@@ -1,4 +1,4 @@
-name: "🤖 Priority 2: Claude AI Code Review"
+name: "Priority 2: Claude AI Code Review"
 
 # TEMPORARY: Re-enable pull_request trigger while debugging Priority 1 issues
 # TODO: Remove pull_request trigger once Priority 1 is fixed
@@ -6,7 +6,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]  # TEMPORARY: Allow direct execution
   workflow_run:
-    workflows: ["🔍 Priority 1: Claude Direct Approval"]
+    workflows: ["Priority 1: Claude Direct Approval"]
     types: [completed]
   pull_request_review:
     types: [submitted, dismissed]  # Added for review updates
@@ -60,7 +60,7 @@ jobs:
                 console.log(`📊 CONCLUSION: ${workflowRun.conclusion}`);
                 console.log(`📊 STATUS: ${workflowRun.status}`);
 
-                if (workflowRun.name === '🔍 Priority 1: Claude Direct Approval') {
+                if (workflowRun.name === 'Priority 1: Claude Direct Approval') {
                   if (workflowRun.conclusion === 'success') {
                     shouldRun = true;
                     priority1Status = 'success';
@@ -99,7 +99,7 @@ jobs:
                 });
 
                 const priority1Run = workflowRuns.data.workflow_runs.find(run =>
-                  run.name === '🔍 Priority 1: Claude Direct Approval' &&
+                  run.name === 'Priority 1: Claude Direct Approval' &&
                   run.conclusion === 'success'
                 );
 
