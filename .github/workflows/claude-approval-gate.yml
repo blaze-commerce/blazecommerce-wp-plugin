@@ -5,8 +5,8 @@ name: "✅ Priority 3: Claude AI Approval Gate"
 # Priority 3: Runs after Claude AI Review (Priority 2) completes and evaluates official Claude App feedback
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  # pull_request:  # DISABLED: Causing auto-approval on every commit push
+  #   types: [opened, synchronize, reopened]
   # pull_request_review:  # DISABLED: Causing premature auto-approval on Claude review events
   #   types: [submitted, dismissed]
   # issue_comment:  # DISABLED: Causing premature auto-approval on Claude 'working' comments
@@ -39,11 +39,7 @@ jobs:
             let prNumber = null;
             let triggerReason = '';
 
-            if (context.eventName === 'pull_request') {
-              shouldRun = true;
-              prNumber = context.payload.pull_request.number;
-              triggerReason = `PR ${context.payload.action}`;
-            } else if (context.eventName === 'workflow_run') {
+            if (context.eventName === 'workflow_run') {
               if (context.payload.workflow_run.conclusion) {
                 shouldRun = true;
                 // Extract PR number from workflow run
