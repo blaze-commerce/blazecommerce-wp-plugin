@@ -18,6 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    # FIX: Prevent endless approval loop by excluding bot-generated reviews
+    # This condition prevents the workflow from triggering when the bot creates reviews
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request_review' &&
+       github.event.review.user.login != 'blazecommerce-claude-ai')
+
     outputs:
       approval_status: ${{ steps.test-step.outputs.approval_status }}
       pr_number: ${{ steps.get-pr.outputs.pr_number }}
