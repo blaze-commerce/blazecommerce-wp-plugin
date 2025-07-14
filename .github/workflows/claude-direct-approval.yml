@@ -1,11 +1,12 @@
 name: 🔍 Priority 1: Claude Direct Approval
 
-# ENHANCED: Comprehensive triggers to ensure Priority 1 always runs first
+# FIXED: Removed issue_comment trigger to prevent premature auto-approval
+# The issue_comment trigger was causing auto-approval to run BEFORE Claude finished reviewing
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  issue_comment:
-    types: [created]
+  # issue_comment:  # DISABLED: Caused race condition - auto-approval before review completion
+  #   types: [created]
   pull_request_review:
     types: [submitted, dismissed]  # Added for completeness
 
@@ -66,12 +67,12 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             PR_NUMBER=${{ github.event.number }}
-          elif [ "${{ github.event_name }}" = "issue_comment" ]; then
-            PR_NUMBER=${{ github.event.issue.number }}
           elif [ "${{ github.event_name }}" = "pull_request_review" ]; then
             PR_NUMBER=${{ github.event.pull_request.number }}
           else
             echo "❌ Unsupported event type: ${{ github.event_name }}"
+            echo "📋 Supported events: pull_request, pull_request_review"
+            echo "📋 Current event: ${{ github.event_name }}"
             exit 1
           fi
 
