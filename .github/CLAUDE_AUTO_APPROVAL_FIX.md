@@ -79,9 +79,12 @@ const existingBotApproval = existingReviews.find(review => {
 
 1. **Temporal Validation:** Only considers Claude reviews made after the latest commit
 2. **Workflow Synchronization:** Waits for Claude review completion before approval
-3. **Enhanced Logging:** Detailed timestamps and commit tracking for debugging
-4. **Stale Review Prevention:** Explicitly ignores reviews from previous commits
-5. **Improved Error Handling:** Better detection of in-progress vs. missing reviews
+3. **Comment Verification Wait:** Waits for Claude comment to actually be posted
+4. **Enhanced Logging:** Detailed timestamps and commit tracking for debugging
+5. **Stale Review Prevention:** Explicitly ignores reviews from previous commits
+6. **Improved Error Handling:** Better detection of in-progress vs. missing reviews
+7. **Minimum Wait Time:** Enforces 2-minute minimum between commit and approval
+8. **Final Safety Check:** Additional verification with 30-second buffer
 
 ## Testing Recommendations
 
@@ -158,3 +161,37 @@ Look for these log messages to verify proper operation:
 - `❌ Comment is BEFORE latest commit - ignoring stale review`
 - `🔄 Claude review workflow is still running - waiting for completion`
 - `🤖 Claude review detected from: [bot-name]` (should be claude[bot], not blazecommerce-automation-bot)
+
+## Race Condition Fix (PR #386 Analysis)
+
+**Critical Issue Discovered:** Even with our timing fixes, auto-approval was still happening before Claude comments were posted.
+
+### **Problem Analysis (Commit f82dc7b1):**
+
+| Time | Event | Issue |
+|------|-------|-------|
+| 17:03:22Z | Claude review starts | ✅ Correct |
+| 17:06:09Z | **Auto-approval** | ❌ **8 seconds too early** |
+| 17:06:17Z | Claude review completes | ✅ Should have waited for this |
+
+### **Root Cause:**
+1. **Workflow completion ≠ Comment posted** - Claude workflow completes before comment is posted
+2. **Evaluation runs immediately** - After workflow wait, evaluation runs without verifying comment exists
+3. **Finds stale reviews** - Evaluation finds old Claude comments and approves based on those
+
+### **Additional Fixes Applied:**
+
+1. **Comment Verification Wait** - Waits up to 3 minutes for Claude comment to actually appear
+2. **Final Safety Check** - Additional 30-second wait and re-check if no comment found
+3. **Minimum Wait Time** - Enforces 2-minute minimum between commit and approval
+4. **Enhanced Verification** - Multiple layers of timing validation
+
+### **New Workflow Sequence:**
+1. Claude workflow completes → Triggers auto-approval
+2. **Wait for Claude workflow completion** (existing)
+3. **NEW: Wait for Claude comment to be posted** (up to 3 minutes)
+4. **NEW: Final safety check** (additional 30 seconds if needed)
+5. **NEW: Minimum wait time enforcement** (2 minutes from commit)
+6. Evaluate Claude approval → Only approve if all checks pass
+
+This multi-layered approach ensures Claude has sufficient time to post comments before any approval occurs.

@@ -170,6 +170,79 @@ jobs:
 
             console.log('🏁 Claude review wait period completed');
 
+      - name: Wait for Claude Comment to be Posted
+        if: steps.get-pr.outputs.should_run == 'true'
+        id: wait-comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
+          script: |
+            const prNumber = '${{ steps.get-pr.outputs.pr_number }}';
+            console.log('🔍 Waiting for Claude comment to be posted for PR #' + prNumber);
+
+            // Get the latest commit SHA to verify Claude reviewed THIS commit
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNumber)
+            });
+
+            const latestCommitSha = pr.head.sha;
+            const { data: commit } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: latestCommitSha
+            });
+
+            const actualCommitDate = new Date(commit.commit.committer.date);
+            console.log(`📅 Latest commit: ${latestCommitSha} at ${actualCommitDate.toISOString()}`);
+
+            // Wait up to 3 minutes for Claude comment to appear AFTER the latest commit
+            const maxWaitTime = 3 * 60 * 1000; // 3 minutes
+            const checkInterval = 10 * 1000; // Check every 10 seconds
+            const startTime = Date.now();
+
+            let claudeCommentFound = false;
+
+            while (Date.now() - startTime < maxWaitTime && !claudeCommentFound) {
+              console.log(`⏰ Checking for Claude comment... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`);
+
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(prNumber),
+                per_page: 10,
+                sort: 'created',
+                direction: 'desc'
+              });
+
+              // Look for Claude comment made AFTER the latest commit
+              for (const comment of comments) {
+                const commentDate = new Date(comment.created_at);
+                const isClaudeBot = comment.user.login === 'blazecommerce-automation-bot[bot]' &&
+                                   comment.body.includes('Claude AI PR Review Complete');
+
+                if (isClaudeBot && commentDate > actualCommitDate) {
+                  console.log(`✅ Found Claude comment for current commit!`);
+                  console.log(`   Comment date: ${commentDate.toISOString()}`);
+                  console.log(`   Commit date: ${actualCommitDate.toISOString()}`);
+                  claudeCommentFound = true;
+                  break;
+                }
+              }
+
+              if (!claudeCommentFound) {
+                console.log('⏳ Claude comment not found yet, waiting...');
+                await new Promise(resolve => setTimeout(resolve, checkInterval));
+              }
+            }
+
+            if (claudeCommentFound) {
+              console.log('🎯 Claude comment verified - proceeding with approval evaluation');
+            } else {
+              console.log('⚠️ Timeout waiting for Claude comment - proceeding anyway');
+            }
+
       - name: Evaluate Claude AI Approval
         if: steps.get-pr.outputs.should_run == 'true'
         id: evaluate
@@ -261,10 +334,47 @@ jobs:
               }
             }
 
-            // Additional safety check: If no valid Claude comment found, check if Claude is still reviewing
+            // ENHANCED SAFETY CHECK: If no valid Claude comment found, wait a bit more and check again
             if (!validClaudeComment) {
               console.log('⚠️ No valid Claude review found for current commit');
-              console.log('🔍 Checking if Claude review is in progress...');
+              console.log('🔄 Performing final check after additional wait...');
+
+              // Wait an additional 30 seconds and check one more time
+              await new Promise(resolve => setTimeout(resolve, 30000));
+
+              const { data: finalComments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(prNumber),
+                per_page: 5,
+                sort: 'created',
+                direction: 'desc'
+              });
+
+              // Final check for Claude comments after latest commit
+              for (const comment of finalComments) {
+                const isClaudeBot = comment.user.login === 'blazecommerce-automation-bot[bot]' &&
+                                   comment.body.includes('Claude AI PR Review Complete');
+
+                if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
+                  const commentDate = new Date(comment.created_at);
+
+                  if (commentDate > actualCommitDate) {
+                    console.log('✅ Found Claude review in final check!');
+                    validClaudeComment = comment;
+
+                    if (comment.body.includes('Status**: APPROVED') || comment.body.includes('Status: APPROVED')) {
+                      claudeApproval = 'APPROVED';
+                    } else if (comment.body.includes('Status**: BLOCKED') || comment.body.includes('Status: BLOCKED')) {
+                      claudeApproval = 'BLOCKED';
+                    }
+                    break;
+                  }
+                }
+              }
+
+              if (!validClaudeComment) {
+                console.log('🔍 Still no valid Claude review - checking if Claude is still reviewing...');
 
               // Check for recent workflow runs of Claude review
               const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -298,6 +408,16 @@ jobs:
               console.log('🎯 PR Number: ' + prNumber);
               console.log(`📅 Claude review timestamp: ${validClaudeComment.created_at}`);
               console.log(`📅 Latest commit timestamp: ${actualCommitDate.toISOString()}`);
+
+              // CRITICAL FIX: Ensure minimum time gap between commit and approval
+              const timeSinceCommit = Date.now() - actualCommitDate.getTime();
+              const minWaitTime = 2 * 60 * 1000; // 2 minutes minimum
+
+              if (timeSinceCommit < minWaitTime) {
+                const remainingWait = minWaitTime - timeSinceCommit;
+                console.log(`⏳ Enforcing minimum wait time: ${Math.round(remainingWait / 1000)}s remaining`);
+                await new Promise(resolve => setTimeout(resolve, remainingWait));
+              }
 
               try {
                 // ENHANCED: Check for existing bot approvals AFTER the latest commit
