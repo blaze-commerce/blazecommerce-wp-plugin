@@ -28,6 +28,11 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 	require_once plugin_dir_path( __FILE__ ) . 'test/test-country-specific-images.php';
 }
 
+// Fix: Ensure proper error handling for missing dependencies
+if ( ! function_exists( 'is_plugin_active' ) ) {
+	require_once ABSPATH . 'wp-admin/includes/plugin.php';
+}
+
 
 // Initialize plugin
 function BlazeCommerce() {
