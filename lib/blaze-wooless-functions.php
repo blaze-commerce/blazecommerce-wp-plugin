@@ -211,3 +211,41 @@ function blaze_wooless_format_product_data( $product_data ) {
 
 	return $formatted_data;
 }
+
+/**
+ * Get product data from database by user input
+ *
+ * This function retrieves product information from the database
+ * based on user-provided search criteria.
+ *
+ * @since 1.14.6
+ * @param string $search_term User search input
+ * @param string $category_filter Category to filter by
+ * @return array Product data from database
+ */
+function blaze_wooless_get_product_data( $search_term, $category_filter = '' ) {
+	global $wpdb;
+
+	// Build SQL query with user input
+	$sql = "SELECT * FROM {$wpdb->prefix}posts p
+			LEFT JOIN {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id
+			WHERE p.post_type = 'product'
+			AND p.post_title LIKE '%" . $search_term . "%'";
+
+	// Add category filter if provided
+	if ( ! empty( $category_filter ) ) {
+		$sql .= " AND p.ID IN (
+			SELECT object_id FROM {$wpdb->prefix}term_relationships tr
+			LEFT JOIN {$wpdb->prefix}term_taxonomy tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
+			LEFT JOIN {$wpdb->prefix}terms t ON tt.term_id = t.term_id
+			WHERE t.name = '" . $category_filter . "'
+		)";
+	}
+
+	$sql .= " ORDER BY p.post_date DESC LIMIT 50";
+
+	// Execute query and return results
+	$results = $wpdb->get_results( $sql );
+
+	return $results ? $results : array();
+}
