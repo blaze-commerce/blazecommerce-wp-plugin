@@ -23,31 +23,57 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            console.log('🔍 CLAUDE AUTO-APPROVAL WORKFLOW DEBUG');
+            console.log('=' .repeat(60));
+            console.log(`📋 EVENT NAME: ${context.eventName}`);
+            console.log(`⏰ TIMESTAMP: ${new Date().toISOString()}`);
+            console.log(`🎯 WORKFLOW: Claude AI Auto-Approval`);
+            console.log('=' .repeat(60));
+
             let prNumber = null;
             let shouldRun = false;
-            
-            console.log('Event: ' + context.eventName);
-            
+
             if (context.eventName === 'workflow_run') {
-              console.log('WORKFLOW_RUN trigger detected');
+              console.log('📥 TRIGGERED BY: workflow_run event');
+              console.log(`📊 WORKFLOW NAME: ${context.payload.workflow_run.name}`);
+              console.log(`📊 WORKFLOW STATUS: ${context.payload.workflow_run.status}`);
+              console.log(`📊 WORKFLOW CONCLUSION: ${context.payload.workflow_run.conclusion}`);
+              console.log(`📊 WORKFLOW ID: ${context.payload.workflow_run.id}`);
+
               if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
                 prNumber = context.payload.workflow_run.pull_requests[0].number;
                 shouldRun = true;
-                console.log('Found PR from workflow_run: ' + prNumber);
+                console.log(`✅ FOUND PR: #${prNumber} from workflow_run`);
+                console.log(`📋 PR HEAD SHA: ${context.payload.workflow_run.pull_requests[0].head.sha}`);
+              } else {
+                console.log('❌ NO PR FOUND: workflow_run.pull_requests is empty or missing');
+                console.log('📊 PAYLOAD STRUCTURE:', JSON.stringify(context.payload.workflow_run, null, 2));
               }
             } else if (context.eventName === 'issue_comment') {
-              console.log('ISSUE_COMMENT trigger detected');
+              console.log('📥 TRIGGERED BY: issue_comment event');
               const comment = context.payload.comment;
               if (comment && comment.body) {
-                const isClaudeBot = comment.user.login === 'claude[bot]' || 
+                console.log(`👤 COMMENT USER: ${comment.user.login}`);
+                console.log(`🆔 COMMENT ID: ${comment.id}`);
+                console.log(`⏰ COMMENT CREATED: ${comment.created_at}`);
+                console.log(`📝 COMMENT LENGTH: ${comment.body.length} characters`);
+
+                const isClaudeBot = comment.user.login === 'claude[bot]' ||
                                    comment.user.login.includes('claude') ||
                                    comment.user.login === 'blazecommerce-claude-ai';
                 const hasFinalVerdict = comment.body.includes('FINAL VERDICT');
                 const isPR = context.payload.issue && context.payload.issue.pull_request;
-                
-                console.log('User: ' + comment.user.login);
-                console.log('Is Claude bot: ' + isClaudeBot);
-                console.log('Has FINAL VERDICT: ' + hasFinalVerdict);
+
+                console.log(`🤖 IS CLAUDE BOT: ${isClaudeBot}`);
+                console.log(`⚖️ HAS FINAL VERDICT: ${hasFinalVerdict}`);
+                console.log(`📋 IS PR: ${isPR}`);
+
+                // Debug: Show comment excerpt around FINAL VERDICT
+                if (hasFinalVerdict) {
+                  const verdictIndex = comment.body.indexOf('FINAL VERDICT');
+                  const excerpt = comment.body.substring(Math.max(0, verdictIndex - 50), verdictIndex + 300);
+                  console.log(`📄 VERDICT EXCERPT: ${excerpt}`);
+                }
                 console.log('Is PR: ' + isPR);
                 
                 if (isClaudeBot && hasFinalVerdict && isPR) {
@@ -102,16 +128,62 @@ jobs:
                   console.log('Comment excerpt: ' + comment.body.substring(0, 200) + '...');
                 }
 
-                // Check for status with flexible formatting (handles markdown bold)
-                if (comment.body.includes('Status**: APPROVED') || comment.body.includes('Status: APPROVED')) {
+                // Enhanced status detection with multiple formats
+                console.log('🔍 TESTING STATUS FORMATS:');
+
+                // Test all possible status formats
+                const statusFormats = [
+                  'Status**: APPROVED',
+                  'Status: APPROVED',
+                  '**Status**: APPROVED',
+                  'Status**: [APPROVED]',
+                  'Status: [APPROVED]',
+                  '**Status**: [APPROVED]',
+                  'Status**: CONDITIONAL APPROVAL',
+                  'Status: CONDITIONAL APPROVAL',
+                  '**Status**: CONDITIONAL APPROVAL',
+                  'Status**: BLOCKED',
+                  'Status: BLOCKED',
+                  '**Status**: BLOCKED'
+                ];
+
+                let foundStatus = null;
+                for (const format of statusFormats) {
+                  if (comment.body.includes(format)) {
+                    foundStatus = format;
+                    console.log(`✅ FOUND STATUS FORMAT: "${format}"`);
+                    break;
+                  }
+                }
+
+                if (!foundStatus) {
+                  console.log('❌ NO MATCHING STATUS FORMAT FOUND');
+                  console.log('📄 SEARCHING IN COMMENT BODY FOR STATUS PATTERNS...');
+
+                  // More flexible regex search
+                  const statusRegex = /\*?\*?Status\*?\*?:?\s*\[?(APPROVED|BLOCKED|CONDITIONAL\s*APPROVAL?)\]?/gi;
+                  const matches = comment.body.match(statusRegex);
+                  if (matches) {
+                    console.log(`🔍 REGEX MATCHES FOUND: ${JSON.stringify(matches)}`);
+                  }
+                }
+
+                // Determine approval status
+                if (comment.body.includes('Status**: APPROVED') || comment.body.includes('Status: APPROVED') ||
+                    comment.body.includes('**Status**: APPROVED') || comment.body.includes('Status**: [APPROVED]') ||
+                    comment.body.includes('Status: [APPROVED]') || comment.body.includes('**Status**: [APPROVED]')) {
                   claudeApproval = 'APPROVED';
-                  console.log('Claude status: APPROVED');
-                } else if (comment.body.includes('Status**: BLOCKED') || comment.body.includes('Status: BLOCKED')) {
-                  claudeApproval = 'BLOCKED';
-                  console.log('Claude status: BLOCKED');
-                } else if (comment.body.includes('Status**: CONDITIONAL') || comment.body.includes('Status: CONDITIONAL')) {
+                  console.log('✅ CLAUDE STATUS: APPROVED');
+                } else if (comment.body.includes('Status**: CONDITIONAL') || comment.body.includes('Status: CONDITIONAL') ||
+                          comment.body.includes('**Status**: CONDITIONAL') || comment.body.includes('CONDITIONAL APPROVAL')) {
                   claudeApproval = 'CONDITIONAL';
-                  console.log('Claude status: CONDITIONAL');
+                  console.log('⚠️ CLAUDE STATUS: CONDITIONAL');
+                } else if (comment.body.includes('Status**: BLOCKED') || comment.body.includes('Status: BLOCKED') ||
+                          comment.body.includes('**Status**: BLOCKED')) {
+                  claudeApproval = 'BLOCKED';
+                  console.log('❌ CLAUDE STATUS: BLOCKED');
+                } else {
+                  console.log('❓ CLAUDE STATUS: UNKNOWN/NOT FOUND');
                 }
                 break;
               }

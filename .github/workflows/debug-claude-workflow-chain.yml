@@ -1,0 +1,197 @@
+name: "🔧 DEBUG: Claude Workflow Chain Analysis"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to analyze'
+        required: true
+        type: string
+      test_mode:
+        description: 'Test mode'
+        required: false
+        default: 'full_analysis'
+        type: choice
+        options:
+          - 'full_analysis'
+          - 'comment_analysis'
+          - 'workflow_status'
+
+jobs:
+  debug-workflow-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Analyze Complete Workflow Chain
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ github.event.inputs.pr_number }}';
+            const testMode = '${{ github.event.inputs.test_mode }}';
+            
+            console.log('🔧 CLAUDE WORKFLOW CHAIN DEBUG ANALYSIS');
+            console.log('=' .repeat(70));
+            console.log(`📋 PR NUMBER: ${prNumber}`);
+            console.log(`🧪 TEST MODE: ${testMode}`);
+            console.log(`⏰ ANALYSIS TIME: ${new Date().toISOString()}`);
+            console.log('=' .repeat(70));
+            
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNumber)
+            });
+            
+            console.log(`📋 PR TITLE: ${pr.title}`);
+            console.log(`👤 PR AUTHOR: ${pr.user.login}`);
+            console.log(`📊 PR STATE: ${pr.state}`);
+            console.log(`🔗 PR HEAD SHA: ${pr.head.sha}`);
+            console.log('');
+            
+            // Analyze workflow runs for this PR
+            console.log('🔍 ANALYZING WORKFLOW RUNS:');
+            console.log('-' .repeat(50));
+            
+            const workflowNames = [
+              'claude-direct-approval.yml',
+              'claude-code-review.yml', 
+              'claude-auto-approval.yml'
+            ];
+            
+            for (const workflowFile of workflowNames) {
+              try {
+                const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: workflowFile,
+                  head_sha: pr.head.sha,
+                  per_page: 10
+                });
+                
+                console.log(`📊 WORKFLOW: ${workflowFile}`);
+                console.log(`   TOTAL RUNS: ${runs.total_count}`);
+                
+                if (runs.workflow_runs.length > 0) {
+                  const latestRun = runs.workflow_runs[0];
+                  console.log(`   LATEST RUN ID: ${latestRun.id}`);
+                  console.log(`   STATUS: ${latestRun.status}`);
+                  console.log(`   CONCLUSION: ${latestRun.conclusion}`);
+                  console.log(`   CREATED: ${latestRun.created_at}`);
+                  console.log(`   UPDATED: ${latestRun.updated_at}`);
+                  
+                  // Get job details
+                  try {
+                    const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      run_id: latestRun.id
+                    });
+                    
+                    console.log(`   JOBS: ${jobs.total_count}`);
+                    for (const job of jobs.jobs) {
+                      console.log(`     - ${job.name}: ${job.status} (${job.conclusion})`);
+                    }
+                  } catch (jobError) {
+                    console.log(`   ❌ ERROR GETTING JOBS: ${jobError.message}`);
+                  }
+                } else {
+                  console.log('   ❌ NO RUNS FOUND');
+                }
+                console.log('');
+              } catch (error) {
+                console.log(`❌ ERROR ANALYZING ${workflowFile}: ${error.message}`);
+              }
+            }
+            
+            // Analyze PR comments for Claude verdicts
+            console.log('💬 ANALYZING PR COMMENTS:');
+            console.log('-' .repeat(50));
+            
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt(prNumber),
+              per_page: 100
+            });
+            
+            console.log(`📊 TOTAL COMMENTS: ${comments.length}`);
+            
+            let claudeComments = 0;
+            let finalVerdictComments = 0;
+            
+            for (const comment of comments) {
+              const isClaudeBot = comment.user.login === 'claude[bot]' || 
+                                 comment.user.login.includes('claude') ||
+                                 comment.user.login === 'blazecommerce-claude-ai';
+              
+              if (isClaudeBot) {
+                claudeComments++;
+                console.log(`🤖 CLAUDE COMMENT #${claudeComments}:`);
+                console.log(`   USER: ${comment.user.login}`);
+                console.log(`   CREATED: ${comment.created_at}`);
+                console.log(`   LENGTH: ${comment.body.length} chars`);
+                
+                if (comment.body.includes('FINAL VERDICT')) {
+                  finalVerdictComments++;
+                  console.log(`   ⚖️ CONTAINS FINAL VERDICT: YES`);
+                  
+                  // Extract verdict section
+                  const verdictIndex = comment.body.indexOf('FINAL VERDICT');
+                  const verdictSection = comment.body.substring(verdictIndex, verdictIndex + 500);
+                  console.log(`   📄 VERDICT SECTION: ${verdictSection.substring(0, 200)}...`);
+                  
+                  // Test status detection
+                  const statusFormats = [
+                    'Status**: APPROVED', 'Status: APPROVED', '**Status**: APPROVED',
+                    'Status**: [APPROVED]', 'Status: [APPROVED]', '**Status**: [APPROVED]',
+                    'Status**: BLOCKED', 'Status: BLOCKED', '**Status**: BLOCKED',
+                    'Status**: CONDITIONAL', 'Status: CONDITIONAL', '**Status**: CONDITIONAL'
+                  ];
+                  
+                  let detectedStatus = 'NONE';
+                  for (const format of statusFormats) {
+                    if (comment.body.includes(format)) {
+                      detectedStatus = format;
+                      break;
+                    }
+                  }
+                  console.log(`   📊 DETECTED STATUS: ${detectedStatus}`);
+                } else {
+                  console.log(`   ⚖️ CONTAINS FINAL VERDICT: NO`);
+                }
+                console.log('');
+              }
+            }
+            
+            console.log(`📊 SUMMARY:`);
+            console.log(`   CLAUDE COMMENTS: ${claudeComments}`);
+            console.log(`   FINAL VERDICT COMMENTS: ${finalVerdictComments}`);
+            
+            // Check PR reviews
+            console.log('');
+            console.log('👥 ANALYZING PR REVIEWS:');
+            console.log('-' .repeat(50));
+            
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNumber)
+            });
+            
+            console.log(`📊 TOTAL REVIEWS: ${reviews.length}`);
+            
+            for (const review of reviews) {
+              console.log(`👤 REVIEWER: ${review.user.login}`);
+              console.log(`   STATE: ${review.state}`);
+              console.log(`   SUBMITTED: ${review.submitted_at}`);
+              if (review.body) {
+                console.log(`   BODY LENGTH: ${review.body.length} chars`);
+              }
+              console.log('');
+            }
+            
+            console.log('🎯 ANALYSIS COMPLETE');
+            console.log('=' .repeat(70));
