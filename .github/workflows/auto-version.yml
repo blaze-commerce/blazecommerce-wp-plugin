@@ -1,4 +1,4 @@
-name: "🔢 Priority 4: Auto Version Bump"
+name: "Priority 4: Auto Version Bump"
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
             });
 
             // Look for completed Priority 3 workflows
-            const priority3Workflows = ['✅ Priority 3: Claude AI Approval Gate'];
+            const priority3Workflows = ['Priority 3: Claude Auto Approval'];
             let allCompleted = true;
 
             for (const workflowName of priority3Workflows) {
