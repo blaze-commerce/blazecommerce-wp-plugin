@@ -144,10 +144,18 @@ jobs:
       # Security: All other permissions explicitly denied (no issues, packages, etc.)
 
     steps:
+    - name: Generate GitHub App Token
+      id: app_token
+      if: secrets.BC_GITHUB_APP_ID && secrets.BC_GITHUB_APP_PRIVATE_KEY
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+        private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
+        token: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
         fetch-depth: 0
 
     - name: Pull Latest Changes to Prevent Version Conflicts
@@ -706,7 +714,9 @@ jobs:
 
         # Create commit with conventional format
         git commit -m "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]"
-        git push
+
+        # Push with admin token to bypass branch protection
+        git push https://${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
 
         echo "SUCCESS: Version changes committed and pushed"
 

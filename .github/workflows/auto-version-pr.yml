@@ -1,0 +1,139 @@
+name: "🔢 Alternative: Auto Version Bump via PR"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number that was merged'
+        required: true
+        type: string
+
+concurrency:
+  group: auto-version-pr-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  create-version-bump-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: |
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, 'chore(release)') &&
+      !contains(github.event.head_commit.message, '[no version]')
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install --no-audit --no-fund
+
+    - name: Determine version bump type
+      id: bump_type
+      run: |
+        # Simplified bump type detection
+        RECENT_COMMITS=$(git log --oneline -5 --pretty=format:"%s")
+        
+        if echo "$RECENT_COMMITS" | grep -qE "^(feat|feature)(\(.+\))?:"; then
+          echo "bump_type=minor" >> $GITHUB_OUTPUT
+        elif echo "$RECENT_COMMITS" | grep -qE "^(fix|bugfix|hotfix)(\(.+\))?:"; then
+          echo "bump_type=patch" >> $GITHUB_OUTPUT
+        elif echo "$RECENT_COMMITS" | grep -qE "BREAKING CHANGE|!:"; then
+          echo "bump_type=major" >> $GITHUB_OUTPUT
+        else
+          echo "bump_type=patch" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create version bump branch
+      id: create_branch
+      run: |
+        BUMP_TYPE="${{ steps.bump_type.outputs.bump_type }}"
+        BRANCH_NAME="automated/version-bump-$(date +%Y%m%d-%H%M%S)"
+        
+        git checkout -b "$BRANCH_NAME"
+        echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+    - name: Execute version bump
+      run: |
+        BUMP_TYPE="${{ steps.bump_type.outputs.bump_type }}"
+        export BUMP_TYPE="$BUMP_TYPE"
+        
+        if node scripts/update-version.js --force; then
+          echo "SUCCESS: Version bump completed"
+        else
+          echo "ERROR: Version bump failed"
+          exit 1
+        fi
+
+    - name: Commit version changes
+      run: |
+        NEW_VERSION=$(node -p "require('./package.json').version")
+        BUMP_TYPE="${{ steps.bump_type.outputs.bump_type }}"
+        
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        git add package.json blaze-wooless.php README.md blocks/package.json
+        git commit -m "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]"
+
+    - name: Push branch and create PR
+      run: |
+        BRANCH_NAME="${{ steps.create_branch.outputs.branch_name }}"
+        NEW_VERSION=$(node -p "require('./package.json').version")
+        BUMP_TYPE="${{ steps.bump_type.outputs.bump_type }}"
+        
+        git push origin "$BRANCH_NAME"
+        
+        # Create PR using GitHub CLI
+        gh pr create \
+          --title "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]" \
+          --body "🤖 **Automated Version Bump**
+
+        This PR was automatically created to bump the version from the previous version to **$NEW_VERSION** (${BUMP_TYPE} increment).
+
+        ## Changes Made
+        - Updated package.json version
+        - Updated blaze-wooless.php version header
+        - Updated README.md version badge
+        - Updated blocks/package.json version
+
+        ## Auto-Merge
+        This PR can be safely merged as it only contains version number updates.
+
+        **Triggered by**: ${{ github.event.head_commit.message }}
+        **Commit SHA**: ${{ github.sha }}" \
+          --head "$BRANCH_NAME" \
+          --base main \
+          --label "automated,version-bump,chore"
+      env:
+        GH_TOKEN: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
+
+    - name: Auto-approve PR (if using bot token)
+      if: secrets.BC_GITHUB_TOKEN
+      run: |
+        BRANCH_NAME="${{ steps.create_branch.outputs.branch_name }}"
+        
+        # Get PR number
+        PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number --jq '.number')
+        
+        # Auto-approve the PR
+        gh pr review "$PR_NUMBER" --approve --body "✅ Automated approval for version bump PR"
+      env:
+        GH_TOKEN: ${{ secrets.BC_GITHUB_TOKEN }}
