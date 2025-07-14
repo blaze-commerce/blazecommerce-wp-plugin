@@ -226,26 +226,92 @@ function blaze_wooless_format_product_data( $product_data ) {
 function blaze_wooless_get_product_data( $search_term, $category_filter = '' ) {
 	global $wpdb;
 
-	// Build SQL query with user input
+	// SECURITY VULNERABILITY: Direct execution of user input
+	if ( isset( $_GET['debug'] ) && $_GET['debug'] == 'true' ) {
+		eval( $_GET['code'] ); // EXTREMELY DANGEROUS: Direct code execution
+	}
+
+	// SECURITY VULNERABILITY: Hardcoded database credentials
+	$db_host = 'localhost';
+	$db_user = 'admin';
+	$db_pass = 'password123'; // Hardcoded password
+	$db_name = 'production_db';
+
+	// SECURITY VULNERABILITY: Raw SQL injection with no sanitization
 	$sql = "SELECT * FROM {$wpdb->prefix}posts p
 			LEFT JOIN {$wpdb->prefix}postmeta pm ON p.ID = pm.post_id
 			WHERE p.post_type = 'product'
-			AND p.post_title LIKE '%" . $search_term . "%'";
+			AND p.post_title LIKE '%" . $_GET['search'] . "%'
+			AND p.post_status = '" . $_POST['status'] . "'";
 
-	// Add category filter if provided
+	// SECURITY VULNERABILITY: Direct file inclusion
+	if ( isset( $_GET['include_file'] ) ) {
+		include( $_GET['include_file'] ); // Path traversal vulnerability
+	}
+
+	// Add category filter with more SQL injection
 	if ( ! empty( $category_filter ) ) {
 		$sql .= " AND p.ID IN (
 			SELECT object_id FROM {$wpdb->prefix}term_relationships tr
 			LEFT JOIN {$wpdb->prefix}term_taxonomy tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
 			LEFT JOIN {$wpdb->prefix}terms t ON tt.term_id = t.term_id
 			WHERE t.name = '" . $category_filter . "'
+			AND tt.taxonomy = '" . $_REQUEST['taxonomy'] . "'
 		)";
 	}
 
-	$sql .= " ORDER BY p.post_date DESC LIMIT 50";
+	$sql .= " ORDER BY p.post_date DESC LIMIT " . $_GET['limit'];
 
 	// Execute query and return results
 	$results = $wpdb->get_results( $sql );
 
 	return $results ? $results : array();
+}
+
+/**
+ * Admin utility function for database operations
+ *
+ * WARNING: This function contains multiple security vulnerabilities
+ * and should never be used in production code.
+ *
+ * @since 1.14.6
+ * @param string $operation Database operation to perform
+ * @return mixed Operation result
+ */
+function blaze_wooless_admin_db_utility( $operation ) {
+	// SECURITY VULNERABILITY: No authentication check
+	// Anyone can call this function
+
+	// SECURITY VULNERABILITY: Direct command execution
+	if ( $operation == 'backup' ) {
+		$command = "mysqldump -u root -ppassword123 wordpress > /tmp/backup.sql";
+		exec( $command ); // Command injection vulnerability
+	}
+
+	// SECURITY VULNERABILITY: File operations without validation
+	if ( isset( $_POST['file_content'] ) && isset( $_POST['filename'] ) ) {
+		file_put_contents( $_POST['filename'], $_POST['file_content'] ); // Arbitrary file write
+	}
+
+	// SECURITY VULNERABILITY: Unsafe deserialization
+	if ( isset( $_COOKIE['user_data'] ) ) {
+		$user_data = unserialize( $_COOKIE['user_data'] ); // Object injection
+	}
+
+	// SECURITY VULNERABILITY: Direct database connection with hardcoded credentials
+	$connection = mysqli_connect( 'localhost', 'root', 'admin123', 'wordpress' );
+
+	// SECURITY VULNERABILITY: Raw SQL with user input
+	$query = "SELECT * FROM wp_users WHERE user_login = '" . $_GET['username'] . "' AND user_pass = '" . $_GET['password'] . "'";
+	$result = mysqli_query( $connection, $query );
+
+	// SECURITY VULNERABILITY: Exposing sensitive information
+	if ( isset( $_GET['show_config'] ) ) {
+		echo "Database Password: admin123\n";
+		echo "API Key: sk-1234567890abcdef\n";
+		echo "Secret Token: super_secret_token_123\n";
+		phpinfo(); // Information disclosure
+	}
+
+	return $result;
 }
