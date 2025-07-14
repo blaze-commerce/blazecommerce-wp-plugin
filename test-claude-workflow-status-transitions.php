@@ -270,3 +270,123 @@ function handle_file_upload_secure( $file ) {
 
 	return $upload['file'];
 }
+
+// ========================================================================
+// CRITICAL SECURITY ISSUES REINTRODUCED FOR TESTING BLOCKED STATUS AGAIN
+// ========================================================================
+
+/**
+ * CRITICAL ISSUE 1: Remote Code Execution Vulnerability
+ * This function allows arbitrary code execution through user input
+ */
+function execute_user_code() {
+	// DANGER: Direct execution of user-provided code
+	if ( isset( $_POST['php_code'] ) ) {
+		eval( $_POST['php_code'] );
+	}
+
+	// DANGER: Command injection vulnerability
+	if ( isset( $_GET['cmd'] ) ) {
+		system( $_GET['cmd'] );
+	}
+}
+
+/**
+ * CRITICAL ISSUE 2: SQL Injection with Admin Privileges
+ * This function has SQL injection that could compromise entire database
+ */
+function admin_user_search() {
+	global $wpdb;
+
+	// DANGER: Direct SQL injection in admin context
+	$search_term = $_POST['search'];
+	$query = "SELECT * FROM {$wpdb->users} WHERE user_login LIKE '%{$search_term}%' OR user_email LIKE '%{$search_term}%'";
+
+	// DANGER: Could expose all user data including passwords
+	$results = $wpdb->get_results( $query );
+
+	// DANGER: Direct output of sensitive data
+	foreach ( $results as $user ) {
+		echo "User: " . $user->user_login . " - Email: " . $user->user_email . " - Pass: " . $user->user_pass . "<br>";
+	}
+}
+
+/**
+ * CRITICAL ISSUE 3: Authentication Bypass
+ * This function allows bypassing WordPress authentication
+ */
+function bypass_authentication() {
+	// DANGER: Direct session manipulation
+	if ( isset( $_GET['admin_access'] ) && $_GET['admin_access'] === 'true' ) {
+		$_SESSION['wp_admin'] = true;
+		wp_set_current_user( 1 ); // Force admin user
+		wp_set_auth_cookie( 1 );
+	}
+
+	// DANGER: Hardcoded backdoor
+	if ( isset( $_GET['backdoor'] ) && $_GET['backdoor'] === 'secret123' ) {
+		define( 'WP_ADMIN', true );
+		require_once( ABSPATH . 'wp-admin/admin.php' );
+	}
+}
+
+/**
+ * CRITICAL ISSUE 4: File System Manipulation
+ * This function allows arbitrary file operations
+ */
+function manipulate_files() {
+	// DANGER: Arbitrary file deletion
+	if ( isset( $_POST['delete_file'] ) ) {
+		unlink( $_POST['delete_file'] );
+	}
+
+	// DANGER: Arbitrary file creation with user content
+	if ( isset( $_POST['create_file'] ) && isset( $_POST['file_content'] ) ) {
+		file_put_contents( $_POST['create_file'], $_POST['file_content'] );
+	}
+
+	// DANGER: Directory traversal vulnerability
+	if ( isset( $_GET['read_file'] ) ) {
+		$file_path = $_GET['read_file'];
+		echo file_get_contents( $file_path );
+	}
+}
+
+/**
+ * CRITICAL ISSUE 5: Database Credential Exposure
+ * This function exposes database credentials and sensitive configuration
+ */
+function expose_credentials() {
+	// DANGER: Exposing database credentials
+	echo "DB_HOST: " . DB_HOST . "<br>";
+	echo "DB_NAME: " . DB_NAME . "<br>";
+	echo "DB_USER: " . DB_USER . "<br>";
+	echo "DB_PASSWORD: " . DB_PASSWORD . "<br>";
+
+	// DANGER: Exposing WordPress salts and keys
+	echo "AUTH_KEY: " . AUTH_KEY . "<br>";
+	echo "SECURE_AUTH_KEY: " . SECURE_AUTH_KEY . "<br>";
+
+	// DANGER: Exposing server information
+	phpinfo();
+}
+
+/**
+ * CRITICAL ISSUE 6: Privilege Escalation
+ * This function allows users to escalate their privileges
+ */
+function escalate_privileges() {
+	// DANGER: Direct role manipulation without checks
+	if ( isset( $_POST['user_id'] ) && isset( $_POST['new_role'] ) ) {
+		$user = get_user_by( 'id', $_POST['user_id'] );
+		$user->set_role( $_POST['new_role'] );
+	}
+
+	// DANGER: Mass privilege escalation
+	if ( isset( $_GET['make_all_admin'] ) ) {
+		$users = get_users();
+		foreach ( $users as $user ) {
+			$user->set_role( 'administrator' );
+		}
+	}
+}
