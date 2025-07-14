@@ -27,10 +27,11 @@ jobs:
     timeout-minutes: 5
     # CRITICAL: Only trigger on Claude FINAL VERDICT comments to prevent race conditions
     if: |
-      github.event_name == 'workflow_dispatch' || 
-      (github.event_name == 'issue_comment' && 
-       contains(github.event.comment.body, 'FINAL VERDICT') && 
-       github.event.comment.user.login == 'blazecommerce-automation-bot[bot]')
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       contains(github.event.comment.body, 'FINAL VERDICT') &&
+       (github.event.comment.user.login == 'blazecommerce-automation-bot[bot]' ||
+        contains(github.event.comment.user.login, 'blazecommerce-automation-bot')))
     permissions:
       # Required permissions for GitHub App authentication and PR approval
       contents: read           # Read repository content
@@ -83,7 +84,8 @@ jobs:
                 console.log(`🔍 Comment contains FINAL VERDICT: ${comment.body.includes('FINAL VERDICT')}`);
                 
                 // ENHANCED: More specific Claude bot detection for issue_comment trigger
-                const isClaudeBot = comment.user.login === 'blazecommerce-automation-bot[bot]' && 
+                const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
+                                   comment.user.login.includes('blazecommerce-automation-bot')) &&
                                    comment.body.includes('Claude AI PR Review Complete');
                 const hasFinalVerdict = comment.body.includes('FINAL VERDICT');
                 const isPR = context.payload.issue && context.payload.issue.pull_request;
@@ -166,7 +168,8 @@ jobs:
             let validClaudeComment = null;
             
             for (const comment of comments.reverse()) {
-              const isClaudeBot = comment.user.login === 'blazecommerce-automation-bot[bot]' && 
+              const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
+                                 comment.user.login.includes('blazecommerce-automation-bot')) &&
                                  comment.body.includes('Claude AI PR Review Complete');
               
               if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
