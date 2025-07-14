@@ -29,7 +29,7 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 }
 
 
-// Initialize plugin
+// Initialize plugin - Main entry point for BlazeCommerce functionality
 function BlazeCommerce() {
 	return \BlazeWooless\BlazeWooless::get_instance();
 }
