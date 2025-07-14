@@ -4,11 +4,10 @@ name: "Priority 3: Claude AI Approval Gate (Fixed Race Condition)"
 # This workflow now ensures Claude AI has reviewed the LATEST commit before approving
 # Fixes issue where auto-approval was based on stale reviews from previous commits
 
-# RACE CONDITION FIX: Trigger on Claude comment posting, not workflow completion
-# This ensures auto-approval only happens AFTER Claude posts the review comment
+# DISABLED: Replaced by claude-auto-approval-final.yml to fix race conditions
+# This workflow is disabled to prevent conflicts with the new race-condition-free workflow
 on:
-  issue_comment:
-    types: [created]
+  # Completely disabled - all triggers removed
   workflow_dispatch:
     inputs:
       pr_number:
