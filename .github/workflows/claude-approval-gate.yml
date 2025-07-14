@@ -215,9 +215,13 @@ jobs:
             let validClaudeComment = null;
 
             for (const comment of comments.reverse()) {
+              // TEMPORARY FIX: Accept reviews from blazecommerce-automation-bot until CLAUDE_GITHUB_TOKEN is configured
+              // TODO: Remove blazecommerce-automation-bot detection once proper Claude token is set up
               const isClaudeBot = comment.user.login === 'claude[bot]' ||
                                  comment.user.login.includes('claude') ||
-                                 comment.user.login === 'blazecommerce-claude-ai';
+                                 comment.user.login === 'blazecommerce-claude-ai' ||
+                                 (comment.user.login === 'blazecommerce-automation-bot[bot]' &&
+                                  comment.body.includes('Claude AI PR Review Complete'));
 
               if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
                 const commentDate = new Date(comment.created_at);
