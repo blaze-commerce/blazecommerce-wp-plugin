@@ -839,16 +839,36 @@ jobs:
                   }
                 }
 
-                // Pattern 4: BLOCKED status priority detection - check for BLOCKED first
+                // Pattern 4: COMPREHENSIVE BLOCKED status priority detection
                 if (!finalVerdictMatch) {
-                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 4: BLOCKED status priority detection');
-                  const blockedMatch = comment.body.match(/Status\*?\*?:\s*(.*?(?:BLOCKED|NOT APPROVED|REJECTED|NOT READY).*?)(?:\s*\n|\s*\*|$)/i);
-                  if (blockedMatch) {
-                    finalVerdictMatch = [null, blockedMatch[1]];
-                    detectionMethod = 'blocked-priority-detection';
-                    console.log('🚨 AUTO-APPROVAL: Pattern 4 BLOCKED DETECTED:', finalVerdictMatch[1]);
-                  } else {
-                    console.log('❌ AUTO-APPROVAL: Pattern 4 NO BLOCKED STATUS');
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 4: Comprehensive BLOCKED status detection');
+
+                  // Enhanced BLOCKED detection patterns with multiple variations
+                  const blockedPatterns = [
+                    /Status\*?\*?:\s*(.*?(?:BLOCKED|NOT APPROVED|REJECTED|NOT READY|NEEDS WORK|CHANGES REQUIRED).*?)(?:\s*\n|\s*\*|$)/i,
+                    /Status\*?\*?:\s*(BLOCKED.*?)(?:\s*\n|\s*\*|$)/i,
+                    /Status\*?\*?:\s*(NOT\s+APPROVED.*?)(?:\s*\n|\s*\*|$)/i,
+                    /Status\*?\*?:\s*(REJECTED.*?)(?:\s*\n|\s*\*|$)/i,
+                    /Status\*?\*?:\s*(.*?CRITICAL.*?REQUIRED.*?)(?:\s*\n|\s*\*|$)/i,
+                    /Status\*?\*?:\s*(.*?MUST.*?FIX.*?)(?:\s*\n|\s*\*|$)/i
+                  ];
+
+                  for (let i = 0; i < blockedPatterns.length; i++) {
+                    try {
+                      const blockedMatch = sanitizedCommentBody.match(blockedPatterns[i]);
+                      if (blockedMatch) {
+                        finalVerdictMatch = [null, blockedMatch[1]];
+                        detectionMethod = `blocked-priority-detection-${i + 1}`;
+                        console.log(`🚨 AUTO-APPROVAL: Pattern 4.${i + 1} BLOCKED DETECTED:`, finalVerdictMatch[1]);
+                        break;
+                      }
+                    } catch (error) {
+                      console.error(`🚨 SECURITY: Regex error in BLOCKED pattern ${i + 1}:`, error.message);
+                    }
+                  }
+
+                  if (!finalVerdictMatch) {
+                    console.log('❌ AUTO-APPROVAL: Pattern 4 NO BLOCKED STATUS FOUND');
                   }
                 }
 
@@ -898,13 +918,29 @@ jobs:
                   // CRITICAL FIX: Enhanced status classification with BLOCKED priority
                   const statusUpper = status.toUpperCase();
 
-                  // PRIORITY 1: Check for BLOCKED status FIRST (takes precedence over everything)
-                  if (statusUpper === 'BLOCKED' || statusUpper.includes('BLOCKED') ||
-                      statusUpper.includes('NOT APPROVED') || statusUpper.includes('REJECTED')) {
+                  // PRIORITY 1: COMPREHENSIVE BLOCKED status detection (takes precedence over everything)
+                  const blockedIndicators = [
+                    'BLOCKED', 'NOT APPROVED', 'REJECTED', 'NOT READY',
+                    'NEEDS WORK', 'CHANGES REQUIRED', 'CRITICAL REQUIRED',
+                    'MUST FIX', 'BLOCKING ISSUES', 'CANNOT APPROVE',
+                    'SECURITY ISSUES', 'CRITICAL BUGS', 'MAJOR ISSUES'
+                  ];
+
+                  const hasBlockedIndicator = blockedIndicators.some(indicator =>
+                    statusUpper.includes(indicator)
+                  );
+
+                  if (statusUpper === 'BLOCKED' || hasBlockedIndicator) {
                     claudeApprovalStatus = 'blocked';
                     hasRequiredIssues = true;
                     console.log('❌ CLASSIFICATION: Claude BLOCKED the PR (PRIORITY 1)');
                     console.log(`   BLOCKED indicators found in: "${status}"`);
+
+                    // Log which specific indicator was found
+                    const foundIndicators = blockedIndicators.filter(indicator =>
+                      statusUpper.includes(indicator)
+                    );
+                    console.log(`   Specific BLOCKED indicators: [${foundIndicators.join(', ')}]`);
                   }
                   // PRIORITY 2: Check for CONDITIONAL approval (before general approval)
                   else if (statusUpper === 'CONDITIONAL APPROVAL' || statusUpper.includes('CONDITIONAL')) {
@@ -928,17 +964,34 @@ jobs:
                   console.log('   Comment preview:', comment.body.substring(0, 500) + '...');
                   console.log('   Attempting content-based analysis as fallback...');
 
-                  // ENHANCED FALLBACK: Strict content analysis for FINAL VERDICT only
+                  // COMPREHENSIVE FALLBACK: Advanced content analysis for FINAL VERDICT
                   if (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT')) {
                     const commentLower = comment.body.toLowerCase();
 
-                    // PRIORITY 1: Check for explicit BLOCKED status first
-                    if (commentLower.includes('blocked') || commentLower.includes('not ready') ||
-                        commentLower.includes('rejected') || commentLower.includes('status: blocked') ||
-                        commentLower.includes('status**: blocked')) {
+                    // PRIORITY 1: COMPREHENSIVE BLOCKED status detection
+                    const blockedKeywords = [
+                      'blocked', 'not ready', 'rejected', 'not approved',
+                      'status: blocked', 'status**: blocked', 'needs work',
+                      'changes required', 'critical required', 'must fix',
+                      'blocking issues', 'cannot approve', 'security issues',
+                      'critical bugs', 'major issues', 'serious concerns',
+                      'unacceptable', 'dangerous', 'vulnerable'
+                    ];
+
+                    const hasBlockedKeyword = blockedKeywords.some(keyword =>
+                      commentLower.includes(keyword)
+                    );
+
+                    if (hasBlockedKeyword) {
                       console.log('❌ FALLBACK: Found BLOCKED indicators in FINAL VERDICT');
                       claudeApprovalStatus = 'blocked';
                       hasRequiredIssues = true;
+
+                      // Log which specific keywords were found
+                      const foundKeywords = blockedKeywords.filter(keyword =>
+                        commentLower.includes(keyword)
+                      );
+                      console.log(`   Specific BLOCKED keywords: [${foundKeywords.join(', ')}]`);
                     }
                     // PRIORITY 2: Only check for approved if not already blocked
                     else if (commentLower.includes('approved') && !commentLower.includes('not approved')) {
