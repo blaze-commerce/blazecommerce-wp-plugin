@@ -1,6 +1,6 @@
 {
   "name": "location",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "author": "The WordPress Contributors",
   "license": "GPL-2.0-or-later",
   "main": "build/index.js",

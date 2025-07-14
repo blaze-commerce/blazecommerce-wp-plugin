@@ -2,7 +2,7 @@
 
 The official plugin that integrates your WordPress/WooCommerce site with the Blaze Commerce service.
 
-**Version:** 1.14.1
+**Version:** 1.14.2
 **Author:** Blaze Commerce
 **Plugin URI:** https://www.blazecommerce.io
 **Author URI:** https://www.blazecommerce.io
