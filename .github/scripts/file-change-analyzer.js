@@ -63,16 +63,25 @@ class FileChangeAnalyzer {
       if (fs.existsSync(ignoreScript)) {
         Logger.debug('Loading ignore patterns from external script');
         const output = execSync('bash scripts/get-ignore-patterns.sh', { encoding: 'utf8' });
-        return output.trim().split('\n').filter(pattern => pattern.trim());
+
+        // Parse patterns and filter out comments and empty lines
+        const patterns = output.trim().split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#'))
+          .filter(pattern => pattern.length > 0);
+
+        Logger.debug(`Loaded ${patterns.length} ignore patterns from external script`);
+        return patterns;
       }
     } catch (error) {
       Logger.warning(`Could not load external ignore patterns: ${error.message}`);
     }
 
     // Default ignore patterns
-    return [
-      '.github/workflows/*',
-      'docs/*',
+    const defaultPatterns = [
+      '.github/',
+      '.github/workflows/',
+      'docs/',
       '*.md',
       '*.txt',
       '.gitignore',
@@ -82,15 +91,21 @@ class FileChangeAnalyzer {
       'README*',
       'package-lock.json',
       'yarn.lock',
-      '.vscode/*',
-      '.idea/*',
+      '.vscode/',
+      '.idea/',
       '*.log',
-      'test/*',
-      'tests/*',
-      '__tests__/*',
+      'test/',
+      'tests/',
+      '__tests__/',
       '*.test.js',
-      '*.spec.js'
+      '*.spec.js',
+      'scripts/',
+      'bin/',
+      'setup-templates/'
     ];
+
+    Logger.debug(`Using ${defaultPatterns.length} default ignore patterns`);
+    return defaultPatterns;
   }
 
   /**
@@ -127,34 +142,38 @@ class FileChangeAnalyzer {
    * @returns {boolean} True if file should be ignored
    */
   shouldIgnoreFile(filePath) {
+    // Normalize file path (remove leading ./ if present)
+    const normalizedPath = filePath.replace(/^\.\//, '');
+
     return this.ignorePatterns.some(pattern => {
       const trimmedPattern = pattern.trim();
 
-      // Skip empty patterns and comments
+      // Skip empty patterns and comments (double check)
       if (!trimmedPattern || trimmedPattern.startsWith('#')) {
         return false;
       }
 
       // Handle directory patterns (ending with /)
       if (trimmedPattern.endsWith('/')) {
-        // Directory pattern should match any file starting with the directory path
-        return filePath.startsWith(trimmedPattern);
+        // Directory pattern should match any file within that directory
+        const dirPattern = trimmedPattern.slice(0, -1); // Remove trailing slash
+        return normalizedPath.startsWith(dirPattern + '/') || normalizedPath === dirPattern;
       }
 
       // Handle exact file matches
-      if (filePath === trimmedPattern) {
+      if (normalizedPath === trimmedPattern) {
         return true;
       }
 
       // Handle file basename matches (file in any directory)
-      if (filePath.endsWith('/' + trimmedPattern)) {
+      const fileName = normalizedPath.split('/').pop();
+      if (fileName === trimmedPattern) {
         return true;
       }
 
-      // Handle file extension patterns (starting with .)
+      // Handle file extension patterns (starting with . but not a path)
       if (trimmedPattern.startsWith('.') && !trimmedPattern.includes('/')) {
-        const fileName = filePath.split('/').pop();
-        if (fileName === trimmedPattern) {
+        if (fileName === trimmedPattern || fileName.endsWith(trimmedPattern)) {
           return true;
         }
       }
@@ -167,7 +186,22 @@ class FileChangeAnalyzer {
           .replace(/\?/g, '.');
 
         const regex = new RegExp(`^${regexPattern}$`);
-        return regex.test(filePath);
+        if (regex.test(normalizedPath)) {
+          return true;
+        }
+
+        // Also check if the pattern matches the file basename for patterns like *.md
+        if (!trimmedPattern.includes('/') && regex.test(fileName)) {
+          return true;
+        }
+      }
+
+      // Handle patterns that should match files in subdirectories
+      // e.g., "docs" should match "docs/file.md"
+      if (!trimmedPattern.includes('/') && !trimmedPattern.includes('*')) {
+        if (normalizedPath.startsWith(trimmedPattern + '/')) {
+          return true;
+        }
       }
 
       return false;
@@ -199,12 +233,15 @@ class FileChangeAnalyzer {
       const ignoredFiles = [];
       const significantFiles = [];
 
-      // Categorize files
+      // Categorize files with detailed logging
       changedFiles.forEach(file => {
-        if (this.shouldIgnoreFile(file)) {
+        const shouldIgnore = this.shouldIgnoreFile(file);
+        if (shouldIgnore) {
           ignoredFiles.push(file);
+          Logger.debug(`IGNORED: ${file}`);
         } else {
           significantFiles.push(file);
+          Logger.debug(`SIGNIFICANT: ${file}`);
         }
       });
 
@@ -214,11 +251,21 @@ class FileChangeAnalyzer {
       Logger.info(`  Ignored files: ${ignoredFiles.length}`);
       Logger.info(`  Significant files: ${significantFiles.length}`);
 
+      // Always show file categorization for transparency
+      if (ignoredFiles.length > 0) {
+        Logger.info('Ignored files:');
+        ignoredFiles.forEach(file => Logger.info(`  - ${file} (ignored)`));
+      }
+
+      if (significantFiles.length > 0) {
+        Logger.info('Significant files (will trigger version bump):');
+        significantFiles.forEach(file => Logger.info(`  - ${file} (significant)`));
+      }
+
+      // Show loaded ignore patterns for debugging
       if (process.env.DEBUG === 'true') {
-        Logger.debug('Ignored files:');
-        ignoredFiles.forEach(file => Logger.debug(`  - ${file}`));
-        Logger.debug('Significant files:');
-        significantFiles.forEach(file => Logger.debug(`  - ${file}`));
+        Logger.debug('Loaded ignore patterns:');
+        this.ignorePatterns.forEach(pattern => Logger.debug(`  - "${pattern}"`));
       }
 
       const shouldBump = significantFiles.length > 0;
