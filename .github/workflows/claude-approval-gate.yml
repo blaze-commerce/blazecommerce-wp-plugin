@@ -50,46 +50,30 @@ jobs:
             let shouldRun = false;
             let prNumber = null;
             let triggerReason = '';
-            const debugMode = '${{ github.event.inputs.debug_mode }}' === 'true';
 
-            if (debugMode) console.log(`🔍 DEBUG: Event type: ${context.eventName}`);
+            console.log('Event type: ' + context.eventName);
 
             try {
               if (context.eventName === 'workflow_run') {
-                if (debugMode) console.log('📋 WORKFLOW_RUN: Checking workflow completion...');
+                console.log('WORKFLOW_RUN: Checking workflow completion...');
 
                 if (context.payload.workflow_run && context.payload.workflow_run.conclusion) {
                   shouldRun = true;
 
-                  // Extract PR number from workflow run - multiple methods
-                  let prMatch = null;
-
-                  // Method 1: From head branch
-                  if (context.payload.workflow_run.head_branch) {
-                    prMatch = context.payload.workflow_run.head_branch.match(/^pr-(\d+)/);
-                  }
-
-                  // Method 2: From display title
-                  if (!prMatch && context.payload.workflow_run.display_title) {
-                    prMatch = context.payload.workflow_run.display_title.match(/#(\d+)/);
-                  }
-
-                  // Method 3: From pull_requests array
-                  if (!prMatch && context.payload.workflow_run.pull_requests?.length > 0) {
+                  // Extract PR number from workflow run
+                  if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
                     prNumber = context.payload.workflow_run.pull_requests[0].number;
-                  } else if (prMatch) {
-                    prNumber = parseInt(prMatch[1]);
                   }
 
-                  triggerReason = `Claude review workflow ${context.payload.workflow_run.conclusion}`;
-                  if (debugMode) console.log(`✅ WORKFLOW_RUN: PR #${prNumber}, Status: ${context.payload.workflow_run.conclusion}`);
+                  triggerReason = 'Claude review workflow ' + context.payload.workflow_run.conclusion;
+                  console.log('WORKFLOW_RUN: PR #' + prNumber + ', Status: ' + context.payload.workflow_run.conclusion);
                 }
               } else if (context.eventName === 'issue_comment') {
-                if (debugMode) console.log('💬 ISSUE_COMMENT: Checking for Claude FINAL VERDICT...');
+                console.log('ISSUE_COMMENT: Checking for Claude FINAL VERDICT...');
 
                 const comment = context.payload.comment;
                 if (!comment || !comment.body) {
-                  if (debugMode) console.log('❌ No comment body found');
+                  console.log('No comment body found');
                   return;
                 }
 
@@ -103,37 +87,34 @@ jobs:
 
                 const isPR = context.payload.issue && context.payload.issue.pull_request;
 
-                if (debugMode) {
-                  console.log(`   - User: ${comment.user.login}`);
-                  console.log(`   - Is Claude bot: ${isClaudeBot}`);
-                  console.log(`   - Has FINAL VERDICT: ${hasFinalVerdict}`);
-                  console.log(`   - Is PR: ${isPR}`);
-                }
+                console.log('User: ' + comment.user.login);
+                console.log('Is Claude bot: ' + isClaudeBot);
+                console.log('Has FINAL VERDICT: ' + hasFinalVerdict);
+                console.log('Is PR: ' + isPR);
 
                 if (isClaudeBot && hasFinalVerdict && isPR) {
                   shouldRun = true;
                   prNumber = context.payload.issue.number;
                   triggerReason = 'Claude posted FINAL VERDICT comment';
-                  if (debugMode) console.log(`✅ ISSUE_COMMENT: Claude FINAL VERDICT found in PR #${prNumber}`);
+                  console.log('ISSUE_COMMENT: Claude FINAL VERDICT found in PR #' + prNumber);
                 } else {
-                  if (debugMode) console.log('❌ ISSUE_COMMENT: Not a Claude FINAL VERDICT comment');
+                  console.log('ISSUE_COMMENT: Not a Claude FINAL VERDICT comment');
                 }
               } else if (context.eventName === 'workflow_dispatch') {
-                if (debugMode) console.log('🔧 WORKFLOW_DISPATCH: Manual trigger...');
+                console.log('WORKFLOW_DISPATCH: Manual trigger...');
                 shouldRun = true;
                 prNumber = parseInt(context.payload.inputs.pr_number);
                 triggerReason = 'Manual workflow dispatch';
-                if (debugMode) console.log(`✅ WORKFLOW_DISPATCH: Manual trigger for PR #${prNumber}`);
+                console.log('WORKFLOW_DISPATCH: Manual trigger for PR #' + prNumber);
               }
             } catch (error) {
-              console.error(`❌ ERROR in trigger check: ${error.message}`);
-              console.error(`Stack: ${error.stack}`);
+              console.error('ERROR in trigger check: ' + error.message);
             }
 
-            console.log(`🎯 RESULT: Event=${context.eventName}, ShouldRun=${shouldRun}, PR=${prNumber}, Reason=${triggerReason}`);
+            console.log('RESULT: Event=' + context.eventName + ', ShouldRun=' + shouldRun + ', PR=' + prNumber + ', Reason=' + triggerReason);
 
             core.setOutput('should_run', shouldRun.toString());
-            core.setOutput('pr_number', prNumber?.toString() || '');
+            core.setOutput('pr_number', prNumber ? prNumber.toString() : '');
             core.setOutput('trigger_reason', triggerReason);
 
   # Wait for Priority 1 workflow completion before proceeding
