@@ -3,6 +3,17 @@
 The official plugin that integrates your WordPress/WooCommerce site with the Blaze Commerce service.
 
 **Version:** 1.14.5
+
+## 🚀 Quick Start Guide
+
+For new users, follow these simple steps to get started:
+
+1. **Install the Plugin**: Upload and activate the plugin in your WordPress admin
+2. **Configure Settings**: Navigate to the Blaze Commerce settings page
+3. **Connect Your Store**: Follow the setup wizard to connect your WooCommerce store
+4. **Test Integration**: Verify the connection is working properly
+
+For detailed setup instructions, see our [documentation](docs/).
 **Author:** Blaze Commerce
 **Plugin URI:** https://www.blazecommerce.io
 **Author URI:** https://www.blazecommerce.io
