@@ -2,7 +2,7 @@ name: "✅ Priority 2: Claude AI Approval Gate"
 
 # This workflow creates a required status check that only passes when Claude AI has approved the PR
 # Use this with GitHub Branch Protection Rules to block merging until Claude AI approval
-# Priority 2: Runs after Claude AI Review (Priority 1) completes
+# Priority 2: Runs after Claude AI Review (Priority 1) completes and evaluates official Claude App feedback
 
 on:
   pull_request:
@@ -12,10 +12,10 @@ on:
   issue_comment:
     types: [created]
   workflow_run:
-    workflows: ["Priority 1: Claude AI PR Review"]
+    workflows: ["Priority 1: Claude AI Code Review"]
     types: [completed]
 
-# Priority 2: Wait for Priority 1 (Claude Review) to complete before running
+# Priority 2: Wait for Priority 1 (Claude AI Code Review) to complete before running
 concurrency:
   group: priority-2-claude-approval-pr-${{ github.event.pull_request.number || github.event.number }}
   cancel-in-progress: false  # Don't cancel to ensure approval gate completion
@@ -76,7 +76,7 @@ jobs:
     needs: [check-trigger]
     if: needs.check-trigger.outputs.should_run == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ vars.CLAUDE_DEPENDENCY_CHECK_TIMEOUT || 5 }}
+    timeout-minutes: ${{ vars.CLAUDE_DEPENDENCY_CHECK_TIMEOUT || 15 }}
     outputs:
       claude-review-completed: ${{ steps.check-completion.outputs.completed }}
       claude-review-conclusion: ${{ steps.check-completion.outputs.conclusion }}
@@ -116,33 +116,42 @@ jobs:
               if (context.eventName === 'workflow_run') {
                 completed = true;
                 conclusion = context.payload.workflow_run.conclusion;
-                shouldProceed = true;
+                // Only proceed if the Claude review workflow completed successfully
+                shouldProceed = conclusion === 'success';
                 console.log(`SUCCESS: Claude review workflow completed via workflow_run event: ${conclusion}`);
+                if (!shouldProceed) {
+                  console.log(`WARNING: Claude review workflow failed with conclusion: ${conclusion}`);
+                }
               } else {
-                // For other events, check if Claude review workflow has completed
-                const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  per_page: 50
-                });
+                // For other events (PR synchronize, comments), proceed immediately to check for existing Claude reviews
+                // This allows the approval gate to work even if Priority 1 workflow is still running or failed
+                console.log(`INFO: Event type ${context.eventName} - proceeding to check for existing Claude reviews`);
+                shouldProceed = true;
+                completed = true;
+                conclusion = 'success';
 
-                // Find the most recent Claude review run for this PR
-                const claudeReviewRun = workflowRuns.workflow_runs.find(run =>
-                  run.name === 'Priority 1: Claude AI PR Review' &&
-                  (run.head_branch?.includes(`pr-${prNumber}`) ||
-                   run.display_title?.includes(`#${prNumber}`) ||
-                   run.pull_requests?.some(pr => pr.number == prNumber))
-                );
+                // Optional: Still check for recent workflow runs for debugging
+                try {
+                  const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    per_page: 10
+                  });
 
-                if (claudeReviewRun) {
-                  completed = claudeReviewRun.status === 'completed';
-                  conclusion = claudeReviewRun.conclusion || 'unknown';
-                  shouldProceed = true;
-                  console.log(`SUCCESS: Found Claude review run: ${claudeReviewRun.status} (${conclusion})`);
-                } else {
-                  // No Claude review found, but we should still proceed to check status
-                  shouldProceed = true;
-                  console.log('WARNING: No Claude review workflow found, proceeding with status check');
+                  const claudeReviewRun = workflowRuns.workflow_runs.find(run =>
+                    run.name === 'Priority 1: Claude AI Code Review' &&
+                    (run.head_branch?.includes(`pr-${prNumber}`) ||
+                     run.display_title?.includes(`#${prNumber}`) ||
+                     run.pull_requests?.some(pr => pr.number == prNumber))
+                  );
+
+                  if (claudeReviewRun) {
+                    console.log(`DEBUG: Found recent Claude review run: ${claudeReviewRun.status} (${claudeReviewRun.conclusion})`);
+                  } else {
+                    console.log('DEBUG: No recent Claude review workflow found');
+                  }
+                } catch (error) {
+                  console.log(`DEBUG: Error checking workflow runs: ${error.message}`);
                 }
               }
             } catch (error) {
@@ -188,7 +197,7 @@ jobs:
       - name: Get Current Status
         id: current-status
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
           GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -197,7 +206,7 @@ jobs:
       - name: Enhanced Claude AI Approval Check
         id: check-approval
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
         uses: actions/github-script@v7
         with:
@@ -252,9 +261,148 @@ jobs:
                 statusDescription = 'Waiting for Claude AI review to complete';
                 reason = 'Claude AI review in progress';
               } else {
-                // Fallback: check for manual approvals in PR reviews
-                console.log('RETRY: Fallback: Checking PR reviews for manual Claude AI approval...');
+                // New Architecture: Check for official Claude App review and @blazecommerce-claude-ai approval
+                console.log('INFO: Checking for official Claude App review and @blazecommerce-claude-ai approval...');
 
+                // Step 1: Check for official Claude App review comments
+                const comments = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  per_page: 100
+                });
+
+                // Enhanced Claude comment detection - look for any comment with FINAL VERDICT
+                const claudeAppComments = comments.data.filter(comment => {
+                  const isClaudeUser = comment.user.login === 'claude[bot]' ||
+                                      comment.user.login === 'claude' ||
+                                      comment.user.login.includes('claude');
+
+                  const hasClaudeContent = comment.body && (
+                    comment.body.includes('Claude AI') ||
+                    comment.body.includes('FINAL VERDICT') ||
+                    comment.body.includes('### FINAL VERDICT') ||
+                    (comment.body.includes('Status') && comment.body.includes('APPROVED'))
+                  );
+
+                  const isRelevant = isClaudeUser || hasClaudeContent;
+
+                  if (isRelevant) {
+                    console.log(`🎯 FOUND RELEVANT COMMENT: User=${comment.user.login}, HasFinalVerdict=${comment.body.includes('FINAL VERDICT')}`);
+                  }
+
+                  return isRelevant;
+                });
+
+                console.log(`🔍 DETECTION DEBUG: Found ${claudeAppComments.length} Claude App comment(s) out of ${comments.data.length} total comments`);
+
+                // Debug: Log ALL comments for troubleshooting
+                console.log('📝 ALL COMMENTS ANALYSIS:');
+                comments.data.forEach((comment, index) => {
+                  console.log(`Comment ${index + 1}: User=${comment.user.login}, Created=${comment.created_at}`);
+                  console.log(`Comment ${index + 1} body contains "FINAL VERDICT":`, comment.body.includes('FINAL VERDICT'));
+                  console.log(`Comment ${index + 1} body contains "Status":`, comment.body.includes('Status'));
+                  if (comment.body.includes('FINAL VERDICT') || comment.body.includes('Status')) {
+                    console.log(`Comment ${index + 1} RELEVANT CONTENT:`, comment.body.substring(0, 500) + '...');
+                  }
+                });
+
+                // Debug: Log Claude-specific comments
+                console.log('🤖 CLAUDE COMMENTS ANALYSIS:');
+                claudeAppComments.forEach((comment, index) => {
+                  console.log(`Claude Comment ${index + 1}: User=${comment.user.login}, Created=${comment.created_at}`);
+                  console.log(`Claude Comment ${index + 1} preview:`, comment.body.substring(0, 300) + '...');
+                });
+
+                // Step 2: Analyze Claude's feedback using standardized format from CLAUDE.md
+                let hasRequiredIssues = false;
+                let claudeReviewFound = false;
+                let claudeApprovalStatus = 'unknown';
+
+                for (const comment of claudeAppComments) {
+                  claudeReviewFound = true;
+                  console.log(`Analyzing Claude comment from ${comment.user.login}`);
+
+                  // Check for standardized Final Verdict section with enhanced detection
+                  console.log('🔍 SEARCHING FOR FINAL VERDICT SECTION...');
+                  console.log('📄 Comment body length:', comment.body.length);
+                  console.log('📄 Comment contains "FINAL VERDICT":', comment.body.includes('FINAL VERDICT'));
+                  console.log('📄 Comment contains "Status":', comment.body.includes('Status'));
+
+                  // Show relevant part of comment for debugging
+                  const finalVerdictIndex = comment.body.indexOf('FINAL VERDICT');
+                  if (finalVerdictIndex !== -1) {
+                    const relevantSection = comment.body.substring(finalVerdictIndex, finalVerdictIndex + 300);
+                    console.log('📄 FINAL VERDICT SECTION:', relevantSection);
+                  }
+
+                  // Primary detection for bracketed format [APPROVED]
+                  console.log('🔍 Testing Pattern 1: Bracketed format [APPROVED]');
+                  let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+                  let detectionMethod = 'bracketed';
+                  console.log('🔍 Pattern 1 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
+
+                  // Fallback to plain text format APPROVED
+                  if (!finalVerdictMatch) {
+                    console.log('🔍 Testing Pattern 2: Plain text format APPROVED');
+                    finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([A-Z\s]+)(?:\*\*|\n)/i);
+                    detectionMethod = 'plain-text';
+                    console.log('🔍 Pattern 2 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
+                  }
+
+                  // Additional fallback for any status after "Status:"
+                  if (!finalVerdictMatch) {
+                    console.log('🔍 Testing Pattern 3: Loose match for any Status');
+                    finalVerdictMatch = comment.body.match(/\*\*Status\*\*:\s*([A-Z\s]+?)(?:\s*\*\*|\s*\n)/i);
+                    detectionMethod = 'loose-match';
+                    console.log('🔍 Pattern 3 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
+                  }
+
+                  if (finalVerdictMatch) {
+                    const status = finalVerdictMatch[1].trim();
+                    console.log(`Found Final Verdict status: "${status}" using ${detectionMethod} detection`);
+
+                    // Handle both bracketed format [APPROVED] and plain text APPROVED
+                    if (status === 'APPROVED' || (status.includes('APPROVED') && !status.includes('CONDITIONAL'))) {
+                      claudeApprovalStatus = 'approved';
+                      console.log('✅ Claude approved the PR');
+                    } else if (status === 'BLOCKED' || status.includes('BLOCKED')) {
+                      claudeApprovalStatus = 'blocked';
+                      hasRequiredIssues = true;
+                      console.log('❌ Claude blocked the PR');
+                    } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL')) {
+                      claudeApprovalStatus = 'conditional';
+                      console.log('⚠️ Claude conditionally approved the PR');
+                    } else {
+                      console.log(`❓ Unknown status format: "${status}"`);
+                    }
+                  } else {
+                    console.log('❌ No FINAL VERDICT status found in comment');
+                    console.log('Comment preview:', comment.body.substring(0, 500) + '...');
+                  }
+
+                  // Also check for Critical Issues section content
+                  const criticalIssuesMatch = comment.body.match(/\*\*CRITICAL ISSUES\*\*([\s\S]*?)(?=\*\*STRENGTHS\*\*|\*\*AREAS FOR IMPROVEMENT\*\*|\*\*PERFORMANCE CONSIDERATIONS\*\*|\*\*SECURITY ASSESSMENT\*\*|###|$)/i);
+                  if (criticalIssuesMatch) {
+                    const criticalContent = criticalIssuesMatch[1].trim();
+                    // Check if there's actual content (not just empty lines or dashes)
+                    if (criticalContent && criticalContent.length > 10 && !criticalContent.match(/^[\s\-_]*$/)) {
+                      hasRequiredIssues = true;
+                      console.log('Found content in Critical Issues section');
+                    }
+                  }
+
+                  // Fallback: Check for legacy patterns if standardized format not found
+                  if (claudeApprovalStatus === 'unknown') {
+                    if (comment.body.match(/CRITICAL:\s*REQUIRED|REQUIRED.*issues?|must\s+be\s+fixed|critical\s+bugs?/i)) {
+                      hasRequiredIssues = true;
+                      claudeApprovalStatus = 'blocked';
+                      console.log('Found REQUIRED issues using legacy pattern matching');
+                    }
+                  }
+                }
+
+                // Step 3: Check for @blazecommerce-claude-ai approval
                 const reviews = await github.rest.pulls.listReviews({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
@@ -262,26 +410,47 @@ jobs:
                   per_page: 100
                 });
 
-                const claudeReviews = reviews.data.filter(review =>
-                  (review.user.login === 'blazecommerce-claude-ai' ||
-                   review.user.login === 'github-actions[bot]' ||
-                   review.user.login === 'claude[bot]' ||
-                   (review.body && review.body.includes('BlazeCommerce Claude AI Review Bot')))
+                const blazeClaudeApproval = reviews.data.find(review =>
+                  review.user.login === 'blazecommerce-claude-ai' && review.state === 'APPROVED'
                 );
 
-                const claudeApproval = claudeReviews.find(review => review.state === 'APPROVED');
-
-                if (claudeApproval) {
+                // Step 4: Determine approval status based on standardized Claude review format
+                if (blazeClaudeApproval) {
                   approved = true;
                   statusState = 'success';
-                  statusDescription = `Approved by ${claudeApproval.user.login}`;
-                  reason = 'Manual Claude AI approval found';
-                  console.log(`SUCCESS: Found manual Claude AI approval by ${claudeApproval.user.login}`);
+                  statusDescription = 'Approved by @blazecommerce-claude-ai after Claude review';
+                  reason = '@blazecommerce-claude-ai approval found';
+                  console.log('SUCCESS: Found @blazecommerce-claude-ai approval');
+                } else if (claudeReviewFound && claudeApprovalStatus === 'approved') {
+                  approved = false;
+                  statusState = 'pending';
+                  statusDescription = 'Claude approved - waiting for @blazecommerce-claude-ai to approve';
+                  reason = 'Claude approved with APPROVED status - awaiting @blazecommerce-claude-ai approval';
+                  console.log('INFO: Claude approved - awaiting @blazecommerce-claude-ai approval');
+                } else if (claudeReviewFound && claudeApprovalStatus === 'conditional') {
+                  approved = false;
+                  statusState = 'pending';
+                  statusDescription = 'Claude conditionally approved - waiting for @blazecommerce-claude-ai to approve';
+                  reason = 'Claude conditionally approved with CONDITIONAL APPROVAL - awaiting @blazecommerce-claude-ai approval';
+                  console.log('INFO: Claude conditionally approved - awaiting @blazecommerce-claude-ai approval');
+                } else if (claudeReviewFound && (claudeApprovalStatus === 'blocked' || hasRequiredIssues)) {
+                  approved = false;
+                  statusState = 'failure';
+                  statusDescription = 'Blocked by critical issues from Claude review';
+                  reason = 'Claude found critical issues that must be addressed (BLOCKED status)';
+                  console.log('BLOCKED: Claude found critical issues');
+                } else if (claudeReviewFound && !hasRequiredIssues) {
+                  approved = false;
+                  statusState = 'pending';
+                  statusDescription = 'Waiting for @blazecommerce-claude-ai to approve (no critical issues found)';
+                  reason = 'Claude reviewed with no critical issues - awaiting @blazecommerce-claude-ai approval';
+                  console.log('INFO: Claude review complete with no critical issues - awaiting @blazecommerce-claude-ai approval');
                 } else {
                   approved = false;
                   statusState = 'pending';
-                  statusDescription = 'Waiting for Claude AI approval';
-                  reason = 'No Claude AI approval found';
+                  statusDescription = 'Waiting for official Claude App review';
+                  reason = 'No Claude App review found yet';
+                  console.log('WAITING: No Claude App review found yet');
                 }
               }
 
@@ -301,15 +470,23 @@ jobs:
 
             console.log(`ANALYSIS: Final result: approved=${approved}, state=${statusState}, reason=${reason}`);
 
+      - name: Validate Required Token
+        run: |
+          if [ -z "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "ERROR: BOT_GITHUB_TOKEN secret is required for secure operation"
+            echo "Please configure BOT_GITHUB_TOKEN in repository secrets"
+            exit 1
+          fi
+          echo "SUCCESS: BOT_GITHUB_TOKEN is configured"
+
       - name: Update Approval Status
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           PR_NUMBER: ${{ needs.check-trigger.outputs.pr_number }}
           GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          STATUS_STATE: ${{ steps.check-approval.outputs.status_state }}
+          STATUS_DESCRIPTION: ${{ steps.check-approval.outputs.status_description }}
         run: |
-          STATUS_STATE="${{ steps.check-approval.outputs.status_state }}"
-          STATUS_DESCRIPTION="${{ steps.check-approval.outputs.status_description }}"
-
           echo "INFO: Updating approval status: $STATUS_STATE - $STATUS_DESCRIPTION"
 
           # Use status manager to set the approval status
@@ -323,8 +500,8 @@ jobs:
 
             statusManager.setApprovalStatus(
               process.env.GITHUB_SHA,
-              '$STATUS_STATE',
-              '$STATUS_DESCRIPTION',
+              process.env.STATUS_STATE,
+              process.env.STATUS_DESCRIPTION,
               parseInt(process.env.PR_NUMBER)
             ).then(() => {
               console.log('SUCCESS: Approval status updated successfully');
@@ -354,49 +531,53 @@ jobs:
             let commentBody = '';
 
             if (triggerReason === '@claude mention in comment') {
-              commentBody = `## BOT: Claude AI Re-evaluation Triggered
-
-              Claude AI approval status has been re-evaluated based on your request.
-
-              ### ANALYSIS: Current Status
-              - **Approval Status**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not Approved'}
-              - **Details**: ${statusDescription}
-              - **Reason**: ${reason}
-
-              ${approved ?
-                'COMPLETED: **This PR is now ready to merge** (subject to other branch protection rules).' :
-                'WARNING: **This PR is not yet ready to merge.** Please address any outstanding issues.'
-              }
-
-              ---
-              *Re-evaluation completed in response to @claude mention*`;
+              commentBody = [
+                "## BOT: Claude AI Re-evaluation Triggered",
+                "",
+                "Claude AI approval status has been re-evaluated based on your request.",
+                "",
+                "### ANALYSIS: Current Status",
+                `- **Approval Status**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not Approved'}`,
+                `- **Details**: ${statusDescription}`,
+                `- **Reason**: ${reason}`,
+                "",
+                approved ?
+                  'COMPLETED: **This PR is now ready to merge** (subject to other branch protection rules).' :
+                  'WARNING: **This PR is not yet ready to merge.** Please address any outstanding issues.',
+                "",
+                "---",
+                "*Re-evaluation completed in response to @claude mention*"
+              ].join('\n');
             } else {
               // First time comment for new PRs
-              commentBody = `## SECURITY: Claude AI Approval Gate
-
-              This PR requires approval from the Claude AI Review Bot before it can be merged.
-
-              ### SUMMARY: Current Status
-              - **Claude AI Approval**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not yet approved'}
-              - **Details**: ${statusDescription}
-              - **Merge Status**: ${approved ? 'SUCCESS: Ready to merge' : ' Blocked until approval'}
-
-              ### RETRY: Next Steps
-              ${approved ?
-                'This PR has been approved and is ready for merge (subject to other branch protection rules).' :
-                `1. Wait for the Claude AI Review Bot to analyze your PR
-              2. Address any REQUIRED recommendations if found
-              3. Once approved by Claude AI, this check will pass automatically
-              4. The PR will then be ready for merge`
-              }
-
-              ### INFO: About This Check
-              This is an automated gate that ensures all PRs receive Claude AI review before merging. The check will update automatically when Claude AI provides approval.
-
-              TIP: **Tip**: You can mention @claude in a comment to trigger a re-evaluation of the approval status.
-
-              ---
-              *Claude AI Approval Gate - Automated Merge Protection*`;
+              commentBody = [
+                "## SECURITY: Claude AI Approval Gate",
+                "",
+                "This PR requires approval from the Claude AI Review Bot before it can be merged.",
+                "",
+                "### SUMMARY: Current Status",
+                `- **Claude AI Approval**: ${approved ? 'SUCCESS: Approved' : 'ERROR: Not yet approved'}`,
+                `- **Details**: ${statusDescription}`,
+                `- **Merge Status**: ${approved ? 'SUCCESS: Ready to merge' : ' Blocked until approval'}`,
+                "",
+                "### RETRY: Next Steps",
+                approved ?
+                  'This PR has been approved and is ready for merge (subject to other branch protection rules).' :
+                  [
+                    '1. Wait for the Claude AI Review Bot to analyze your PR',
+                    '2. Address any REQUIRED recommendations if found',
+                    '3. Once approved by Claude AI, this check will pass automatically',
+                    '4. The PR will then be ready for merge'
+                  ].join('\n'),
+                "",
+                "### INFO: About This Check",
+                "This is an automated gate that ensures all PRs receive Claude AI review before merging. The check will update automatically when Claude AI provides approval.",
+                "",
+                "TIP: **Tip**: You can mention @claude in a comment to trigger a re-evaluation of the approval status.",
+                "",
+                "---",
+                "*Claude AI Approval Gate - Automated Merge Protection*"
+              ].join('\n');
             }
 
             await github.rest.issues.createComment({
@@ -407,3 +588,360 @@ jobs:
             });
 
             console.log(`NOTE: Posted ${triggerReason === '@claude mention in comment' ? 're-evaluation' : 'initial'} status comment`);
+
+  # New job: @blazecommerce-claude-ai auto-approval logic
+  blazecommerce-claude-ai-approval:
+    needs: [check-trigger]
+    if: needs.check-trigger.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Evaluate Claude Review for Auto-Approval
+        id: evaluate-review
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ needs.check-trigger.outputs.pr_number }};
+
+            if (!prNumber) {
+              console.log('ERROR: Could not determine PR number');
+              core.setOutput('should_approve', 'false');
+              core.setOutput('reason', 'No PR number found');
+              return;
+            }
+
+            console.log(`🚀 BLAZECOMMERCE AUTO-APPROVAL: Evaluating Claude review for PR #${prNumber}`);
+
+            try {
+              // Check for official Claude App review comments
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                per_page: 100
+              });
+
+              console.log(`📊 TOTAL COMMENTS FOUND: ${comments.data.length}`);
+
+              // Enhanced Claude comment detection - look for any comment with FINAL VERDICT
+              const claudeAppComments = comments.data.filter(comment => {
+                const isClaudeUser = comment.user.login === 'claude[bot]' ||
+                                    comment.user.login === 'claude' ||
+                                    comment.user.login.includes('claude');
+
+                const hasClaudeContent = comment.body && (
+                  comment.body.includes('Claude AI') ||
+                  comment.body.includes('FINAL VERDICT') ||
+                  comment.body.includes('### FINAL VERDICT') ||
+                  (comment.body.includes('Status') && comment.body.includes('APPROVED'))
+                );
+
+                const isRelevant = isClaudeUser || hasClaudeContent;
+
+                if (isRelevant) {
+                  console.log(`🎯 FOUND RELEVANT COMMENT: User=${comment.user.login}, HasFinalVerdict=${comment.body.includes('FINAL VERDICT')}`);
+                }
+
+                return isRelevant;
+              });
+
+              if (claudeAppComments.length === 0) {
+                console.log('❌ AUTO-APPROVAL: No Claude App review found yet - waiting');
+                core.setOutput('should_approve', 'false');
+                core.setOutput('reason', 'No Claude App review found');
+                return;
+              }
+
+              console.log(`✅ AUTO-APPROVAL: Found ${claudeAppComments.length} Claude App comment(s)`);
+
+              // Analyze Claude's feedback using standardized format from CLAUDE.md
+              let hasRequiredIssues = false;
+              let claudeReviewContent = '';
+              let claudeApprovalStatus = 'unknown';
+
+              for (const comment of claudeAppComments) {
+                claudeReviewContent += comment.body + '\n\n';
+
+                // Check for standardized Final Verdict section with enhanced detection
+                console.log('🔍 AUTO-APPROVAL: SEARCHING FOR FINAL VERDICT SECTION...');
+                console.log('📄 Comment body length:', comment.body.length);
+                console.log('📄 Comment contains "FINAL VERDICT":', comment.body.includes('FINAL VERDICT'));
+                console.log('📄 Comment contains "Status":', comment.body.includes('Status'));
+
+                // Show relevant part of comment for debugging
+                const finalVerdictIndex = comment.body.indexOf('FINAL VERDICT');
+                if (finalVerdictIndex !== -1) {
+                  const relevantSection = comment.body.substring(finalVerdictIndex, finalVerdictIndex + 300);
+                  console.log('📄 FINAL VERDICT SECTION:', relevantSection);
+                }
+
+                // Primary detection for bracketed format [APPROVED]
+                console.log('🔍 AUTO-APPROVAL: Testing Pattern 1: Bracketed format [APPROVED]');
+                let finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*\[([^\]]+)\]/i);
+                let detectionMethod = 'bracketed';
+                console.log('🔍 AUTO-APPROVAL: Pattern 1 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
+
+                // Fallback to plain text format APPROVED
+                if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 2: Plain text format APPROVED');
+                  finalVerdictMatch = comment.body.match(/### FINAL VERDICT[\s\S]*?\*\*Status\*\*:\s*([A-Z\s]+)(?:\*\*|\n)/i);
+                  detectionMethod = 'plain-text';
+                  console.log('🔍 AUTO-APPROVAL: Pattern 2 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
+                }
+
+                // Additional fallback for any status after "Status:"
+                if (!finalVerdictMatch) {
+                  console.log('🔍 AUTO-APPROVAL: Testing Pattern 3: Loose match for any Status');
+                  finalVerdictMatch = comment.body.match(/\*\*Status\*\*:\s*([A-Z\s]+?)(?:\s*\*\*|\s*\n)/i);
+                  detectionMethod = 'loose-match';
+                  console.log('🔍 AUTO-APPROVAL: Pattern 3 result:', finalVerdictMatch ? finalVerdictMatch[1] : 'NO MATCH');
+                }
+
+                if (finalVerdictMatch) {
+                  const status = finalVerdictMatch[1].trim();
+                  console.log(`Found Final Verdict status: "${status}" using ${detectionMethod} detection`);
+
+                  // Handle both bracketed format [APPROVED] and plain text APPROVED
+                  if (status === 'APPROVED' || (status.includes('APPROVED') && !status.includes('CONDITIONAL'))) {
+                    claudeApprovalStatus = 'approved';
+                    console.log('✅ Claude approved the PR');
+                  } else if (status === 'BLOCKED' || status.includes('BLOCKED')) {
+                    claudeApprovalStatus = 'blocked';
+                    hasRequiredIssues = true;
+                    console.log('❌ Claude blocked the PR');
+                  } else if (status === 'CONDITIONAL APPROVAL' || status.includes('CONDITIONAL')) {
+                    claudeApprovalStatus = 'conditional';
+                    console.log('⚠️ Claude conditionally approved the PR');
+                  } else {
+                    console.log(`❓ Unknown status format: "${status}"`);
+                  }
+                } else {
+                  console.log('❌ No FINAL VERDICT status found in comment');
+                  console.log('Comment preview:', comment.body.substring(0, 500) + '...');
+                }
+
+                // Also check for Critical Issues section content
+                const criticalIssuesMatch = comment.body.match(/\*\*CRITICAL ISSUES\*\*([\s\S]*?)(?=\*\*STRENGTHS\*\*|\*\*AREAS FOR IMPROVEMENT\*\*|\*\*PERFORMANCE CONSIDERATIONS\*\*|\*\*SECURITY ASSESSMENT\*\*|###|$)/i);
+                if (criticalIssuesMatch) {
+                  const criticalContent = criticalIssuesMatch[1].trim();
+                  // Check if there's actual content (not just empty lines or dashes)
+                  if (criticalContent && criticalContent.length > 10 && !criticalContent.match(/^[\s\-_]*$/)) {
+                    hasRequiredIssues = true;
+                    console.log('Found content in Critical Issues section');
+                  }
+                }
+
+                // Fallback: Check for legacy patterns if standardized format not found
+                if (claudeApprovalStatus === 'unknown') {
+                  if (comment.body.match(/CRITICAL:\s*REQUIRED|REQUIRED.*issues?|must\s+be\s+fixed|critical\s+bugs?/i)) {
+                    hasRequiredIssues = true;
+                    claudeApprovalStatus = 'blocked';
+                    console.log('Found REQUIRED issues using legacy pattern matching');
+                  } else if (comment.body.match(/no\s+critical\s+issues|ready\s+to\s+merge|looks\s+good/i)) {
+                    claudeApprovalStatus = 'approved';
+                    console.log('Found approval indicators using legacy pattern matching');
+                  }
+                }
+
+                // Additional validation: Check for implementation verification language
+                if (claudeApprovalStatus === 'approved' && comment.body.match(/previous.*changes.*not.*implemented|required.*changes.*missing|still.*need.*to.*address/i)) {
+                  claudeApprovalStatus = 'blocked';
+                  hasRequiredIssues = true;
+                  console.log('Detected unimplemented previous changes - overriding to blocked status');
+                }
+              }
+
+              // Check if @blazecommerce-claude-ai has already approved
+              const reviews = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                per_page: 100
+              });
+
+              const existingApproval = reviews.data.find(review =>
+                review.user.login === 'blazecommerce-claude-ai' && review.state === 'APPROVED'
+              );
+
+              if (existingApproval) {
+                console.log('INFO: @blazecommerce-claude-ai has already approved this PR');
+                core.setOutput('should_approve', 'false');
+                core.setOutput('reason', 'Already approved');
+                return;
+              }
+
+              // Decision logic based on standardized Claude review format
+              console.log('🔍 DECISION LOGIC DEBUG:');
+              console.log(`   claudeApprovalStatus: "${claudeApprovalStatus}"`);
+              console.log(`   hasRequiredIssues: ${hasRequiredIssues}`);
+              console.log(`   claudeReviewContent length: ${claudeReviewContent.length}`);
+
+              if (claudeApprovalStatus === 'approved' && !hasRequiredIssues) {
+                console.log('✅ SUCCESS: Claude approved with APPROVED status - eligible for auto-approval');
+                core.setOutput('should_approve', 'true');
+                core.setOutput('reason', 'Claude approved with APPROVED status and no critical issues');
+                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
+              } else if (claudeApprovalStatus === 'conditional' && !hasRequiredIssues) {
+                console.log('✅ SUCCESS: Claude conditionally approved with CONDITIONAL APPROVAL - eligible for auto-approval');
+                core.setOutput('should_approve', 'true');
+                core.setOutput('reason', 'Claude conditionally approved with CONDITIONAL APPROVAL and no critical issues');
+                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
+              } else if (claudeApprovalStatus === 'blocked' || hasRequiredIssues) {
+                console.log('❌ BLOCKED: Claude blocked with BLOCKED status or critical issues found - cannot auto-approve');
+                core.setOutput('should_approve', 'false');
+                core.setOutput('reason', 'Claude blocked with BLOCKED status or critical issues found');
+              } else if (!hasRequiredIssues) {
+                console.log('✅ SUCCESS: No critical issues found - eligible for auto-approval');
+                core.setOutput('should_approve', 'true');
+                core.setOutput('reason', 'No critical issues found in Claude review');
+                core.setOutput('claude_review_summary', claudeReviewContent.substring(0, 1000) + '...');
+              } else {
+                console.log('❌ BLOCKED: Critical issues found - cannot auto-approve');
+                core.setOutput('should_approve', 'false');
+                core.setOutput('reason', 'Critical issues found in Claude review');
+              }
+
+              // CRITICAL DEBUG: Show final decision
+              const finalDecision = (claudeApprovalStatus === 'approved' && !hasRequiredIssues) ||
+                                   (claudeApprovalStatus === 'conditional' && !hasRequiredIssues) ||
+                                   (!hasRequiredIssues);
+              console.log(`🎯 FINAL DECISION: should_approve = ${finalDecision}`);
+              console.log(`🎯 DECISION REASON: claudeApprovalStatus="${claudeApprovalStatus}", hasRequiredIssues=${hasRequiredIssues}`);
+
+            } catch (error) {
+              console.error(`ERROR: Failed to evaluate Claude review: ${error.message}`);
+              core.setOutput('should_approve', 'false');
+              core.setOutput('reason', `Error: ${error.message}`);
+            }
+
+      - name: Auto-Approve PR as @blazecommerce-claude-ai
+        if: steps.evaluate-review.outputs.should_approve == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          script: |
+            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
+            const shouldApprove = '${{ steps.evaluate-review.outputs.should_approve }}';
+            const reason = '${{ steps.evaluate-review.outputs.reason }}';
+
+            console.log(`🚀 AUTO-APPROVAL STEP EXECUTING!`);
+            console.log(`   PR Number: ${prNumber}`);
+            console.log(`   Should Approve: ${shouldApprove}`);
+            console.log(`   Reason: ${reason}`);
+            console.log(`🚀 EXECUTING APPROVAL API CALL...`);
+            console.log(`📡 API Call: POST /repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNumber}/reviews`);
+
+            try {
+              const approvalResponse = await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                event: 'APPROVE',
+                body: [
+                  "## BlazeCommerce Claude AI Review - Auto-Approved",
+                  "",
+                  "**Automated approval by @blazecommerce-claude-ai**",
+                  "",
+                  "### Review Summary",
+                  "- Official Claude GitHub App completed comprehensive review",
+                  "- No CRITICAL: REQUIRED issues found",
+                  "- Code meets BlazeCommerce quality standards",
+                  "- All security and performance checks passed",
+                  "",
+                  "### Claude AI Analysis",
+                  "The official Claude App has reviewed this PR and found no blocking issues. The code follows WordPress plugin best practices and BlazeCommerce development standards.",
+                  "",
+                  "### Next Steps",
+                  "This PR is now approved and ready for merge (subject to other branch protection rules and checks).",
+                  "",
+                  "---",
+                  "*Automated approval by BlazeCommerce Claude AI Review System*",
+                  "*Based on official Claude GitHub App analysis*"
+                ].join('\n')
+              });
+
+              console.log('✅ SUCCESS: Approval API call completed!');
+              console.log(`📋 Review ID: ${approvalResponse.data.id}`);
+              console.log(`📋 Review State: ${approvalResponse.data.state}`);
+              console.log(`📋 Review URL: ${approvalResponse.data.html_url}`);
+              console.log('🎉 PR auto-approved by @blazecommerce-claude-ai');
+
+            } catch (error) {
+              console.error(`ERROR: Failed to auto-approve PR: ${error.message}`);
+
+              // Post error comment
+              try {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: [
+                    "## BlazeCommerce Claude AI Review - Approval Error",
+                    "",
+                    "**Error**: Failed to auto-approve this PR.",
+                    "",
+                    `**Details**: ${error.message}`,
+                    "",
+                    "**Action Required**: Manual approval needed.",
+                    "",
+                    "*Please contact repository administrators if this issue persists.*"
+                  ].join('\n')
+                });
+              } catch (commentError) {
+                console.error(`ERROR: Failed to post error comment: ${commentError.message}`);
+              }
+            }
+
+      - name: Post Blocking Issues Comment
+        if: steps.evaluate-review.outputs.should_approve == 'false' && steps.evaluate-review.outputs.reason == 'REQUIRED issues found in Claude review'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          script: |
+            const prNumber = '${{ needs.check-trigger.outputs.pr_number }}';
+
+            console.log(`INFO: Posting blocking issues comment for PR #${prNumber}`);
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: [
+                  "## BlazeCommerce Claude AI Review - Approval Blocked",
+                  "",
+                  "**Status**: Cannot auto-approve due to REQUIRED issues",
+                  "",
+                  "### Action Required",
+                  "The official Claude GitHub App has identified **CRITICAL: REQUIRED** issues that must be addressed before this PR can be approved.",
+                  "",
+                  "### Next Steps",
+                  "1. Review Claude's feedback above for specific REQUIRED issues",
+                  "2. Address all CRITICAL: REQUIRED items",
+                  "3. Push your changes to trigger a new review",
+                  "4. @blazecommerce-claude-ai will automatically approve once all REQUIRED issues are resolved",
+                  "",
+                  "### Re-evaluation",
+                  "This PR will be automatically re-evaluated when:",
+                  "- New commits are pushed",
+                  "- Claude provides an updated review",
+                  "- All REQUIRED issues are addressed",
+                  "",
+                  "---",
+                  "*Automated blocking by BlazeCommerce Claude AI Review System*",
+                  "*Based on official Claude GitHub App analysis*"
+                ].join('\n')
+              });
+
+              console.log('SUCCESS: Posted blocking issues comment');
+
+            } catch (error) {
+              console.error(`ERROR: Failed to post blocking comment: ${error.message}`);
+            }
