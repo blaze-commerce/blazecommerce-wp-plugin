@@ -22,11 +22,23 @@ jobs:
         id: get-pr
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             let prNumber = null;
             let shouldRun = false;
-            
+
+            console.log('🔍 CLAUDE AUTO-APPROVAL WORKFLOW - AUTHENTICATION FIX');
+            console.log('=' .repeat(60));
             console.log('Event: ' + context.eventName);
+            console.log('🔐 Authentication: Using BOT_GITHUB_TOKEN for @blazecommerce-claude-ai');
+
+            // Verify authentication
+            try {
+              const { data: user } = await github.rest.users.getAuthenticated();
+              console.log(`✅ Authenticated as: ${user.login} (${user.type})`);
+            } catch (authError) {
+              console.error(`❌ Authentication error: ${authError.message}`);
+            }
             
             if (context.eventName === 'workflow_run') {
               console.log('WORKFLOW_RUN trigger detected');
@@ -72,6 +84,7 @@ jobs:
         id: evaluate
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           script: |
             const prNumber = '${{ steps.get-pr.outputs.pr_number }}';
             console.log('Evaluating Claude approval for PR #' + prNumber);
@@ -119,18 +132,87 @@ jobs:
             
             if (claudeApproval === 'APPROVED') {
               console.log('✅ Auto-approving PR #' + prNumber + ' based on Claude AI approval');
-              
-              // Auto-approve the PR
-              await github.rest.pulls.createReview({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: parseInt(prNumber),
-                event: 'APPROVE',
-                body: '✅ **Auto-approved by Claude AI**\n\nClaude AI has reviewed this PR and provided approval. This automated approval is based on Claude\'s comprehensive security and code quality analysis.\n\n**Status:** APPROVED by Claude AI\n**Trigger:** ' + context.eventName
-              });
-              
-              console.log('✅ Successfully auto-approved PR #' + prNumber);
-              core.setOutput('result', 'APPROVED');
+              console.log('🔐 Authentication: Using BOT_GITHUB_TOKEN for @blazecommerce-claude-ai');
+              console.log('📋 Repository: ' + context.repo.owner + '/' + context.repo.repo);
+              console.log('🎯 PR Number: ' + prNumber);
+
+              try {
+                // Auto-approve the PR with comprehensive error handling
+                console.log('🚀 Attempting to create approval review...');
+
+                const approvalResult = await github.rest.pulls.createReview({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: parseInt(prNumber),
+                  event: 'APPROVE',
+                  body: '✅ **Auto-approved by Claude AI**\n\nClaude AI has reviewed this PR and provided approval. This automated approval is based on Claude\'s comprehensive security and code quality analysis.\n\n**Status:** APPROVED by Claude AI\n**Trigger:** ' + context.eventName + '\n**Timestamp:** ' + new Date().toISOString()
+                });
+
+                console.log('✅ Successfully created approval review!');
+                console.log('📊 Review ID: ' + approvalResult.data.id);
+                console.log('👤 Review User: ' + approvalResult.data.user.login);
+                console.log('📅 Review Created: ' + approvalResult.data.submitted_at);
+                console.log('🔗 Review URL: ' + approvalResult.data.html_url);
+
+                // Verify the approval was created
+                const { data: reviews } = await github.rest.pulls.listReviews({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: parseInt(prNumber)
+                });
+
+                const botApproval = reviews.find(review =>
+                  review.user.login === 'blazecommerce-claude-ai' &&
+                  review.state === 'APPROVED'
+                );
+
+                if (botApproval) {
+                  console.log('✅ VERIFICATION SUCCESS: Bot approval confirmed in PR reviews');
+                  console.log('👤 Approver: ' + botApproval.user.login);
+                  console.log('📊 Review State: ' + botApproval.state);
+                } else {
+                  console.log('⚠️ WARNING: Bot approval not found in PR reviews - may need manual verification');
+                }
+
+                core.setOutput('result', 'APPROVED');
+                core.setOutput('review_id', approvalResult.data.id);
+                core.setOutput('review_url', approvalResult.data.html_url);
+
+              } catch (error) {
+                console.error('❌ CRITICAL ERROR: Failed to create approval review');
+                console.error('🔍 Error Type: ' + error.constructor.name);
+                console.error('📝 Error Message: ' + error.message);
+                console.error('📊 Error Status: ' + (error.status || 'unknown'));
+
+                if (error.response) {
+                  console.error('🌐 Response Status: ' + error.response.status);
+                  console.error('📄 Response Data: ' + JSON.stringify(error.response.data, null, 2));
+                }
+
+                // Check token permissions
+                try {
+                  const { data: user } = await github.rest.users.getAuthenticated();
+                  console.log('🔐 Token User: ' + user.login);
+                  console.log('👤 User Type: ' + user.type);
+                } catch (authError) {
+                  console.error('❌ Authentication Error: ' + authError.message);
+                }
+
+                // Check repository permissions
+                try {
+                  const { data: repo } = await github.rest.repos.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo
+                  });
+                  console.log('📊 Repository Permissions Available: ' + JSON.stringify(repo.permissions, null, 2));
+                } catch (repoError) {
+                  console.error('❌ Repository Access Error: ' + repoError.message);
+                }
+
+                core.setOutput('result', 'ERROR');
+                core.setOutput('error_message', error.message);
+                throw error; // Re-throw to fail the workflow
+              }
             } else if (claudeApproval === 'BLOCKED') {
               console.log('❌ PR #' + prNumber + ' blocked by Claude AI - manual review required');
               core.setOutput('result', 'BLOCKED');
