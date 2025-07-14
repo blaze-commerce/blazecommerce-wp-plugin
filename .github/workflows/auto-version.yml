@@ -38,7 +38,7 @@ jobs:
             });
 
             // Look for completed Priority 3 workflows
-            const priority3Workflows = ['Priority 3: Claude Auto Approval'];
+            const priority3Workflows = ['Priority 3: Claude AI Approval Gate'];
             let allCompleted = true;
 
             for (const workflowName of priority3Workflows) {
