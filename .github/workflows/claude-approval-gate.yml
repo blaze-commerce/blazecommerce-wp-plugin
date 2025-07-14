@@ -26,10 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # CRITICAL: Only trigger on Claude FINAL VERDICT comments to prevent race conditions
+    # ENHANCED: More robust condition checking with detailed logging
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'issue_comment' &&
        contains(github.event.comment.body, 'FINAL VERDICT') &&
+       contains(github.event.comment.body, 'Claude AI PR Review Complete') &&
        (github.event.comment.user.login == 'blazecommerce-automation-bot[bot]' ||
         contains(github.event.comment.user.login, 'blazecommerce-automation-bot')))
     permissions:
@@ -61,7 +63,17 @@ jobs:
             console.log(`📋 EVENT TYPE: ${context.eventName}`);
             console.log(`📅 TIMESTAMP: ${new Date().toISOString()}`);
             console.log('🎯 EXPECTED: issue_comment (with FINAL VERDICT from Claude)');
-            
+
+            // ENHANCED: Log the triggering event details for debugging
+            if (context.eventName === 'issue_comment') {
+              console.log('🔍 ISSUE_COMMENT EVENT DETAILS:');
+              console.log(`   Comment User: ${context.payload.comment?.user?.login || 'UNKNOWN'}`);
+              console.log(`   Comment Body Preview: ${(context.payload.comment?.body || '').substring(0, 200)}...`);
+              console.log(`   Contains FINAL VERDICT: ${(context.payload.comment?.body || '').includes('FINAL VERDICT')}`);
+              console.log(`   Contains Claude Review: ${(context.payload.comment?.body || '').includes('Claude AI PR Review Complete')}`);
+              console.log(`   Is PR: ${!!context.payload.issue?.pull_request}`);
+            }
+
             let prNumber = null;
             let shouldRun = false;
 
