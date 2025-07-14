@@ -1,0 +1,214 @@
+name: "Claude Auto-Approval (Race Condition Fixed)"
+
+# DEFINITIVE RACE CONDITION FIX
+# This workflow ONLY triggers when Claude posts a FINAL VERDICT comment
+# Completely isolated from all other workflows to prevent race conditions
+
+on:
+  issue_comment:
+    types: [created]
+
+# Unique concurrency group to prevent conflicts
+concurrency:
+  group: claude-auto-approval-fixed-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  claude-auto-approval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    # CRITICAL: Only run on Claude FINAL VERDICT comments in PRs
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, 'FINAL VERDICT') &&
+      github.event.comment.user.login == 'blazecommerce-automation-bot[bot]'
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+    
+    steps:
+      - name: Critical Debug Information
+        id: debug
+        run: |
+          echo "🚨 CLAUDE AUTO-APPROVAL WORKFLOW TRIGGERED"
+          echo "📋 Event: ${{ github.event_name }}"
+          echo "📝 Comment User: ${{ github.event.comment.user.login }}"
+          echo "📅 Comment Created: ${{ github.event.comment.created_at }}"
+          echo "🎯 PR Number: ${{ github.event.issue.number }}"
+          echo "🔍 Contains FINAL VERDICT: ${{ contains(github.event.comment.body, 'FINAL VERDICT') }}"
+          echo "✅ This should ONLY run AFTER Claude posts review"
+
+      - name: Generate GitHub App Token
+        id: app_token
+        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        env:
+          BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+          BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Validate Claude Comment and Timing
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
+          script: |
+            const prNumber = ${{ github.event.issue.number }};
+            const comment = context.payload.comment;
+            
+            console.log('🔍 VALIDATION STARTED');
+            console.log(`📋 PR Number: ${prNumber}`);
+            console.log(`📝 Comment ID: ${comment.id}`);
+            console.log(`👤 Comment User: ${comment.user.login}`);
+            console.log(`📅 Comment Date: ${comment.created_at}`);
+            
+            // Get PR details and latest commit
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            const latestCommitSha = pr.head.sha;
+            const { data: commit } = await github.rest.repos.getCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: latestCommitSha
+            });
+            
+            const commitDate = new Date(commit.commit.committer.date);
+            const commentDate = new Date(comment.created_at);
+            const timeDiff = commentDate.getTime() - commitDate.getTime();
+            
+            console.log(`📊 TIMING ANALYSIS:`);
+            console.log(`   Latest Commit: ${latestCommitSha}`);
+            console.log(`   Commit Date: ${commitDate.toISOString()}`);
+            console.log(`   Comment Date: ${commentDate.toISOString()}`);
+            console.log(`   Time Difference: ${Math.round(timeDiff / 1000)}s`);
+            
+            // Validate comment is after commit with sufficient gap
+            const minGap = 30 * 1000; // 30 seconds minimum
+            if (commentDate <= commitDate) {
+              console.log('❌ VALIDATION FAILED: Comment is before or at commit time');
+              core.setOutput('should_approve', 'false');
+              core.setOutput('reason', 'Comment predates commit');
+              return;
+            }
+            
+            if (timeDiff < minGap) {
+              console.log(`❌ VALIDATION FAILED: Insufficient time gap (${Math.round(timeDiff/1000)}s < 30s)`);
+              core.setOutput('should_approve', 'false');
+              core.setOutput('reason', 'Insufficient review time');
+              return;
+            }
+            
+            // Check if comment contains APPROVED status
+            const hasApproved = comment.body.includes('Status**: APPROVED') || 
+                               comment.body.includes('Status: APPROVED');
+            
+            if (!hasApproved) {
+              console.log('❌ VALIDATION FAILED: Comment does not contain APPROVED status');
+              core.setOutput('should_approve', 'false');
+              core.setOutput('reason', 'Not approved by Claude');
+              return;
+            }
+            
+            console.log('✅ VALIDATION PASSED: All criteria met');
+            core.setOutput('should_approve', 'true');
+            core.setOutput('commit_sha', latestCommitSha);
+            core.setOutput('commit_date', commitDate.toISOString());
+            core.setOutput('comment_date', commentDate.toISOString());
+
+      - name: Enforce Minimum Wait Time
+        if: steps.validate.outputs.should_approve == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commitDate = new Date('${{ steps.validate.outputs.commit_date }}');
+            const now = new Date();
+            const timeSinceCommit = now.getTime() - commitDate.getTime();
+            const minWaitTime = 3 * 60 * 1000; // 3 minutes
+            
+            console.log(`⏰ MINIMUM WAIT TIME CHECK:`);
+            console.log(`   Time since commit: ${Math.round(timeSinceCommit / 1000)}s`);
+            console.log(`   Required minimum: ${Math.round(minWaitTime / 1000)}s`);
+            
+            if (timeSinceCommit < minWaitTime) {
+              const waitTime = minWaitTime - timeSinceCommit;
+              console.log(`⏳ Waiting additional ${Math.round(waitTime / 1000)}s...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              console.log('✅ Minimum wait time completed');
+            } else {
+              console.log('✅ Sufficient time has passed');
+            }
+
+      - name: Create Auto-Approval
+        if: steps.validate.outputs.should_approve == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
+          script: |
+            const prNumber = ${{ github.event.issue.number }};
+            const commitSha = '${{ steps.validate.outputs.commit_sha }}';
+            const commitDate = '${{ steps.validate.outputs.commit_date }}';
+            const commentDate = '${{ steps.validate.outputs.comment_date }}';
+            
+            console.log('🚀 CREATING AUTO-APPROVAL');
+            
+            // Check for existing approvals after this commit
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            const existingApproval = reviews.find(review => {
+              const reviewDate = new Date(review.submitted_at);
+              const commitDateTime = new Date(commitDate);
+              return review.user.login.includes('blazecommerce-automation') &&
+                     review.state === 'APPROVED' &&
+                     reviewDate > commitDateTime;
+            });
+            
+            if (existingApproval) {
+              console.log('✅ Approval already exists for this commit');
+              return;
+            }
+            
+            // Create the approval
+            const approval = await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              event: 'APPROVE',
+              body: `✅ **Auto-approved by BlazeCommerce Automation Bot (Race Condition Fixed)**
+
+Claude AI has reviewed this PR and provided approval. This automated approval is based on Claude's comprehensive security and code quality analysis.
+
+**Status:** APPROVED by Claude AI
+**Automation:** BlazeCommerce Automation Bot  
+**Trigger:** issue_comment (FIXED - no more race conditions)
+**Commit SHA:** ${commitSha}
+**Commit Date:** ${commitDate}
+**Claude Review Date:** ${commentDate}
+**Timestamp:** ${new Date().toISOString()}
+
+🔧 **Race Condition Fix Applied:**
+- Triggered by Claude comment posting (not workflow completion)
+- 3-minute minimum wait enforced from commit time
+- 30-second minimum gap between commit and Claude review
+- Comprehensive timing validation applied
+
+✅ This approval was issued AFTER Claude completed review of commit ${commitSha.substring(0, 7)}.`
+            });
+            
+            console.log('✅ Auto-approval created successfully');
+            console.log(`📊 Review ID: ${approval.data.id}`);
+            console.log(`🔗 Review URL: ${approval.data.html_url}`);
