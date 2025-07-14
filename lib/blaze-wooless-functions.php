@@ -168,3 +168,46 @@ function is_string_in_current_url( $string ) {
 function blaze_wooless_test_version_bump_feature() {
 	return 'Version bump test feature - automated workflow verification';
 }
+
+/**
+ * Format product data for display purposes
+ *
+ * This helper function takes raw product data and formats it consistently
+ * for use across different parts of the application. It ensures proper
+ * sanitization and standardized formatting.
+ *
+ * @since 1.14.6
+ * @param array $product_data Raw product data array
+ * @return array Formatted product data with sanitized values
+ */
+function blaze_wooless_format_product_data( $product_data ) {
+	// Validate input parameter
+	if ( ! is_array( $product_data ) ) {
+		return array();
+	}
+
+	// Initialize formatted data array
+	$formatted_data = array();
+
+	// Format product name with proper sanitization
+	if ( isset( $product_data['name'] ) ) {
+		$formatted_data['name'] = sanitize_text_field( $product_data['name'] );
+	}
+
+	// Format product description
+	if ( isset( $product_data['description'] ) ) {
+		$formatted_data['description'] = wp_kses_post( $product_data['description'] );
+	}
+
+	// Format price with proper number formatting
+	if ( isset( $product_data['price'] ) && is_numeric( $product_data['price'] ) ) {
+		$formatted_data['price'] = number_format( floatval( $product_data['price'] ), 2 );
+	}
+
+	// Format SKU with alphanumeric validation
+	if ( isset( $product_data['sku'] ) ) {
+		$formatted_data['sku'] = preg_replace( '/[^a-zA-Z0-9\-_]/', '', $product_data['sku'] );
+	}
+
+	return $formatted_data;
+}
