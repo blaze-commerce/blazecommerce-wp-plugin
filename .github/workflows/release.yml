@@ -252,6 +252,97 @@ jobs:
 
         echo "SUCCESS: Version validation passed"
 
+    - name: Version validation summary
+      if: steps.check_files.outputs.should_create_release == 'true'
+      run: |
+        echo "SUMMARY: Version Validation Summary"
+        echo "=================================="
+        echo "TAG: Git tag: ${GITHUB_REF#refs/tags/}"
+        echo "PACKAGE: Expected version: ${GITHUB_REF#refs/tags/v}"
+        echo "SUCCESS: File consistency validation: Passed"
+        echo "INFO: Proceeding to tag-to-files synchronization validation..."
+
+    - name: Validate git tag to files synchronization
+      if: steps.check_files.outputs.should_create_release == 'true'
+      id: tag_sync_validation
+      run: |
+        echo "DEBUG: Validating git tag to files version synchronization..."
+
+        # Get the current git tag
+        CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+        echo "TAG: Validating against tag: $CURRENT_TAG"
+
+        # Validate that required script exists
+        if [ ! -f "scripts/version-sync-validator.js" ]; then
+          echo "ERROR: Required script 'scripts/version-sync-validator.js' not found"
+          echo "   This script is required for tag-to-files validation"
+          exit 1
+        fi
+
+        # Run tag-to-files validation
+        echo "EXECUTING: Running comprehensive tag-to-files validation..."
+        if node scripts/version-sync-validator.js --tag "$CURRENT_TAG" --verbose; then
+          echo "SUCCESS: Git tag matches all file versions"
+          echo "sync_status=synchronized" >> $GITHUB_OUTPUT
+        else
+          echo "ERROR: Git tag does not match file versions"
+          echo "sync_status=mismatched" >> $GITHUB_OUTPUT
+
+          # Check if auto-fix is enabled
+          if [ "${AUTO_FIX_VERSION_MISMATCH:-false}" = "true" ]; then
+            echo "EXECUTING: Auto-fix is enabled, attempting to resolve mismatch..."
+
+            # Extract version from tag
+            TAG_VERSION="${CURRENT_TAG#v}"
+            echo "EXECUTING: Attempting to fix version mismatch to: $TAG_VERSION"
+
+            if [ -f "scripts/fix-version-mismatch.js" ]; then
+              if node scripts/fix-version-mismatch.js "$TAG_VERSION" --verbose; then
+                echo "SUCCESS: Version mismatch automatically resolved"
+                echo "sync_status=auto_fixed" >> $GITHUB_OUTPUT
+              else
+                echo "ERROR: Auto-fix failed"
+                exit 1
+              fi
+            else
+              echo "ERROR: Auto-fix script not found"
+              exit 1
+            fi
+          else
+            echo "ERROR: Version mismatch detected and auto-fix is disabled"
+            echo ""
+            echo "RESOLUTION OPTIONS:"
+            echo "1. Enable auto-fix by setting AUTO_FIX_VERSION_MISMATCH=true"
+            echo "2. Manually fix with: node scripts/fix-version-mismatch.js ${CURRENT_TAG#v}"
+            echo "3. Update files manually to match tag version: ${CURRENT_TAG#v}"
+            echo ""
+            echo "FILES TO CHECK:"
+            echo "   - package.json"
+            echo "   - blaze-wooless.php (Plugin Header and Version Constant)"
+            echo "   - blocks/package.json"
+            echo "   - README.md (Version Badge)"
+            exit 1
+          fi
+        fi
+
+    - name: Final validation summary
+      if: steps.check_files.outputs.should_create_release == 'true'
+      run: |
+        echo "SUMMARY: Final Validation Summary"
+        echo "================================"
+        echo "TAG: Git tag: ${GITHUB_REF#refs/tags/}"
+        echo "PACKAGE: Version: ${GITHUB_REF#refs/tags/v}"
+        echo "SUCCESS: File consistency: Passed"
+        echo "SUCCESS: Tag synchronization: ${{ steps.tag_sync_validation.outputs.sync_status }}"
+
+        if [ "${{ steps.tag_sync_validation.outputs.sync_status }}" = "auto_fixed" ]; then
+          echo "INFO: Version mismatch was automatically resolved"
+        elif [ "${{ steps.tag_sync_validation.outputs.sync_status }}" = "synchronized" ]; then
+          echo "INFO: All versions were already synchronized"
+        fi
+
+        echo "SUCCESS: All validation checks passed - proceeding with release creation"
+
   build-and-release:
     needs: validate-release
     runs-on: ubuntu-latest

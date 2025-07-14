@@ -129,6 +129,26 @@ function updateVersionInFile(fileConfig, newVersion) {
           result.errors.push(`Could not find ${pattern.name} pattern in ${fileConfig.path}`);
         }
       }
+    } else if (fileConfig.type === 'markdown') {
+      for (const pattern of fileConfig.patterns) {
+        const match = content.match(pattern.regex);
+        if (match) {
+          const oldVersion = match[1];
+          if (oldVersion !== newVersion) {
+            // Create replacement string for markdown version badge
+            const replacement = `**Version:** ${newVersion}`;
+            updatedContent = updatedContent.replace(pattern.regex, replacement);
+            changesMade = true;
+            result.changes.push({
+              location: pattern.name,
+              from: oldVersion,
+              to: newVersion
+            });
+          }
+        } else {
+          result.errors.push(`Could not find ${pattern.name} pattern in ${fileConfig.path}`);
+        }
+      }
     }
 
     if (changesMade) {

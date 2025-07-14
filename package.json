@@ -1,6 +1,6 @@
 {
   "name": "blazecommerce-wp-plugin",
-  "version": "1.12.0",
+  "version": "1.14.1",
   "description": "The official plugin that integrates your site with the Blaze Commerce service.",
   "main": "blaze-wooless.php",
   "scripts": {
@@ -11,6 +11,10 @@
     "update-plugin-version": "node scripts/update-version.js",
     "validate-version": "node scripts/validate-version.js",
     "validate-version:verbose": "node scripts/validate-version.js --verbose",
+    "validate-version-sync": "node scripts/version-sync-validator.js",
+    "validate-version-sync:verbose": "node scripts/version-sync-validator.js --verbose",
+    "fix-version-mismatch": "node scripts/fix-version-mismatch.js",
+    "test:version-bump": "echo 'Testing version bump workflow'",
     "build": "cd blocks && npm run build",
     "build:blocks": "cd blocks && npm run build",
     "release": "npm run build && node scripts/create-release.js",
