@@ -620,8 +620,45 @@ jobs:
           echo "SUCCESS: Basic pre-tag validation passed"
         fi
 
-    - name: Create git tag
+    - name: Final validation before tag creation
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      id: final_validation
+      run: |
+        echo "🔍 Final validation: Ensuring all previous steps completed successfully..."
+
+        # Check that all required outputs are present
+        if [ -z "${{ steps.check_files.outputs.should_bump_version }}" ]; then
+          echo "ERROR: Missing file check output"
+          exit 1
+        fi
+
+        if [ -z "${{ steps.bump_type.outputs.bump_type }}" ]; then
+          echo "ERROR: Missing bump type output"
+          exit 1
+        fi
+
+        if [ "${{ steps.bump_type.outputs.bump_type }}" = "none" ]; then
+          echo "INFO: No version bump needed, skipping tag creation"
+          exit 0
+        fi
+
+        # Verify version files are consistent
+        NEW_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "")
+        if [ -z "$NEW_VERSION" ]; then
+          echo "ERROR: Could not read version from package.json"
+          exit 1
+        fi
+
+        echo "✅ Final validation passed - ready for tag creation"
+        echo "version_ready=true" >> $GITHUB_OUTPUT
+        echo "final_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create git tag
+      if: |
+        steps.check_files.outputs.should_bump_version == 'true' &&
+        steps.bump_type.outputs.bump_type != 'none' &&
+        steps.final_validation.outputs.version_ready == 'true' &&
+        success()
       run: |
         echo "TAG: Creating git tag..."
 
@@ -687,7 +724,10 @@ jobs:
         fi
 
     - name: Post-tag validation
-      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      if: |
+        steps.check_files.outputs.should_bump_version == 'true' &&
+        steps.bump_type.outputs.bump_type != 'none' &&
+        success()
       run: |
         echo "🔍 Post-tag validation: Verifying git tag matches file versions..."
 
@@ -730,7 +770,10 @@ jobs:
         echo "SUCCESS: Post-tag validation passed - tag and files are synchronized"
 
     - name: Commit version changes
-      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      if: |
+        steps.check_files.outputs.should_bump_version == 'true' &&
+        steps.bump_type.outputs.bump_type != 'none' &&
+        success()
       run: |
         echo "NOTE: Committing version changes..."
 
