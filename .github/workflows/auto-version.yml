@@ -460,7 +460,7 @@ jobs:
           fi
         fi
 
-    - name: Pre-tag validation
+    - name: 🏷️ Pre-Tag Validation (Post-Bump Files → Git Tag)
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
       run: |
         echo "🔍 Pre-tag validation: Ensuring version consistency before creating git tag..."
