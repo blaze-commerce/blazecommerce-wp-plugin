@@ -261,6 +261,6 @@ add_action( 'tgmpa_register', function () {
 
 function plugin_activate() {
 
-	PostType::initiliaze_default_home_page();
+	PostType::initialize_default_home_page();
 }
 register_activation_hook( __FILE__, 'plugin_activate' );
