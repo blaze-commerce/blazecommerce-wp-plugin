@@ -623,9 +623,20 @@ function validateVersionSystem(options = {}) {
 
   if (hasIssues) {
     console.log('\n❌ Version validation failed. Please fix the issues above.');
+    console.log('\n🔧 QUICK FIXES:');
+
     if (enableResolution && validationResult.resolutions.length > 0) {
-      console.log('\n💡 TIP: Automatic resolutions are available. Use --apply-resolution to apply them.');
+      console.log('   • Run: npm run fix-version-mismatch:auto');
+      console.log('   • Or: node scripts/validate-version.js --apply-resolution');
+    } else {
+      console.log('   • For version mismatches: npm run fix-version-mismatch');
+      console.log('   • For post-bump validation: npm run validate-version:post-bump');
+      console.log('   • For detailed analysis: npm run validate-version:verbose');
     }
+
+    console.log('\n📚 DOCUMENTATION:');
+    console.log('   • See: docs/version-synchronization.md');
+    console.log('   • Troubleshooting: docs/version-synchronization.md#troubleshooting');
   } else {
     console.log('✅ Version validation passed. All versions are consistent and valid.');
   }

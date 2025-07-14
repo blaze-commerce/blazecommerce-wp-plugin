@@ -89,3 +89,9 @@ docs/**/*.WEBM
 docs/**/*.AVIF
 docs/**/*.HEIC
 
+# Version synchronization backup files
+# These are created by the version fix scripts and should not be committed
+.backup/
+*.backup
+backup-*/
+
