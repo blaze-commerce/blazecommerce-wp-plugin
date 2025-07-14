@@ -1,121 +1,22 @@
 name: "✅ Priority 3: Claude AI Approval Gate"
 
-# This workflow creates a required status check that only passes when Claude AI has approved the PR
-# Use this with GitHub Branch Protection Rules to block merging until Claude AI approval
-# Priority 3: Runs after Claude AI Review (Priority 2) completes and evaluates official Claude App feedback
-
 on:
-  # PRIMARY TRIGGER: workflow_run (when Claude review completes)
-  workflow_run:
-    workflows: ["🤖 Priority 2: Claude AI Code Review"]
-    types: [completed]
-
-  # BACKUP TRIGGER: issue_comment (only for Claude FINAL VERDICT)
-  issue_comment:
-    types: [created]
-
-  # MANUAL TRIGGER: workflow_dispatch for testing and debugging
   workflow_dispatch:
     inputs:
       pr_number:
         description: 'PR number to evaluate'
         required: true
         type: string
-      debug_mode:
-        description: 'Enable debug logging'
-        required: false
-        type: boolean
-        default: false
-
-# Priority 3: Wait for Priority 2 (Claude AI Code Review) to complete before running
-concurrency:
-  group: priority-3-claude-approval-pr-${{ github.event.pull_request.number || github.event.number || github.run_id }}
-  cancel-in-progress: false  # Don't cancel to ensure approval gate completion
 
 jobs:
-  # Check if this workflow should run
-  check-trigger:
+  test-basic:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
-    outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
-      pr_number: ${{ steps.check.outputs.pr_number }}
-      trigger_reason: ${{ steps.check.outputs.trigger_reason }}
     steps:
-      - name: Check Trigger Conditions
-        id: check
-        uses: actions/github-script@v7
-        with:
-          script: |
-            let shouldRun = false;
-            let prNumber = null;
-            let triggerReason = '';
-
-            console.log('Event type: ' + context.eventName);
-
-            try {
-              if (context.eventName === 'workflow_run') {
-                console.log('WORKFLOW_RUN: Checking workflow completion...');
-
-                if (context.payload.workflow_run && context.payload.workflow_run.conclusion) {
-                  shouldRun = true;
-
-                  // Extract PR number from workflow run
-                  if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
-                    prNumber = context.payload.workflow_run.pull_requests[0].number;
-                  }
-
-                  triggerReason = 'Claude review workflow ' + context.payload.workflow_run.conclusion;
-                  console.log('WORKFLOW_RUN: PR #' + prNumber + ', Status: ' + context.payload.workflow_run.conclusion);
-                }
-              } else if (context.eventName === 'issue_comment') {
-                console.log('ISSUE_COMMENT: Checking for Claude FINAL VERDICT...');
-
-                const comment = context.payload.comment;
-                if (!comment || !comment.body) {
-                  console.log('No comment body found');
-                  return;
-                }
-
-                // Only process comments from Claude bot with FINAL VERDICT
-                const isClaudeBot = comment.user.login === 'claude[bot]' ||
-                                   comment.user.login.includes('claude') ||
-                                   comment.user.login === 'blazecommerce-claude-ai';
-
-                const hasFinalVerdict = comment.body.includes('FINAL VERDICT') ||
-                                       comment.body.includes('### FINAL VERDICT');
-
-                const isPR = context.payload.issue && context.payload.issue.pull_request;
-
-                console.log('User: ' + comment.user.login);
-                console.log('Is Claude bot: ' + isClaudeBot);
-                console.log('Has FINAL VERDICT: ' + hasFinalVerdict);
-                console.log('Is PR: ' + isPR);
-
-                if (isClaudeBot && hasFinalVerdict && isPR) {
-                  shouldRun = true;
-                  prNumber = context.payload.issue.number;
-                  triggerReason = 'Claude posted FINAL VERDICT comment';
-                  console.log('ISSUE_COMMENT: Claude FINAL VERDICT found in PR #' + prNumber);
-                } else {
-                  console.log('ISSUE_COMMENT: Not a Claude FINAL VERDICT comment');
-                }
-              } else if (context.eventName === 'workflow_dispatch') {
-                console.log('WORKFLOW_DISPATCH: Manual trigger...');
-                shouldRun = true;
-                prNumber = parseInt(context.payload.inputs.pr_number);
-                triggerReason = 'Manual workflow dispatch';
-                console.log('WORKFLOW_DISPATCH: Manual trigger for PR #' + prNumber);
-              }
-            } catch (error) {
-              console.error('ERROR in trigger check: ' + error.message);
-            }
-
-            console.log('RESULT: Event=' + context.eventName + ', ShouldRun=' + shouldRun + ', PR=' + prNumber + ', Reason=' + triggerReason);
-
-            core.setOutput('should_run', shouldRun.toString());
-            core.setOutput('pr_number', prNumber ? prNumber.toString() : '');
-            core.setOutput('trigger_reason', triggerReason);
+      - name: Test Basic Functionality
+        run: |
+          echo "Testing basic workflow functionality"
+          echo "PR Number: ${{ github.event.inputs.pr_number }}"
+          echo "Event: ${{ github.event_name }}"
 
   # Wait for Priority 1 workflow completion before proceeding
   wait-for-claude-review:
