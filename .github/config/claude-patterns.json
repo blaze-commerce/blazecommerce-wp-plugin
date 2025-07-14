@@ -1,0 +1,45 @@
+{
+  "description": "Configuration for Claude AI approval detection patterns",
+  "version": "1.0.0",
+  "patterns": {
+    "finalVerdict": {
+      "bracketed": "### FINAL VERDICT[\\s\\S]*?\\*\\*Status\\*\\*:\\s*\\[([^\\]]+)\\]",
+      "legacy": "### FINAL VERDICT[\\s\\S]*?\\*\\*Status\\*\\*:\\s*([^*\\n\\[]+)",
+      "description": "Patterns to detect Claude's final verdict section"
+    },
+    "criticalIssues": {
+      "section": "\\*\\*CRITICAL ISSUES\\*\\*([\\s\\S]*?)(?=\\*\\*STRENGTHS\\*\\*|\\*\\*AREAS FOR IMPROVEMENT\\*\\*|\\*\\*PERFORMANCE CONSIDERATIONS\\*\\*|\\*\\*SECURITY ASSESSMENT\\*\\*|###|$)",
+      "required": "CRITICAL:\\s*REQUIRED|REQUIRED.*issues?|must\\s+be\\s+fixed|critical\\s+bugs?",
+      "description": "Patterns to detect critical issues that block approval"
+    },
+    "approvalIndicators": {
+      "positive": "no\\s+critical\\s+issues|ready\\s+to\\s+merge|looks\\s+good",
+      "description": "Patterns that indicate approval in legacy format"
+    },
+    "implementationVerification": {
+      "unimplemented": "previous.*changes.*not.*implemented|required.*changes.*missing|still.*need.*to.*address",
+      "description": "Patterns to detect unimplemented previous changes"
+    }
+  },
+  "statusValues": {
+    "approved": ["APPROVED"],
+    "conditional": ["CONDITIONAL APPROVAL"],
+    "blocked": ["BLOCKED"],
+    "description": "Valid status values for approval detection"
+  },
+  "userIdentifiers": {
+    "claudeBot": ["claude[bot]", "claude"],
+    "blazecommerceBot": ["blazecommerce-claude-ai"],
+    "description": "User identifiers for bot detection"
+  },
+  "timeouts": {
+    "dependencyCheck": 15,
+    "approvalGate": 5,
+    "description": "Timeout values in minutes for workflow jobs"
+  },
+  "errorHandling": {
+    "retryAttempts": 3,
+    "retryDelay": 5000,
+    "description": "Error handling configuration"
+  }
+}
