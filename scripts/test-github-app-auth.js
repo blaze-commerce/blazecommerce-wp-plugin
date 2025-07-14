@@ -39,12 +39,30 @@ async function testGitHubAppAuth() {
             privateKey: privateKey,
         });
 
+        // First, get the installation ID
+        console.log('🔍 Finding GitHub App installation...');
+        const appAuth = await auth({ type: 'app' });
+        const appOctokit = new Octokit({ auth: appAuth.token });
+
+        const { data: installations } = await appOctokit.rest.apps.listInstallations();
+        console.log(`📋 Found ${installations.length} installation(s)`);
+
+        // Find installation for our organization
+        const installation = installations.find(inst =>
+            inst.account.login === owner
+        );
+
+        if (!installation) {
+            throw new Error(`No installation found for organization: ${owner}`);
+        }
+
+        console.log(`✅ Found installation: ${installation.id} for ${installation.account.login}`);
+
         // Get installation access token
         console.log('🔑 Getting installation access token...');
         const installationAuth = await auth({
             type: 'installation',
-            installationId: undefined, // Will be auto-detected
-            repositoryNames: [repo],
+            installationId: installation.id,
         });
 
         console.log('✅ Installation token obtained\n');

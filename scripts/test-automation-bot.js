@@ -44,12 +44,30 @@ async function testAutomationBot() {
             privateKey: privateKey,
         });
 
+        // First, get the installation ID
+        console.log('🔍 Finding GitHub App installation...');
+        const appAuth = await auth({ type: 'app' });
+        const appOctokit = new Octokit({ auth: appAuth.token });
+
+        const { data: installations } = await appOctokit.rest.apps.listInstallations();
+        console.log(`📋 Found ${installations.length} installation(s)`);
+
+        // Find installation for our organization
+        const installation = installations.find(inst =>
+            inst.account.login === owner
+        );
+
+        if (!installation) {
+            throw new Error(`No installation found for organization: ${owner}`);
+        }
+
+        console.log(`✅ Found installation: ${installation.id} for ${installation.account.login}`);
+
         // Get installation access token
         console.log('🔑 Getting installation access token...');
         const installationAuth = await auth({
             type: 'installation',
-            installationId: undefined, // Will be auto-detected
-            repositoryNames: [repo],
+            installationId: installation.id,
         });
 
         console.log('✅ Installation token obtained\n');
@@ -163,16 +181,26 @@ async function testAutomationBot() {
         }
         console.log('');
 
-        // Test 5: Authentication identity
+        // Test 5: Authentication identity (GitHub Apps don't have access to /user endpoint)
         console.log('🔐 Testing authentication identity...');
-        const { data: user } = await octokit.rest.users.getAuthenticated();
-        console.log(`✅ Authenticated as: ${user.login} (${user.type})`);
-        
-        if (user.type === 'Bot') {
-            console.log('🤖 Confirmed: Using GitHub App authentication');
-            console.log(`   - App name pattern: ${user.login}`);
-        } else {
-            console.log('⚠️ Warning: Not using GitHub App authentication');
+        try {
+            const { data: user } = await octokit.rest.users.getAuthenticated();
+            console.log(`✅ Authenticated as: ${user.login} (${user.type})`);
+
+            if (user.type === 'Bot') {
+                console.log('🤖 Confirmed: Using GitHub App authentication');
+                console.log(`   - App name pattern: ${user.login}`);
+            } else {
+                console.log('⚠️ Warning: Not using GitHub App authentication');
+            }
+        } catch (authError) {
+            if (authError.status === 403 && authError.message.includes('Resource not accessible by integration')) {
+                console.log('✅ GitHub App authentication confirmed');
+                console.log('🤖 Note: GitHub Apps cannot access /user endpoint (this is expected)');
+                console.log('   - This confirms we are using GitHub App authentication');
+            } else {
+                throw authError;
+            }
         }
         console.log('');
 
