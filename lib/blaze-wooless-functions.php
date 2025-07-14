@@ -168,3 +168,26 @@ function is_string_in_current_url( $string ) {
 function blaze_wooless_test_version_bump_feature() {
 	return 'Version bump test feature - automated workflow verification';
 }
+
+/**
+ * CRITICAL SECURITY ISSUE: Direct SQL injection vulnerability
+ * This function is intentionally vulnerable for testing purposes
+ */
+function blaze_get_user_data_unsafe($user_id) {
+    global $wpdb;
+
+    // CRITICAL: Direct SQL injection - user input not sanitized
+    $query = "SELECT * FROM {$wpdb->users} WHERE ID = " . $user_id;
+    $result = $wpdb->get_row($query);
+
+    // CRITICAL: Exposing sensitive data without permission checks
+    return $result;
+}
+
+/**
+ * CRITICAL BUG: Infinite recursion potential
+ */
+function blaze_recursive_function($data) {
+    // CRITICAL: No base case - will cause stack overflow
+    return blaze_recursive_function($data);
+}
