@@ -1,29 +1,29 @@
-name: "🚀 Priority 3: Create Release"
+name: "🚀 Priority 5: Create Release"
 
 on:
   push:
     tags:
       - 'v*'
 
-# Priority 3: Post-merge workflow - runs after PR workflows complete
+# Priority 5: Lowest priority - runs after Priority 4 (Auto Version Bump) completes successfully
 concurrency:
-  group: priority-3-release-${{ github.repository }}
+  group: priority-5-release-${{ github.repository }}
   cancel-in-progress: false  # Don't cancel to ensure release consistency
 
 jobs:
-  # Wait for Priority 2 (Claude Approval Gate) to complete before proceeding
-  wait-for-priority-2:
+  # Wait for Priority 4 (Auto Version Bump) to complete before proceeding
+  wait-for-priority-4:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ vars.PRIORITY_DEPENDENCY_TIMEOUT || 5 }}
+    timeout-minutes: ${{ vars.PRIORITY_DEPENDENCY_TIMEOUT || 10 }}
     outputs:
-      priority-2-completed: ${{ steps.check-dependencies.outputs.all_dependencies_completed }}
+      priority-4-completed: ${{ steps.check-dependencies.outputs.all_dependencies_completed }}
     steps:
-      - name: Check Priority 2 Dependencies
+      - name: Check Priority 4 Dependencies
         id: check-dependencies
         uses: actions/github-script@v7
         with:
           script: |
-            console.log('DEBUG: Checking Priority 2 workflow completion...');
+            console.log('DEBUG: Checking Priority 4 workflow completion...');
 
             // Get all workflow runs for this commit
             const { data: workflowRuns } = await github.rest.actions.listWorkflowRunsForRepo({
@@ -33,11 +33,11 @@ jobs:
               status: 'completed'
             });
 
-            // Look for completed Priority 2 workflows
-            const priority2Workflows = ['Priority 2: Claude AI Approval Gate'];
+            // Look for completed Priority 4 workflows
+            const priority4Workflows = ['🔢 Priority 4: Auto Version Bump'];
             let allCompleted = true;
 
-            for (const workflowName of priority2Workflows) {
+            for (const workflowName of priority4Workflows) {
               const workflow = workflowRuns.workflow_runs.find(run =>
                 run.name === workflowName && run.head_sha === context.sha
               );
@@ -53,7 +53,7 @@ jobs:
             core.setOutput('all_dependencies_completed', allCompleted.toString());
 
   validate-release:
-    needs: [wait-for-priority-2]
+    needs: [wait-for-priority-4]
     runs-on: ubuntu-latest
     timeout-minutes: ${{ vars.RELEASE_VALIDATION_TIMEOUT || 10 }}
     permissions:
@@ -71,6 +71,13 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Pull Latest Changes to Prevent Version Conflicts
+      run: |
+        echo "INFO: Pulling latest changes to prevent version conflicts..."
+        git fetch origin main
+        git reset --hard origin/main
+        echo "SUCCESS: Repository updated to latest main branch"
 
     - name: Check if release is needed
       id: check_files

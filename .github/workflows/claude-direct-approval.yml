@@ -1,10 +1,15 @@
-name: 🚀 Claude Direct Auto-Approval
+name: 🔍 Priority 1: Claude Direct Approval
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
   issue_comment:
     types: [created]
+
+# Priority 1: Highest priority - must run BEFORE Claude code review to initialize approval process
+concurrency:
+  group: priority-1-claude-direct-approval-pr-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false  # Don't cancel to ensure approval initialization completion
 
 jobs:
   claude-direct-approval:
