@@ -22,6 +22,8 @@
     "test:token-auth": "node scripts/test-token-auth.js",
     "test:automation-bot": "node scripts/test-automation-bot.js",
     "test:release-auth": "node scripts/test-release-workflow-auth.js",
+    "test:file-change-analyzer": "node scripts/test-file-change-analyzer.js",
+    "test:auto-version-fixes": "node scripts/validate-auto-version-fixes.js",
     "build": "cd blocks && npm run build",
     "build:blocks": "cd blocks && npm run build",
     "release": "npm run build && node scripts/create-release.js",
