@@ -68,19 +68,28 @@ class BC_Test_Approval {
     public function filter_content($content) {
         // Sanitize and escape output
         if (is_single() && in_the_loop() && is_main_query()) {
-            $additional_content = '<p>' . dfdfgsdrysrth
+            $additional_content = '<p>' . esc_html__('Test content added safely.', 'blazecommerce') . '</p>';
+            $content .= $additional_content;
+        }
+
+        return $content;
+    }
+
     /**
      * Get test data safely
      * 
      * @param int $id The ID to retrieve
      * @return array|false Test data or false on failure
-     */srtysrtyrsyt5srt
+     */
     public function get_test_data($id) {
         // Validate input
-        $id = absint($id);y
-        if (!$id) {srt
-        // Use WordPress databaysrtse methods
-        global $wpdb;trurstyrs
+        $id = absint($id);
+        if (!$id) {
+            return false;
+        }
+
+        // Use WordPress database methods
+        global $wpdb;
 
         $result = $wpdb->get_row(
             $wpdb->prepare(
