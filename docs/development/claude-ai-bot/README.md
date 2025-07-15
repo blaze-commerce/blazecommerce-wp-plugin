@@ -118,6 +118,8 @@ ANTHROPIC_API_KEY: Claude AI API access key
 BOT_GITHUB_TOKEN: Bot account personal access token
 ```
 
+
+
 ### Bot Account
 - **Username**: `blazecommerce-claude-ai`
 - **Display Name**: `🤖 BlazeCommerce Claude AI Reviewer`
