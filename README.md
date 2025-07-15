@@ -11,7 +11,7 @@ The official plugin that integrates your WordPress/WooCommerce site with the Bla
 
 Blaze Commerce is a powerful WordPress plugin that provides seamless integration between your WooCommerce store and the Blaze Commerce headless commerce platform. The plugin features advanced Typesense search integration, collection aliasing for zero-downtime syncing, comprehensive settings management, and extensive customization options.
 
-<!-- Testing automatic version bump system - final validation after status check fix -->
+<!-- Testing automatic version bump system - patch version bump validation -->
 
 ## Key Features
 
@@ -43,6 +43,7 @@ For detailed installation and configuration instructions, see our [Installation 
 2. Activate the plugin through the 'Plugins' screen in WordPress
 3. Configure your Typesense settings in the admin panel
 4. Run initial data sync using WP-CLI commands
+5. Verify your frontend integration is working correctly
 
 ## Documentation
 
