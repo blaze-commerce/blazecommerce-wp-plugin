@@ -1,0 +1,169 @@
+name: "Atomic Auto Version Bump"
+
+"on":
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: 'Custom version (optional)'
+        required: false
+        type: string
+
+# Prevent concurrent version bumps
+concurrency:
+  group: atomic-version-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  atomic-version-bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: |
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.head_commit.message, 'chore(release)') &&
+      !contains(github.event.head_commit.message, '[no version]')
+    
+    permissions:
+      contents: write
+      pull-requests: read
+      actions: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for tag analysis
+        token: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Configure Git
+      run: |
+        git config user.name "blazecommerce-automation-bot[bot]"
+        git config user.email "blazecommerce-automation-bot[bot]@users.noreply.github.com"
+
+    - name: Check if version bump is needed
+      id: check_bump
+      run: |
+        echo "🔍 Analyzing changes to determine if version bump is needed..."
+        
+        # Get changed files since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          CHANGED_FILES=$(git diff --name-only $LAST_TAG..HEAD)
+        else
+          CHANGED_FILES=$(git ls-files)
+        fi
+        
+        echo "Changed files since last tag:"
+        echo "$CHANGED_FILES"
+        
+        # Check if any user-facing files changed
+        if echo "$CHANGED_FILES" | grep -E "(app/|blocks/|views/|assets/|lib/|blaze-wooless\.php|README\.md|composer\.json)" > /dev/null; then
+          echo "✅ User-facing changes detected - version bump needed"
+          echo "should_bump=true" >> $GITHUB_OUTPUT
+        else
+          echo "ℹ️ Only internal changes detected - skipping version bump"
+          echo "should_bump=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Perform atomic version bump
+      if: steps.check_bump.outputs.should_bump == 'true'
+      run: |
+        echo "🚀 Starting atomic version bump..."
+        
+        # Determine bump type
+        BUMP_TYPE="${{ github.event.inputs.bump_type || 'auto' }}"
+        CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+        
+        # Build command
+        CMD="node scripts/atomic-version-manager.js $BUMP_TYPE --verbose"
+        if [ -n "$CUSTOM_VERSION" ]; then
+          CMD="$CMD $CUSTOM_VERSION"
+        fi
+        
+        echo "Executing: $CMD"
+        
+        # Execute atomic version bump
+        if $CMD; then
+          echo "✅ Atomic version bump completed successfully"
+          
+          # Get the new version for output
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "🏷️ New version: $NEW_VERSION"
+          echo "📦 Git tag: v$NEW_VERSION"
+          
+        else
+          echo "❌ Atomic version bump failed"
+          exit 1
+        fi
+
+    - name: Verify synchronization
+      if: steps.check_bump.outputs.should_bump == 'true'
+      run: |
+        echo "🔍 Verifying version synchronization..."
+        
+        # Get version from git tag (source of truth)
+        LATEST_TAG=$(git describe --tags --abbrev=0)
+        TAG_VERSION=${LATEST_TAG#v}
+        
+        # Get versions from files
+        PACKAGE_VERSION=$(node -p "require('./package.json').version")
+        PHP_VERSION=$(grep -o 'Version: [0-9.]*' blaze-wooless.php | cut -d' ' -f2)
+        PHP_CONSTANT=$(grep -o "BLAZE_COMMERCE_VERSION', '[0-9.]*'" blaze-wooless.php | cut -d"'" -f4)
+        BLOCKS_VERSION=$(node -p "require('./blocks/package.json').version")
+        
+        echo "📊 Version comparison:"
+        echo "  Git tag:           $TAG_VERSION"
+        echo "  package.json:      $PACKAGE_VERSION"
+        echo "  PHP header:        $PHP_VERSION"
+        echo "  PHP constant:      $PHP_CONSTANT"
+        echo "  blocks/package.json: $BLOCKS_VERSION"
+        
+        # Verify all versions match
+        if [ "$TAG_VERSION" = "$PACKAGE_VERSION" ] && \
+           [ "$TAG_VERSION" = "$PHP_VERSION" ] && \
+           [ "$TAG_VERSION" = "$PHP_CONSTANT" ] && \
+           [ "$TAG_VERSION" = "$BLOCKS_VERSION" ]; then
+          echo "✅ All versions are synchronized"
+        else
+          echo "❌ Version synchronization failed"
+          exit 1
+        fi
+
+    - name: Summary
+      if: always()
+      run: |
+        if [ "${{ steps.check_bump.outputs.should_bump }}" = "true" ]; then
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "🎉 Atomic version bump completed successfully!"
+            echo "📋 Summary:"
+            echo "  - Git tag created as source of truth"
+            echo "  - All version files updated atomically"
+            echo "  - Changes committed and pushed"
+            echo "  - Version synchronization verified"
+          else
+            echo "❌ Atomic version bump failed"
+            echo "🔄 All changes have been rolled back automatically"
+          fi
+        else
+          echo "ℹ️ No version bump needed - only internal changes detected"
+        fi
