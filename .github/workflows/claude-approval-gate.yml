@@ -100,25 +100,82 @@ jobs:
   claude-approval-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # ENHANCED: More flexible conditional logic with improved bot detection and fallback mechanisms
-    # CRITICAL FIX: Relaxed user matching to prevent workflow skips due to bot user representation variations
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' &&
-       contains(github.event.comment.body, 'FINAL VERDICT') &&
-       contains(github.event.comment.body, 'Claude AI PR Review Complete') &&
-       (github.event.comment.user.login == 'blazecommerce-automation-bot[bot]' ||
-        contains(github.event.comment.user.login, 'blazecommerce-automation-bot') ||
-        (github.event.comment.user.type == 'Bot' && contains(github.event.comment.user.login, 'blazecommerce'))))
+    # CRITICAL FIX: Simplified conditional logic to match working debug job pattern
+    # ISSUE: Complex multi-line YAML condition was causing job skips despite valid triggers
+    # SOLUTION: Use simple condition like debug job, move detailed checks to job steps
+    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch'
     permissions:
       # Required permissions for GitHub App authentication and PR approval
       contents: read           # Read repository content
       pull-requests: write     # Create approval reviews
       actions: read           # Read workflow run information
     steps:
+      - name: Validate Claude Comment Trigger
+        id: validate-trigger
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          echo "🔍 VALIDATING CLAUDE COMMENT TRIGGER"
+          echo "=================================================="
+          echo "Event: ${EVENT_NAME}"
+          echo "Comment User: ${COMMENT_USER}"
+          echo "Comment User Type: ${COMMENT_USER_TYPE}"
+          echo ""
+
+          # Skip validation for manual workflow_dispatch triggers
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "✅ Manual workflow_dispatch trigger - validation skipped"
+            echo "trigger_valid=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Validate issue_comment triggers
+          if [ "${EVENT_NAME}" = "issue_comment" ]; then
+            echo "🔍 Validating issue_comment trigger..."
+
+            # Check if comment contains FINAL VERDICT
+            if echo "${COMMENT_BODY}" | grep -q "FINAL VERDICT"; then
+              echo "✅ Comment contains 'FINAL VERDICT'"
+            else
+              echo "❌ Comment does not contain 'FINAL VERDICT'"
+              echo "trigger_valid=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            # Check if comment contains Claude AI PR Review Complete
+            if echo "${COMMENT_BODY}" | grep -q "Claude AI PR Review Complete"; then
+              echo "✅ Comment contains 'Claude AI PR Review Complete'"
+            else
+              echo "❌ Comment does not contain 'Claude AI PR Review Complete'"
+              echo "trigger_valid=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            # Check if user is Claude automation bot
+            if [ "${COMMENT_USER}" = "blazecommerce-automation-bot[bot]" ] || \
+               echo "${COMMENT_USER}" | grep -q "blazecommerce-automation-bot" || \
+               ([ "${COMMENT_USER_TYPE}" = "Bot" ] && echo "${COMMENT_USER}" | grep -q "blazecommerce"); then
+              echo "✅ Comment from valid Claude automation bot: ${COMMENT_USER}"
+            else
+              echo "❌ Comment not from Claude automation bot: ${COMMENT_USER}"
+              echo "trigger_valid=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            echo "✅ All validation checks passed - proceeding with approval gate"
+            echo "trigger_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Unexpected event type: ${EVENT_NAME}"
+            echo "trigger_valid=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
       - name: Generate GitHub App Token
         id: app_token
-        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        if: steps.validate-trigger.outputs.trigger_valid == 'true' && env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
         env:
           BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
           BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
@@ -131,6 +188,7 @@ jobs:
 
       - name: Determine PR Number and Trigger
         id: get-pr
+        if: steps.validate-trigger.outputs.trigger_valid == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
@@ -212,7 +270,7 @@ jobs:
             core.setOutput('should_run', shouldRun.toString());
 
       - name: Evaluate Claude AI Approval
-        if: steps.get-pr.outputs.should_run == 'true'
+        if: steps.validate-trigger.outputs.trigger_valid == 'true' && steps.get-pr.outputs.should_run == 'true'
         id: evaluate
         uses: actions/github-script@v7
         with:
@@ -452,7 +510,7 @@ jobs:
 
       # FALLBACK MECHANISM: Emergency approval for edge cases
       - name: Fallback Approval Check
-        if: always() && steps.get-pr.outputs.should_run == 'true' && (steps.evaluate.outputs.result == 'ERROR' || steps.evaluate.outputs.result == '')
+        if: always() && steps.validate-trigger.outputs.trigger_valid == 'true' && steps.get-pr.outputs.should_run == 'true' && (steps.evaluate.outputs.result == 'ERROR' || steps.evaluate.outputs.result == '')
         id: fallback
         uses: actions/github-script@v7
         with:
