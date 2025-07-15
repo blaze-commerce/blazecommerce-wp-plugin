@@ -162,6 +162,14 @@ jobs:
         permission-metadata: read
         permission-pull-requests: read
         permission-actions: read
+        permission-administration: read
+
+    - name: Verify GitHub App Token
+      if: steps.app_token.outputs.token
+      run: |
+        echo "✅ GitHub App token generated successfully"
+        echo "🤖 Using blazecommerce-automation-bot identity"
+        echo "🔐 Token length: $(echo '${{ steps.app_token.outputs.token }}' | wc -c)"
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -275,14 +283,19 @@ jobs:
       run: |
         # Use GitHub App identity if available, otherwise fall back to github-actions bot
         if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-          git config --local user.email "blazecommerce-automation[bot]@users.noreply.github.com"
-          git config --local user.name "BlazeCommerce Automation Bot"
-          echo "SUCCESS: Git configured for BlazeCommerce Automation Bot"
+          git config --local user.email "blazecommerce-automation-bot[bot]@users.noreply.github.com"
+          git config --local user.name "blazecommerce-automation-bot[bot]"
+          echo "✅ Git configured for blazecommerce-automation-bot[bot]"
+          echo "🔐 Using GitHub App authentication with bypass permissions"
         else
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          echo "SUCCESS: Git configured for GitHub Actions bot"
+          echo "⚠️ Fallback: Git configured for GitHub Actions bot"
         fi
+
+        # Verify git configuration
+        echo "📧 Git user.email: $(git config user.email)"
+        echo "👤 Git user.name: $(git config user.name)"
 
     - name: Run version system tests
       if: steps.check_files.outputs.should_bump_version == 'true'
@@ -758,17 +771,20 @@ jobs:
 
             # Push tag with GitHub App token (preferred) or admin token fallback
             if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-              echo "INFO: Using GitHub App token to push tag (with bypass permissions)"
-              git remote set-url origin https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git
+              echo "🏷️ Using GitHub App token to push tag (blazecommerce-automation-bot with bypass permissions)"
+              git remote set-url origin "https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git"
               if git push origin "$TAG_NAME"; then
-                echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+                echo "✅ Successfully created and pushed tag: $TAG_NAME"
               else
-                echo "ERROR: Failed to push tag to remote with GitHub App token"
+                echo "❌ Failed to push tag to remote with GitHub App token"
+                echo "🔍 Checking git status and remote configuration..."
+                git status
+                git remote -v
                 exit 1
               fi
             elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
-              echo "INFO: Using admin token fallback to push tag"
-              git remote set-url origin https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+              echo "⚠️ Using admin token fallback to push tag"
+              git remote set-url origin "https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
               if git push origin "$TAG_NAME"; then
                 echo "SUCCESS: Created and pushed tag: $TAG_NAME"
               else
@@ -860,16 +876,39 @@ jobs:
 
         # Push with GitHub App token (preferred) or admin token fallback
         if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-          echo "INFO: Using GitHub App token for push (with bypass permissions)"
-          # Set the remote URL with the GitHub App token
-          git remote set-url origin https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git
-          git push origin HEAD:main
+          echo "🚀 Using GitHub App token for push (blazecommerce-automation-bot with bypass permissions)"
+
+          # Configure git remote with GitHub App token
+          git remote set-url origin "https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git"
+
+          # Verify remote configuration
+          echo "🔗 Remote URL configured for GitHub App authentication"
+
+          # Push with detailed error handling
+          if git push origin HEAD:main; then
+            echo "✅ Successfully pushed version bump commit to main branch"
+          else
+            echo "❌ Failed to push with GitHub App token"
+            echo "🔍 Checking git status and remote configuration..."
+            git status
+            git remote -v
+            echo "🔍 Checking if GitHub App has bypass permissions..."
+            exit 1
+          fi
         elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
-          echo "INFO: Using admin token fallback for push"
-          git remote set-url origin https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git push origin HEAD:main
+          echo "⚠️ Using admin token fallback for push"
+          git remote set-url origin "https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          if git push origin HEAD:main; then
+            echo "✅ Successfully pushed with admin token fallback"
+          else
+            echo "❌ Failed to push with admin token"
+            exit 1
+          fi
         else
-          echo "ERROR: No suitable token available for push"
+          echo "❌ ERROR: No suitable token available for push"
+          echo "🔍 Available tokens:"
+          echo "  - GitHub App token: $([ -n '${{ steps.app_token.outputs.token }}' ] && echo 'Available' || echo 'Not available')"
+          echo "  - Admin token: $([ -n '${{ secrets.BC_GITHUB_TOKEN }}' ] && echo 'Available' || echo 'Not available')"
           exit 1
         fi
 
