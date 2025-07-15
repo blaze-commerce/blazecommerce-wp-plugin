@@ -437,12 +437,77 @@ jobs:
           fi
           echo "SUCCESS: Fallback bump type analysis completed"
         else
-          # Run the extracted bump type analyzer
-          if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG"; then
-            echo "SUCCESS: Bump type analysis completed successfully"
+          # Check if intelligent analysis is available and successful
+          if [ "${{ steps.intelligent_analysis.outputs.intelligent_analysis_available }}" = "true" ]; then
+            echo "✅ Using results from intelligent analysis (already completed)"
+            echo "SUCCESS: Intelligent bump type analysis completed successfully"
+
+            # Add gap detection summary to output
+            if [ "${{ steps.intelligent_analysis.outputs.gaps_detected }}" = "true" ]; then
+              echo "⚠️  Gap Detection Summary: Version gaps were detected"
+              echo "   This indicates commits that should have triggered version bumps but didn't"
+              echo "   The intelligent analysis has adjusted the bump type accordingly"
+            else
+              echo "✅ Gap Detection Summary: No version gaps detected"
+            fi
           else
-            echo "ERROR: Bump type analysis failed"
-            exit 1
+            echo "🔄 Intelligent analysis not available, using traditional analysis..."
+            # Run the traditional bump type analyzer
+            if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG" "false"; then
+              echo "SUCCESS: Traditional bump type analysis completed successfully"
+            else
+              echo "ERROR: Bump type analysis failed"
+              exit 1
+            fi
+          fi
+        fi
+
+    - name: Intelligent commit analysis with gap detection
+      if: steps.check_files.outputs.should_bump_version == 'true'
+      id: intelligent_analysis
+      run: |
+        echo "🔍 Running intelligent commit analysis with gap detection..."
+
+        # Set environment variables for intelligent analysis
+        export VERSION_MISMATCH="${{ steps.version_validation.outputs.version_mismatch }}"
+        export LAST_TAG="${{ steps.version_validation.outputs.last_tag }}"
+        export USE_INTELLIGENT_ANALYSIS="true"
+        export ENABLE_GAP_DETECTION="true"
+        export LIMITED_COMMIT_LIMIT="${{ vars.LIMITED_COMMIT_LIMIT || '25' }}"
+        export FALLBACK_COMMIT_LIMIT="${{ vars.FALLBACK_COMMIT_LIMIT || '50' }}"
+
+        echo "🔧 Intelligent Analysis Configuration:"
+        echo "   - Version mismatch: $VERSION_MISMATCH"
+        echo "   - Last tag: $LAST_TAG"
+        echo "   - Gap detection: enabled"
+        echo "   - Cumulative analysis: enabled"
+
+        # Check if the enhanced script exists
+        if [ ! -f ".github/scripts/bump-type-analyzer.js" ]; then
+          echo "WARNING: Enhanced bump type analyzer not found, skipping intelligent analysis..."
+          echo "intelligent_analysis_available=false" >> $GITHUB_OUTPUT
+          echo "gap_detection_enabled=false" >> $GITHUB_OUTPUT
+        else
+          # Run intelligent analysis
+          echo "🚀 Running intelligent commit analysis..."
+          if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG" "true"; then
+            echo "✅ Intelligent analysis completed successfully"
+            echo "intelligent_analysis_available=true" >> $GITHUB_OUTPUT
+            echo "gap_detection_enabled=true" >> $GITHUB_OUTPUT
+
+            # Check if gap detection found any issues
+            if grep -q "Gap detection:" /tmp/github_output.txt 2>/dev/null; then
+              echo "⚠️  Version gaps detected - see analysis output"
+              echo "gaps_detected=true" >> $GITHUB_OUTPUT
+            else
+              echo "✅ No version gaps detected"
+              echo "gaps_detected=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "❌ Intelligent analysis failed, will use traditional analysis"
+            echo "intelligent_analysis_available=false" >> $GITHUB_OUTPUT
+            echo "gap_detection_enabled=false" >> $GITHUB_OUTPUT
+            echo "gaps_detected=false" >> $GITHUB_OUTPUT
           fi
         fi
 
