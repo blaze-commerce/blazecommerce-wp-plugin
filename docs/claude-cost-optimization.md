@@ -8,21 +8,15 @@ This document explains the cost optimization features implemented in our Claude 
 
 ## 🎯 Key Optimizations Implemented
 
-### 1. Intelligent Model Selection
+### 1. Consistent Model Usage
 
-The system automatically chooses between Claude Haiku (cheap) and Claude Sonnet 4 (expensive) based on:
+The system now uses Claude Sonnet 4 for all code reviews to ensure consistent quality and reliability:
 
-#### **Claude Sonnet 4 Triggers:**
-- **Critical Files**: Security, auth, payment, admin, core, API files
-- **Large Changes**: PRs with >200 total changes
-- **Medium PHP Changes**: PRs with >100 changes in PHP files
-- **Manual Override**: Force Sonnet via workflow dispatch
-
-#### **Claude Haiku Triggers:**
-- Documentation changes
-- Configuration updates  
-- Small bug fixes
-- Non-critical file modifications
+#### **Claude Sonnet 4 Usage:**
+- **All Reviews**: Every PR uses Claude Sonnet 4 for consistent quality
+- **Reliable Performance**: No model switching issues or operational problems
+- **Comprehensive Analysis**: Full-featured reviews for all changes
+- **Consistent Standards**: Same review quality regardless of change size
 
 ### 2. Conditional Execution
 
@@ -56,7 +50,7 @@ Workflows skip execution for:
 
 | Optimization | Before | After | Savings |
 |-------------|--------|-------|---------|
-| **Model Selection** | 100% Sonnet | 70% Haiku, 30% Sonnet | 68% |
+| **Model Selection** | 100% Sonnet | 100% Sonnet | 0% |
 | **Conditional Execution** | All PRs | External only | 60% |
 | **File Filtering** | All changes | Code only | 40% |
 | **Review Caching** | Always review | Skip duplicates | 20% |
@@ -119,8 +113,8 @@ Each run shows:
 💰 CLAUDE AI COST-OPTIMIZED REVIEW STARTING
 ============================================
 📋 PR NUMBER: 123
-🤖 SELECTED MODEL: claude-3-haiku-20240307
-📝 SELECTION REASON: Simple changes (45 changes, no critical files)
+🤖 SELECTED MODEL: claude-3-5-sonnet-20240620
+📝 SELECTION REASON: Using Claude Sonnet for all reviews
 💾 CACHE STATUS: MISS (Proceeding)
 ⏰ EXECUTION TIME: 2024-01-15 10:30:00 UTC
 ```
@@ -130,13 +124,13 @@ Each run shows:
 ### Automatic Model Selection
 
 ```yaml
-# PR with security changes → Sonnet
+# All PRs now use Sonnet
 files: ['src/auth/login.php', 'includes/security.php']
-result: claude-3-5-sonnet-20241022
+result: claude-3-5-sonnet-20240620
 
-# PR with docs changes → Haiku  
+# Documentation changes also use Sonnet
 files: ['README.md', 'docs/api.md']
-result: claude-3-haiku-20240307
+result: claude-3-5-sonnet-20240620
 ```
 
 ### Manual Override
@@ -190,7 +184,7 @@ Track these metrics to monitor optimization effectiveness:
 - **Daily API costs** (target: <$8/day)
 - **Review coverage** (maintain >95% for external PRs)
 - **Cache hit rate** (target: >30%)
-- **Haiku vs Sonnet ratio** (target: 70/30)
+- **Review quality** (target: consistent high quality)
 
 ## 🔄 Future Enhancements
 
@@ -200,7 +194,7 @@ Potential additional optimizations:
 2. **Author-based rules**: Different thresholds per contributor
 3. **Repository-specific patterns**: Custom rules per repo
 4. **Batch processing**: Group multiple small PRs
-5. **Progressive review**: Start with Haiku, escalate if needed
+5. **Enhanced caching**: Improve review caching mechanisms
 
 ## 📞 Support
 

@@ -21,11 +21,6 @@ on:
         description: 'PR number to review'
         required: true
         type: string
-      force_sonnet:
-        description: 'Force use of Claude Sonnet (bypass intelligent selection)'
-        required: false
-        type: boolean
-        default: false
 
 # COST OPTIMIZATION: Maintain existing concurrency pattern for priority queue system
 concurrency:
@@ -33,7 +28,7 @@ concurrency:
   cancel-in-progress: true  # Cancel previous runs to save costs
 
 jobs:
-  # COST OPTIMIZATION: Intelligent model selection and conditional execution
+  # COST OPTIMIZATION: Conditional execution and caching
   cost-optimization-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -138,25 +133,22 @@ jobs:
               core.setOutput('cache_hit', 'false');
             }
 
-      - name: Intelligent Model Selection
+      - name: Set Claude Sonnet Model
         id: model-selection
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
-            console.log('🤖 INTELLIGENT MODEL SELECTION');
-            console.log('================================');
+            console.log('🤖 USING CLAUDE SONNET MODEL');
+            console.log('============================');
 
             const prNumber = ${{ github.event.pull_request.number || github.event.inputs.pr_number }};
-            const forceSonnet = ${{ github.event.inputs.force_sonnet || false }};
 
-            // Force Sonnet if requested via workflow_dispatch
-            if (forceSonnet) {
-              console.log('🔧 MANUAL OVERRIDE: Force Sonnet requested');
-              core.setOutput('model', 'claude-3-5-sonnet-20240620');
-              core.setOutput('reason', 'Manual override via workflow_dispatch');
-              return;
-            }
+            // Always use Claude Sonnet model
+            console.log('✅ Using Claude Sonnet model for all reviews');
+            core.setOutput('model', 'claude-3-5-sonnet-20240620');
+            core.setOutput('reason', 'Using Claude Sonnet for all reviews');
+            return;
 
             try {
               // Get PR details including file changes
@@ -182,42 +174,11 @@ jobs:
               const changedFiles = files.map(file => file.filename);
               console.log(`📁 Changed files (${changedFiles.length}):`, changedFiles.slice(0, 10));
 
-              // Critical file patterns that require Sonnet (more specific to avoid false positives)
-              const criticalPatterns = [
-                /\/security\//i, /\/auth\//i, /\/payment\//i, /\/admin\//i, /\/core\//i, /\/api\//i,
-                /security\./i, /auth\./i, /payment\./i, /admin\./i, /core\./i, /api\./i,
-                /login\./i, /user\./i, /permission\./i, /role\./i, /session\./i, /token\./i,
-                /-security/i, /-auth/i, /-payment/i, /-admin/i, /-core/i, /-api/i,
-                /crypto/i, /encrypt/i, /password/i, /oauth/i, /jwt/i, /sql/i,
-                /database/i, /migration/i, /schema/i
-              ];
+              // Always use Claude Sonnet model
+              const model = 'claude-3-5-sonnet-20240620';
+              const reason = 'Using Claude Sonnet for all reviews';
 
-              // Check for critical files
-              const hasCriticalFiles = changedFiles.some(file =>
-                criticalPatterns.some(pattern => pattern.test(file))
-              );
-
-              // Decision logic
-              let model, reason;
-
-              if (hasCriticalFiles) {
-                model = 'claude-3-5-sonnet-20240620';
-                reason = 'Critical security/auth/payment files detected';
-                console.log('🔴 SONNET SELECTED: Critical files found');
-              } else if (totalChanges > 200) {
-                model = 'claude-3-5-sonnet-20240620';
-                reason = `Large changeset (${totalChanges} changes > 200 threshold)`;
-                console.log('🔴 SONNET SELECTED: Large changeset');
-              } else if (totalChanges > 100 && changedFiles.some(f => f.endsWith('.php'))) {
-                model = 'claude-3-5-sonnet-20240620';
-                reason = `Medium PHP changeset (${totalChanges} changes)`;
-                console.log('🟡 SONNET SELECTED: Medium PHP changes');
-              } else {
-                model = 'claude-3-haiku-20240307';
-                reason = `Simple changes (${totalChanges} changes, no critical files)`;
-                console.log('🟢 HAIKU SELECTED: Simple changes');
-              }
-
+              console.log('✅ SONNET SELECTED: Default model for all reviews');
               console.log(`✅ Model: ${model}`);
               console.log(`📝 Reason: ${reason}`);
 
@@ -226,9 +187,9 @@ jobs:
 
             } catch (error) {
               console.error(`❌ ERROR in model selection: ${error.message}`);
-              // Fallback to Haiku for safety
-              core.setOutput('model', 'claude-3-haiku-20240307');
-              core.setOutput('reason', 'Error in selection, defaulting to Haiku');
+              // Fallback to Sonnet for safety
+              core.setOutput('model', 'claude-3-5-sonnet-20240620');
+              core.setOutput('reason', 'Error in selection, defaulting to Sonnet');
             }
 
   claude-review:
@@ -323,7 +284,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
 
-          # COST OPTIMIZATION: Intelligent model selection
+          # Using Claude Sonnet model for all reviews
           model: ${{ needs.cost-optimization-check.outputs.model_selection }}
 
           # Add timeout to prevent hanging
@@ -376,7 +337,7 @@ jobs:
           echo "Action Version: v0.0.32"
           echo "Timeout: 8 minutes"
           echo ""
-          echo "💡 If the issue persists, try manually triggering the workflow with 'Force Sonnet' option"
+          echo "💡 If the issue persists, try manually triggering the workflow or check API status"
 
   # COST OPTIMIZATION: Show cache hit information
   cache-skip-notification:
@@ -418,7 +379,7 @@ jobs:
             **Reason:** Commit already reviewed
             **Cost Savings:** ~$0.50-$2.00 per skipped review
 
-            If you need a fresh review, push a new commit or use the manual workflow dispatch with "Force Sonnet" option.`;
+            If you need a fresh review, push a new commit or use the manual workflow dispatch.`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
