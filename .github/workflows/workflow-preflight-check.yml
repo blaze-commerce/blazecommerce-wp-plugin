@@ -1,4 +1,4 @@
-name: "Priority 1: Claude Direct Approval"
+name: "Priority 1: Workflow Pre-flight Check"
 
 # SIMPLIFIED: Basic triggers only to test workflow execution
 on:
@@ -9,12 +9,12 @@ on:
 
 # Priority 1: HIGHEST PRIORITY - must run BEFORE all other workflows
 concurrency:
-  group: priority-1-claude-direct-approval-pr-${{ github.event.pull_request.number || github.run_id }}
+  group: priority-1-workflow-preflight-pr-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
-  claude-direct-approval:
-    name: Direct Claude Approval Action
+  workflow-preflight-check:
+    name: Workflow Connectivity Test
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -33,14 +33,14 @@ jobs:
       issues: write
 
     steps:
-      - name: Simple Priority 1 Test
+      - name: Workflow Connectivity Test
         id: test-step
         run: |
-          echo "🔍 PRIORITY 1: CLAUDE DIRECT APPROVAL TEST"
+          echo "🔍 PRIORITY 1: WORKFLOW PRE-FLIGHT CHECK"
           echo "📋 EVENT: ${{ github.event_name }}"
           echo "📋 ACTOR: ${{ github.actor }}"
           echo "🎯 PR Number: ${{ github.event.pull_request.number || github.event.number || 'N/A' }}"
-          echo "✅ Priority 1 workflow is working!"
+          echo "✅ Priority 1 workflow connectivity verified!"
           echo "approval_status=success" >> $GITHUB_OUTPUT
           echo "execution_time=$(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
       - name: Get PR Number
@@ -57,12 +57,12 @@ jobs:
           echo "🎯 PR Number: $PR_NUMBER"
           echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
 
-      - name: Priority 1 Success Confirmation
+      - name: Pre-flight Check Completion
         run: |
-          echo "✅ Priority 1 workflow completed successfully!"
+          echo "✅ Priority 1 pre-flight check completed successfully!"
           echo "🎯 PR Number: ${{ steps.get-pr.outputs.pr_number }}"
           echo "🔗 Priority 2 can now execute"
-          echo "📊 Test Status: WORKFLOWS ARE WORKING!"
+          echo "📊 Connectivity Status: WORKFLOWS ARE OPERATIONAL!"
           echo "⏰ Completion Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 
 
