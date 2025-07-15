@@ -4,16 +4,6 @@ name: "Priority 2: Claude AI Code Review"
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - '**.php'
-      - '**.js'
-      - '**.ts'
-      - '**.jsx'
-      - '**.tsx'
-      - 'src/**'
-      - 'includes/**'
-      - 'lib/**'
-      - 'assets/**'
     paths-ignore:
       - 'docs/**'
       - '**.md'
