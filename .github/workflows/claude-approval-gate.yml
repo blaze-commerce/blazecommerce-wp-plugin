@@ -4,9 +4,12 @@ name: "Priority 3: Claude AI Approval Gate"
 # This workflow now ensures Claude AI has reviewed the LATEST commit before approving
 # Fixes issue where auto-approval was based on stale reviews from previous commits
 
-# RACE CONDITION FIX: Trigger on Claude comment posting, not workflow completion
-# This ensures auto-approval only happens AFTER Claude posts the review comment
+# CRITICAL FIX: Trigger on Claude Review workflow completion AND comment posting
+# This ensures auto-approval only happens AFTER Claude completes the review
 on:
+  workflow_run:
+    workflows: ["Priority 2: Claude AI Code Review"]
+    types: [completed]
   issue_comment:
     types: [created]
   workflow_dispatch:
@@ -27,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     # Always run this debug job to capture conditional evaluation details
-    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
     steps:
       - name: Debug Conditional Logic Evaluation
         env:
@@ -133,10 +136,10 @@ jobs:
   claude-approval-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # CRITICAL FIX: Simplified conditional logic to match working debug job pattern
-    # ISSUE: Complex multi-line YAML condition was causing job skips despite valid triggers
-    # SOLUTION: Use simple condition like debug job, move detailed checks to job steps
-    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch'
+    # CRITICAL FIX: Handle multiple trigger types for proper workflow sequencing
+    # ISSUE: Race condition between Claude Review and Approval Gate workflows
+    # SOLUTION: Support both workflow_run (after Claude completes) and issue_comment (direct trigger)
+    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
     permissions:
       # Required permissions for GitHub App authentication and PR approval
       contents: read           # Read repository content
@@ -161,6 +164,14 @@ jobs:
           # Skip validation for manual workflow_dispatch triggers
           if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
             echo "✅ Manual workflow_dispatch trigger - validation skipped"
+            echo "trigger_valid=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Handle workflow_run triggers (Claude Review completion)
+          if [ "${EVENT_NAME}" = "workflow_run" ]; then
+            echo "🔄 workflow_run trigger detected - Claude Review workflow completed"
+            echo "✅ Proceeding to check for Claude review comments"
             echo "trigger_valid=true" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -363,10 +374,33 @@ jobs:
               prNumber = parseInt(context.payload.inputs.pr_number);
               shouldRun = true;
               console.log(`🎯 Manual trigger for PR: ${prNumber}`);
+            } else if (context.eventName === 'workflow_run') {
+              console.log('🔄 WORKFLOW_RUN trigger detected (Claude Review completed)');
+              console.log(`📋 Workflow: ${context.payload.workflow_run.name}`);
+              console.log(`📊 Conclusion: ${context.payload.workflow_run.conclusion}`);
+
+              // Only proceed if Claude Review workflow succeeded
+              if (context.payload.workflow_run.conclusion === 'success') {
+                // Extract PR number from the workflow_run event
+                const headBranch = context.payload.workflow_run.head_branch;
+                console.log(`🌿 Head branch: ${headBranch}`);
+
+                // Get PR number from the workflow_run pull_requests array
+                if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
+                  prNumber = context.payload.workflow_run.pull_requests[0].number;
+                  shouldRun = true;
+                  console.log(`✅ Found PR from workflow_run: ${prNumber}`);
+                } else {
+                  console.log('❌ No PR found in workflow_run event');
+                  shouldRun = false;
+                }
+              } else {
+                console.log(`❌ Claude Review workflow failed: ${context.payload.workflow_run.conclusion}`);
+                shouldRun = false;
+              }
             } else {
               console.log(`❌ UNSUPPORTED EVENT TYPE: ${context.eventName}`);
-              console.log('✅ SUPPORTED EVENTS: issue_comment (with FINAL VERDICT), workflow_dispatch');
-              console.log('🚫 REMOVED SUPPORT: workflow_run (caused race conditions)');
+              console.log('✅ SUPPORTED EVENTS: issue_comment, workflow_dispatch, workflow_run');
               shouldRun = false;
             }
             
