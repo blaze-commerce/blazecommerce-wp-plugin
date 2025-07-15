@@ -30,6 +30,10 @@ jobs:
           private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          # Individual permission parameters for dependency checking
+          permission-contents: read
+          permission-actions: read
+          permission-administration: read
 
       - name: Check Priority 4 Dependencies
         id: check-dependencies
@@ -93,6 +97,10 @@ jobs:
         private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
         owner: ${{ github.repository_owner }}
         repositories: ${{ github.event.repository.name }}
+        # Individual permission parameters for release validation
+        permission-contents: read
+        permission-actions: read
+        permission-administration: read
 
     - name: Checkout code
       uses: actions/checkout@v4
@@ -402,6 +410,10 @@ jobs:
         private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
         owner: ${{ github.repository_owner }}
         repositories: ${{ github.event.repository.name }}
+        # Individual permission parameters for release creation
+        permission-contents: write
+        permission-actions: read
+        permission-administration: read
 
     - name: Checkout code
       uses: actions/checkout@v4
