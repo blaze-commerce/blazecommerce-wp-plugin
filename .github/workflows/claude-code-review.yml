@@ -62,22 +62,22 @@ jobs:
 
       - name: Verify Authentication
         run: |
-          echo "🔐 AUTHENTICATION STATUS:"
+          echo "[AUTH] AUTHENTICATION STATUS:"
           if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-            echo "✅ GitHub App token generated successfully"
-            echo "🤖 Using BlazeCommerce Automation Bot authentication"
+            echo "[OK] GitHub App token generated successfully"
+            echo "[BOT] Using BlazeCommerce Automation Bot authentication"
           elif [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
-            echo "⚠️ Using BOT_GITHUB_TOKEN fallback"
+            echo "[WARN] Using BOT_GITHUB_TOKEN fallback"
           else
-            echo "⚠️ Using default github.token"
+            echo "[WARN] Using default github.token"
           fi
-          echo "📊 Repository: ${{ github.repository }}"
-          echo "🎯 Event: ${{ github.event_name }}"
+          echo "[INFO] Repository: ${{ github.repository }}"
+          echo "[EVENT] Event: ${{ github.event_name }}"
 
       - name: Check Execution Conditions
         id: execution-check
         run: |
-          echo "💰 COST OPTIMIZATION: Checking execution conditions"
+          echo "[COST] COST OPTIMIZATION: Checking execution conditions"
           echo "=================================================="
           echo "Event: ${{ github.event_name }}"
           echo "Author Association: ${{ github.event.pull_request.author_association }}"
@@ -94,14 +94,14 @@ jobs:
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
-            console.log('💰 COST OPTIMIZATION: Checking for review cache');
+            console.log('[COST] COST OPTIMIZATION: Checking for review cache');
 
             const prNumber = ${{ github.event.pull_request.number || github.event.inputs.pr_number }};
             const sha = '${{ github.event.pull_request.head.sha }}';
 
             // Generate a cache key based on PR number and commit SHA
             const cacheKey = `claude-review-${prNumber}-${sha}`;
-            console.log(`📋 Cache key: ${cacheKey}`);
+            console.log(`[INFO] Cache key: ${cacheKey}`);
             core.setOutput('cache_key', cacheKey);
 
             try {
@@ -120,16 +120,16 @@ jobs:
               );
 
               if (existingReview) {
-                console.log('✅ CACHE HIT: Found existing Claude review for this commit');
-                console.log(`📅 Review date: ${existingReview.created_at}`);
-                console.log(`🔗 Review URL: ${existingReview.html_url}`);
+                console.log('[OK] CACHE HIT: Found existing Claude review for this commit');
+                console.log(`[DATE] Review date: ${existingReview.created_at}`);
+                console.log(`[LINK] Review URL: ${existingReview.html_url}`);
                 core.setOutput('cache_hit', 'true');
               } else {
-                console.log('❌ CACHE MISS: No existing review found for this commit');
+                console.log('[ERROR] CACHE MISS: No existing review found for this commit');
                 core.setOutput('cache_hit', 'false');
               }
             } catch (error) {
-              console.error(`❌ ERROR checking cache: ${error.message}`);
+              console.error(`[ERROR] ERROR checking cache: ${error.message}`);
               core.setOutput('cache_hit', 'false');
             }
 
@@ -139,13 +139,13 @@ jobs:
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
-            console.log('🤖 USING CLAUDE SONNET MODEL');
+            console.log('[BOT] USING CLAUDE SONNET MODEL');
             console.log('============================');
 
             const prNumber = ${{ github.event.pull_request.number || github.event.inputs.pr_number }};
 
             // Always use Claude Sonnet model
-            console.log('✅ Using Claude Sonnet model for all reviews');
+            console.log('[OK] Using Claude Sonnet model for all reviews');
             core.setOutput('model', 'claude-3-5-sonnet-20240620');
             core.setOutput('reason', 'Using Claude Sonnet for all reviews');
             return;
@@ -162,7 +162,7 @@ jobs:
               const deletions = pr.deletions || 0;
               const totalChanges = additions + deletions;
 
-              console.log(`📊 PR Stats: +${additions} -${deletions} (${totalChanges} total changes)`);
+              console.log(`[INFO] PR Stats: +${additions} -${deletions} (${totalChanges} total changes)`);
 
               // Get list of changed files
               const { data: files } = await github.rest.pulls.listFiles({
@@ -172,21 +172,21 @@ jobs:
               });
 
               const changedFiles = files.map(file => file.filename);
-              console.log(`📁 Changed files (${changedFiles.length}):`, changedFiles.slice(0, 10));
+              console.log(`[FILES] Changed files (${changedFiles.length}):`, changedFiles.slice(0, 10));
 
               // Always use Claude Sonnet model
               const model = 'claude-3-5-sonnet-20240620';
               const reason = 'Using Claude Sonnet for all reviews';
 
-              console.log('✅ SONNET SELECTED: Default model for all reviews');
-              console.log(`✅ Model: ${model}`);
-              console.log(`📝 Reason: ${reason}`);
+              console.log('[OK] SONNET SELECTED: Default model for all reviews');
+              console.log(`[OK] Model: ${model}`);
+              console.log(`[NOTE] Reason: ${reason}`);
 
               core.setOutput('model', model);
               core.setOutput('reason', reason);
 
             } catch (error) {
-              console.error(`❌ ERROR in model selection: ${error.message}`);
+              console.error(`[ERROR] ERROR in model selection: ${error.message}`);
               // Fallback to Sonnet for safety
               core.setOutput('model', 'claude-3-5-sonnet-20240620');
               core.setOutput('reason', 'Error in selection, defaulting to Sonnet');
@@ -210,13 +210,13 @@ jobs:
     steps:
       - name: Cost Optimization Summary
         run: |
-          echo "💰 CLAUDE AI COST-OPTIMIZED REVIEW STARTING"
+          echo "[COST] CLAUDE AI COST-OPTIMIZED REVIEW STARTING"
           echo "============================================"
-          echo "📋 PR NUMBER: ${{ needs.cost-optimization-check.outputs.pr_number }}"
-          echo "🤖 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
-          echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
-          echo "💾 CACHE STATUS: ${{ needs.cost-optimization-check.outputs.cache_hit == 'true' && 'HIT (Skipped)' || 'MISS (Proceeding)' }}"
-          echo "⏰ EXECUTION TIME: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "[INFO] PR NUMBER: ${{ needs.cost-optimization-check.outputs.pr_number }}"
+          echo "[BOT] SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
+          echo "[NOTE] SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+          echo "[CACHE] CACHE STATUS: ${{ needs.cost-optimization-check.outputs.cache_hit == 'true' && 'HIT (Skipped)' || 'MISS (Proceeding)' }}"
+          echo "[TIME] EXECUTION TIME: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "============================================"
 
       - name: Generate GitHub App Token
@@ -234,17 +234,17 @@ jobs:
 
       - name: Verify Authentication
         run: |
-          echo "🔐 AUTHENTICATION STATUS:"
+          echo "[AUTH] AUTHENTICATION STATUS:"
           if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-            echo "✅ GitHub App token generated successfully"
-            echo "🤖 Using BlazeCommerce Automation Bot authentication"
+            echo "[OK] GitHub App token generated successfully"
+            echo "[BOT] Using BlazeCommerce Automation Bot authentication"
           elif [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
-            echo "⚠️ Using BOT_GITHUB_TOKEN fallback"
+            echo "[WARN] Using BOT_GITHUB_TOKEN fallback"
           else
-            echo "⚠️ Using default github.token"
+            echo "[WARN] Using default github.token"
           fi
-          echo "📊 Repository: ${{ github.repository }}"
-          echo "🎯 Event: ${{ github.event_name }}"
+          echo "[INFO] Repository: ${{ github.repository }}"
+          echo "[EVENT] Event: ${{ github.event_name }}"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -255,25 +255,25 @@ jobs:
       - name: Validate Claude API Key
         id: validate-api-key
         run: |
-          echo "🔍 VALIDATING CLAUDE API CONFIGURATION"
+          echo "[CHECK] VALIDATING CLAUDE API CONFIGURATION"
           echo "====================================="
           if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
-            echo "❌ ERROR: ANTHROPIC_API_KEY secret is not set!"
+            echo "[ERROR] ERROR: ANTHROPIC_API_KEY secret is not set!"
             echo ""
-            echo "🔧 TO FIX THIS:"
-            echo "1. Go to repository Settings → Secrets and variables → Actions"
+            echo "[FIX] TO FIX THIS:"
+            echo "1. Go to repository Settings > Secrets and variables > Actions"
             echo "2. Click 'New repository secret'"
             echo "3. Name: ANTHROPIC_API_KEY"
             echo "4. Value: Your Anthropic API key (starts with 'sk-ant-')"
             echo "5. Get your API key from: https://console.anthropic.com/"
             echo ""
-            echo "📋 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
-            echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+            echo "[INFO] SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
+            echo "[NOTE] SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
             exit 1
           else
-            echo "✅ ANTHROPIC_API_KEY is configured"
-            echo "📋 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
-            echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+            echo "[OK] ANTHROPIC_API_KEY is configured"
+            echo "[INFO] SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
+            echo "[NOTE] SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
           fi
 
 
@@ -296,19 +296,19 @@ jobs:
           direct_prompt: |
             Review this WordPress/WooCommerce plugin PR focusing on critical issues:
 
-            **🔴 Critical (Must Fix):**
+            **CRITICAL (Must Fix):**
             - Security vulnerabilities (SQL injection, XSS, CSRF)
             - WordPress/WooCommerce API misuse
             - Breaking changes or compatibility issues
             - Performance bottlenecks
 
-            **🟡 Important (Should Fix):**
+            **IMPORTANT (Should Fix):**
             - WordPress coding standards violations
             - Missing input sanitization/output escaping
             - Deprecated function usage
             - Missing error handling
 
-            **🟢 Suggestions (Nice to Have):**
+            **SUGGESTIONS (Nice to Have):**
             - Code organization improvements
             - Documentation updates
             - Performance optimizations
@@ -324,22 +324,22 @@ jobs:
       - name: Handle Claude Review Failure
         if: failure() && steps.validate-api-key.outcome == 'success'
         run: |
-          echo "❌ CLAUDE CODE REVIEW FAILED"
+          echo "[ERROR] CLAUDE CODE REVIEW FAILED"
           echo "============================"
           echo ""
-          echo "🔍 TROUBLESHOOTING STEPS:"
+          echo "[CHECK] TROUBLESHOOTING STEPS:"
           echo "1. Check if ANTHROPIC_API_KEY is valid and has sufficient credits"
           echo "2. Verify the model name is correct: ${{ needs.cost-optimization-check.outputs.model_selection }}"
           echo "3. Check Anthropic API status: https://status.anthropic.com/"
           echo "4. Review the action logs above for specific error messages"
           echo ""
-          echo "📋 DEBUG INFO:"
+          echo "[INFO] DEBUG INFO:"
           echo "Model: ${{ needs.cost-optimization-check.outputs.model_selection }}"
           echo "Reason: ${{ needs.cost-optimization-check.outputs.model_reason }}"
           echo "Action Version: v0.0.32"
           echo "Timeout: 8 minutes"
           echo ""
-          echo "💡 If the issue persists, try manually triggering the workflow or check API status"
+          echo "[TIP] If the issue persists, try manually triggering the workflow or check API status"
 
   # COST OPTIMIZATION: Show cache hit information
   cache-skip-notification:
@@ -373,7 +373,7 @@ jobs:
             const prNumber = ${{ needs.cost-optimization-check.outputs.pr_number }};
             const cacheKey = '${{ needs.cost-optimization-check.outputs.cache_key }}';
 
-            const message = `💰 **Cost Optimization: Review Skipped**
+            const message = `[COST] **Cost Optimization: Review Skipped**
 
             This commit has already been reviewed by Claude AI. Skipping duplicate review to save costs.
 
