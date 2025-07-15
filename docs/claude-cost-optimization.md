@@ -4,6 +4,8 @@
 
 This document explains the cost optimization features implemented in our Claude AI GitHub Actions workflows to reduce API costs from ~$35/day to ~$5-8/day (85% reduction).
 
+**Important**: This optimization maintains the existing Priority Queue System architecture, ensuring proper execution order with Priority 1 (Claude Direct Approval) and Priority 3 (Claude Approval Gate).
+
 ## 🎯 Key Optimizations Implemented
 
 ### 1. Intelligent Model Selection
@@ -67,10 +69,21 @@ Workflows skip execution for:
 ### Environment Variables
 
 ```yaml
-# Required secrets (same as before)
+# Required secrets
 ANTHROPIC_API_KEY: Your Claude API key
-GITHUB_TOKEN: GitHub access token
+BC_GITHUB_APP_ID: BlazeCommerce Automation Bot App ID
+BC_GITHUB_APP_PRIVATE_KEY: BlazeCommerce Automation Bot Private Key
+BOT_GITHUB_TOKEN: Fallback GitHub token
 ```
+
+### Authentication Hierarchy
+
+The workflow uses a three-tier authentication fallback system:
+1. **Primary**: BlazeCommerce Automation Bot (GitHub App)
+2. **Secondary**: BOT_GITHUB_TOKEN (Personal Access Token)
+3. **Tertiary**: Default github.token (GitHub Actions token)
+
+This ensures consistent bot identity across all Claude AI operations.
 
 ### Workflow Dispatch Options
 
