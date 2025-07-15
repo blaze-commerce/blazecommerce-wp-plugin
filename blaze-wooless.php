@@ -28,6 +28,8 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 	require_once plugin_dir_path( __FILE__ ) . 'test/test-country-specific-images.php';
 }
 
+// Test comment for auto-version workflow validation - v2
+
 
 // Initialize plugin
 function BlazeCommerce() {
