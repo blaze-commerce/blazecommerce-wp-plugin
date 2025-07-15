@@ -1,172 +1,228 @@
-name: "Priority 2: Claude AI Code Review"
+name: "Priority 2: Claude AI Code Review (Cost Optimized)"
 
-# HYBRID TRIGGER: Support both pull_request (for Claude action) and workflow_run (for timing control)
-# Claude action requires pull_request trigger, but our timing fix needs workflow_run
+# COST OPTIMIZATION: Intelligent triggering with file filtering and conditional execution
 on:
   pull_request:
-    types: [opened, synchronize, reopened]  # Required for Claude action compatibility
-  workflow_run:
-    workflows: ["Priority 1: Claude Direct Approval"]
-    types: [completed]  # For timing control and approval gate
-  pull_request_review:
-    types: [submitted, dismissed]  # For review updates
-  workflow_dispatch:  # Added for manual testing and debugging
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**.php'
+      - '**.js'
+      - '**.ts'
+      - '**.jsx'
+      - '**.tsx'
+      - 'src/**'
+      - 'includes/**'
+      - 'lib/**'
+      - 'assets/**'
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'tests/**'
+      - 'test/**'
+      - '**.txt'
+      - 'README*'
+      - 'CHANGELOG*'
+      - '.gitignore'
+      - 'package-lock.json'
+      - 'composer.lock'
+  workflow_dispatch:
     inputs:
       pr_number:
         description: 'PR number to review'
         required: true
         type: string
+      force_sonnet:
+        description: 'Force use of Claude Sonnet (bypass intelligent selection)'
+        required: false
+        type: boolean
+        default: false
 
-# Priority 2: Handles both pull_request (Claude action) and workflow_run (timing control) events
-# Concurrency control ensures proper sequencing regardless of trigger type
+# COST OPTIMIZATION: Simplified concurrency control for cost-optimized workflow
 concurrency:
-  group: priority-2-claude-review-pr-${{ github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: false  # Don't cancel to ensure review completion
+  group: claude-review-pr-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true  # Cancel previous runs to save costs
 
 jobs:
-  # ENHANCED: Strict validation that Priority 1 completed successfully before running Priority 2
-  validate-workflow-sequence:
+  # COST OPTIMIZATION: Intelligent model selection and conditional execution
+  cost-optimization-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    # CONDITIONAL EXECUTION: Only run for external contributors or labeled PRs
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
+      github.event.pull_request.author_association == 'CONTRIBUTOR' ||
+      contains(github.event.pull_request.labels.*.name, 'needs-review') ||
+      contains(github.event.pull_request.labels.*.name, 'external-review')
     outputs:
-      should_run: ${{ steps.validate.outputs.should_run }}
-      pr_number: ${{ steps.validate.outputs.pr_number }}
-      priority_1_status: ${{ steps.validate.outputs.priority_1_status }}
+      should_run: ${{ steps.execution-check.outputs.should_run }}
+      model_selection: ${{ steps.model-selection.outputs.model }}
+      model_reason: ${{ steps.model-selection.outputs.reason }}
+      pr_number: ${{ steps.execution-check.outputs.pr_number }}
+      cache_key: ${{ steps.cache-check.outputs.cache_key }}
+      cache_hit: ${{ steps.cache-check.outputs.cache_hit }}
     steps:
-      - name: Validate Priority 1 Completion and Workflow Sequence
-        id: validate
+      - name: Check Execution Conditions
+        id: execution-check
+        run: |
+          echo "💰 COST OPTIMIZATION: Checking execution conditions"
+          echo "=================================================="
+          echo "Event: ${{ github.event_name }}"
+          echo "Author Association: ${{ github.event.pull_request.author_association }}"
+          echo "Labels: ${{ toJson(github.event.pull_request.labels.*.name) }}"
+
+          PR_NUMBER="${{ github.event.pull_request.number || github.event.inputs.pr_number }}"
+          echo "PR Number: $PR_NUMBER"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "should_run=true" >> $GITHUB_OUTPUT
+
+      - name: Check for Review Cache
+        id: cache-check
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            console.log('🔍 PRIORITY 2: WORKFLOW SEQUENCE VALIDATION');
-            console.log('=' .repeat(60));
-            console.log(`📋 EVENT NAME: ${context.eventName}`);
-            console.log(`🎯 WORKFLOW: Priority 2 - Claude AI Code Review`);
-            console.log(`🔗 DEPENDENCY: Must wait for Priority 1 completion`);
-            console.log('=' .repeat(60));
+            console.log('💰 COST OPTIMIZATION: Checking for review cache');
 
-            let shouldRun = false;
-            let prNumber = null;
-            let priority1Status = 'unknown';
+            const prNumber = ${{ github.event.pull_request.number || github.event.inputs.pr_number }};
+            const sha = '${{ github.event.pull_request.head.sha }}';
+
+            // Generate a cache key based on PR number and commit SHA
+            const cacheKey = `claude-review-${prNumber}-${sha}`;
+            console.log(`📋 Cache key: ${cacheKey}`);
+            core.setOutput('cache_key', cacheKey);
 
             try {
-              // HYBRID APPROACH: Handle both pull_request and workflow_run events
-              if (context.eventName === 'pull_request') {
-                console.log('📥 TRIGGERED BY: pull_request event (Claude action compatible)');
-                shouldRun = true;
-                priority1Status = 'pull_request_direct';
-                prNumber = context.payload.pull_request.number;
-                console.log(`✅ PULL_REQUEST: Direct execution for PR #${prNumber}`);
-                console.log('🎯 Claude action will run with full PR context');
-              } else if (context.eventName === 'workflow_run') {
-                console.log('📥 TRIGGERED BY: workflow_run event');
+              // Check if this commit has already been reviewed
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                per_page: 30
+              });
 
-                const workflowRun = context.payload.workflow_run;
-                console.log(`📊 WORKFLOW RUN: ${workflowRun.name}`);
-                console.log(`📊 CONCLUSION: ${workflowRun.conclusion}`);
-                console.log(`📊 STATUS: ${workflowRun.status}`);
+              // Look for Claude review comments that mention this specific commit
+              const existingReview = comments.find(comment =>
+                comment.body.includes('Claude AI PR Review Complete') &&
+                comment.body.includes(sha.substring(0, 7))
+              );
 
-                if (workflowRun.name === 'Priority 1: Claude Direct Approval') {
-                  if (workflowRun.conclusion === 'success') {
-                    shouldRun = true;
-                    priority1Status = 'success';
-                    console.log('✅ VALIDATION: Priority 1 completed successfully');
-
-                    // Extract PR number from workflow run
-                    if (workflowRun.pull_requests && workflowRun.pull_requests.length > 0) {
-                      prNumber = workflowRun.pull_requests[0].number;
-                      console.log(`📋 PR NUMBER: ${prNumber} (from workflow_run.pull_requests)`);
-                    } else {
-                      console.log('⚠️ WARNING: No PR number found in workflow_run.pull_requests');
-                    }
-                  } else {
-                    shouldRun = false;
-                    priority1Status = workflowRun.conclusion || 'failed';
-                    console.log(`❌ VALIDATION: Priority 1 failed with conclusion: ${workflowRun.conclusion}`);
-                  }
-                } else {
-                  console.log(`⚠️ WARNING: Unexpected workflow triggered this: ${workflowRun.name}`);
-                  shouldRun = false;
-                }
-              } else if (context.eventName === 'pull_request_review') {
-                console.log('📥 TRIGGERED BY: pull_request_review event');
-                prNumber = context.payload.pull_request.number;
-
-                // For review events, check if Priority 1 has completed for this PR
-                console.log(`🔍 CHECKING: Priority 1 completion for PR #${prNumber}`);
-
-                const workflowRuns = await github.rest.actions.listWorkflowRunsForRepo({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  workflow_id: 'claude-direct-approval.yml',
-                  head_sha: context.payload.pull_request.head.sha,
-                  status: 'completed',
-                  per_page: 10
-                });
-
-                const priority1Run = workflowRuns.data.workflow_runs.find(run =>
-                  run.name === 'Priority 1: Claude Direct Approval' &&
-                  run.conclusion === 'success'
-                );
-
-                if (priority1Run) {
-                  shouldRun = true;
-                  priority1Status = 'success';
-                  console.log(`✅ VALIDATION: Found successful Priority 1 run (ID: ${priority1Run.id})`);
-                } else {
-                  shouldRun = false;
-                  priority1Status = 'not_found';
-                  console.log('❌ VALIDATION: No successful Priority 1 run found for this PR');
-                }
+              if (existingReview) {
+                console.log('✅ CACHE HIT: Found existing Claude review for this commit');
+                console.log(`📅 Review date: ${existingReview.created_at}`);
+                console.log(`🔗 Review URL: ${existingReview.html_url}`);
+                core.setOutput('cache_hit', 'true');
               } else {
-                console.log(`❌ VALIDATION: Unsupported event type: ${context.eventName}`);
-                shouldRun = false;
+                console.log('❌ CACHE MISS: No existing review found for this commit');
+                core.setOutput('cache_hit', 'false');
               }
-
-              console.log('🎯 VALIDATION RESULTS:');
-              console.log(`   SHOULD RUN: ${shouldRun}`);
-              console.log(`   PR NUMBER: ${prNumber}`);
-              console.log(`   PRIORITY 1 STATUS: ${priority1Status}`);
-              console.log('=' .repeat(60));
-
-              core.setOutput('should_run', shouldRun.toString());
-              core.setOutput('pr_number', prNumber?.toString() || '');
-              core.setOutput('priority_1_status', priority1Status);
-
             } catch (error) {
-              console.error(`❌ ERROR during validation: ${error.message}`);
-              core.setOutput('should_run', 'false');
-              core.setOutput('pr_number', '');
-              core.setOutput('priority_1_status', 'error');
+              console.error(`❌ ERROR checking cache: ${error.message}`);
+              core.setOutput('cache_hit', 'false');
             }
 
-  # NEW JOB: Handle workflow_run events for timing control without running Claude action
-  workflow-run-handler:
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    if: github.event_name == 'workflow_run'
-    steps:
-      - name: Handle Workflow Run Event
-        run: |
-          echo "🔄 WORKFLOW_RUN EVENT HANDLER"
-          echo "This job handles workflow_run events for timing control"
-          echo "Claude review will be triggered by pull_request events only"
-          echo "Event: ${{ github.event_name }}"
-          echo "Workflow: ${{ github.event.workflow_run.name || 'N/A' }}"
-          echo "Status: ${{ github.event.workflow_run.conclusion || 'N/A' }}"
+      - name: Intelligent Model Selection
+        id: model-selection
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('🤖 INTELLIGENT MODEL SELECTION');
+            console.log('================================');
+
+            const prNumber = ${{ github.event.pull_request.number || github.event.inputs.pr_number }};
+            const forceSonnet = ${{ github.event.inputs.force_sonnet || false }};
+
+            // Force Sonnet if requested via workflow_dispatch
+            if (forceSonnet) {
+              console.log('🔧 MANUAL OVERRIDE: Force Sonnet requested');
+              core.setOutput('model', 'claude-3-5-sonnet-20241022');
+              core.setOutput('reason', 'Manual override via workflow_dispatch');
+              return;
+            }
+
+            try {
+              // Get PR details including file changes
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+
+              const additions = pr.additions || 0;
+              const deletions = pr.deletions || 0;
+              const totalChanges = additions + deletions;
+
+              console.log(`📊 PR Stats: +${additions} -${deletions} (${totalChanges} total changes)`);
+
+              // Get list of changed files
+              const { data: files } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+
+              const changedFiles = files.map(file => file.filename);
+              console.log(`📁 Changed files (${changedFiles.length}):`, changedFiles.slice(0, 10));
+
+              // Critical file patterns that require Sonnet (more specific to avoid false positives)
+              const criticalPatterns = [
+                /\/security\//i, /\/auth\//i, /\/payment\//i, /\/admin\//i, /\/core\//i, /\/api\//i,
+                /security\./i, /auth\./i, /payment\./i, /admin\./i, /core\./i, /api\./i,
+                /login\./i, /user\./i, /permission\./i, /role\./i, /session\./i, /token\./i,
+                /-security/i, /-auth/i, /-payment/i, /-admin/i, /-core/i, /-api/i,
+                /crypto/i, /encrypt/i, /password/i, /oauth/i, /jwt/i, /sql/i,
+                /database/i, /migration/i, /schema/i
+              ];
+
+              // Check for critical files
+              const hasCriticalFiles = changedFiles.some(file =>
+                criticalPatterns.some(pattern => pattern.test(file))
+              );
+
+              // Decision logic
+              let model, reason;
+
+              if (hasCriticalFiles) {
+                model = 'claude-3-5-sonnet-20241022';
+                reason = 'Critical security/auth/payment files detected';
+                console.log('🔴 SONNET SELECTED: Critical files found');
+              } else if (totalChanges > 200) {
+                model = 'claude-3-5-sonnet-20241022';
+                reason = `Large changeset (${totalChanges} changes > 200 threshold)`;
+                console.log('🔴 SONNET SELECTED: Large changeset');
+              } else if (totalChanges > 100 && changedFiles.some(f => f.endsWith('.php'))) {
+                model = 'claude-3-5-sonnet-20241022';
+                reason = `Medium PHP changeset (${totalChanges} changes)`;
+                console.log('🟡 SONNET SELECTED: Medium PHP changes');
+              } else {
+                model = 'claude-3-haiku-20240307';
+                reason = `Simple changes (${totalChanges} changes, no critical files)`;
+                console.log('🟢 HAIKU SELECTED: Simple changes');
+              }
+
+              console.log(`✅ Model: ${model}`);
+              console.log(`📝 Reason: ${reason}`);
+
+              core.setOutput('model', model);
+              core.setOutput('reason', reason);
+
+            } catch (error) {
+              console.error(`❌ ERROR in model selection: ${error.message}`);
+              // Fallback to Haiku for safety
+              core.setOutput('model', 'claude-3-haiku-20240307');
+              core.setOutput('reason', 'Error in selection, defaulting to Haiku');
+            }
 
   claude-review:
-    needs: [validate-workflow-sequence]
-    # CRITICAL FIX: Only run Claude action on pull_request events (Claude action requirement)
-    # workflow_run events are handled by validate-workflow-sequence job only
-    if: needs.validate-workflow-sequence.outputs.should_run == 'true' && github.event_name == 'pull_request'
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    needs: [cost-optimization-check]
+    # COST OPTIMIZATION: Skip if cached or conditions not met
+    if: |
+      needs.cost-optimization-check.outputs.should_run == 'true' &&
+      needs.cost-optimization-check.outputs.cache_hit == 'false'
 
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
@@ -174,16 +230,16 @@ jobs:
       id-token: write
 
     steps:
-      - name: Log Workflow Sequence Validation
+      - name: Cost Optimization Summary
         run: |
-          echo "🤖 PRIORITY 2: CLAUDE AI CODE REVIEW STARTING"
-          echo "=" | tr -d '\n' | head -c 60; echo
-          echo "📋 PR NUMBER: ${{ needs.validate-workflow-sequence.outputs.pr_number }}"
-          echo "✅ PRIORITY 1 STATUS: ${{ needs.validate-workflow-sequence.outputs.priority_1_status }}"
-          echo "🎯 WORKFLOW SEQUENCE: Priority 1 → Priority 2 (CURRENT)"
-          echo "🔗 DEPENDENCY VALIDATED: Priority 1 completed successfully"
+          echo "💰 CLAUDE AI COST-OPTIMIZED REVIEW STARTING"
+          echo "============================================"
+          echo "📋 PR NUMBER: ${{ needs.cost-optimization-check.outputs.pr_number }}"
+          echo "🤖 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
+          echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+          echo "💾 CACHE STATUS: ${{ needs.cost-optimization-check.outputs.cache_hit == 'true' && 'HIT (Skipped)' || 'MISS (Proceeding)' }}"
           echo "⏰ EXECUTION TIME: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "=" | tr -d '\n' | head -c 60; echo
+          echo "============================================"
 
       - name: Generate GitHub App Token
         id: app_token
@@ -220,176 +276,71 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        # INTENTIONAL EXCEPTION: @beta tag preserved for Claude functionality
-        # This is required for proper Claude code review integration
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # CUSTOM IMPLEMENTATION: Use our GitHub App for consistent branding
-          # This ensures comments appear as blazecommerce-automation-bot[bot]
           github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
 
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
+          # COST OPTIMIZATION: Intelligent model selection
+          model: ${{ needs.cost-optimization-check.outputs.model_selection }}
 
-          # Direct prompt for automated review (no @claude mention needed)
+          # COST OPTIMIZATION: Concise prompt (reduced from 138 lines to ~20 lines)
           direct_prompt: |
-            Please review this pull request with comprehensive feedback focusing on WordPress/WooCommerce plugin development standards:
+            Review this WordPress/WooCommerce plugin PR focusing on critical issues:
 
-            ## 🔍 **WordPress/WooCommerce Specific Review**
+            **🔴 Critical (Must Fix):**
+            - Security vulnerabilities (SQL injection, XSS, CSRF)
+            - WordPress/WooCommerce API misuse
+            - Breaking changes or compatibility issues
+            - Performance bottlenecks
 
-            ### **WordPress Coding Standards**
-            - Verify compliance with WordPress PHP Coding Standards
-            - Check PSR-4 namespace usage (`BlazeWooless\` namespace)
-            - Validate proper WordPress hook/filter implementation
-            - Review WordPress database operations (`$wpdb->prepare()` usage)
+            **🟡 Important (Should Fix):**
+            - WordPress coding standards violations
+            - Missing input sanitization/output escaping
+            - Deprecated function usage
+            - Missing error handling
 
-            ### **WooCommerce Integration**
-            - Validate WooCommerce API usage patterns
-            - Check product data handling security
-            - Review cart/session management
-            - Verify payment gateway integration security
+            **🟢 Suggestions (Nice to Have):**
+            - Code organization improvements
+            - Documentation updates
+            - Performance optimizations
 
-            ## 🔒 **Security Review (WordPress-Specific)**
-
-            ### **Input/Output Security**
-            - Check for unsanitized `$_GET`/`$_POST` parameters
-            - Verify proper output escaping (`esc_html()`, `esc_attr()`, `esc_url()`)
-            - Validate input sanitization (`sanitize_text_field()`, etc.)
-            - Review direct echo of user input
-
-            ### **WordPress Security Patterns**
-            - Verify CSRF protection (`wp_verify_nonce()`)
-            - Check capability validation (`current_user_can()`)
-            - Review SQL injection prevention (`$wpdb->prepare()`)
-            - Validate file upload security
-            - Check remote request security (`wp_remote_get/post()`)
-
-            ### **Plugin Security**
-            - Review plugin activation/deactivation hooks
-            - Check admin interface security
-            - Validate AJAX endpoint security
-            - Review REST API endpoint security
-
-            ## ⚡ **Performance & Optimization**
-
-            ### **Database Operations**
-            - Review query efficiency and optimization
-            - Check for N+1 query problems
-            - Validate proper indexing usage
-            - Review caching implementation
-
-            ### **WordPress Performance**
-            - Check for proper WordPress caching usage
-            - Review asset optimization (CSS/JS)
-            - Validate image optimization
-            - Check memory usage impact
-
-            ## 📚 **Documentation & Standards**
-
-            ### **Code Documentation**
-            - Verify PHPDoc compliance for all public methods
-            - Check inline comments for complex logic
-            - Review class and function documentation
-
-            ### **Project Documentation**
-            - Check if README updates are needed
-            - Verify changelog entries for user-facing changes
-            - Review API documentation updates
-            - Validate feature documentation updates
-
-            ## 🧪 **Testing & Quality**
-
-            ### **WordPress Testing**
-            - Review WordPress environment testing
-            - Check WooCommerce compatibility testing
-            - Validate plugin dependency testing
-            - Review unit test coverage
-
-            ### **Integration Testing**
-            - Check GraphQL API integration
-            - Review Typesense integration
-            - Validate third-party plugin compatibility
-
-            ## 🌐 **Compliance & Accessibility**
-
-            ### **Regulatory Compliance**
-            - Review GDPR/CCPA compliance for data handling
-            - Check PCI DSS requirements for payment features
-            - Validate data retention policies
-
-            ### **Accessibility**
-            - Review WCAG 2.1 AA compliance
-            - Check keyboard navigation
-            - Validate screen reader compatibility
-
-            ## 🔄 **Backward Compatibility**
-
-            ### **WordPress/PHP Compatibility**
-            - Verify minimum WordPress version support
-            - Check PHP version compatibility
-            - Review deprecated function usage
-            - Validate plugin dependency requirements
-
-            ## 📋 **Previous Review Implementation Check**
-
-            **CRITICAL**: If this PR has previous Claude review comments, verify that:
-            1. All REQUIRED (🔴) issues have been properly addressed
-            2. IMPORTANT (🟡) recommendations have been implemented or acknowledged
-            3. Code changes align with previous feedback
-
-            **Do NOT approve** if required changes from previous reviews haven't been implemented.
-
-            ## 🎯 **FINAL VERDICT FORMAT**
-
-            You MUST end your review with this EXACT format:
-
+            **Required Final Format:**
             ### FINAL VERDICT
-            **Status**: APPROVED
-            **Merge Readiness**: READY TO MERGE
-            **Recommendation**: Brief explanation of your decision
+            **Status**: APPROVED | CONDITIONAL APPROVAL | BLOCKED
+            **Merge Readiness**: READY TO MERGE | READY AFTER FIXES | NOT READY
+            **Recommendation**: Brief explanation
 
-            OR
+            Focus on security, compatibility, and WordPress best practices. Be concise but thorough.
 
-            ### FINAL VERDICT
-            **Status**: CONDITIONAL APPROVAL
-            **Merge Readiness**: READY AFTER FIXES
-            **Recommendation**: Brief explanation of your decision
+  # COST OPTIMIZATION: Show cache hit information
+  cache-skip-notification:
+    needs: [cost-optimization-check]
+    if: needs.cost-optimization-check.outputs.cache_hit == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Cache Hit Notification
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ needs.cost-optimization-check.outputs.pr_number }};
+            const cacheKey = '${{ needs.cost-optimization-check.outputs.cache_key }}';
 
-            OR
+            const message = `💰 **Cost Optimization: Review Skipped**
 
-            ### FINAL VERDICT
-            **Status**: BLOCKED
-            **Merge Readiness**: NOT READY
-            **Recommendation**: Brief explanation of your decision
+            This commit has already been reviewed by Claude AI. Skipping duplicate review to save costs.
 
-            **STATUS GUIDELINES:**
-            - **APPROVED**: No critical issues, WordPress/WooCommerce standards met, previous issues resolved
-            - **CONDITIONAL APPROVAL**: Minor improvements suggested, standards mostly met
-            - **BLOCKED**: Critical security/compatibility issues, WordPress standards violations, or unresolved previous issues
+            **Cache Key:** \`${cacheKey}\`
+            **Reason:** Commit already reviewed
+            **Cost Savings:** ~$0.50-$2.00 per skipped review
 
-            ⚠️ IMPORTANT: Use the exact status values (APPROVED, CONDITIONAL APPROVAL, BLOCKED) without brackets or additional formatting. The automated system will detect these specific terms.
+            If you need a fresh review, push a new commit or use the manual workflow dispatch with "Force Sonnet" option.`;
 
-            Focus on WordPress/WooCommerce plugin best practices and be constructive in feedback.
-
-          # Optional: Customize review based on file types
-          # direct_prompt: |
-          #   Review this PR focusing on:
-          #   - For TypeScript files: Type safety and proper interface usage
-          #   - For API endpoints: Security, input validation, and error handling
-          #   - For React components: Performance, accessibility, and best practices
-          #   - For tests: Coverage, edge cases, and test quality
-
-          # Optional: Different prompts for different authors
-          # direct_prompt: |
-          #   ${{ github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' &&
-          #   'Welcome! Please review this PR from a first-time contributor. Be encouraging and provide detailed explanations for any suggestions.' ||
-          #   'Please provide a thorough code review focusing on our coding standards and best practices.' }}
-
-          # Optional: Add specific tools for running tests or linting
-          # allowed_tools: "Bash(npm run test),Bash(npm run lint),Bash(npm run typecheck)"
-
-          # Optional: Skip review for certain conditions
-          # if: |
-          #   !contains(github.event.pull_request.title, '[skip-review]') &&
-          #   !contains(github.event.pull_request.title, '[WIP]')
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: message
+            });
