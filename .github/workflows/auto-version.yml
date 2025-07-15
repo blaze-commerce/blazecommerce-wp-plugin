@@ -936,18 +936,18 @@ jobs:
 
         # Create PR with comprehensive error handling
         echo "📝 Creating PR with error handling..."
-        PR_BODY="🤖 **Automated Version Bump** (Run ID: ${{ github.run_id }})
 
-**Changes:**
-- Updated package.json version: $NEW_VERSION
-- Updated blaze-wooless.php version
-- Updated README.md version
-- Updated blocks/package.json version
-- Created git tag v$NEW_VERSION
-
-**Auto-merge**: This PR will be automatically merged using BlazeCommerce Automation Bot bypass permissions.
-**Conflict Resolution**: If conflicts occur, the workflow handles them automatically.
-**Branch**: $BRANCH_NAME"
+        # Create PR body using simple string concatenation to avoid YAML issues
+        PR_BODY="🤖 Automated Version Bump (Run ID: ${{ github.run_id }})"
+        PR_BODY="$PR_BODY"$'\n\n'"Changes:"
+        PR_BODY="$PR_BODY"$'\n'"- Updated package.json version: $NEW_VERSION"
+        PR_BODY="$PR_BODY"$'\n'"- Updated blaze-wooless.php version"
+        PR_BODY="$PR_BODY"$'\n'"- Updated README.md version"
+        PR_BODY="$PR_BODY"$'\n'"- Updated blocks/package.json version"
+        PR_BODY="$PR_BODY"$'\n'"- Created git tag v$NEW_VERSION"
+        PR_BODY="$PR_BODY"$'\n\n'"Auto-merge: This PR will be automatically merged using BlazeCommerce Automation Bot bypass permissions."
+        PR_BODY="$PR_BODY"$'\n'"Conflict Resolution: If conflicts occur, the workflow handles them automatically."
+        PR_BODY="$PR_BODY"$'\n'"Branch: $BRANCH_NAME"
 
         if PR_URL=$(gh pr create \
           --title "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]" \
@@ -1059,19 +1059,17 @@ jobs:
           echo "🔗 PR URL: https://github.com/${{ github.repository }}/pull/$PR_NUMBER"
 
           # Add comment to PR explaining the situation
-          gh pr comment "$PR_NUMBER" --body "⚠️ **Auto-merge failed**
-
-This automated version bump PR could not be automatically merged due to conflicts or permission issues.
-
-**Next Steps:**
-1. Review the changes in this PR
-2. Resolve any conflicts if present
-3. Manually merge this PR to complete the version bump
-
-**Technical Details:**
-- Workflow Run: ${{ github.run_id }}
-- Branch: $BRANCH_NAME
-- Multiple merge strategies attempted"
+          COMMENT_BODY="⚠️ Auto-merge failed"
+          COMMENT_BODY="$COMMENT_BODY"$'\n\n'"This automated version bump PR could not be automatically merged due to conflicts or permission issues."
+          COMMENT_BODY="$COMMENT_BODY"$'\n\n'"Next Steps:"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"1. Review the changes in this PR"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"2. Resolve any conflicts if present"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"3. Manually merge this PR to complete the version bump"
+          COMMENT_BODY="$COMMENT_BODY"$'\n\n'"Technical Details:"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"- Workflow Run: ${{ github.run_id }}"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"- Branch: $BRANCH_NAME"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"- Multiple merge strategies attempted"
+          gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
 
           echo "⚠️ Manual merge required for PR #$PR_NUMBER"
           # Don't fail the workflow, just log the issue for manual intervention
