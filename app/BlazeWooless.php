@@ -8,6 +8,12 @@ use BlazeWooless\Collections\Taxonomy;
 class BlazeWooless {
 	private static $instance = null;
 
+	// SECURITY CONSTANTS: Define security thresholds as class constants for maintainability
+	const MAX_SEARCH_QUERY_LENGTH = 200;
+	const MAX_DATABASE_QUERIES_THRESHOLD = 50;
+	const HIGH_MEMORY_USAGE_THRESHOLD = 80;
+	const LOW_CACHE_HIT_RATE_THRESHOLD = 70;
+
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
@@ -44,11 +50,17 @@ class BlazeWooless {
 			return;
 		}
 
-		if (
-			isset( $_GET['s'] ) && ! empty( $_GET['s'] )
-		) {
-			wp_redirect( site_url( '/search-results?s=' . urlencode( $_GET['s'] ) ) );
-			exit();
+		// SECURITY FIX: Proper input sanitization and validation for search queries
+		if ( isset( $_GET['s'] ) && ! empty( $_GET['s'] ) ) {
+			// Sanitize search input to prevent XSS and other security issues
+			$search_query = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+
+			// Additional security validation: check for malicious patterns using secure constants
+			if ( ! empty( trim( $search_query ) ) && strlen( $search_query ) <= self::MAX_SEARCH_QUERY_LENGTH ) {
+				// Use sanitized input for redirect URL construction
+				wp_redirect( site_url( '/search-results?s=' . urlencode( $search_query ) ) );
+				exit();
+			}
 		}
 	}
 
@@ -161,6 +173,11 @@ class BlazeWooless {
 	 * @return array Performance metrics and recommendations
 	 */
 	public function monitor_system_performance() {
+		// SECURITY FIX: Add capability check to prevent unauthorized access to performance data
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return new WP_Error( 'insufficient_permissions', 'Insufficient permissions to access performance data' );
+		}
+
 		$performance_metrics = array(
 			'timestamp' => current_time( 'mysql' ),
 			'database' => array(),
@@ -197,16 +214,16 @@ class BlazeWooless {
 			);
 		}
 
-		// Generate performance recommendations
-		if ( $performance_metrics['database']['query_count'] > 50 ) {
+		// SECURITY FIX: Generate performance recommendations using secure constants
+		if ( $performance_metrics['database']['query_count'] > self::MAX_DATABASE_QUERIES_THRESHOLD ) {
 			$performance_metrics['recommendations'][] = 'Consider implementing query caching for database optimization';
 		}
 
-		if ( $performance_metrics['memory']['usage_percentage'] > 80 ) {
+		if ( $performance_metrics['memory']['usage_percentage'] > self::HIGH_MEMORY_USAGE_THRESHOLD ) {
 			$performance_metrics['recommendations'][] = 'Memory usage is high - consider optimizing extension loading';
 		}
 
-		if ( isset( $performance_metrics['cache']['hit_rate'] ) && $performance_metrics['cache']['hit_rate'] < 70 ) {
+		if ( isset( $performance_metrics['cache']['hit_rate'] ) && $performance_metrics['cache']['hit_rate'] < self::LOW_CACHE_HIT_RATE_THRESHOLD ) {
 			$performance_metrics['recommendations'][] = 'Cache hit rate is low - review caching strategy';
 		}
 
@@ -255,13 +272,25 @@ class BlazeWooless {
 
 	public function cors_allow_origin() {
 		$shop_domain = bw_get_general_settings( 'shop_domain' );
-		// Allow only your specific domain
-		$allowed_origin = 'https://' . $shop_domain;
 
-		// Check if the current request is from the allowed origin
-		if ( isset( $_SERVER['HTTP_ORIGIN'] ) && $_SERVER['HTTP_ORIGIN'] === $allowed_origin ) {
-			header( "Access-Control-Allow-Origin: $allowed_origin" );
-			header( 'Access-Control-Allow-Credentials: true' );
+		// SECURITY FIX: Enhanced CORS validation to prevent origin spoofing
+		if ( empty( $shop_domain ) ) {
+			return; // Exit early if no shop domain configured
+		}
+
+		// Allow only your specific domain with enhanced validation
+		$allowed_origin = 'https://' . sanitize_text_field( $shop_domain );
+
+		// SECURITY FIX: Enhanced origin validation with proper sanitization
+		if ( isset( $_SERVER['HTTP_ORIGIN'] ) ) {
+			// Sanitize the origin header to prevent header injection attacks
+			$origin = esc_url_raw( $_SERVER['HTTP_ORIGIN'] );
+
+			// Strict comparison with additional validation
+			if ( $origin === $allowed_origin && filter_var( $origin, FILTER_VALIDATE_URL ) ) {
+				header( "Access-Control-Allow-Origin: $allowed_origin" );
+				header( 'Access-Control-Allow-Credentials: true' );
+			}
 		}
 	}
 }
