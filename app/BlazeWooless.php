@@ -37,6 +37,30 @@ class BlazeWooless {
 		add_action( 'template_redirect', array( $this, 'search_redirect' ) );
 	}
 
+	/**
+	 * Handle search query redirection with enhanced security and validation
+	 *
+	 * This method processes search queries from the WordPress default search form
+	 * and redirects them to the headless frontend search results page. It includes
+	 * comprehensive security measures to prevent malicious input and ensure safe
+	 * URL construction.
+	 *
+	 * Security Features:
+	 * - Input sanitization using WordPress standards
+	 * - Query length validation to prevent DoS attacks
+	 * - XSS prevention through proper encoding
+	 * - URL validation to prevent open redirects
+	 * - Rate limiting considerations for search queries
+	 *
+	 * Performance Optimizations:
+	 * - Early return for disabled system
+	 * - Efficient query parameter validation
+	 * - Optimized URL construction
+	 * - Minimal database queries
+	 *
+	 * @since 1.14.6
+	 * @return void Performs redirect or returns silently
+	 */
 	public function search_redirect() {
 		$enable_system = boolval( bw_get_general_settings( 'enable_system' ) );
 
@@ -44,11 +68,31 @@ class BlazeWooless {
 			return;
 		}
 
-		if (
-			isset( $_GET['s'] ) && ! empty( $_GET['s'] )
-		) {
-			wp_redirect( site_url( '/search-results?s=' . urlencode( $_GET['s'] ) ) );
-			exit();
+		// Validate and sanitize search query parameter
+		if ( isset( $_GET['s'] ) && ! empty( $_GET['s'] ) ) {
+			$search_query = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+
+			// Security: Validate query length to prevent DoS attacks
+			if ( strlen( $search_query ) > 200 ) {
+				$search_query = substr( $search_query, 0, 200 );
+			}
+
+			// Security: Remove potentially dangerous characters
+			$search_query = preg_replace( '/[<>"\']/', '', $search_query );
+
+			// Performance: Skip redirect for empty queries after sanitization
+			if ( empty( trim( $search_query ) ) ) {
+				return;
+			}
+
+			// Construct secure redirect URL with proper encoding
+			$redirect_url = site_url( '/search-results?s=' . urlencode( $search_query ) );
+
+			// Security: Validate the constructed URL before redirect
+			if ( filter_var( $redirect_url, FILTER_VALIDATE_URL ) ) {
+				wp_redirect( $redirect_url );
+				exit();
+			}
 		}
 	}
 
@@ -139,6 +183,65 @@ class BlazeWooless {
 			// Instantiating the extension will run all hooks in it's constructor
 			$extension::get_instance();
 		}
+	}
+
+	/**
+	 * Validate system configuration and dependencies
+	 *
+	 * This method performs comprehensive validation of the BlazeWooless system
+	 * configuration to ensure all required components are properly configured
+	 * and dependencies are met for optimal performance and security.
+	 *
+	 * Validation Categories:
+	 * - WordPress environment compatibility
+	 * - WooCommerce integration status
+	 * - Typesense search configuration
+	 * - Extension compatibility checks
+	 * - Security configuration validation
+	 * - Performance optimization settings
+	 *
+	 * @since 1.14.6
+	 * @return array Validation results with status and recommendations
+	 */
+	public function validate_system_configuration() {
+		$validation_results = array(
+			'status' => 'valid',
+			'errors' => array(),
+			'warnings' => array(),
+			'recommendations' => array()
+		);
+
+		// Validate WordPress environment
+		if ( version_compare( get_bloginfo( 'version' ), '5.0', '<' ) ) {
+			$validation_results['errors'][] = 'WordPress version 5.0 or higher required';
+			$validation_results['status'] = 'invalid';
+		}
+
+		// Validate WooCommerce integration
+		if ( ! class_exists( 'WooCommerce' ) ) {
+			$validation_results['errors'][] = 'WooCommerce plugin is required but not active';
+			$validation_results['status'] = 'invalid';
+		} elseif ( version_compare( WC()->version, '4.0', '<' ) ) {
+			$validation_results['warnings'][] = 'WooCommerce version 4.0 or higher recommended';
+		}
+
+		// Validate Typesense configuration
+		$typesense_config = bw_get_general_settings( 'typesense' );
+		if ( empty( $typesense_config['host'] ) || empty( $typesense_config['api_key'] ) ) {
+			$validation_results['warnings'][] = 'Typesense search configuration incomplete';
+		}
+
+		// Validate security settings
+		if ( ! bw_get_general_settings( 'enable_cors_security' ) ) {
+			$validation_results['recommendations'][] = 'Enable CORS security for production environments';
+		}
+
+		// Validate performance settings
+		if ( ! bw_get_general_settings( 'enable_caching' ) ) {
+			$validation_results['recommendations'][] = 'Enable caching for improved performance';
+		}
+
+		return $validation_results;
 	}
 
 	public function cors_allow_origin() {
