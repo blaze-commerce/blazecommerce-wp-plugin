@@ -289,13 +289,10 @@ jobs:
               // ENHANCED: Format-agnostic FINAL VERDICT detection
               const commentBody = context.payload.comment?.body || '';
               const cleanComment = commentBody.toLowerCase().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-              const hasFinalVerdict = cleanComment.includes('final verdict') ||
-                                    cleanComment.includes('finalverdict') ||
-                                    commentBody.includes('FINAL VERDICT') ||
-                                    commentBody.includes('final verdict');
+              const hasFinalVerdict = commentBody.includes('PR_APPROVED_BY_BLAZE_BOT');
 
               console.log(`   Contains FINAL VERDICT (enhanced): ${hasFinalVerdict}`);
-              console.log(`   Contains Claude Review: ${commentBody.includes('Claude AI PR Review Complete')}`);
+              console.log(`   Contains PR_APPROVED_BY_BLAZE_BOT: ${commentBody.includes('PR_APPROVED_BY_BLAZE_BOT')}`);
               console.log(`   Is PR: ${!!context.payload.issue?.pull_request}`);
               console.log(`   Issue/PR Number: ${context.payload.issue?.number}`);
               console.log(`   Repository: ${context.repo.owner}/${context.repo.repo}`);
@@ -323,18 +320,14 @@ jobs:
                 console.log(`📅 Comment created: ${comment.created_at}`);
                 // ENHANCED: Format-agnostic FINAL VERDICT detection
                 const cleanCommentBody = comment.body.toLowerCase().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-                const hasFinalVerdictEnhanced = cleanCommentBody.includes('final verdict') ||
-                                              cleanCommentBody.includes('finalverdict') ||
-                                              comment.body.includes('FINAL VERDICT') ||
-                                              comment.body.includes('final verdict');
+                const hasFinalVerdictEnhanced = comment.body.includes('PR_APPROVED_BY_BLAZE_BOT');
 
                 console.log(`🔍 Comment contains FINAL VERDICT (enhanced): ${hasFinalVerdictEnhanced}`);
                 console.log(`🔍 Clean comment preview: ${cleanCommentBody.substring(0, 200)}...`);
 
                 // CRITICAL FIX: Enhanced Claude bot detection for issue_comment trigger
                 const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
-                                   comment.user.login.includes('blazecommerce-automation-bot')) &&
-                                   comment.body.includes('Claude AI PR Review Complete');
+                                   comment.user.login.includes('blazecommerce-automation-bot'));
                 const hasFinalVerdict = hasFinalVerdictEnhanced;
 
                 // FIXED: Robust PR detection for issue_comment events
@@ -467,18 +460,12 @@ jobs:
             
             for (const comment of comments.reverse()) {
               const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
-                                 comment.user.login.includes('blazecommerce-automation-bot')) &&
-                                 comment.body.includes('Claude AI PR Review Complete');
+                                 comment.user.login.includes('blazecommerce-automation-bot'));
               
-              // ENHANCED: Format-agnostic FINAL VERDICT detection
-              const cleanBody = comment.body.toLowerCase().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-              const hasVerdictEnhanced = cleanBody.includes('final verdict') ||
-                                       cleanBody.includes('finalverdict') ||
-                                       comment.body.includes('FINAL VERDICT') ||
-                                       comment.body.includes('### FINAL VERDICT') ||
-                                       comment.body.includes('final verdict');
+              // SIMPLIFIED: Direct detection of approval status
+              const hasApprovalStatus = comment.body.includes('PR_APPROVED_BY_BLAZE_BOT');
 
-              if (isClaudeBot && hasVerdictEnhanced) {
+              if (isClaudeBot && hasApprovalStatus) {
                 const commentDate = new Date(comment.created_at);
                 console.log(`Found Claude FINAL VERDICT comment from: ${comment.user.login}`);
                 console.log(`Comment created at: ${commentDate.toISOString()}`);
@@ -499,39 +486,12 @@ jobs:
                   console.log('✅ Comment is AFTER latest commit with sufficient time gap - valid for approval');
                   validClaudeComment = comment;
                   
-                  // ENHANCED: Safe excerpt extraction with multiple patterns
-                  let verdictIndex = comment.body.indexOf('FINAL VERDICT');
-                  if (verdictIndex === -1) {
-                    verdictIndex = comment.body.toLowerCase().indexOf('final verdict');
-                  }
-                  if (verdictIndex === -1) {
-                    verdictIndex = comment.body.indexOf('### FINAL VERDICT');
-                  }
+                  // SIMPLIFIED: Direct approval detection
+                  console.log('✅ Found PR_APPROVED_BY_BLAZE_BOT in comment');
+                  console.log('Comment excerpt: ' + comment.body.substring(comment.body.indexOf('PR_APPROVED_BY_BLAZE_BOT') - 50, comment.body.indexOf('PR_APPROVED_BY_BLAZE_BOT') + 100));
 
-                  if (verdictIndex !== -1) {
-                    console.log('Comment excerpt: ' + comment.body.substring(verdictIndex, verdictIndex + 200));
-                  } else {
-                    console.log('Comment excerpt: ' + comment.body.substring(0, 200) + '...');
-                  }
-
-                  // Check for status with flexible formatting (handles markdown bold)
-                  // FIXED: Added support for **Status**: format (asterisks before Status)
-                  if (comment.body.includes('Status**: APPROVED') ||
-                      comment.body.includes('Status: APPROVED') ||
-                      comment.body.includes('**Status**: APPROVED')) {
-                    claudeApproval = 'APPROVED';
-                    console.log('Claude status: APPROVED');
-                  } else if (comment.body.includes('Status**: BLOCKED') ||
-                             comment.body.includes('Status: BLOCKED') ||
-                             comment.body.includes('**Status**: BLOCKED')) {
-                    claudeApproval = 'BLOCKED';
-                    console.log('Claude status: BLOCKED');
-                  } else if (comment.body.includes('Status**: CONDITIONAL') ||
-                             comment.body.includes('Status: CONDITIONAL') ||
-                             comment.body.includes('**Status**: CONDITIONAL')) {
-                    claudeApproval = 'CONDITIONAL';
-                    console.log('Claude status: CONDITIONAL');
-                  }
+                  claudeApproval = 'APPROVED';
+                  console.log('Claude status: APPROVED (PR_APPROVED_BY_BLAZE_BOT found)');
                   break;
                 } else if (commentDate <= actualCommitDate) {
                   console.log('❌ Comment is BEFORE or AT commit time - ignoring stale review');
@@ -699,20 +659,10 @@ jobs:
               // Look for any Claude-related comment with APPROVED status
               const claudeComment = comments.reverse().find(comment => {
                 const isClaudeRelated = comment.user.login.includes('blazecommerce') ||
-                                       comment.user.type === 'Bot' ||
-                                       comment.body.includes('Claude AI');
+                                       comment.user.type === 'Bot';
                 // ENHANCED: Format-agnostic FINAL VERDICT and APPROVED detection
                 const cleanFallbackBody = comment.body.toLowerCase().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-                const hasFinalVerdictFallback = cleanFallbackBody.includes('final verdict') ||
-                                              cleanFallbackBody.includes('finalverdict') ||
-                                              comment.body.includes('FINAL VERDICT');
-                const hasApproval = hasFinalVerdictFallback &&
-                                   (cleanFallbackBody.includes('status**: approved') ||
-                                    cleanFallbackBody.includes('status: approved') ||
-                                    cleanFallbackBody.includes('**status**: approved') ||
-                                    comment.body.includes('Status**: APPROVED') ||
-                                    comment.body.includes('Status: APPROVED') ||
-                                    comment.body.includes('**Status**: APPROVED'));
+                const hasApproval = comment.body.includes('PR_APPROVED_BY_BLAZE_BOT');
                 return isClaudeRelated && hasApproval;
               });
 
