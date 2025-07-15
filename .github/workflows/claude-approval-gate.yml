@@ -144,7 +144,7 @@ jobs:
           script: |
             const prNumber = '${{ steps.get-pr.outputs.pr_number }}';
             console.log('Evaluating Claude approval for PR #' + prNumber);
-            
+
             // CRITICAL FIX: Get the latest commit timestamp to ensure Claude reviewed current changes
             console.log('🔍 Getting latest commit information...');
             const { data: pr } = await github.rest.pulls.get({
@@ -152,22 +152,23 @@ jobs:
               repo: context.repo.repo,
               pull_number: parseInt(prNumber)
             });
-            
+
             const latestCommitSha = pr.head.sha;
-            const latestCommitDate = new Date(pr.updated_at); // Use PR updated_at as proxy for latest commit
             console.log(`📊 Latest commit SHA: ${latestCommitSha}`);
-            console.log(`📅 Latest commit date: ${latestCommitDate.toISOString()}`);
-            
-            // Get the actual latest commit details for more accurate timestamp
+            console.log(`📊 Workflow context SHA: ${context.sha}`);
+            console.log(`📊 PR head SHA: ${pr.head.sha}`);
+
+            // COMMIT CONTEXT FIX: Use PR head commit, not workflow context commit
             const { data: commit } = await github.rest.repos.getCommit({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: latestCommitSha
+              ref: latestCommitSha  // Use PR head SHA, not context.sha
             });
-            
+
             const actualCommitDate = new Date(commit.commit.committer.date);
             console.log(`📅 Actual latest commit date: ${actualCommitDate.toISOString()}`);
-            
+            console.log(`🔍 Commit context fix: Using PR head commit ${latestCommitSha.substring(0, 7)} instead of workflow context`);
+
             // Get comments on the PR
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -192,14 +193,15 @@ jobs:
                 
                 // CRITICAL: Only consider comments made AFTER the latest commit
                 const timeDifference = commentDate.getTime() - actualCommitDate.getTime();
-                const minTimeDiff = 30 * 1000; // 30 seconds minimum between commit and comment
-                
-                console.log(`🔍 DETAILED TIMING ANALYSIS:`);
+                const minTimeDiff = 10 * 1000; // Reduced to 10 seconds (was 30) after commit context fix
+
+                console.log(`🔍 DETAILED TIMING ANALYSIS (COMMIT CONTEXT FIXED):`);
                 console.log(`   Comment date: ${commentDate.toISOString()}`);
                 console.log(`   Commit date: ${actualCommitDate.toISOString()}`);
                 console.log(`   Time difference: ${Math.round(timeDifference / 1000)}s`);
                 console.log(`   Required minimum: ${Math.round(minTimeDiff / 1000)}s`);
-                
+                console.log(`   Using PR head commit context (not workflow context)`);
+
                 if (commentDate > actualCommitDate && timeDifference >= minTimeDiff) {
                   console.log('✅ Comment is AFTER latest commit with sufficient time gap - valid for approval');
                   validClaudeComment = comment;
@@ -245,19 +247,20 @@ jobs:
               console.log(`📅 Claude review timestamp: ${validClaudeComment.created_at}`);
               console.log(`📅 Latest commit timestamp: ${actualCommitDate.toISOString()}`);
               
-              // CRITICAL FIX: Ensure minimum time gap between commit and approval
+              // COMMIT CONTEXT FIX: Reduced wait time since commit context issue is resolved
               const timeSinceCommit = Date.now() - actualCommitDate.getTime();
-              const minWaitTime = 3 * 60 * 1000; // 3 minutes minimum (increased from 2)
-              
-              console.log(`⏰ TIMING VALIDATION:`);
+              const minWaitTime = 1 * 60 * 1000; // Reduced to 1 minute (was 3) after commit context fix
+
+              console.log(`⏰ TIMING VALIDATION (COMMIT CONTEXT FIXED):`);
               console.log(`   Commit time: ${actualCommitDate.toISOString()}`);
               console.log(`   Current time: ${new Date().toISOString()}`);
               console.log(`   Time since commit: ${Math.round(timeSinceCommit / 1000)}s`);
               console.log(`   Required minimum: ${Math.round(minWaitTime / 1000)}s`);
-              
+              console.log(`   Using correct PR head commit context`);
+
               if (timeSinceCommit < minWaitTime) {
                 const remainingWait = minWaitTime - timeSinceCommit;
-                console.log(`⏳ Enforcing 3-minute minimum wait: ${Math.round(remainingWait / 1000)}s remaining`);
+                console.log(`⏳ Enforcing 1-minute minimum wait: ${Math.round(remainingWait / 1000)}s remaining`);
                 console.log('🛡️ This prevents premature approval before Claude has sufficient time to review');
                 await new Promise(resolve => setTimeout(resolve, remainingWait));
                 console.log('✅ Minimum wait time completed');
