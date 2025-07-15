@@ -299,47 +299,56 @@ class PluginIntegrationUrlManager {
 
 	/**
 	 * Safely replace URL host with site_url host
-	 * 
+	 *
 	 * @param string $url The URL to modify
 	 * @return string The URL with replaced host
 	 */
 	private function safely_replace_url_host( $url ) {
+		// Input validation
+		if ( empty( $url ) || ! is_string( $url ) ) {
+			return $url;
+		}
+
 		$site_url = get_option( 'siteurl' );
 		$parsed_site_url = parse_url( $site_url );
 		$parsed_url = parse_url( $url );
-		
+
 		// Validate both URLs are properly parsed
 		if ( ! $parsed_site_url || ! $parsed_url ) {
+			// Log parsing errors for debugging in development environments
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'BlazeCommerce: URL parsing failed in PluginIntegrationUrlManager' );
+			}
 			return $url;
 		}
-		
+
 		// Only proceed if both have valid hosts
 		if ( ! isset( $parsed_site_url['host'] ) || ! isset( $parsed_url['host'] ) ) {
 			return $url;
 		}
-		
+
 		// Validate hosts are different to avoid unnecessary replacement
 		if ( $parsed_site_url['host'] === $parsed_url['host'] ) {
 			return $url;
 		}
-		
+
 		// Build new URL with site_url components
 		$new_url = $parsed_site_url['scheme'] . '://' . $parsed_site_url['host'];
-		
+
 		if ( isset( $parsed_site_url['port'] ) ) {
 			$new_url .= ':' . $parsed_site_url['port'];
 		}
-		
+
 		$new_url .= $parsed_url['path'] ?? '';
-		
+
 		if ( isset( $parsed_url['query'] ) ) {
 			$new_url .= '?' . $parsed_url['query'];
 		}
-		
+
 		if ( isset( $parsed_url['fragment'] ) ) {
 			$new_url .= '#' . $parsed_url['fragment'];
 		}
-		
+
 		return $new_url;
 	}
 }
