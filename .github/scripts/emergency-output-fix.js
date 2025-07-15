@@ -193,6 +193,7 @@ class EmergencyOutputFixer {
     
     const filesToCheck = this.targetFile ? [this.targetFile] : [
       '.github/scripts/claude-review-enhancer.js',
+      '.github/workflows/workflow-preflight-check.yml',
       '.github/workflows/claude-code-review.yml',
       '.github/workflows/claude-approval-gate.yml'
     ];

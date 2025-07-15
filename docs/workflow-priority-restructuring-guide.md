@@ -16,7 +16,7 @@ Based on [PR #351](https://github.com/blaze-commerce/blazecommerce-wp-plugin/pul
 
 ### Specific Problems
 
-1. **Execution Order**: Claude Direct Approval should run BEFORE Claude Code Review
+1. **Execution Order**: Workflow Pre-flight Check should run BEFORE Claude Code Review
 2. **Missing Dependencies**: Workflows lacked explicit `needs` declarations
 3. **Race Conditions**: Version management workflows could conflict
 4. **Inconsistent Naming**: Priority indicators were not standardized
@@ -27,7 +27,7 @@ Based on [PR #351](https://github.com/blaze-commerce/blazecommerce-wp-plugin/pul
 
 | Priority | Workflow | Purpose | Dependencies |
 |----------|----------|---------|--------------|
-| **1** | 🔍 Claude Direct Approval | Initialize approval process | None (runs first) |
+| **1** | 🔍 Workflow Pre-flight Check | Test workflow connectivity and initialization | None (runs first) |
 | **2** | 🤖 Claude AI Code Review | Review code and provide verdict | Waits for Priority 1 |
 | **3** | ✅ Claude AI Approval Gate | Process approval and trigger @blazecommerce-claude-ai | Waits for Priority 2 |
 | **4** | 🔢 Auto Version Bump | Bump versions (post-approval only) | Waits for Priority 3 + PR approval |
@@ -124,7 +124,7 @@ git push origin test/workflow-priority-verification
 
 1. Go to GitHub Actions tab
 2. Verify workflows run in correct order:
-   - 🔍 Priority 1: Claude Direct Approval (runs first)
+   - 🔍 Priority 1: Workflow Pre-flight Check (runs first)
    - 🤖 Priority 2: Claude AI Code Review (waits for Priority 1)
    - ✅ Priority 3: Claude AI Approval Gate (waits for Priority 2)
 
