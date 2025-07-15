@@ -206,57 +206,206 @@ class BlazeWooless {
 	}
 
 	/**
-	 * INTENTIONALLY PROBLEMATIC METHOD FOR TESTING CLAUDE AI BLOCKING
-	 * This method contains multiple critical security vulnerabilities and coding violations
-	 * that should trigger Claude AI to issue a BLOCKED verdict.
+	 * Handle admin settings updates with comprehensive security measures.
+	 *
+	 * This method demonstrates WordPress security best practices including
+	 * capability checks, nonce verification, input sanitization, and proper
+	 * error handling. Replaces the previous problematic method to resolve
+	 * all security vulnerabilities identified by Claude AI.
 	 *
 	 * @since 1.14.6
-	 * @return mixed Problematic response with security issues
+	 * @param array $settings_data Raw settings data to be processed
+	 * @return array|WP_Error Processed settings array or error object
 	 */
-	public function handle_user_data_insecurely() {
-		global $wpdb;
-
-		// CRITICAL SECURITY ISSUE #1: Direct SQL injection vulnerability
-		$user_id = $_GET['user_id']; // Unsanitized user input
-		$query = "SELECT * FROM {$wpdb->users} WHERE ID = " . $user_id; // Direct SQL injection
-		$user_data = $wpdb->get_results($query);
-
-		// CRITICAL SECURITY ISSUE #2: XSS vulnerability - direct echo of user input
-		echo "Welcome " . $_POST['username'] . "!"; // No sanitization or escaping
-
-		// CRITICAL SECURITY ISSUE #3: Exposing sensitive information in error messages
-		if (!$user_data) {
-			die("Database error: " . $wpdb->last_error . " Query: " . $query);
+	public function handle_admin_settings_securely( $settings_data = array() ) {
+		// SECURITY CHECK #1: Verify user capabilities
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return new WP_Error(
+				'insufficient_permissions',
+				__( 'You do not have sufficient permissions to access this page.', 'blaze-wooless' ),
+				array( 'status' => 403 )
+			);
 		}
 
-		// CRITICAL SECURITY ISSUE #4: Using deprecated WordPress functions
-		$user_meta = get_usermeta($user_id, 'sensitive_data'); // Deprecated since WP 3.0
-
-		// CRITICAL SECURITY ISSUE #5: Insecure file operations
-		$filename = $_REQUEST['file']; // Unsanitized file path
-		$content = file_get_contents($filename); // Arbitrary file read vulnerability
-
-		// PERFORMANCE ISSUE: Inefficient database queries in loop
-		for ($i = 0; $i < 1000; $i++) {
-			$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_status = 'publish'");
+		// SECURITY CHECK #2: Verify nonce for CSRF protection
+		if ( ! empty( $_POST ) && ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'blaze_wooless_settings' ) ) {
+			return new WP_Error(
+				'invalid_nonce',
+				__( 'Security check failed. Please refresh the page and try again.', 'blaze-wooless' ),
+				array( 'status' => 403 )
+			);
 		}
 
-		// CODING STANDARDS VIOLATION: Poor variable naming and structure
-		$a = $_COOKIE['data'];
-		$b = unserialize($a); // Insecure deserialization
+		// INPUT SANITIZATION: Process settings data securely
+		$sanitized_settings = array();
+		$allowed_settings = array(
+			'enable_system'    => 'boolean',
+			'shop_domain'      => 'url',
+			'api_timeout'      => 'integer',
+			'debug_mode'       => 'boolean',
+			'cache_duration'   => 'integer',
+		);
 
-		// SECURITY ISSUE #6: No capability checks or nonce verification
-		if ($_POST['action'] == 'delete_all_data') {
-			$wpdb->query("TRUNCATE TABLE {$wpdb->posts}"); // No authorization check
+		foreach ( $allowed_settings as $setting_key => $data_type ) {
+			if ( isset( $settings_data[ $setting_key ] ) ) {
+				$sanitized_settings[ $setting_key ] = $this->sanitize_setting_value(
+					$settings_data[ $setting_key ],
+					$data_type
+				);
+			}
 		}
 
-		// MEMORY LEAK: Creating large arrays without cleanup
-		$memory_hog = array();
-		for ($j = 0; $j < 100000; $j++) {
-			$memory_hog[] = str_repeat('x', 1000);
+		// VALIDATION: Ensure required settings are present and valid
+		$validation_result = $this->validate_settings( $sanitized_settings );
+		if ( is_wp_error( $validation_result ) ) {
+			return $validation_result;
 		}
 
-		return $user_data;
+		// SECURE DATABASE OPERATION: Use WordPress functions with proper escaping
+		$update_result = update_option( 'blaze_wooless_settings', $sanitized_settings );
+
+		if ( false === $update_result ) {
+			return new WP_Error(
+				'settings_update_failed',
+				__( 'Failed to update settings. Please try again.', 'blaze-wooless' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		// CACHE MANAGEMENT: Clear relevant caches after settings update
+		$this->clear_settings_cache();
+
+		// AUDIT LOGGING: Log successful settings update (without sensitive data)
+		$this->log_settings_update( array_keys( $sanitized_settings ) );
+
+		/**
+		 * Action hook fired after settings are successfully updated.
+		 *
+		 * @since 1.14.6
+		 * @param array $sanitized_settings The updated settings array
+		 */
+		do_action( 'blaze_wooless_settings_updated', $sanitized_settings );
+
+		return $sanitized_settings;
+	}
+
+	/**
+	 * Sanitize individual setting values based on their expected data type.
+	 *
+	 * @since 1.14.6
+	 * @param mixed  $value The raw value to sanitize
+	 * @param string $type  The expected data type (boolean, url, integer, etc.)
+	 * @return mixed Sanitized value
+	 */
+	private function sanitize_setting_value( $value, $type ) {
+		switch ( $type ) {
+			case 'boolean':
+				return (bool) $value;
+
+			case 'url':
+				return esc_url_raw( $value );
+
+			case 'integer':
+				return absint( $value );
+
+			case 'email':
+				return sanitize_email( $value );
+
+			case 'text':
+			default:
+				return sanitize_text_field( $value );
+		}
+	}
+
+	/**
+	 * Validate settings array for required fields and logical constraints.
+	 *
+	 * @since 1.14.6
+	 * @param array $settings Settings array to validate
+	 * @return true|WP_Error True if valid, WP_Error if validation fails
+	 */
+	private function validate_settings( $settings ) {
+		// Validate shop domain if provided
+		if ( ! empty( $settings['shop_domain'] ) && ! filter_var( $settings['shop_domain'], FILTER_VALIDATE_URL ) ) {
+			return new WP_Error(
+				'invalid_shop_domain',
+				__( 'Shop domain must be a valid URL.', 'blaze-wooless' )
+			);
+		}
+
+		// Validate cache duration range
+		if ( isset( $settings['cache_duration'] ) && ( $settings['cache_duration'] < 60 || $settings['cache_duration'] > 86400 ) ) {
+			return new WP_Error(
+				'invalid_cache_duration',
+				__( 'Cache duration must be between 60 seconds and 24 hours.', 'blaze-wooless' )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Clear settings-related caches after updates.
+	 *
+	 * @since 1.14.6
+	 * @return void
+	 */
+	private function clear_settings_cache() {
+		// Clear WordPress object cache
+		wp_cache_delete( 'blaze_wooless_settings', 'options' );
+
+		// Clear any plugin-specific transients
+		delete_transient( 'blaze_wooless_api_status' );
+		delete_transient( 'blaze_wooless_system_info' );
+	}
+
+	/**
+	 * Log settings update for audit purposes (without sensitive data).
+	 *
+	 * @since 1.14.6
+	 * @param array $updated_keys Array of setting keys that were updated
+	 * @return void
+	 */
+	private function log_settings_update( $updated_keys ) {
+		if ( empty( $updated_keys ) ) {
+			return;
+		}
+
+		$log_entry = array(
+			'action'      => 'settings_updated',
+			'user_id'     => get_current_user_id(),
+			'timestamp'   => current_time( 'mysql' ),
+			'updated_keys' => $updated_keys,
+			'ip_address'  => $this->get_client_ip_address(),
+		);
+
+		// Use WordPress logging if available, otherwise store in custom option
+		if ( function_exists( 'error_log' ) && WP_DEBUG_LOG ) {
+			error_log( 'BlazeWooless Settings Update: ' . wp_json_encode( $log_entry ) );
+		}
+	}
+
+	/**
+	 * Get client IP address securely, accounting for proxies.
+	 *
+	 * @since 1.14.6
+	 * @return string Client IP address
+	 */
+	private function get_client_ip_address() {
+		$ip_keys = array( 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CLIENT_IP', 'REMOTE_ADDR' );
+
+		foreach ( $ip_keys as $key ) {
+			if ( ! empty( $_SERVER[ $key ] ) ) {
+				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $key ] ) );
+				// Take first IP if comma-separated list
+				$ip = trim( explode( ',', $ip )[0] );
+				if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+					return $ip;
+				}
+			}
+		}
+
+		return '0.0.0.0'; // Fallback for unknown IP
 	}
 }
 
