@@ -36,10 +36,12 @@ jobs:
       - name: Direct approval check
         id: approval
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr-info.outputs.pr_number }}
         with:
           script: |
-            const prNumber = ${{ steps.pr-info.outputs.pr_number }};
-            
+            const prNumber = parseInt(process.env.PR_NUMBER);
+
             // Simple direct approval logic
             console.log(`Checking direct approval for PR #${prNumber}`);
             

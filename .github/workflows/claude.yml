@@ -68,11 +68,14 @@ jobs:
 
       - name: Process Claude request
         uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ steps.context.outputs.issue_number }}
+          CONTEXT_TYPE: ${{ steps.context.outputs.context_type }}
         with:
           script: |
-            const issueNumber = ${{ steps.context.outputs.issue_number }};
-            const contextType = '${{ steps.context.outputs.context_type }}';
-            
+            const issueNumber = parseInt(process.env.ISSUE_NUMBER);
+            const contextType = process.env.CONTEXT_TYPE;
+
             // Simple Claude assistant response
             const response = "## 🤖 Claude Assistant Response\n\n" +
               "Thank you for mentioning me! I'm here to help with code review and assistance.\n\n" +

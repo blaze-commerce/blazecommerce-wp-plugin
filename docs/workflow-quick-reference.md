@@ -106,6 +106,23 @@ scripts/setup-local-fallbacks.sh
 
 ### Common Issues
 
+#### JavaScript Syntax Errors in GitHub Actions
+**Symptoms**: `SyntaxError: Unexpected token ';'` in `actions/github-script@v7`
+**Root Cause**: Unsafe template literal interpolation patterns
+**Solutions**:
+```yaml
+# ❌ UNSAFE - Direct interpolation
+script: |
+  const prNumber = ${{ steps.pr-info.outputs.pr-number }};
+
+# ✅ SAFE - Environment variables
+env:
+  PR_NUMBER: ${{ steps.pr-info.outputs.pr-number }}
+script: |
+  const prNumber = parseInt(process.env.PR_NUMBER);
+```
+**Prevention**: Run `scripts/validate-javascript-syntax.sh` before committing
+
 #### MySQL Connection Failed
 - **Cause**: MySQL service not ready
 - **Solution**: Workflow will auto-fallback to minimal mode

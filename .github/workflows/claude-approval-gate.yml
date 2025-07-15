@@ -102,11 +102,13 @@ jobs:
       - name: Get PR information
         id: pr-details
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr-info.outputs.pr-number }}
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = ${{ steps.pr-info.outputs.pr-number }};
-            
+            const prNumber = parseInt(process.env.PR_NUMBER);
+
             try {
               const { data: pr } = await github.rest.pulls.get({
                 owner: context.repo.owner,
@@ -131,12 +133,15 @@ jobs:
       - name: Check Claude review verdict
         id: claude-verdict
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr-info.outputs.pr-number }}
+          HEAD_SHA: ${{ steps.pr-details.outputs.head-sha }}
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = ${{ steps.pr-info.outputs.pr-number }};
-            const headSha = '${{ steps.pr-details.outputs.head-sha }}';
-            
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            const headSha = process.env.HEAD_SHA;
+
             // Get the comment that triggered this workflow
             let claudeComment;
             if (context.eventName === 'issue_comment') {
@@ -179,11 +184,13 @@ jobs:
       - name: Auto-approve PR if Claude approved
         if: steps.claude-verdict.outputs.approved == 'true' && steps.pr-details.outputs.pr-state == 'open'
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr-info.outputs.pr-number }}
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = ${{ steps.pr-info.outputs.pr-number }};
-            
+            const prNumber = parseInt(process.env.PR_NUMBER);
+
             try {
               // Create approval review
               await github.rest.pulls.createReview({
@@ -212,11 +219,13 @@ jobs:
       - name: Add rejection label if not approved
         if: steps.claude-verdict.outputs.approved == 'false' && steps.pr-details.outputs.pr-state == 'open'
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr-info.outputs.pr-number }}
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
           script: |
-            const prNumber = ${{ steps.pr-info.outputs.pr-number }};
-            
+            const prNumber = parseInt(process.env.PR_NUMBER);
+
             try {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
