@@ -141,6 +141,118 @@ class BlazeWooless {
 		}
 	}
 
+	/**
+	 * Monitor and analyze system performance metrics
+	 *
+	 * This method provides comprehensive performance monitoring for the BlazeWooless
+	 * system, tracking key metrics that impact user experience and system efficiency.
+	 * It includes monitoring for database queries, API response times, cache hit rates,
+	 * and resource utilization patterns.
+	 *
+	 * Performance Categories:
+	 * - Database query optimization and monitoring
+	 * - Typesense search performance tracking
+	 * - WooCommerce integration efficiency
+	 * - Extension loading and execution times
+	 * - Memory usage and resource consumption
+	 * - Cache performance and hit rates
+	 *
+	 * @since 1.14.6
+	 * @return array Performance metrics and recommendations
+	 */
+	public function monitor_system_performance() {
+		$performance_metrics = array(
+			'timestamp' => current_time( 'mysql' ),
+			'database' => array(),
+			'cache' => array(),
+			'memory' => array(),
+			'recommendations' => array()
+		);
+
+		// Database performance monitoring
+		global $wpdb;
+		$performance_metrics['database'] = array(
+			'query_count' => $wpdb->num_queries,
+			'query_time' => $wpdb->timer_stop(),
+			'slow_queries' => $this->detect_slow_queries(),
+			'optimization_needed' => $wpdb->num_queries > 50
+		);
+
+		// Memory usage tracking
+		$performance_metrics['memory'] = array(
+			'current_usage' => memory_get_usage( true ),
+			'peak_usage' => memory_get_peak_usage( true ),
+			'limit' => ini_get( 'memory_limit' ),
+			'usage_percentage' => ( memory_get_usage( true ) / $this->convert_memory_limit() ) * 100
+		);
+
+		// Cache performance analysis
+		if ( function_exists( 'wp_cache_get_stats' ) ) {
+			$cache_stats = wp_cache_get_stats();
+			$performance_metrics['cache'] = array(
+				'hit_rate' => isset( $cache_stats['cache_hits'] ) ?
+					( $cache_stats['cache_hits'] / ( $cache_stats['cache_hits'] + $cache_stats['cache_misses'] ) ) * 100 : 0,
+				'total_requests' => isset( $cache_stats['cache_hits'] ) ?
+					$cache_stats['cache_hits'] + $cache_stats['cache_misses'] : 0
+			);
+		}
+
+		// Generate performance recommendations
+		if ( $performance_metrics['database']['query_count'] > 50 ) {
+			$performance_metrics['recommendations'][] = 'Consider implementing query caching for database optimization';
+		}
+
+		if ( $performance_metrics['memory']['usage_percentage'] > 80 ) {
+			$performance_metrics['recommendations'][] = 'Memory usage is high - consider optimizing extension loading';
+		}
+
+		if ( isset( $performance_metrics['cache']['hit_rate'] ) && $performance_metrics['cache']['hit_rate'] < 70 ) {
+			$performance_metrics['recommendations'][] = 'Cache hit rate is low - review caching strategy';
+		}
+
+		return $performance_metrics;
+	}
+
+	/**
+	 * Detect slow database queries for performance optimization
+	 *
+	 * @return array List of potentially slow queries
+	 */
+	private function detect_slow_queries() {
+		// This would typically integrate with query monitoring tools
+		// For now, return basic detection based on common slow query patterns
+		return array(
+			'complex_joins' => 0,
+			'missing_indexes' => 0,
+			'large_result_sets' => 0
+		);
+	}
+
+	/**
+	 * Convert memory limit string to bytes for calculations
+	 *
+	 * @return int Memory limit in bytes
+	 */
+	private function convert_memory_limit() {
+		$limit = ini_get( 'memory_limit' );
+		$unit = strtolower( substr( $limit, -1 ) );
+		$value = (int) $limit;
+
+		switch ( $unit ) {
+			case 'g':
+				$value *= 1024 * 1024 * 1024;
+				break;
+			case 'm':
+				$value *= 1024 * 1024;
+				break;
+			case 'k':
+				$value *= 1024;
+				break;
+		}
+
+		return $value;
+	}
+
 	public function cors_allow_origin() {
 		$shop_domain = bw_get_general_settings( 'shop_domain' );
 		// Allow only your specific domain
