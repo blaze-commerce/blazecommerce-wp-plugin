@@ -5,6 +5,40 @@ namespace BlazeWooless;
 use BlazeWooless\Collections\Menu;
 use BlazeWooless\Collections\Taxonomy;
 
+/**
+ * BlazeWooless Main Plugin Class
+ *
+ * This class serves as the primary entry point for the BlazeWooless WordPress plugin,
+ * implementing a headless WooCommerce solution with advanced features including:
+ *
+ * - Typesense search integration for fast product discovery
+ * - CORS handling for cross-origin API requests
+ * - Taxonomy management with automatic document synchronization
+ * - Breadcrumb generation for improved navigation
+ * - Cache revalidation for optimal performance
+ * - Extension system for modular functionality
+ *
+ * Security Features:
+ * - Proper capability checks for admin operations
+ * - Nonce verification for CSRF protection
+ * - Input sanitization using WordPress standards
+ * - Secure database operations without direct SQL
+ *
+ * Performance Optimizations:
+ * - Singleton pattern for efficient resource usage
+ * - Lazy loading of non-critical components
+ * - Optimized hook registration and execution
+ * - Efficient extension loading and management
+ *
+ * @package BlazeWooless
+ * @since 1.0.0
+ * @author BlazeCommerce Team
+ * @version 1.14.6
+ *
+ * @see https://github.com/blaze-commerce/blazecommerce-wp-plugin
+ * @see TypesenseClient For search functionality
+ * @see Revalidate For cache management
+ */
 class BlazeWooless {
 	private static $instance = null;
 
