@@ -179,6 +179,66 @@ class BlazeWooless {
 	public function is_version_compatible( $min_version ) {
 		return version_compare( BLAZE_COMMERCE_VERSION, $min_version, '>=' );
 	}
+
+	/**
+	 * Enhanced logging utility for debugging and monitoring
+	 *
+	 * @param string $message Log message
+	 * @param string $level Log level (info, warning, error, debug)
+	 * @param array $context Additional context data
+	 * @return void
+	 */
+	public function log_debug( $message, $level = 'info', $context = array() ) {
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+			return;
+		}
+
+		$timestamp = current_time( 'Y-m-d H:i:s' );
+		$formatted_message = sprintf(
+			'[%s] [%s] BlazeCommerce: %s',
+			$timestamp,
+			strtoupper( $level ),
+			$message
+		);
+
+		if ( ! empty( $context ) ) {
+			$formatted_message .= ' | Context: ' . wp_json_encode( $context );
+		}
+
+		error_log( $formatted_message );
+
+		// Also log to WordPress debug.log if available
+		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+			error_log( $formatted_message );
+		}
+	}
+
+	/**
+	 * Log performance metrics for optimization analysis
+	 *
+	 * @param string $operation Operation name
+	 * @param float $execution_time Execution time in seconds
+	 * @param array $metrics Additional performance metrics
+	 * @return void
+	 */
+	public function log_performance( $operation, $execution_time, $metrics = array() ) {
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+			return;
+		}
+
+		$performance_data = array_merge( array(
+			'operation' => $operation,
+			'execution_time' => round( $execution_time, 4 ),
+			'memory_usage' => memory_get_usage( true ),
+			'peak_memory' => memory_get_peak_usage( true ),
+		), $metrics );
+
+		$this->log_debug(
+			sprintf( 'Performance: %s completed in %s seconds', $operation, $execution_time ),
+			'debug',
+			$performance_data
+		);
+	}
 }
 
 BlazeWooless::get_instance();
