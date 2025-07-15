@@ -1,6 +1,6 @@
 name: "Priority 4: Auto Version Bump"
 
-on:
+"on":
   push:
     branches:
       - main
