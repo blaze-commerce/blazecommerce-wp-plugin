@@ -51,10 +51,11 @@ git checkout feature/workflow-naming-improvement
 
 | Priority | Workflow Name | File | Purpose |
 |----------|---------------|------|---------|
-| **1** | 🤖 Priority 1: Claude AI Code Review | `claude-pr-review.yml` | Automatic PR reviews |
-| **2** | ✅ Priority 2: Claude AI Approval Gate | `claude-approval-gate.yml` | Approval verification |
-| **3** | 🔢 Priority 3: Auto Version Bump | `auto-version.yml` | Post-merge versioning |
-| **3** | 🚀 Priority 3: Create Release | `release.yml` | Release creation |
+| **1** | 🔍 Priority 1: Workflow Pre-flight Check | `workflow-preflight-check.yml` | Workflow connectivity test |
+| **2** | 🤖 Priority 2: Claude AI Code Review | `claude-code-review.yml` | Automatic PR reviews |
+| **3** | ✅ Priority 3: Claude AI Approval Gate | `claude-approval-gate.yml` | Approval verification |
+| **4** | 🔢 Priority 4: Auto Version Bump | `auto-version.yml` | Post-merge versioning |
+| **5** | 🚀 Priority 5: Create Release | `release.yml` | Release creation |
 | **-** | 💬 Claude Interactive Assistant | `claude.yml` | @claude mentions |
 
 ### Benefits of New Naming:
@@ -85,10 +86,11 @@ git checkout feature/workflow-naming-improvement
 ### After Cleanup:
 ```
 ✅ Clean, organized workflows:
-├── 🤖 Priority 1: Claude AI Code Review
-├── ✅ Priority 2: Claude AI Approval Gate
-├── 🔢 Priority 3: Auto Version Bump
-├── 🚀 Priority 3: Create Release
+├── 🔍 Priority 1: Workflow Pre-flight Check
+├── 🤖 Priority 2: Claude AI Code Review
+├── ✅ Priority 3: Claude AI Approval Gate
+├── 🔢 Priority 4: Auto Version Bump
+├── 🚀 Priority 5: Create Release
 └── 💬 Claude Interactive Assistant
 ```
 
@@ -111,8 +113,8 @@ git pull origin main
 ```bash
 # Check remaining workflows
 ls .github/workflows/
-# Should show only: auto-version.yml, claude-approval-gate.yml, 
-# claude-pr-review.yml, claude.yml, release.yml
+# Should show only: workflow-preflight-check.yml, claude-code-review.yml,
+# claude-approval-gate.yml, auto-version.yml, release.yml, claude.yml, tests.yml
 ```
 
 ### Step 4: Monitor GitHub Actions UI

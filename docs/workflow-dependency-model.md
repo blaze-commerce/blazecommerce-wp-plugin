@@ -8,7 +8,7 @@ This document explains the strict dependency model implemented to ensure proper 
 
 ### Issue Identified in PR #352
 
-The workflow priority restructuring initially failed because Priority 2 (Claude AI Code Review) had a **dual trigger system** that allowed it to bypass Priority 1 (Claude Direct Approval):
+The workflow priority restructuring initially failed because Priority 2 (Claude AI Code Review) had a **dual trigger system** that allowed it to bypass Priority 1 (Workflow Pre-flight Check):
 
 ```yaml
 # PROBLEMATIC CONFIGURATION
@@ -16,7 +16,7 @@ on:
   pull_request:                    # ← Immediate trigger (bypassed dependency)
     types: [opened, synchronize]
   workflow_run:                    # ← Dependency trigger (intended)
-    workflows: ["🔍 Priority 1: Claude Direct Approval"]
+    workflows: ["🔍 Priority 1: Workflow Pre-flight Check"]
     types: [completed]
 ```
 
@@ -31,7 +31,7 @@ on:
 # FIXED: Single dependency trigger only
 on:
   workflow_run:                    # ← ONLY dependency trigger
-    workflows: ["🔍 Priority 1: Claude Direct Approval"]
+    workflows: ["🔍 Priority 1: Workflow Pre-flight Check"]
     types: [completed]
   pull_request_review:             # ← Added for review updates
     types: [submitted, dismissed]
@@ -45,13 +45,13 @@ on:
 const workflowRuns = await github.rest.actions.listWorkflowRunsForRepo({
   owner: context.repo.owner,
   repo: context.repo.repo,
-  workflow_id: 'claude-direct-approval.yml',
+  workflow_id: 'workflow-preflight-check.yml',
   head_sha: context.sha,
   status: 'completed'
 });
 
-const priority1Run = workflowRuns.data.workflow_runs.find(run => 
-  run.name === '🔍 Priority 1: Claude Direct Approval' && 
+const priority1Run = workflowRuns.data.workflow_runs.find(run =>
+  run.name === '🔍 Priority 1: Workflow Pre-flight Check' &&
   run.conclusion === 'success'
 );
 
@@ -110,7 +110,7 @@ sequenceDiagram
 
 ## Implementation Details
 
-### Priority 1: Claude Direct Approval
+### Priority 1: Workflow Pre-flight Check
 
 **Triggers**:
 ```yaml
@@ -134,7 +134,7 @@ on:
 ```yaml
 on:
   workflow_run:
-    workflows: ["🔍 Priority 1: Claude Direct Approval"]
+    workflows: ["🔍 Priority 1: Workflow Pre-flight Check"]
     types: [completed]
   pull_request_review:
     types: [submitted, dismissed]
@@ -168,7 +168,7 @@ on:
 
 **Priority 1 Logs**:
 ```
-🔍 PRIORITY 1: CLAUDE DIRECT APPROVAL STARTING
+🔍 PRIORITY 1: WORKFLOW PRE-FLIGHT CHECK STARTING
 📋 EVENT: pull_request
 🔗 NEXT: Priority 2 (Claude AI Code Review) will wait for this completion
 ⏰ EXECUTION TIME: 2025-07-14 12:00:00 UTC
@@ -223,13 +223,13 @@ on:
 **Before (Problematic)**:
 ```yaml
 concurrency:
-  group: priority-1-claude-direct-approval-pr-${{ github.event.pull_request.number || github.event.issue.number }}
+  group: priority-1-workflow-preflight-pr-${{ github.event.pull_request.number || github.event.issue.number }}
 ```
 
 **After (Fixed)**:
 ```yaml
 concurrency:
-  group: priority-1-claude-direct-approval-pr-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  group: priority-1-workflow-preflight-pr-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
 ```
 
 #### **Issue #2: Insufficient Permissions**

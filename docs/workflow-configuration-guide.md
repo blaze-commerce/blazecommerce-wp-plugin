@@ -116,11 +116,13 @@ TOKEN_VALIDATION_MODE: strict
 Our workflows implement a 3-tier priority system with explicit dependencies:
 
 ```
-Priority 1: Claude AI PR Review
+Priority 1: Workflow Pre-flight Check
      ↓ (explicit dependency)
-Priority 2: Claude AI Approval Gate
+Priority 2: Claude AI Code Review
+     ↓ (explicit dependency)
+Priority 3: Claude AI Approval Gate
      ↓ (merge triggers)
-Priority 3: Auto-Version & Release (parallel)
+Priority 4-5: Auto-Version & Release (parallel)
 ```
 
 ### Dependency Implementation

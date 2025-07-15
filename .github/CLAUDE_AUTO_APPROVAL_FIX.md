@@ -139,7 +139,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]  # For Claude action
   workflow_run:
-    workflows: ["Priority 1: Claude Direct Approval"]
+    workflows: ["Priority 1: Workflow Pre-flight Check"]
     types: [completed]  # For timing control
 
 # Conditional Claude job
