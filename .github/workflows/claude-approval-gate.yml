@@ -215,13 +215,20 @@ jobs:
                   }
 
                   // Check for status with flexible formatting (handles markdown bold)
-                  if (comment.body.includes('Status**: APPROVED') || comment.body.includes('Status: APPROVED')) {
+                  // FIXED: Added support for **Status**: format (asterisks before Status)
+                  if (comment.body.includes('Status**: APPROVED') ||
+                      comment.body.includes('Status: APPROVED') ||
+                      comment.body.includes('**Status**: APPROVED')) {
                     claudeApproval = 'APPROVED';
                     console.log('Claude status: APPROVED');
-                  } else if (comment.body.includes('Status**: BLOCKED') || comment.body.includes('Status: BLOCKED')) {
+                  } else if (comment.body.includes('Status**: BLOCKED') ||
+                             comment.body.includes('Status: BLOCKED') ||
+                             comment.body.includes('**Status**: BLOCKED')) {
                     claudeApproval = 'BLOCKED';
                     console.log('Claude status: BLOCKED');
-                  } else if (comment.body.includes('Status**: CONDITIONAL') || comment.body.includes('Status: CONDITIONAL')) {
+                  } else if (comment.body.includes('Status**: CONDITIONAL') ||
+                             comment.body.includes('Status: CONDITIONAL') ||
+                             comment.body.includes('**Status**: CONDITIONAL')) {
                     claudeApproval = 'CONDITIONAL';
                     console.log('Claude status: CONDITIONAL');
                   }
