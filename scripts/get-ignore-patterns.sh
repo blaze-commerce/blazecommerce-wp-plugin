@@ -30,6 +30,7 @@ node_modules/
 # Only lock files are ignored as they're auto-generated
 composer.lock
 package-lock.json
+yarn.lock
 blocks/package-lock.json
 blocks/yarn.lock
 # Documentation & Configuration

@@ -1,4 +1,4 @@
-name: 🔍 Priority 1: Claude Direct Approval
+name: "Priority 1: Claude Direct Approval"
 
 # SIMPLIFIED: Basic triggers only to test workflow execution
 on:
@@ -20,10 +20,7 @@ jobs:
 
     # FIX: Prevent endless approval loop by excluding bot-generated reviews
     # This condition prevents the workflow from triggering when the bot creates reviews
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'pull_request_review' &&
-       github.event.review.user.login != 'blazecommerce-claude-ai')
+    if: github.event_name == 'pull_request' || (github.event_name == 'pull_request_review' && github.event.review.user.login != 'blazecommerce-claude-ai')
 
     outputs:
       approval_status: ${{ steps.test-step.outputs.approval_status }}

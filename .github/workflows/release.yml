@@ -1,4 +1,4 @@
-name: "🚀 Priority 5: Create Release"
+name: "Priority 5: Create Release"
 
 on:
   push:
@@ -18,10 +18,24 @@ jobs:
     outputs:
       priority-4-completed: ${{ steps.check-dependencies.outputs.all_dependencies_completed }}
     steps:
+      - name: Generate GitHub App Token
+        id: app_token
+        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        env:
+          BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+          BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Check Priority 4 Dependencies
         id: check-dependencies
         uses: actions/github-script@v7
         with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
           script: |
             console.log('DEBUG: Checking Priority 4 workflow completion...');
 
@@ -34,7 +48,7 @@ jobs:
             });
 
             // Look for completed Priority 4 workflows
-            const priority4Workflows = ['🔢 Priority 4: Auto Version Bump'];
+            const priority4Workflows = ['Priority 4: Auto Version Bump'];
             let allCompleted = true;
 
             for (const workflowName of priority4Workflows) {
@@ -67,9 +81,23 @@ jobs:
       should_create_release: ${{ steps.check_files.outputs.should_create_release }}
 
     steps:
+    - name: Generate GitHub App Token
+      id: app_token
+      if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+      env:
+        BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+        BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+        private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ github.event.repository.name }}
+
     - name: Checkout code
       uses: actions/checkout@v4
       with:
+        token: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
         fetch-depth: 0
 
     - name: Pull Latest Changes to Prevent Version Conflicts
@@ -362,8 +390,23 @@ jobs:
       # Security: All other permissions explicitly denied
 
     steps:
+    - name: Generate GitHub App Token
+      id: app_token
+      if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+      env:
+        BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+        BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+        private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ github.event.repository.name }}
+
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        token: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -532,7 +575,7 @@ jobs:
         generate_release_notes: true
         fail_on_unmatched_files: true
       env:
-        GITHUB_TOKEN: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
+        GITHUB_TOKEN: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
 
     - name: Verify release creation
       run: |

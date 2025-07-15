@@ -68,12 +68,21 @@ class BlazeWooless
             '\\BlazeWooless\\Settings\\ExportImportSettings',
         );
 
+<<<<<<< HEAD
         foreach ($settings as $setting) {
             // Instantiating the settings will register an admin_init hook to add the configuration
             // See here BlazeWooless\Settings\BaseSEttings.php @ line 18
             $setting::get_instance();
         }
     }
+=======
+		foreach ( $settings as $setting ) {
+			// Instantiating the settings will register an admin_init hook to add the configuration
+			// See here BlazeWooless\Settings\BaseSettings.php @ line 18
+			$setting::get_instance();
+		}
+	}
+>>>>>>> main
 
 <<<<<<< HEAD
     public function register_features()

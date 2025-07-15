@@ -1,4 +1,4 @@
-name: "🔢 Priority 4: Auto Version Bump"
+name: "Priority 4: Auto Version Bump"
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
             });
 
             // Look for completed Priority 3 workflows
-            const priority3Workflows = ['✅ Priority 3: Claude AI Approval Gate'];
+            const priority3Workflows = ['Priority 3: Claude AI Approval Gate'];
             let allCompleted = true;
 
             for (const workflowName of priority3Workflows) {
@@ -79,7 +79,7 @@ jobs:
             const pr = prs[0];
             console.log(`INFO: Checking approval status for PR #${pr.number}`);
 
-            // Check for @blazecommerce-claude-ai approval
+            // Check for BlazeCommerce Automation Bot approval
             const { data: reviews } = await github.rest.pulls.listReviews({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -87,15 +87,16 @@ jobs:
             });
 
             const claudeApproval = reviews.find(review =>
-              review.user.login === 'blazecommerce-claude-ai' &&
+              (review.user.login === 'blazecommerce-claude-ai' ||
+               review.user.type === 'Bot' && review.user.login.includes('blazecommerce-automation')) &&
               review.state === 'APPROVED'
             );
 
             if (claudeApproval) {
-              console.log('SUCCESS: PR is approved by @blazecommerce-claude-ai');
+              console.log('SUCCESS: PR is approved by BlazeCommerce Automation Bot');
               core.setOutput('approved', 'true');
             } else {
-              console.log('WARNING: PR is not yet approved by @blazecommerce-claude-ai');
+              console.log('WARNING: PR is not yet approved by BlazeCommerce Automation Bot');
               core.setOutput('approved', 'false');
             }
 
@@ -144,10 +145,28 @@ jobs:
       # Security: All other permissions explicitly denied (no issues, packages, etc.)
 
     steps:
+    - name: Generate GitHub App Token
+      id: app_token
+      if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+      env:
+        BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+        BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+        private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ github.event.repository.name }}
+        # Individual permission parameters (required format for this action)
+        permission-contents: write
+        permission-metadata: read
+        permission-pull-requests: read
+        permission-actions: read
+
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.BC_GITHUB_TOKEN || github.token }}
+        token: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
         fetch-depth: 0
 
     - name: Pull Latest Changes to Prevent Version Conflicts
@@ -254,9 +273,16 @@ jobs:
     - name: Configure Git
       if: steps.check_files.outputs.should_bump_version == 'true'
       run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        echo "SUCCESS: Git configured for automated commits"
+        # Use GitHub App identity if available, otherwise fall back to github-actions bot
+        if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+          git config --local user.email "blazecommerce-automation[bot]@users.noreply.github.com"
+          git config --local user.name "BlazeCommerce Automation Bot"
+          echo "SUCCESS: Git configured for BlazeCommerce Automation Bot"
+        else
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          echo "SUCCESS: Git configured for GitHub Actions bot"
+        fi
 
     - name: Run version system tests
       if: steps.check_files.outputs.should_bump_version == 'true'
@@ -411,12 +437,77 @@ jobs:
           fi
           echo "SUCCESS: Fallback bump type analysis completed"
         else
-          # Run the extracted bump type analyzer
-          if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG"; then
-            echo "SUCCESS: Bump type analysis completed successfully"
+          # Check if intelligent analysis is available and successful
+          if [ "${{ steps.intelligent_analysis.outputs.intelligent_analysis_available }}" = "true" ]; then
+            echo "✅ Using results from intelligent analysis (already completed)"
+            echo "SUCCESS: Intelligent bump type analysis completed successfully"
+
+            # Add gap detection summary to output
+            if [ "${{ steps.intelligent_analysis.outputs.gaps_detected }}" = "true" ]; then
+              echo "⚠️  Gap Detection Summary: Version gaps were detected"
+              echo "   This indicates commits that should have triggered version bumps but didn't"
+              echo "   The intelligent analysis has adjusted the bump type accordingly"
+            else
+              echo "✅ Gap Detection Summary: No version gaps detected"
+            fi
           else
-            echo "ERROR: Bump type analysis failed"
-            exit 1
+            echo "🔄 Intelligent analysis not available, using traditional analysis..."
+            # Run the traditional bump type analyzer
+            if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG" "false"; then
+              echo "SUCCESS: Traditional bump type analysis completed successfully"
+            else
+              echo "ERROR: Bump type analysis failed"
+              exit 1
+            fi
+          fi
+        fi
+
+    - name: Intelligent commit analysis with gap detection
+      if: steps.check_files.outputs.should_bump_version == 'true'
+      id: intelligent_analysis
+      run: |
+        echo "🔍 Running intelligent commit analysis with gap detection..."
+
+        # Set environment variables for intelligent analysis
+        export VERSION_MISMATCH="${{ steps.version_validation.outputs.version_mismatch }}"
+        export LAST_TAG="${{ steps.version_validation.outputs.last_tag }}"
+        export USE_INTELLIGENT_ANALYSIS="true"
+        export ENABLE_GAP_DETECTION="true"
+        export LIMITED_COMMIT_LIMIT="${{ vars.LIMITED_COMMIT_LIMIT || '25' }}"
+        export FALLBACK_COMMIT_LIMIT="${{ vars.FALLBACK_COMMIT_LIMIT || '50' }}"
+
+        echo "🔧 Intelligent Analysis Configuration:"
+        echo "   - Version mismatch: $VERSION_MISMATCH"
+        echo "   - Last tag: $LAST_TAG"
+        echo "   - Gap detection: enabled"
+        echo "   - Cumulative analysis: enabled"
+
+        # Check if the enhanced script exists
+        if [ ! -f ".github/scripts/bump-type-analyzer.js" ]; then
+          echo "WARNING: Enhanced bump type analyzer not found, skipping intelligent analysis..."
+          echo "intelligent_analysis_available=false" >> $GITHUB_OUTPUT
+          echo "gap_detection_enabled=false" >> $GITHUB_OUTPUT
+        else
+          # Run intelligent analysis
+          echo "🚀 Running intelligent commit analysis..."
+          if node .github/scripts/bump-type-analyzer.js "$VERSION_MISMATCH" "$LAST_TAG" "true"; then
+            echo "✅ Intelligent analysis completed successfully"
+            echo "intelligent_analysis_available=true" >> $GITHUB_OUTPUT
+            echo "gap_detection_enabled=true" >> $GITHUB_OUTPUT
+
+            # Check if gap detection found any issues
+            if grep -q "Gap detection:" /tmp/github_output.txt 2>/dev/null; then
+              echo "⚠️  Version gaps detected - see analysis output"
+              echo "gaps_detected=true" >> $GITHUB_OUTPUT
+            else
+              echo "✅ No version gaps detected"
+              echo "gaps_detected=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "❌ Intelligent analysis failed, will use traditional analysis"
+            echo "intelligent_analysis_available=false" >> $GITHUB_OUTPUT
+            echo "gap_detection_enabled=false" >> $GITHUB_OUTPUT
+            echo "gaps_detected=false" >> $GITHUB_OUTPUT
           fi
         fi
 
@@ -591,8 +682,45 @@ jobs:
           echo "SUCCESS: Basic pre-tag validation passed"
         fi
 
-    - name: Create git tag
+    - name: Final validation before tag creation
       if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      id: final_validation
+      run: |
+        echo "🔍 Final validation: Ensuring all previous steps completed successfully..."
+
+        # Check that all required outputs are present
+        if [ -z "${{ steps.check_files.outputs.should_bump_version }}" ]; then
+          echo "ERROR: Missing file check output"
+          exit 1
+        fi
+
+        if [ -z "${{ steps.bump_type.outputs.bump_type }}" ]; then
+          echo "ERROR: Missing bump type output"
+          exit 1
+        fi
+
+        if [ "${{ steps.bump_type.outputs.bump_type }}" = "none" ]; then
+          echo "INFO: No version bump needed, skipping tag creation"
+          exit 0
+        fi
+
+        # Verify version files are consistent
+        NEW_VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "")
+        if [ -z "$NEW_VERSION" ]; then
+          echo "ERROR: Could not read version from package.json"
+          exit 1
+        fi
+
+        echo "✅ Final validation passed - ready for tag creation"
+        echo "version_ready=true" >> $GITHUB_OUTPUT
+        echo "final_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create git tag
+      if: |
+        steps.check_files.outputs.should_bump_version == 'true' &&
+        steps.bump_type.outputs.bump_type != 'none' &&
+        steps.final_validation.outputs.version_ready == 'true' &&
+        success()
       run: |
         echo "TAG: Creating git tag..."
 
@@ -628,10 +756,27 @@ jobs:
           if git tag "$TAG_NAME"; then
             echo "✅ Tag created locally: $TAG_NAME"
 
-            if git push origin "$TAG_NAME"; then
-              echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+            # Push tag with GitHub App token (preferred) or admin token fallback
+            if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+              echo "INFO: Using GitHub App token to push tag (with bypass permissions)"
+              git remote set-url origin https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git
+              if git push origin "$TAG_NAME"; then
+                echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+              else
+                echo "ERROR: Failed to push tag to remote with GitHub App token"
+                exit 1
+              fi
+            elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
+              echo "INFO: Using admin token fallback to push tag"
+              git remote set-url origin https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+              if git push origin "$TAG_NAME"; then
+                echo "SUCCESS: Created and pushed tag: $TAG_NAME"
+              else
+                echo "ERROR: Failed to push tag to remote with admin token"
+                exit 1
+              fi
             else
-              echo "ERROR: Failed to push tag to remote"
+              echo "ERROR: No suitable token available for tag push"
               exit 1
             fi
           else
@@ -641,7 +786,10 @@ jobs:
         fi
 
     - name: Post-tag validation
-      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      if: |
+        steps.check_files.outputs.should_bump_version == 'true' &&
+        steps.bump_type.outputs.bump_type != 'none' &&
+        success()
       run: |
         echo "🔍 Post-tag validation: Verifying git tag matches file versions..."
 
@@ -684,7 +832,10 @@ jobs:
         echo "SUCCESS: Post-tag validation passed - tag and files are synchronized"
 
     - name: Commit version changes
-      if: steps.check_files.outputs.should_bump_version == 'true' && steps.bump_type.outputs.bump_type != 'none'
+      if: |
+        steps.check_files.outputs.should_bump_version == 'true' &&
+        steps.bump_type.outputs.bump_type != 'none' &&
+        success()
       run: |
         echo "NOTE: Committing version changes..."
 
@@ -706,7 +857,21 @@ jobs:
 
         # Create commit with conventional format
         git commit -m "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]"
-        git push
+
+        # Push with GitHub App token (preferred) or admin token fallback
+        if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+          echo "INFO: Using GitHub App token for push (with bypass permissions)"
+          # Set the remote URL with the GitHub App token
+          git remote set-url origin https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:main
+        elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
+          echo "INFO: Using admin token fallback for push"
+          git remote set-url origin https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push origin HEAD:main
+        else
+          echo "ERROR: No suitable token available for push"
+          exit 1
+        fi
 
         echo "SUCCESS: Version changes committed and pushed"
 
