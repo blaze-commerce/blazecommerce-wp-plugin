@@ -157,14 +157,11 @@ jobs:
         private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
         owner: ${{ github.repository_owner }}
         repositories: ${{ github.event.repository.name }}
-        # Ensure the token has bypass permissions for branch protection
-        permissions: >-
-          {
-            "contents": "write",
-            "metadata": "read",
-            "pull_requests": "write",
-            "actions": "read"
-          }
+        # Individual permission parameters (required format for this action)
+        permission-contents: write
+        permission-metadata: read
+        permission-pull-requests: read
+        permission-actions: read
 
     - name: Checkout code
       uses: actions/checkout@v4
