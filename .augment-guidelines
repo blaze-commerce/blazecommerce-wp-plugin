@@ -19,6 +19,8 @@
 
 **BREAKING CHANGE**: All code changes now require mandatory comprehensive documentation updates. No exceptions.
 
+**🚨 HIGH PRIORITY**: All Markdown files MUST follow the documentation organization guidelines defined in `DOCUMENTATION_GUIDELINES.md`. See [Documentation Guidelines](DOCUMENTATION_GUIDELINES.md) for mandatory file organization rules.
+
 ### 1. Documentation-First Development Workflow
 
 **MANDATORY PROCESS**:

@@ -65,7 +65,7 @@ class BlazeWooless {
 
 		foreach ( $settings as $setting ) {
 			// Instantiating the settings will register an admin_init hook to add the configuration
-			// See here BlazeWooless\Settings\BaseSEttings.php @ line 18
+			// See here BlazeWooless\Settings\BaseSettings.php @ line 18
 			$setting::get_instance();
 		}
 	}
@@ -82,6 +82,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\TemplateBuilder',
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',
+			'\\BlazeWooless\\Features\\PluginIntegrationUrlManager',
 		);
 
 		foreach ( $features as $feature ) {
