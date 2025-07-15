@@ -1,9 +1,8 @@
 name: "Priority 5: Create Release"
 
-on:
-  push:
-    tags:
-      - 'v*'
+# DISABLED - Testing atomic workflow
+"on":
+  workflow_dispatch:  # Manual trigger only
 
 # Priority 5: Lowest priority - runs after Priority 4 (Auto Version Bump) completes successfully
 concurrency:
