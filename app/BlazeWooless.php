@@ -239,6 +239,105 @@ class BlazeWooless {
 			$performance_data
 		);
 	}
+
+	/**
+	 * Smart cache utility for API responses and expensive operations
+	 *
+	 * @param string $cache_key Unique cache identifier
+	 * @param callable $callback Function to execute if cache miss
+	 * @param int $expiration Cache expiration in seconds (default: 1 hour)
+	 * @return mixed Cached or fresh data
+	 */
+	public function get_cached_data( $cache_key, $callback, $expiration = 3600 ) {
+		// Sanitize cache key
+		$cache_key = 'blaze_commerce_' . sanitize_key( $cache_key );
+
+		// Try to get from cache first
+		$cached_data = get_transient( $cache_key );
+
+		if ( false !== $cached_data ) {
+			return $cached_data;
+		}
+
+		// Cache miss - execute callback to get fresh data
+		if ( is_callable( $callback ) ) {
+			$fresh_data = call_user_func( $callback );
+
+			// Store in cache for future requests
+			set_transient( $cache_key, $fresh_data, $expiration );
+
+			return $fresh_data;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Clear specific cache entries or all plugin caches
+	 *
+	 * @param string|null $cache_key Specific cache key to clear, or null for all
+	 * @return bool True if cache was cleared successfully
+	 */
+	public function clear_cache( $cache_key = null ) {
+		if ( $cache_key ) {
+			// Clear specific cache entry
+			$cache_key = 'blaze_commerce_' . sanitize_key( $cache_key );
+			return delete_transient( $cache_key );
+		}
+
+		// Clear all plugin caches
+		global $wpdb;
+
+		$cache_prefix = 'blaze_commerce_';
+		$transient_pattern = '_transient_' . $cache_prefix . '%';
+		$timeout_pattern = '_transient_timeout_' . $cache_prefix . '%';
+
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+				$transient_pattern,
+				$timeout_pattern
+			)
+		);
+
+		return $deleted !== false;
+	}
+
+	/**
+	 * Get cache statistics and health information
+	 *
+	 * @return array Cache statistics including hit/miss ratios and storage info
+	 */
+	public function get_cache_stats() {
+		global $wpdb;
+
+		$cache_prefix = 'blaze_commerce_';
+		$transient_pattern = '_transient_' . $cache_prefix . '%';
+
+		// Count active cache entries
+		$cache_count = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s",
+				$transient_pattern
+			)
+		);
+
+		// Calculate total cache size (approximate)
+		$cache_size = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE option_name LIKE %s",
+				$transient_pattern
+			)
+		);
+
+		return array(
+			'active_entries' => (int) $cache_count,
+			'total_size_bytes' => (int) $cache_size,
+			'total_size_mb' => round( $cache_size / 1024 / 1024, 2 ),
+			'cache_prefix' => $cache_prefix,
+			'timestamp' => current_time( 'timestamp' )
+		);
+	}
 }
 
 BlazeWooless::get_instance();
