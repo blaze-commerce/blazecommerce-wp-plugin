@@ -32,11 +32,13 @@ jobs:
   cost-optimization-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # CONDITIONAL EXECUTION: Only run for external contributors or labeled PRs
+    # CONDITIONAL EXECUTION: Run for all contributors and labeled PRs
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR' ||
       github.event.pull_request.author_association == 'CONTRIBUTOR' ||
+      github.event.pull_request.author_association == 'COLLABORATOR' ||
+      github.event.pull_request.author_association == 'OWNER' ||
       contains(github.event.pull_request.labels.*.name, 'needs-review') ||
       contains(github.event.pull_request.labels.*.name, 'external-review')
     outputs:
