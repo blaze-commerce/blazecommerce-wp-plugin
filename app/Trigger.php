@@ -54,10 +54,7 @@ class BC_Test_Approval {
             'bc-test-script',
             plugin_dir_url(__FILE__) . 'assets/test.js',
             array('jquery'),
-            '1.0.0',
-            true
-        );
-    }
+            '1.0.0',fdsfsdfsdfsdfasdvfasdfgvadfgv
     
     /**
      * Filter content safely
