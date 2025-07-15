@@ -41,6 +41,15 @@ BlazeCommerce()->init();
 add_action( 'admin_enqueue_scripts', 'enqueue_typesense_product_indexer_scripts' );
 add_action( 'admin_menu', 'add_typesense_product_indexer_menu' );
 
+/**
+ * Enqueue required scripts for the Typesense product indexer functionality.
+ *
+ * This function ensures jQuery is loaded for admin pages that require
+ * Typesense product indexing capabilities.
+ *
+ * @since 1.14.5
+ * @return void
+ */
 function enqueue_typesense_product_indexer_scripts() {
 	wp_enqueue_script( 'jquery' );
 }
