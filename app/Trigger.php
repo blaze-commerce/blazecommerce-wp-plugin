@@ -18,14 +18,14 @@ if (!defined('ABSPATH')) {
  * Simple utility class for testing auto-approval
  */
 class BC_Test_Approval {
-    
+
     /**
      * Initialize the test class
      */
     public function __construct() {
         add_action('init', array($this, 'init'));
     }
-    
+
     /**
      * Initialize functionality
      */
@@ -33,7 +33,7 @@ class BC_Test_Approval {
         // Simple initialization - no complex logic
         $this->setup_hooks();
     }
-    
+
     /**
      * Setup WordPress hooks
      */
@@ -41,7 +41,7 @@ class BC_Test_Approval {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_filter('the_content', array($this, 'filter_content'));
     }
-    
+
     /**
      * Enqueue scripts safely
      */
@@ -49,13 +49,16 @@ class BC_Test_Approval {
         if (is_admin()) {
             return;
         }
-        
+
         wp_enqueue_script(
             'bc-test-script',
             plugin_dir_url(__FILE__) . 'assets/test.js',
             array('jquery'),
-            '1.0.0',fdsfsdfsdfsdfasdvfasdfgvadfgv
-    
+            '1.0.0',
+            true
+        );
+    }
+
     /**
      * Filter content safely
      * 
@@ -68,10 +71,10 @@ class BC_Test_Approval {
             $additional_content = '<p>' . esc_html__('Test content added safely.', 'blazecommerce') . '</p>';
             $content .= $additional_content;
         }
-        
+
         return $content;
     }
-    
+
     /**
      * Get test data safely
      * 
@@ -84,10 +87,10 @@ class BC_Test_Approval {
         if (!$id) {
             return false;
         }
-        
+
         // Use WordPress database methods
         global $wpdb;
-        
+
         $result = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT * FROM {$wpdb->posts} WHERE ID = %d",
@@ -95,10 +98,10 @@ class BC_Test_Approval {
             ),
             ARRAY_A
         );
-        
+
         return $result ? $result : false;
     }
-    
+
     /**
      * Save test data safely
      * 
@@ -110,17 +113,17 @@ class BC_Test_Approval {
         if (!is_array($data) || empty($data['title'])) {
             return false;
         }
-        
+
         $sanitized_data = array(
             'post_title'   => sanitize_text_field($data['title']),
             'post_content' => wp_kses_post($data['content']),
             'post_status'  => 'draft',
             'post_type'    => 'post'
         );
-        
+
         // Use WordPress functions
         $post_id = wp_insert_post($sanitized_data);
-        
+
         return !is_wp_error($post_id);
     }
 }
