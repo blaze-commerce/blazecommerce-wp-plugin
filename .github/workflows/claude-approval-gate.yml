@@ -57,14 +57,43 @@ jobs:
             echo "  Is Pull Request: ${IS_PULL_REQUEST}"
             echo ""
 
-            echo "🔍 CONDITIONAL CHECKS (using environment variables for accuracy):"
-            echo "  Contains 'FINAL VERDICT': $(echo "${COMMENT_BODY}" | grep -q 'FINAL VERDICT' && echo 'true' || echo 'false')"
-            echo "  Contains 'Claude AI PR Review Complete': $(echo "${COMMENT_BODY}" | grep -q 'Claude AI PR Review Complete' && echo 'true' || echo 'false')"
-            echo "  User login exact match: $([ "${COMMENT_USER}" = 'blazecommerce-automation-bot[bot]' ] && echo 'true' || echo 'false')"
-            echo "  User login contains match: $(echo "${COMMENT_USER}" | grep -q 'blazecommerce-automation-bot' && echo 'true' || echo 'false')"
-            echo "  User type is Bot: $([ "${COMMENT_USER_TYPE}" = 'Bot' ] && echo 'true' || echo 'false')"
+            echo "🔍 DETAILED DETECTION ANALYSIS:"
+            echo "  Comment Body Length: ${#COMMENT_BODY} characters"
+            echo "  Comment User: '${COMMENT_USER}'"
+            echo "  Comment User Type: '${COMMENT_USER_TYPE}'"
             echo ""
-            echo "🔍 GITHUB CONTEXT CHECKS (for comparison):"
+
+            echo "🔍 SEARCH TESTS:"
+            echo "  Contains 'FINAL VERDICT' (case sensitive): $(echo "${COMMENT_BODY}" | grep -q 'FINAL VERDICT' && echo 'true' || echo 'false')"
+            echo "  Contains 'final verdict' (case insensitive): $(echo "${COMMENT_BODY}" | grep -qi 'final verdict' && echo 'true' || echo 'false')"
+            echo "  Contains 'Claude AI PR Review Complete': $(echo "${COMMENT_BODY}" | grep -q 'Claude AI PR Review Complete' && echo 'true' || echo 'false')"
+            echo "  Contains 'Claude AI' (partial): $(echo "${COMMENT_BODY}" | grep -q 'Claude AI' && echo 'true' || echo 'false')"
+            echo ""
+
+            echo "🔍 COMMENT BODY SAMPLE (first 500 chars):"
+            printf '%s\n' "${COMMENT_BODY}" | head -c 500
+            echo ""
+            echo "..."
+            echo ""
+
+            echo "🔍 COMMENT BODY SAMPLE (last 200 chars):"
+            printf '%s\n' "${COMMENT_BODY}" | tail -c 200
+            echo ""
+
+            echo "🔍 HEX DUMP ANALYSIS (looking for hidden characters):"
+            echo "First 100 chars as hex:"
+            printf '%s' "${COMMENT_BODY}" | head -c 100 | xxd -l 100 || echo "xxd not available"
+            echo ""
+
+            echo "🔍 SPECIFIC PATTERN SEARCHES:"
+            echo "  Searching for 'FINAL VERDICT' with context:"
+            echo "${COMMENT_BODY}" | grep -n -A2 -B2 'FINAL VERDICT' || echo "  NOT FOUND"
+            echo ""
+            echo "  Searching for 'Claude AI PR Review Complete' with context:"
+            echo "${COMMENT_BODY}" | grep -n -A2 -B2 'Claude AI PR Review Complete' || echo "  NOT FOUND"
+            echo ""
+
+            echo "🔍 GITHUB CONTEXT COMPARISON:"
             echo "  GitHub context FINAL VERDICT: ${{ contains(github.event.comment.body, 'FINAL VERDICT') }}"
             echo "  GitHub context Claude Complete: ${{ contains(github.event.comment.body, 'Claude AI PR Review Complete') }}"
             echo ""
