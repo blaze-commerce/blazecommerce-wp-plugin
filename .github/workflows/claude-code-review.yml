@@ -153,7 +153,7 @@ jobs:
             // Force Sonnet if requested via workflow_dispatch
             if (forceSonnet) {
               console.log('🔧 MANUAL OVERRIDE: Force Sonnet requested');
-              core.setOutput('model', 'claude-3-5-sonnet-20241022');
+              core.setOutput('model', 'claude-3-sonnet-20240229');
               core.setOutput('reason', 'Manual override via workflow_dispatch');
               return;
             }
@@ -201,15 +201,15 @@ jobs:
               let model, reason;
 
               if (hasCriticalFiles) {
-                model = 'claude-3-5-sonnet-20241022';
+                model = 'claude-3-sonnet-20240229';
                 reason = 'Critical security/auth/payment files detected';
                 console.log('🔴 SONNET SELECTED: Critical files found');
               } else if (totalChanges > 200) {
-                model = 'claude-3-5-sonnet-20241022';
+                model = 'claude-3-sonnet-20240229';
                 reason = `Large changeset (${totalChanges} changes > 200 threshold)`;
                 console.log('🔴 SONNET SELECTED: Large changeset');
               } else if (totalChanges > 100 && changedFiles.some(f => f.endsWith('.php'))) {
-                model = 'claude-3-5-sonnet-20241022';
+                model = 'claude-3-sonnet-20240229';
                 reason = `Medium PHP changeset (${totalChanges} changes)`;
                 console.log('🟡 SONNET SELECTED: Medium PHP changes');
               } else {
