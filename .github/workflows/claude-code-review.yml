@@ -376,6 +376,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app_token.outputs.token }}
 
           # Add timeout to prevent hanging
           timeout_minutes: "8"
