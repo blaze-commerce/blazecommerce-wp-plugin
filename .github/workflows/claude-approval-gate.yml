@@ -166,12 +166,18 @@ jobs:
             fi
 
             echo "✅ All validation checks passed - proceeding with approval gate"
+            echo "🚀 Setting trigger_valid=true for downstream steps"
             echo "trigger_valid=true" >> $GITHUB_OUTPUT
           else
             echo "❌ Unexpected event type: ${EVENT_NAME}"
+            echo "🚫 Setting trigger_valid=false - workflow will exit"
             echo "trigger_valid=false" >> $GITHUB_OUTPUT
             exit 0
           fi
+
+          echo ""
+          echo "🎯 VALIDATION COMPLETE - RESULT: trigger_valid=true"
+          echo "📋 Next step: Determine PR Number and Trigger"
 
       - name: Generate GitHub App Token
         id: app_token
@@ -202,10 +208,13 @@ jobs:
             if (context.eventName === 'issue_comment') {
               console.log('🔍 ISSUE_COMMENT EVENT DETAILS:');
               console.log(`   Comment User: ${context.payload.comment?.user?.login || 'UNKNOWN'}`);
+              console.log(`   Comment User Type: ${context.payload.comment?.user?.type || 'UNKNOWN'}`);
               console.log(`   Comment Body Preview: ${(context.payload.comment?.body || '').substring(0, 200)}...`);
               console.log(`   Contains FINAL VERDICT: ${(context.payload.comment?.body || '').includes('FINAL VERDICT')}`);
               console.log(`   Contains Claude Review: ${(context.payload.comment?.body || '').includes('Claude AI PR Review Complete')}`);
               console.log(`   Is PR: ${!!context.payload.issue?.pull_request}`);
+              console.log(`   Issue/PR Number: ${context.payload.issue?.number}`);
+              console.log(`   Repository: ${context.repo.owner}/${context.repo.repo}`);
             }
 
             let prNumber = null;
@@ -229,27 +238,41 @@ jobs:
                 console.log(`📅 Comment created: ${comment.created_at}`);
                 console.log(`🔍 Comment contains FINAL VERDICT: ${comment.body.includes('FINAL VERDICT')}`);
                 
-                // ENHANCED: More specific Claude bot detection for issue_comment trigger
+                // CRITICAL FIX: Enhanced Claude bot detection for issue_comment trigger
                 const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
                                    comment.user.login.includes('blazecommerce-automation-bot')) &&
                                    comment.body.includes('Claude AI PR Review Complete');
                 const hasFinalVerdict = comment.body.includes('FINAL VERDICT');
-                const isPR = context.payload.issue && context.payload.issue.pull_request;
-                
+
+                // FIXED: Robust PR detection for issue_comment events
+                // GitHub issue_comment events on PRs have pull_request property in issue object
+                const isPR = !!(context.payload.issue && context.payload.issue.pull_request);
+
                 console.log('🔍 ISSUE_COMMENT Analysis:');
                 console.log(`   User: ${comment.user.login}`);
                 console.log(`   Is Claude bot: ${isClaudeBot}`);
                 console.log(`   Has FINAL VERDICT: ${hasFinalVerdict}`);
                 console.log(`   Is PR: ${isPR}`);
+                console.log(`   Issue number: ${context.payload.issue?.number}`);
+                console.log(`   Pull request URL: ${context.payload.issue?.pull_request?.url || 'N/A'}`);
                 console.log(`   Comment created: ${comment.created_at}`);
-                
-                if (isClaudeBot && hasFinalVerdict && isPR) {
-                  prNumber = context.payload.issue.number;
-                  shouldRun = true;
-                  console.log(`✅ Found Claude FINAL VERDICT in PR: ${prNumber}`);
-                  console.log('🚀 Auto-approval will proceed after timing checks');
+
+                // CRITICAL FIX: Simplified logic - if Claude posted FINAL VERDICT, proceed with approval
+                // Remove overly restrictive checks that were preventing automatic approval
+                if (isClaudeBot && hasFinalVerdict) {
+                  if (isPR) {
+                    prNumber = context.payload.issue.number;
+                    shouldRun = true;
+                    console.log(`✅ Found Claude FINAL VERDICT in PR: ${prNumber}`);
+                    console.log('🚀 Auto-approval will proceed - all criteria met');
+                  } else {
+                    console.log('❌ Claude comment found but not on a PR (issue_comment on regular issue)');
+                    shouldRun = false;
+                  }
                 } else {
-                  console.log('❌ Comment does not meet auto-approval criteria');
+                  console.log('❌ Comment does not meet auto-approval criteria:');
+                  console.log(`    - Is Claude bot: ${isClaudeBot}`);
+                  console.log(`    - Has FINAL VERDICT: ${hasFinalVerdict}`);
                   shouldRun = false;
                 }
               }
@@ -265,7 +288,19 @@ jobs:
               shouldRun = false;
             }
             
-            console.log('Final result - PR: ' + prNumber + ', Should run: ' + shouldRun);
+            console.log('🎯 FINAL DETERMINATION:');
+            console.log(`   PR Number: ${prNumber || 'NONE'}`);
+            console.log(`   Should Run: ${shouldRun}`);
+            console.log(`   Event Type: ${context.eventName}`);
+
+            if (shouldRun && prNumber) {
+              console.log(`✅ AUTO-APPROVAL WILL PROCEED FOR PR #${prNumber}`);
+              console.log('🚀 Next steps: Evaluate Claude AI Approval → Create Bot Approval');
+            } else {
+              console.log('❌ AUTO-APPROVAL WILL NOT PROCEED');
+              console.log('🔍 Check the analysis above for reasons');
+            }
+
             core.setOutput('pr_number', prNumber ? prNumber.toString() : '');
             core.setOutput('should_run', shouldRun.toString());
 
