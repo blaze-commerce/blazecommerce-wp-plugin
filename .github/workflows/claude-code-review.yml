@@ -1,4 +1,4 @@
-name: "Priority 2: Claude AI Code Review (Cost Optimized)"
+name: "Priority 2: Claude AI Code Review"
 
 # COST OPTIMIZATION: Intelligent triggering with file filtering and conditional execution
 on:
@@ -37,9 +37,9 @@ on:
         type: boolean
         default: false
 
-# COST OPTIMIZATION: Simplified concurrency control for cost-optimized workflow
+# COST OPTIMIZATION: Maintain existing concurrency pattern for priority queue system
 concurrency:
-  group: claude-review-pr-${{ github.event.pull_request.number || github.run_id }}
+  group: priority-2-claude-review-pr-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true  # Cancel previous runs to save costs
 
 jobs:
@@ -62,6 +62,33 @@ jobs:
       cache_key: ${{ steps.cache-check.outputs.cache_key }}
       cache_hit: ${{ steps.cache-check.outputs.cache_hit }}
     steps:
+      - name: Generate GitHub App Token
+        id: app_token
+        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        env:
+          BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+          BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Verify Authentication
+        run: |
+          echo "🔐 AUTHENTICATION STATUS:"
+          if [ -n "${{ steps.app_token.outputs.token }}" ]; then
+            echo "✅ GitHub App token generated successfully"
+            echo "🤖 Using BlazeCommerce Automation Bot authentication"
+          elif [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "⚠️ Using BOT_GITHUB_TOKEN fallback"
+          else
+            echo "⚠️ Using default github.token"
+          fi
+          echo "📊 Repository: ${{ github.repository }}"
+          echo "🎯 Event: ${{ github.event_name }}"
+
       - name: Check Execution Conditions
         id: execution-check
         run: |
@@ -80,7 +107,7 @@ jobs:
         id: cache-check
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
             console.log('💰 COST OPTIMIZATION: Checking for review cache');
 
@@ -125,7 +152,7 @@ jobs:
         id: model-selection
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
             console.log('🤖 INTELLIGENT MODEL SELECTION');
             console.log('================================');
@@ -319,11 +346,28 @@ jobs:
     if: needs.cost-optimization-check.outputs.cache_hit == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
     steps:
+      - name: Generate GitHub App Token
+        id: app_token
+        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        env:
+          BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+          BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
       - name: Cache Hit Notification
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
             const prNumber = ${{ needs.cost-optimization-check.outputs.pr_number }};
             const cacheKey = '${{ needs.cost-optimization-check.outputs.cache_key }}';
