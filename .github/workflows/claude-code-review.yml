@@ -146,7 +146,7 @@ jobs:
 
             // Always use Claude Sonnet model
             console.log('✅ Using Claude Sonnet model for all reviews');
-            core.setOutput('model', 'claude-3-5-sonnet-20240620');
+            core.setOutput('model', 'claude-3-5-sonnet-20241022');
             core.setOutput('reason', 'Using Claude Sonnet for all reviews');
             return;
 
@@ -175,7 +175,7 @@ jobs:
               console.log(`📁 Changed files (${changedFiles.length}):`, changedFiles.slice(0, 10));
 
               // Always use Claude Sonnet model
-              const model = 'claude-3-5-sonnet-20240620';
+              const model = 'claude-3-5-sonnet-20241022';
               const reason = 'Using Claude Sonnet for all reviews';
 
               console.log('✅ SONNET SELECTED: Default model for all reviews');
@@ -188,7 +188,7 @@ jobs:
             } catch (error) {
               console.error(`❌ ERROR in model selection: ${error.message}`);
               // Fallback to Sonnet for safety
-              core.setOutput('model', 'claude-3-5-sonnet-20240620');
+              core.setOutput('model', 'claude-3-5-sonnet-20241022');
               core.setOutput('reason', 'Error in selection, defaulting to Sonnet');
             }
 
@@ -301,7 +301,7 @@ jobs:
             -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
             -H "anthropic-version: 2023-06-01" \
             -d '{
-              "model": "claude-3-5-sonnet-20240620",
+              "model": "claude-3-5-sonnet-20241022",
               "max_tokens": 10,
               "messages": [{"role": "user", "content": "test"}]
             }')
@@ -371,7 +371,7 @@ jobs:
       - name: Run Claude Code Review
         id: claude-review
         if: steps.validate-api-key.outcome == 'success' && steps.test-api-auth.outputs.api_valid == 'true'
-        uses: anthropics/claude-code-action@v0.0.32
+        uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
