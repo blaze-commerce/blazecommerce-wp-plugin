@@ -291,15 +291,43 @@ jobs:
           token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           fetch-depth: 1
 
+      - name: Validate Claude API Key
+        id: validate-api-key
+        run: |
+          echo "🔍 VALIDATING CLAUDE API CONFIGURATION"
+          echo "====================================="
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "❌ ERROR: ANTHROPIC_API_KEY secret is not set!"
+            echo ""
+            echo "🔧 TO FIX THIS:"
+            echo "1. Go to repository Settings → Secrets and variables → Actions"
+            echo "2. Click 'New repository secret'"
+            echo "3. Name: ANTHROPIC_API_KEY"
+            echo "4. Value: Your Anthropic API key (starts with 'sk-ant-')"
+            echo "5. Get your API key from: https://console.anthropic.com/"
+            echo ""
+            echo "📋 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
+            echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+            exit 1
+          else
+            echo "✅ ANTHROPIC_API_KEY is configured"
+            echo "📋 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
+            echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+          fi
+
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@beta
+        if: steps.validate-api-key.outcome == 'success'
+        uses: anthropics/claude-code-action@v0.0.32
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
 
           # COST OPTIMIZATION: Intelligent model selection
           model: ${{ needs.cost-optimization-check.outputs.model_selection }}
+
+          # Add timeout to prevent hanging
+          timeout_minutes: "8"
 
           # COST OPTIMIZATION: Concise prompt (reduced from 138 lines to ~20 lines)
           direct_prompt: |
@@ -329,6 +357,26 @@ jobs:
             **Recommendation**: Brief explanation
 
             Focus on security, compatibility, and WordPress best practices. Be concise but thorough.
+
+      - name: Handle Claude Review Failure
+        if: failure() && steps.validate-api-key.outcome == 'success'
+        run: |
+          echo "❌ CLAUDE CODE REVIEW FAILED"
+          echo "============================"
+          echo ""
+          echo "🔍 TROUBLESHOOTING STEPS:"
+          echo "1. Check if ANTHROPIC_API_KEY is valid and has sufficient credits"
+          echo "2. Verify the model name is correct: ${{ needs.cost-optimization-check.outputs.model_selection }}"
+          echo "3. Check Anthropic API status: https://status.anthropic.com/"
+          echo "4. Review the action logs above for specific error messages"
+          echo ""
+          echo "📋 DEBUG INFO:"
+          echo "Model: ${{ needs.cost-optimization-check.outputs.model_selection }}"
+          echo "Reason: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+          echo "Action Version: v0.0.32"
+          echo "Timeout: 8 minutes"
+          echo ""
+          echo "💡 If the issue persists, try manually triggering the workflow with 'Force Sonnet' option"
 
   # COST OPTIMIZATION: Show cache hit information
   cache-skip-notification:
