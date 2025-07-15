@@ -38,16 +38,16 @@ cd blocks && npm install && npm run build
 
 ### Version Management
 ```bash
-npm run version:patch    # Bump patch version (e.g., 1.5.2 → 1.5.3)
-npm run version:minor    # Bump minor version (e.g., 1.5.2 → 1.6.0)
-npm run version:major    # Bump major version (e.g., 1.5.2 → 2.0.0)
+npm run version:patch # Bump patch version (e.g., 1.5.2 → 1.5.3)
+npm run version:minor # Bump minor version (e.g., 1.5.2 → 1.6.0)
+npm run version:major # Bump major version (e.g., 1.5.2 → 2.0.0)
 ```
 
 ### Release Process
 ```bash
-npm run changelog         # Generate changelog from commits
-npm run prepare-release   # Full release prep (changelog + build + git add)
-npm run release          # Create and push release tag
+npm run changelog # Generate changelog from commits
+npm run prepare-release # Full release prep (changelog + build + git add)
+npm run release # Create and push release tag
 ```
 
 ### WP-CLI Commands for Testing
@@ -114,3 +114,50 @@ Run these manually in a WordPress environment to verify functionality.
 - WP GraphQL CORS
 - WP GraphQL JWT Authentication
 - WP GraphQL WooCommerce
+
+## Claude AI Integration Status
+
+✅ **WORKING SYSTEM RESTORED**: This repository now uses the working Claude AI integration from PR #289 with `anthropics/claude-code-action@beta` for automatic code reviews and interactive @claude support.
+
+### Claude AI Features:
+- **Automatic Reviews**: PRs automatically get comprehensive code reviews
+- **Interactive Support**: Use @claude mentions for assistance
+- **Security Focus**: WordPress plugin security best practices
+- **Performance Analysis**: WooCommerce optimization recommendations
+
+## Claude AI Review Guidelines
+
+### Required Review Structure
+Every Claude AI review must follow this standardized format for auto-approval workflow integration:
+
+#### 1. Review Header
+```markdown
+### Claude AI PR Review Complete ✅
+```
+
+#### 2. Assessment Categories (Use exact headers)
+- **STRENGTHS** - Positive aspects and good practices
+- **AREAS FOR IMPROVEMENT** - Non-blocking suggestions
+- **CRITICAL ISSUES** - Blocking issues that MUST be fixed
+- **PERFORMANCE CONSIDERATIONS** - Performance-related observations
+- **SECURITY ASSESSMENT** - Security-related findings
+
+#### 3. Final Verdict (REQUIRED - Use exact format)
+```markdown
+### FINAL VERDICT
+**Status**: [APPROVED | CONDITIONAL APPROVAL | BLOCKED]
+**Merge Readiness**: [READY TO MERGE | READY AFTER FIXES | NOT READY]
+**Recommendation**: [Brief recommendation text]
+```
+
+### Auto-Approval Parsing Rules
+- **APPROVED**: No critical issues, ready for auto-approval
+- **CONDITIONAL APPROVAL**: Only improvement suggestions, manual review needed
+- **BLOCKED**: Critical issues present, blocks merge until fixed
+
+### Example Critical Issue Patterns
+- Security vulnerabilities
+- Breaking changes
+- Performance regressions
+- Missing required functionality
+- Code that breaks existing features

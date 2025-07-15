@@ -1,5 +1,10 @@
 {
+    "name": "blaze-commerce/blazecommerce-wp-plugin",
+    "description": "The official plugin that integrates your site with the Blaze Commerce service.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
     "require": {
+        "php": ">=7.4",
         "php-http/curl-client": "^2.2",
         "typesense/typesense-php": "^4.8",
         "symfony/http-client": "^5.4"
@@ -10,6 +15,13 @@
         "phpstan/phpstan": "^1.8",
         "wp-coding-standards/wpcs": "^2.3",
         "dealerdirect/phpcodesniffer-composer-installer": "^0.7"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "optimize-autoloader": true,
+        "sort-packages": true
     },
     "autoload": {
         "psr-4": {
