@@ -1,6 +1,6 @@
 name: "Priority 4: Auto Version Bump"
 
-on:
+"on":
   push:
     branches:
       - main
@@ -852,6 +852,8 @@ jobs:
         steps.check_files.outputs.should_bump_version == 'true' &&
         steps.bump_type.outputs.bump_type != 'none' &&
         success()
+      env:
+        GH_TOKEN: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
       run: |
         echo "NOTE: Committing version changes..."
 
@@ -874,45 +876,206 @@ jobs:
         # Create commit with conventional format
         git commit -m "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]"
 
-        # Push with GitHub App token (preferred) or admin token fallback
+        # Robust PR + Auto-Merge approach to handle repository rules
+        echo "📝 Creating robust version bump PR with conflict handling..."
+
+        # Ensure we're on latest main to avoid conflicts
+        git fetch origin main
+        git reset --hard origin/main
+
+        # Re-apply version changes on latest main (in case of conflicts)
+        echo "🔄 Re-applying version changes on latest main..."
+
+        # Re-run version updates to ensure consistency
+        npm version $NEW_VERSION --no-git-tag-version
+        npm run update-plugin-version
+
+        # Re-add all changed files
+        git add package.json package-lock.json blaze-wooless.php README.md
+        if [ -f "blocks/package.json" ]; then
+          git add blocks/package.json
+        fi
+
+        # Create a unique branch name to avoid collisions
+        TIMESTAMP=$(date +%s)
+        BRANCH_NAME="auto-version-bump-${TIMESTAMP}-${{ github.run_id }}"
+        git checkout -b "$BRANCH_NAME"
+
+        # Commit changes with conventional format
+        git commit -m "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]"
+
+        # Configure git remote with GitHub App token
         if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-          echo "🚀 Using GitHub App token for push (blazecommerce-automation-bot with bypass permissions)"
-
-          # Configure git remote with GitHub App token
+          echo "🔗 Configuring GitHub App authentication for PR operations..."
           git remote set-url origin "https://x-access-token:${{ steps.app_token.outputs.token }}@github.com/${{ github.repository }}.git"
-
-          # Verify remote configuration
-          echo "🔗 Remote URL configured for GitHub App authentication"
-
-          # Push with detailed error handling
-          if git push origin HEAD:main; then
-            echo "✅ Successfully pushed version bump commit to main branch"
-          else
-            echo "❌ Failed to push with GitHub App token"
-            echo "🔍 Checking git status and remote configuration..."
-            git status
-            git remote -v
-            echo "🔍 Checking if GitHub App has bypass permissions..."
-            exit 1
-          fi
+          GH_TOKEN="${{ steps.app_token.outputs.token }}"
         elif [ -n "${{ secrets.BC_GITHUB_TOKEN }}" ]; then
-          echo "⚠️ Using admin token fallback for push"
+          echo "⚠️ Using admin token fallback for PR operations"
           git remote set-url origin "https://${{ secrets.BC_GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          if git push origin HEAD:main; then
-            echo "✅ Successfully pushed with admin token fallback"
-          else
-            echo "❌ Failed to push with admin token"
-            exit 1
-          fi
+          GH_TOKEN="${{ secrets.BC_GITHUB_TOKEN }}"
         else
-          echo "❌ ERROR: No suitable token available for push"
-          echo "🔍 Available tokens:"
-          echo "  - GitHub App token: $([ -n '${{ steps.app_token.outputs.token }}' ] && echo 'Available' || echo 'Not available')"
-          echo "  - Admin token: $([ -n '${{ secrets.BC_GITHUB_TOKEN }}' ] && echo 'Available' || echo 'Not available')"
+          echo "❌ ERROR: No suitable token available for PR operations"
           exit 1
         fi
 
-        echo "SUCCESS: Version changes committed and pushed"
+        # Push branch with retry logic
+        echo "📤 Pushing branch with retry logic..."
+        for i in {1..3}; do
+          if git push origin "$BRANCH_NAME"; then
+            echo "✅ Successfully pushed branch on attempt $i"
+            break
+          else
+            echo "⚠️ Push failed on attempt $i, retrying..."
+            sleep 2
+          fi
+          if [ $i -eq 3 ]; then
+            echo "❌ Failed to push branch after 3 attempts"
+            exit 1
+          fi
+        done
+
+        # Create PR with comprehensive error handling
+        echo "📝 Creating PR with error handling..."
+
+        # Create PR body using simple string concatenation to avoid YAML issues
+        PR_BODY="🤖 Automated Version Bump (Run ID: ${{ github.run_id }})"
+        PR_BODY="$PR_BODY"$'\n\n'"Changes:"
+        PR_BODY="$PR_BODY"$'\n'"- Updated package.json version: $NEW_VERSION"
+        PR_BODY="$PR_BODY"$'\n'"- Updated blaze-wooless.php version"
+        PR_BODY="$PR_BODY"$'\n'"- Updated README.md version"
+        PR_BODY="$PR_BODY"$'\n'"- Updated blocks/package.json version"
+        PR_BODY="$PR_BODY"$'\n'"- Created git tag v$NEW_VERSION"
+        PR_BODY="$PR_BODY"$'\n\n'"Auto-merge: This PR will be automatically merged using BlazeCommerce Automation Bot bypass permissions."
+        PR_BODY="$PR_BODY"$'\n'"Conflict Resolution: If conflicts occur, the workflow handles them automatically."
+        PR_BODY="$PR_BODY"$'\n'"Branch: $BRANCH_NAME"
+
+        if PR_URL=$(gh pr create \
+          --title "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE]" \
+          --body "$PR_BODY" \
+          --base main \
+          --head "$BRANCH_NAME" \
+          --label "automated" \
+          --label "version-bump" \
+          --output url 2>/dev/null); then
+          echo "✅ Created PR: $PR_URL"
+        else
+          echo "❌ Failed to create PR, checking if branch conflicts exist..."
+
+          # Check if there are conflicts and handle them
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "🔄 Branch is behind main, rebasing..."
+            git rebase origin/main
+            git push --force-with-lease origin "$BRANCH_NAME"
+
+            # Retry PR creation
+            PR_URL=$(gh pr create \
+              --title "chore(release): bump version to $NEW_VERSION [$BUMP_TYPE] (rebased)" \
+              --body "$PR_BODY" \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --label "automated" \
+              --label "version-bump" \
+              --output url)
+            echo "✅ Created rebased PR: $PR_URL"
+          else
+            echo "❌ PR creation failed for unknown reason"
+            exit 1
+          fi
+        fi
+
+        # Extract PR number
+        PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]*$')
+        echo "📋 PR Number: $PR_NUMBER"
+
+        # Wait for PR to be fully processed
+        echo "⏳ Waiting for PR to be fully processed..."
+        sleep 5
+
+    - name: Auto-merge version bump PR
+      if: steps.check_files.outputs.should_bump_version == 'true'
+      run: |
+        # Get PR number from previous step (we'll need to extract it differently)
+        TIMESTAMP=$(date +%s)
+        BRANCH_NAME="auto-version-bump-${TIMESTAMP}-${{ github.run_id }}"
+
+        # Find the PR number for our branch
+        PR_NUMBER=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number')
+
+        if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+          echo "❌ Could not find PR for branch $BRANCH_NAME"
+          exit 1
+        fi
+
+        echo "🔄 Attempting auto-merge for PR #$PR_NUMBER with bypass permissions..."
+
+        # Auto-merge with comprehensive error handling
+        MERGE_SUCCESS=false
+
+        # Strategy 1: Regular merge
+        if gh pr merge "$PR_NUMBER" --merge --subject "chore(release): bump version to $(node -p "require('./package.json').version") [${{ steps.bump_type.outputs.bump_type }}]" 2>/dev/null; then
+          echo "✅ Successfully merged with regular merge strategy"
+          MERGE_SUCCESS=true
+        else
+          echo "⚠️ Regular merge failed, trying squash merge..."
+
+          # Strategy 2: Squash merge
+          if gh pr merge "$PR_NUMBER" --squash --subject "chore(release): bump version to $(node -p "require('./package.json').version") [${{ steps.bump_type.outputs.bump_type }}]" 2>/dev/null; then
+            echo "✅ Successfully merged with squash strategy"
+            MERGE_SUCCESS=true
+          else
+            echo "⚠️ Squash merge failed, checking for conflicts..."
+
+            # Strategy 3: Update branch and retry
+            echo "🔄 Updating branch to resolve conflicts..."
+            git checkout "$BRANCH_NAME"
+            git fetch origin main
+            git rebase origin/main
+            git push --force-with-lease origin "$BRANCH_NAME"
+
+            # Wait and retry merge
+            sleep 3
+            if gh pr merge "$PR_NUMBER" --merge --subject "chore(release): bump version to $(node -p "require('./package.json').version") [${{ steps.bump_type.outputs.bump_type }}]" 2>/dev/null; then
+              echo "✅ Successfully merged after conflict resolution"
+              MERGE_SUCCESS=true
+            fi
+          fi
+        fi
+
+        # Final status check and reporting
+        if [ "$MERGE_SUCCESS" = true ]; then
+          echo "🎉 Version bump PR successfully created and merged!"
+          echo "📋 PR #$PR_NUMBER merged successfully"
+
+          # Verify the merge worked
+          git fetch origin main
+          LATEST_COMMIT=$(git log origin/main -1 --pretty=format:"%s")
+          echo "📝 Latest commit on main: $LATEST_COMMIT"
+          echo "SUCCESS: Version changes committed and pushed via PR #$PR_NUMBER"
+
+        else
+          echo "❌ Failed to auto-merge PR after all strategies"
+          echo "📋 PR #$PR_NUMBER created but requires manual intervention"
+          echo "🔗 PR URL: https://github.com/${{ github.repository }}/pull/$PR_NUMBER"
+
+          # Add comment to PR explaining the situation
+          COMMENT_BODY="⚠️ Auto-merge failed"
+          COMMENT_BODY="$COMMENT_BODY"$'\n\n'"This automated version bump PR could not be automatically merged due to conflicts or permission issues."
+          COMMENT_BODY="$COMMENT_BODY"$'\n\n'"Next Steps:"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"1. Review the changes in this PR"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"2. Resolve any conflicts if present"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"3. Manually merge this PR to complete the version bump"
+          COMMENT_BODY="$COMMENT_BODY"$'\n\n'"Technical Details:"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"- Workflow Run: ${{ github.run_id }}"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"- Branch: $BRANCH_NAME"
+          COMMENT_BODY="$COMMENT_BODY"$'\n'"- Multiple merge strategies attempted"
+          gh pr comment "$PR_NUMBER" --body "$COMMENT_BODY"
+
+          echo "⚠️ Manual merge required for PR #$PR_NUMBER"
+          # Don't fail the workflow, just log the issue for manual intervention
+        fi
+      env:
+        GH_TOKEN: ${{ steps.app_token.outputs.token || secrets.BC_GITHUB_TOKEN || github.token }}
 
     - name: Workflow Summary
       if: always()
@@ -937,7 +1100,7 @@ jobs:
               FINAL_VERSION="unknown (package.json not found)"
             fi
             echo "PACKAGE: New version: $FINAL_VERSION"
-            echo "COMPLETED: Version bump completed successfully!"
+            echo "COMPLETED: Version bump completed successfully via PR + auto-merge!"
 
             # Enhanced debug: comprehensive version consistency check
             echo "🔍 Comprehensive version consistency check:"
