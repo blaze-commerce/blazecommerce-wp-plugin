@@ -180,55 +180,23 @@ jobs:
           if [ "${EVENT_NAME}" = "issue_comment" ]; then
             echo "🔍 Validating issue_comment trigger..."
 
-            # ENHANCED: Format-agnostic FINAL VERDICT detection with detailed debugging
-            # Clean comment body: remove HTML tags, normalize whitespace, convert to lowercase
-            CLEAN_COMMENT=$(echo "${COMMENT_BODY}" | tr '[:upper:]' '[:lower:]' | sed 's/<[^>]*>//g' | tr -d '\n\r\t' | sed 's/[[:space:]]\+/ /g')
-
-            echo "🔍 DETAILED FORMAT DETECTION DEBUG:"
-            echo "  Original comment length: ${#COMMENT_BODY} characters"
-            echo "  Clean comment length: ${#CLEAN_COMMENT} characters"
-            echo "  Looking for: 'FINAL VERDICT' or 'final verdict'"
+            # SIMPLIFIED: Direct detection of approval status
+            echo "🔍 APPROVAL STATUS DETECTION:"
+            echo "  Looking for: 'PR_APPROVED_BY_BLAZE_BOT'"
             echo ""
 
-            # Multiple detection patterns for robustness
-            if echo "${CLEAN_COMMENT}" | grep -q "final verdict" || \
-               echo "${CLEAN_COMMENT}" | grep -q "### final verdict" || \
-               echo "${CLEAN_COMMENT}" | grep -q "finalverdict" || \
-               echo "${COMMENT_BODY}" | grep -qi "FINAL VERDICT" || \
-               echo "${COMMENT_BODY}" | grep -qi "final verdict"; then
-              echo "✅ Comment contains 'FINAL VERDICT' (format-agnostic detection)"
-              echo "🔍 Clean comment preview: ${CLEAN_COMMENT:0:200}..."
+            # Check for approval status
+            if echo "${COMMENT_BODY}" | grep -q "PR_APPROVED_BY_BLAZE_BOT"; then
+              echo "✅ Comment contains 'PR_APPROVED_BY_BLAZE_BOT' - approval detected"
+              echo "🔍 Comment preview: ${COMMENT_BODY:0:200}..."
             else
-              echo "❌ CRITICAL: Comment does not contain 'FINAL VERDICT' in any recognized format"
-              echo ""
-              echo "🚨 LIKELY CAUSE: Claude code review action is not following the direct_prompt format!"
-              echo "🔧 SOLUTION: Check .github/workflows/claude-code-review.yml direct_prompt section"
-              echo ""
-              echo "🔍 DEBUGGING INFO:"
-              echo "  Original comment preview: ${COMMENT_BODY:0:300}..."
-              echo "  Clean comment preview: ${CLEAN_COMMENT:0:300}..."
-              echo "  Comment ends with: ${COMMENT_BODY: -50}"
-              echo ""
-              echo "📋 EXPECTED FORMAT:"
-              echo "  ### FINAL VERDICT"
-              echo "  **Status**: APPROVED"
-              echo "  **Merge Readiness**: READY TO MERGE"
-              echo "  **Recommendation**: Brief explanation"
-              echo ""
-              echo "  **Claude AI PR Review Complete**"
-              echo ""
+              echo "ℹ️  Comment does not contain 'PR_APPROVED_BY_BLAZE_BOT' - no approval action needed"
+              echo "🔍 Comment preview: ${COMMENT_BODY:0:200}..."
               echo "trigger_valid=false" >> $GITHUB_OUTPUT
               exit 0
             fi
 
-            # Check if comment contains Claude AI PR Review Complete
-            if echo "${COMMENT_BODY}" | grep -q "Claude AI PR Review Complete"; then
-              echo "✅ Comment contains 'Claude AI PR Review Complete'"
-            else
-              echo "❌ Comment does not contain 'Claude AI PR Review Complete'"
-              echo "trigger_valid=false" >> $GITHUB_OUTPUT
-              exit 0
-            fi
+
 
             # Check if user is Claude automation bot
             if [ "${COMMENT_USER}" = "blazecommerce-automation-bot[bot]" ] || \
@@ -322,7 +290,7 @@ jobs:
                 const cleanCommentBody = comment.body.toLowerCase().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
                 const hasFinalVerdictEnhanced = comment.body.includes('PR_APPROVED_BY_BLAZE_BOT');
 
-                console.log(`🔍 Comment contains FINAL VERDICT (enhanced): ${hasFinalVerdictEnhanced}`);
+                console.log(`🔍 Comment contains PR_APPROVED_BY_BLAZE_BOT: ${hasFinalVerdictEnhanced}`);
                 console.log(`🔍 Clean comment preview: ${cleanCommentBody.substring(0, 200)}...`);
 
                 // CRITICAL FIX: Enhanced Claude bot detection for issue_comment trigger
