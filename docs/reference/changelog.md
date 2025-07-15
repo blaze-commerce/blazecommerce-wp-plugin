@@ -7,18 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note**: Release dates have been corrected based on actual Git commit history to ensure accuracy.
 
-## [Unreleased]
-
-### Features
-- **Claude AI Workflow**: Added intelligent API key validation with cost-ascending model testing (Haiku → Sonnet) before code review execution
-- **API Validation**: Implemented real-time model availability testing using minimal API calls to ensure reliable Claude AI integration
-- **Fallback Strategy**: Enhanced error handling with graceful degradation when API validation fails, maintaining workflow reliability
-- **Cost Optimization**: Preserved existing intelligent model selection while adding validation layer for improved success rates
-
-### CI/CD & Automation
-- **Workflow Enhancement**: Added `validated_models` and `validation_status` outputs to cost-optimization-check job
-- **Security Improvement**: API key validation prevents failed reviews due to invalid or expired credentials
-- **Error Handling**: Enhanced user feedback with detailed validation warnings and troubleshooting guidance
 
 ## [1.12.0] - 2025-07-11
 
