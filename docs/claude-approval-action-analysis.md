@@ -43,7 +43,7 @@ if (claudeApprovalStatus === 'approved' && !hasRequiredIssues) {
 ## 🔧 SOLUTIONS IMPLEMENTED
 
 ### Solution 1: Standalone Direct Approval Workflow
-**File**: `.github/workflows/claude-direct-approval.yml`
+**File**: `.github/workflows/workflow-preflight-check.yml`
 
 **Features**:
 - ✅ **Independent execution** - No complex dependencies
@@ -108,7 +108,7 @@ console.log(`📋 Review ID: ${approvalResponse.data.id}`);
 ## 🧪 TESTING PLAN
 
 ### Step 1: Deploy Standalone Workflow
-1. Commit and push the new `claude-direct-approval.yml`
+1. Commit and push the new `workflow-preflight-check.yml`
 2. Trigger workflow by pushing to PR #342
 3. Monitor logs for approval API call execution
 4. Verify @blazecommerce-claude-ai approval appears

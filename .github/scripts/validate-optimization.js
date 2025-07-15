@@ -152,10 +152,11 @@ class WorkflowOptimizationValidator {
     console.log('\nDEBUG: Validating Priority Dependencies...');
 
     const workflows = [
-      { file: '.github/workflows/claude-pr-review.yml', priority: 1 },
-      { file: '.github/workflows/claude-approval-gate.yml', priority: 2 },
-      { file: '.github/workflows/auto-version.yml', priority: 3 },
-      { file: '.github/workflows/release.yml', priority: 3 }
+      { file: '.github/workflows/workflow-preflight-check.yml', priority: 1 },
+      { file: '.github/workflows/claude-code-review.yml', priority: 2 },
+      { file: '.github/workflows/claude-approval-gate.yml', priority: 3 },
+      { file: '.github/workflows/auto-version.yml', priority: 4 },
+      { file: '.github/workflows/release.yml', priority: 5 }
     ];
 
     for (const workflow of workflows) {

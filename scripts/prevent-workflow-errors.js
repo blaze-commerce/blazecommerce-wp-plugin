@@ -172,10 +172,11 @@ class WorkflowErrorPrevention {
     logHeader('Validating workflow files');
     
     const workflowFiles = [
-      '.github/workflows/tests.yml',
-      '.github/workflows/auto-version.yml',
+      '.github/workflows/workflow-preflight-check.yml',
       '.github/workflows/claude-code-review.yml',
-      '.github/workflows/claude-approval-gate.yml'
+      '.github/workflows/claude-approval-gate.yml',
+      '.github/workflows/auto-version.yml',
+      '.github/workflows/tests.yml'
     ];
 
     let valid = true;

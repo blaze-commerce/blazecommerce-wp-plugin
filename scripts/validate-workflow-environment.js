@@ -120,10 +120,11 @@ function validateWorkflowFiles() {
   log('\n🔍 Validating workflow files...', 'blue');
   
   const workflowFiles = [
-    '.github/workflows/tests.yml',
+    '.github/workflows/workflow-preflight-check.yml',
+    '.github/workflows/claude-code-review.yml',
+    '.github/workflows/claude-approval-gate.yml',
     '.github/workflows/auto-version.yml',
-    '.github/workflows/claude-pr-review.yml',
-    '.github/workflows/claude-approval-gate.yml'
+    '.github/workflows/tests.yml'
   ];
   
   let allValid = true;

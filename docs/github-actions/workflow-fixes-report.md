@@ -92,7 +92,7 @@ Applied the same fix as auto-version.yml to both occurrences:
 
 ## Final Workflow Names
 
-1. "Priority 1: Claude Direct Approval" (claude-direct-approval.yml)
+1. "Priority 1: Workflow Pre-flight Check" (workflow-preflight-check.yml)
 2. "Priority 2: Claude AI Code Review" (claude-code-review.yml)
 3. "Priority 3: Claude AI Approval Gate" (claude-approval-gate.yml)
 4. "Priority 4: Auto Version Bump" (auto-version.yml)
