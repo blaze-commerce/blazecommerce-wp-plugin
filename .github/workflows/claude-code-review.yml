@@ -21,11 +21,6 @@ on:
         description: 'PR number to review'
         required: true
         type: string
-      force_sonnet:
-        description: 'Force use of Claude Sonnet (bypass intelligent selection)'
-        required: false
-        type: boolean
-        default: false
 
 # COST OPTIMIZATION: Maintain existing concurrency pattern for priority queue system
 concurrency:
@@ -33,7 +28,7 @@ concurrency:
   cancel-in-progress: true  # Cancel previous runs to save costs
 
 jobs:
-  # COST OPTIMIZATION: Intelligent model selection and conditional execution
+  # COST OPTIMIZATION: Conditional execution and caching
   cost-optimization-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -51,8 +46,6 @@ jobs:
       pr_number: ${{ steps.execution-check.outputs.pr_number }}
       cache_key: ${{ steps.cache-check.outputs.cache_key }}
       cache_hit: ${{ steps.cache-check.outputs.cache_hit }}
-      validated_models: ${{ steps.api-key-validation.outputs.validated_models }}
-      validation_status: ${{ steps.api-key-validation.outputs.validation_status }}
     steps:
       - name: Generate GitHub App Token
         id: app_token
@@ -140,107 +133,22 @@ jobs:
               core.setOutput('cache_hit', 'false');
             }
 
-      - name: API Key Validation
-        id: api-key-validation
-        run: |
-          echo "🔑 API KEY VALIDATION"
-          echo "===================="
-
-          # Check if API key is set
-          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
-            echo "❌ ERROR: ANTHROPIC_API_KEY secret is not set!"
-            echo "validation_status=failed" >> $GITHUB_OUTPUT
-            echo "validated_models=[]" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "✅ ANTHROPIC_API_KEY is configured"
-          echo "🧪 Testing model availability in cost-ascending order..."
-
-          # Models to test in cost order (cheapest to most expensive)
-          models=("claude-3-haiku-20240307" "claude-3-5-sonnet-20240620")
-          validated_models=()
-
-          for model in "${models[@]}"; do
-            echo "🔍 Testing model: $model"
-
-            # Test model with minimal API call
-            http_code=$(curl -s -w "%{http_code}" -o /dev/null \
-              -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
-              -H "anthropic-version: 2023-06-01" \
-              -H "content-type: application/json" \
-              -d "{\"model\": \"$model\", \"max_tokens\": 1, \"messages\": [{\"role\": \"user\", \"content\": \"test\"}]}" \
-              https://api.anthropic.com/v1/messages)
-
-            if [ "$http_code" = "200" ]; then
-              echo "✅ Model $model is available (HTTP $http_code)"
-              validated_models+=("\"$model\"")
-            else
-              echo "❌ Model $model failed validation (HTTP $http_code)"
-            fi
-          done
-
-          # Format validated models as JSON array
-          if [ ${#validated_models[@]} -eq 0 ]; then
-            echo "⚠️ No models passed validation - will use fallback"
-            echo "validation_status=failed" >> $GITHUB_OUTPUT
-            echo "validated_models=[]" >> $GITHUB_OUTPUT
-          else
-            validated_json="[$(IFS=,; echo "${validated_models[*]}")]"
-            echo "✅ Validated models: $validated_json"
-            echo "validation_status=success" >> $GITHUB_OUTPUT
-            echo "validated_models=$validated_json" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Intelligent Model Selection
+      - name: Set Claude Sonnet Model
         id: model-selection
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
           script: |
-            console.log('🤖 INTELLIGENT MODEL SELECTION');
-            console.log('================================');
+            console.log('🤖 USING CLAUDE SONNET MODEL');
+            console.log('============================');
 
             const prNumber = ${{ github.event.pull_request.number || github.event.inputs.pr_number }};
-            const forceSonnet = ${{ github.event.inputs.force_sonnet || false }};
-            const validationStatus = '${{ steps.api-key-validation.outputs.validation_status }}';
-            const validatedModelsJson = '${{ steps.api-key-validation.outputs.validated_models }}';
 
-            console.log(`🔑 API Validation Status: ${validationStatus}`);
-            console.log(`✅ Validated Models: ${validatedModelsJson}`);
-
-            // Parse validated models
-            let validatedModels = [];
-            try {
-              validatedModels = JSON.parse(validatedModelsJson || '[]');
-            } catch (error) {
-              console.log(`⚠️ Error parsing validated models: ${error.message}`);
-              validatedModels = [];
-            }
-
-            // Force Sonnet if requested via workflow_dispatch (but only if validated)
-            if (forceSonnet) {
-              console.log('🔧 MANUAL OVERRIDE: Force Sonnet requested');
-              const sonnetModel = 'claude-3-5-sonnet-20240620';
-              if (validationStatus === 'success' && validatedModels.includes(sonnetModel)) {
-                core.setOutput('model', sonnetModel);
-                core.setOutput('reason', 'Manual override via workflow_dispatch (validated)');
-              } else {
-                console.log('⚠️ Sonnet not validated, using fallback');
-                core.setOutput('model', sonnetModel);
-                core.setOutput('reason', 'Manual override via workflow_dispatch (fallback - validation failed)');
-              }
-              return;
-            }
-
-            // Handle validation failure - use fallback model
-            if (validationStatus !== 'success' || validatedModels.length === 0) {
-              console.log('⚠️ API validation failed or no models available');
-              const fallbackModel = 'claude-3-5-sonnet-20240620';
-              core.setOutput('model', fallbackModel);
-              core.setOutput('reason', 'Fallback model - API validation failed');
-              return;
-            }
+            // Always use Claude Sonnet model
+            console.log('✅ Using Claude Sonnet model for all reviews');
+            core.setOutput('model', 'claude-3-5-sonnet-20240620');
+            core.setOutput('reason', 'Using Claude Sonnet for all reviews');
+            return;
 
             try {
               // Get PR details including file changes
@@ -266,63 +174,11 @@ jobs:
               const changedFiles = files.map(file => file.filename);
               console.log(`📁 Changed files (${changedFiles.length}):`, changedFiles.slice(0, 10));
 
-              // Critical file patterns that require Sonnet (more specific to avoid false positives)
-              const criticalPatterns = [
-                /\/security\//i, /\/auth\//i, /\/payment\//i, /\/admin\//i, /\/core\//i, /\/api\//i,
-                /security\./i, /auth\./i, /payment\./i, /admin\./i, /core\./i, /api\./i,
-                /login\./i, /user\./i, /permission\./i, /role\./i, /session\./i, /token\./i,
-                /-security/i, /-auth/i, /-payment/i, /-admin/i, /-core/i, /-api/i,
-                /crypto/i, /encrypt/i, /password/i, /oauth/i, /jwt/i, /sql/i,
-                /database/i, /migration/i, /schema/i
-              ];
+              // Always use Claude Sonnet model
+              const model = 'claude-3-5-sonnet-20240620';
+              const reason = 'Using Claude Sonnet for all reviews';
 
-              // Check for critical files
-              const hasCriticalFiles = changedFiles.some(file =>
-                criticalPatterns.some(pattern => pattern.test(file))
-              );
-
-              // Helper function to select best available model from validated models
-              function selectValidatedModel(preferredModel, fallbackModel, reason) {
-                if (validatedModels.includes(preferredModel)) {
-                  return { model: preferredModel, reason: reason + ' (validated)' };
-                } else if (validatedModels.includes(fallbackModel)) {
-                  return { model: fallbackModel, reason: reason + ' (fallback - preferred model not validated)' };
-                } else {
-                  // Last resort - use first validated model
-                  return {
-                    model: validatedModels[0],
-                    reason: reason + ' (using first validated model)'
-                  };
-                }
-              }
-
-              // Decision logic - only use validated models
-              let model, reason;
-              const sonnetModel = 'claude-3-5-sonnet-20240620';
-              const haikuModel = 'claude-3-haiku-20240307';
-
-              if (hasCriticalFiles) {
-                const result = selectValidatedModel(sonnetModel, haikuModel, 'Critical security/auth/payment files detected');
-                model = result.model;
-                reason = result.reason;
-                console.log('🔴 CRITICAL FILES: ' + reason);
-              } else if (totalChanges > 200) {
-                const result = selectValidatedModel(sonnetModel, haikuModel, `Large changeset (${totalChanges} changes > 200 threshold)`);
-                model = result.model;
-                reason = result.reason;
-                console.log('🔴 LARGE CHANGESET: ' + reason);
-              } else if (totalChanges > 100 && changedFiles.some(f => f.endsWith('.php'))) {
-                const result = selectValidatedModel(sonnetModel, haikuModel, `Medium PHP changeset (${totalChanges} changes)`);
-                model = result.model;
-                reason = result.reason;
-                console.log('🟡 MEDIUM PHP CHANGES: ' + reason);
-              } else {
-                const result = selectValidatedModel(haikuModel, sonnetModel, `Simple changes (${totalChanges} changes, no critical files)`);
-                model = result.model;
-                reason = result.reason;
-                console.log('🟢 SIMPLE CHANGES: ' + reason);
-              }
-
+              console.log('✅ SONNET SELECTED: Default model for all reviews');
               console.log(`✅ Model: ${model}`);
               console.log(`📝 Reason: ${reason}`);
 
@@ -331,17 +187,9 @@ jobs:
 
             } catch (error) {
               console.error(`❌ ERROR in model selection: ${error.message}`);
-              // Fallback to first validated model or default
-              let fallbackModel, fallbackReason;
-              if (validatedModels.length > 0) {
-                fallbackModel = validatedModels[0];
-                fallbackReason = 'Error in selection, using first validated model';
-              } else {
-                fallbackModel = 'claude-3-5-sonnet-20240620';
-                fallbackReason = 'Error in selection, using default model (validation failed)';
-              }
-              core.setOutput('model', fallbackModel);
-              core.setOutput('reason', fallbackReason);
+              // Fallback to Sonnet for safety
+              core.setOutput('model', 'claude-3-5-sonnet-20240620');
+              core.setOutput('reason', 'Error in selection, defaulting to Sonnet');
             }
 
   claude-review:
@@ -367,8 +215,6 @@ jobs:
           echo "📋 PR NUMBER: ${{ needs.cost-optimization-check.outputs.pr_number }}"
           echo "🤖 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
           echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
-          echo "🔑 VALIDATION STATUS: ${{ needs.cost-optimization-check.outputs.validation_status }}"
-          echo "✅ VALIDATED MODELS: ${{ needs.cost-optimization-check.outputs.validated_models }}"
           echo "💾 CACHE STATUS: ${{ needs.cost-optimization-check.outputs.cache_hit == 'true' && 'HIT (Skipped)' || 'MISS (Proceeding)' }}"
           echo "⏰ EXECUTION TIME: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "============================================"
@@ -428,48 +274,109 @@ jobs:
             echo "✅ ANTHROPIC_API_KEY is configured"
             echo "📋 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
             echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
-            echo "🔑 VALIDATION STATUS: ${{ needs.cost-optimization-check.outputs.validation_status }}"
-            echo "✅ VALIDATED MODELS: ${{ needs.cost-optimization-check.outputs.validated_models }}"
           fi
 
-      - name: Post API Validation Warning
-        if: needs.cost-optimization-check.outputs.validation_status == 'failed'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
-          script: |
-            const prNumber = ${{ needs.cost-optimization-check.outputs.pr_number }};
+      - name: Test Anthropic API Authentication
+        id: test-api-auth
+        run: |
+          echo "🧪 TESTING ANTHROPIC API AUTHENTICATION"
+          echo "======================================="
 
-            const message = `⚠️ **API Validation Warning**
+          # Test API key format
+          API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+          if [[ ! "$API_KEY" =~ ^sk-ant- ]]; then
+            echo "⚠️ API key does not start with 'sk-ant-' - this might be invalid"
+            echo "🔍 Key prefix: ${API_KEY:0:10}..."
+          else
+            echo "✅ API key format appears correct (starts with 'sk-ant-')"
+          fi
 
-            The Claude AI code review is proceeding with a fallback model because API validation failed for all models.
+          # Test API connectivity and authentication
+          echo ""
+          echo "🌐 Testing API connectivity..."
 
-            **Possible causes:**
-            - API key may be invalid or expired
-            - API rate limits may have been reached
-            - Anthropic API service may be experiencing issues
+          HTTP_STATUS=$(curl -s -o /tmp/anthropic_response.json -w "%{http_code}" \
+            -X POST "https://api.anthropic.com/v1/messages" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
+            -H "anthropic-version: 2023-06-01" \
+            -d '{
+              "model": "claude-3-5-sonnet-20240620",
+              "max_tokens": 10,
+              "messages": [{"role": "user", "content": "test"}]
+            }')
 
-            **Selected Model:** \`${{ needs.cost-optimization-check.outputs.model_selection }}\`
-            **Selection Reason:** ${{ needs.cost-optimization-check.outputs.model_reason }}
+          echo "📊 HTTP Status Code: $HTTP_STATUS"
 
-            The review will continue, but you may want to check your API key configuration.`;
+          case $HTTP_STATUS in
+            200)
+              echo "✅ API authentication successful!"
+              echo "🎉 Anthropic API is accessible and key is valid"
+              echo "api_valid=true" >> $GITHUB_OUTPUT
+              ;;
+            401)
+              echo "❌ Authentication failed - Invalid API key"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "🔧 Please check your ANTHROPIC_API_KEY secret"
+              echo "api_valid=false" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+            403)
+              echo "🚫 Forbidden - API key may not have required permissions"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "api_valid=false" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+            429)
+              echo "⏳ Rate limited - too many requests"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "💡 This might be temporary - the workflow may still work"
+              echo "api_valid=rate_limited" >> $GITHUB_OUTPUT
+              ;;
+            500|502|503|504)
+              echo "🔥 Anthropic API server error (HTTP $HTTP_STATUS)"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "💡 This is likely temporary - check https://status.anthropic.com/"
+              echo "api_valid=server_error" >> $GITHUB_OUTPUT
+              ;;
+            000)
+              echo "🌐 Network connectivity issue - cannot reach Anthropic API"
+              echo "🔍 Check if GitHub Actions can access external APIs"
+              echo "api_valid=network_error" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+            *)
+              echo "❓ Unexpected HTTP status: $HTTP_STATUS"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "api_valid=unknown_error" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+          esac
 
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: message
-            });
+          # Clean up response file
+          rm -f /tmp/anthropic_response.json
+
+
 
       - name: Run Claude Code Review
         id: claude-review
-        if: steps.validate-api-key.outcome == 'success'
+        if: steps.validate-api-key.outcome == 'success' && steps.test-api-auth.outputs.api_valid == 'true'
         uses: anthropics/claude-code-action@v0.0.32
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
 
-          # COST OPTIMIZATION: Intelligent model selection
+          # Using Claude Sonnet model for all reviews
           model: ${{ needs.cost-optimization-check.outputs.model_selection }}
 
           # Add timeout to prevent hanging
@@ -505,16 +412,27 @@ jobs:
             Focus on security, compatibility, and WordPress best practices. Be concise but thorough.
 
       - name: Handle Claude Review Failure
-        if: failure() && steps.validate-api-key.outcome == 'success'
+        if: failure()
         run: |
           echo "❌ CLAUDE CODE REVIEW FAILED"
           echo "============================"
           echo ""
-          echo "🔍 TROUBLESHOOTING STEPS:"
-          echo "1. Check if ANTHROPIC_API_KEY is valid and has sufficient credits"
-          echo "2. Verify the model name is correct: ${{ needs.cost-optimization-check.outputs.model_selection }}"
-          echo "3. Check Anthropic API status: https://status.anthropic.com/"
-          echo "4. Review the action logs above for specific error messages"
+          echo "🔍 VALIDATION RESULTS:"
+          echo "API Key Validation: ${{ steps.validate-api-key.outcome }}"
+          echo "API Authentication Test: ${{ steps.test-api-auth.outcome }}"
+          echo "API Valid Status: ${{ steps.test-api-auth.outputs.api_valid }}"
+          echo ""
+          echo "🛠️ TROUBLESHOOTING STEPS:"
+          if [ "${{ steps.test-api-auth.outputs.api_valid }}" != "true" ]; then
+            echo "1. 🚨 [PRIORITY] Fix API authentication issue identified above"
+            echo "2. 🔑 Check ANTHROPIC_API_KEY secret configuration"
+            echo "3. 💳 Verify API key has sufficient credits at https://console.anthropic.com/"
+          else
+            echo "1. ✅ API authentication passed - issue may be with the Claude action itself"
+            echo "2. 🌐 Check Anthropic API status: https://status.anthropic.com/"
+            echo "3. 📋 Review the action logs above for specific error messages"
+            echo "4. ⚙️ Consider trying a different model or reducing timeout"
+          fi
           echo ""
           echo "📋 DEBUG INFO:"
           echo "Model: ${{ needs.cost-optimization-check.outputs.model_selection }}"
@@ -522,7 +440,28 @@ jobs:
           echo "Action Version: v0.0.32"
           echo "Timeout: 8 minutes"
           echo ""
-          echo "💡 If the issue persists, try manually triggering the workflow with 'Force Sonnet' option"
+          echo "💡 If the issue persists, try manually triggering the workflow or check API status"
+
+      - name: Handle API Validation Failure
+        if: failure() && (steps.validate-api-key.outcome == 'failure' || steps.test-api-auth.outcome == 'failure')
+        run: |
+          echo "🚨 API VALIDATION FAILED"
+          echo "========================"
+          echo ""
+          echo "📝 SUMMARY: The Claude Code Review was skipped due to API validation failure"
+          echo ""
+          echo "🔍 Validation Steps:"
+          echo "- API Key Check: ${{ steps.validate-api-key.outcome }}"
+          echo "- API Auth Test: ${{ steps.test-api-auth.outcome }}"
+          echo "- API Valid Status: ${{ steps.test-api-auth.outputs.api_valid }}"
+          echo ""
+          echo "⚡ ACTION REQUIRED: Please fix the API configuration before the review can proceed"
+          echo ""
+          echo "🛠️ Common solutions:"
+          echo "1. 🔐 Ensure ANTHROPIC_API_KEY secret is set in repository settings"
+          echo "2. ✅ Verify the API key is valid and starts with 'sk-ant-'"
+          echo "3. 💳 Check API key has sufficient credits at https://console.anthropic.com/"
+          echo "4. 🔑 Verify API key permissions allow access to Claude models"
 
   # COST OPTIMIZATION: Show cache hit information
   cache-skip-notification:
@@ -564,7 +503,7 @@ jobs:
             **Reason:** Commit already reviewed
             **Cost Savings:** ~$0.50-$2.00 per skipped review
 
-            If you need a fresh review, push a new commit or use the manual workflow dispatch with "Force Sonnet" option.`;
+            If you need a fresh review, push a new commit or use the manual workflow dispatch.`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
