@@ -415,7 +415,7 @@ jobs:
             - Previous required changes are implemented but minor issues remain
             - Code works but could be optimized
 
-            **Use "APPROVED" when:**
+            **Use "PR_APPROVED_BY_BLAZE_BOT" when:**
             - No critical issues found
             - All previous required changes have been implemented
             - Code follows WordPress best practices
@@ -424,7 +424,7 @@ jobs:
             ⚠️ **CRITICAL: You MUST end your review with this EXACT format for auto-approval to work:**
 
             ### FINAL VERDICT
-            **Status**: APPROVED
+            **Status**: PR_APPROVED_BY_BLAZE_BOT
             **Merge Readiness**: READY TO MERGE
             **Recommendation**: Brief explanation
 
@@ -434,7 +434,7 @@ jobs:
             - Use EXACTLY "### FINAL VERDICT" (with 3 hashtags)
             - Use EXACTLY "**Status**: [STATUS]" (with double asterisks)
             - Use EXACTLY "**Claude AI PR Review Complete**" at the end
-            - Status must be one of: APPROVED | CONDITIONAL APPROVAL | BLOCKED
+            - Status must be one of: PR_APPROVED_BY_BLAZE_BOT | CONDITIONAL APPROVAL | BLOCKED
             - This format is REQUIRED for the automation bot to detect your review
 
             Focus on security, compatibility, and WordPress best practices. Be concise but thorough.
