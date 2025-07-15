@@ -68,23 +68,13 @@ class BlazeWooless
             '\\BlazeWooless\\Settings\\ExportImportSettings',
         );
 
-<<<<<<< HEAD
         foreach ($settings as $setting) {
             // Instantiating the settings will register an admin_init hook to add the configuration
-            // See here BlazeWooless\Settings\BaseSEttings.php @ line 18
+            // See here BlazeWooless\Settings\BaseSettings.php @ line 18
             $setting::get_instance();
         }
     }
-=======
-		foreach ( $settings as $setting ) {
-			// Instantiating the settings will register an admin_init hook to add the configuration
-			// See here BlazeWooless\Settings\BaseSettings.php @ line 18
-			$setting::get_instance();
-		}
-	}
->>>>>>> main
 
-<<<<<<< HEAD
     public function register_features()
     {
         $features = array(
@@ -98,23 +88,8 @@ class BlazeWooless
             '\\BlazeWooless\\Features\\TemplateBuilder',
             '\\BlazeWooless\\Features\\Review',
             '\\BlazeWooless\\Features\\Tax',
+            '\\BlazeWooless\\Features\\PluginIntegrationUrlManager',
         );
-=======
-	public function register_features() {
-		$features = array(
-			'\\BlazeWooless\\Features\\ContentBuilder',
-			'\\BlazeWooless\\Features\\AttributeSettings',
-			'\\BlazeWooless\\Features\\CalculateShipping',
-			'\\BlazeWooless\\Features\\DraggableContent',
-			'\\BlazeWooless\\Features\\LoadCartFromSession',
-			'\\BlazeWooless\\Features\\Authentication',
-			'\\BlazeWooless\\Features\\CategoryBanner',
-			'\\BlazeWooless\\Features\\TemplateBuilder',
-			'\\BlazeWooless\\Features\\Review',
-			'\\BlazeWooless\\Features\\Tax',
-			'\\BlazeWooless\\Features\\PluginIntegrationUrlManager',
-		);
->>>>>>> main
 
         foreach ($features as $feature) {
             $feature::get_instance();
