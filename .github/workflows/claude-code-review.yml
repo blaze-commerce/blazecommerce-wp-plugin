@@ -377,6 +377,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app_token.outputs.token }}
+          model: claude-3-opus-20240229
 
           # Add timeout to prevent hanging
           timeout_minutes: "8"
