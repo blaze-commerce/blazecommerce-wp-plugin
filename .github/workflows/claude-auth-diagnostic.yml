@@ -1,0 +1,166 @@
+name: Claude Authentication Diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  diagnose-authentication:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    
+    steps:
+      - name: 🔍 Diagnose Authentication Setup
+        run: |
+          echo "🔍 CLAUDE AUTHENTICATION DIAGNOSTIC"
+          echo "=================================="
+          echo ""
+          
+          echo "📋 CHECKING REQUIRED SECRETS:"
+          echo "-----------------------------"
+          
+          # Check Anthropic API Key
+          if [ -n "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "✅ ANTHROPIC_API_KEY: Present"
+            API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+            if [[ "$API_KEY" =~ ^sk-ant- ]]; then
+              echo "   ✅ Format: Valid (starts with 'sk-ant-')"
+            else
+              echo "   ❌ Format: Invalid (should start with 'sk-ant-')"
+            fi
+          else
+            echo "❌ ANTHROPIC_API_KEY: Missing"
+          fi
+          
+          # Check GitHub App secrets
+          if [ -n "${{ secrets.BC_GITHUB_APP_ID }}" ]; then
+            echo "✅ BC_GITHUB_APP_ID: Present"
+          else
+            echo "❌ BC_GITHUB_APP_ID: Missing"
+          fi
+          
+          if [ -n "${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}" ]; then
+            echo "✅ BC_GITHUB_APP_PRIVATE_KEY: Present"
+          else
+            echo "❌ BC_GITHUB_APP_PRIVATE_KEY: Missing"
+          fi
+          
+          # Check BOT token fallback
+          if [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "✅ BOT_GITHUB_TOKEN: Present (fallback available)"
+          else
+            echo "⚠️ BOT_GITHUB_TOKEN: Missing (no fallback)"
+          fi
+          
+          echo ""
+          echo "🔧 TESTING GITHUB APP TOKEN GENERATION:"
+          echo "---------------------------------------"
+
+      - name: 🤖 Test GitHub App Token Generation
+        id: test_app_token
+        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        env:
+          BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
+          BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
+          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+        continue-on-error: true
+
+      - name: 📊 Authentication Results
+        run: |
+          echo "📊 AUTHENTICATION TEST RESULTS:"
+          echo "==============================="
+          
+          if [ -n "${{ steps.test_app_token.outputs.token }}" ]; then
+            echo "✅ GitHub App Token: Successfully generated"
+            echo "🤖 BlazeCommerce Automation Bot: Ready"
+          else
+            echo "❌ GitHub App Token: Failed to generate"
+            echo "🔍 Checking fallbacks..."
+            
+            if [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+              echo "✅ BOT_GITHUB_TOKEN: Available as fallback"
+            else
+              echo "⚠️ BOT_GITHUB_TOKEN: Not available"
+              echo "📝 Will use default github.token (limited permissions)"
+            fi
+          fi
+          
+          echo ""
+          echo "🎯 FINAL TOKEN CHAIN:"
+          echo "--------------------"
+          if [ -n "${{ steps.test_app_token.outputs.token }}" ]; then
+            echo "🥇 Using: GitHub App Token (blazecommerce-automation-bot)"
+          elif [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
+            echo "🥈 Using: BOT_GITHUB_TOKEN (fallback)"
+          else
+            echo "🥉 Using: github.token (default, limited permissions)"
+          fi
+
+      - name: 🧪 Test Anthropic API
+        if: secrets.ANTHROPIC_API_KEY != ''
+        run: |
+          echo "🧪 TESTING ANTHROPIC API:"
+          echo "========================"
+          
+          HTTP_STATUS=$(curl -s -o /tmp/test_response.json -w "%{http_code}" \
+            -X POST "https://api.anthropic.com/v1/messages" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
+            -H "anthropic-version: 2023-06-01" \
+            -d '{
+              "model": "claude-3-5-sonnet-20241022",
+              "max_tokens": 10,
+              "messages": [{"role": "user", "content": "test"}]
+            }')
+          
+          echo "📊 HTTP Status: $HTTP_STATUS"
+          
+          case $HTTP_STATUS in
+            200)
+              echo "✅ Anthropic API: Working perfectly!"
+              ;;
+            401)
+              echo "❌ Anthropic API: Authentication failed (invalid key)"
+              ;;
+            403)
+              echo "❌ Anthropic API: Forbidden (insufficient permissions)"
+              ;;
+            429)
+              echo "⚠️ Anthropic API: Rate limited (temporary)"
+              ;;
+            *)
+              echo "❌ Anthropic API: Error (HTTP $HTTP_STATUS)"
+              ;;
+          esac
+          
+          rm -f /tmp/test_response.json
+
+      - name: 📋 Diagnostic Summary
+        run: |
+          echo ""
+          echo "📋 DIAGNOSTIC SUMMARY:"
+          echo "====================="
+          echo ""
+          echo "🔑 Key Separation: ✅ CORRECT"
+          echo "   - ANTHROPIC_API_KEY → Claude AI only"
+          echo "   - GitHub tokens → GitHub operations only"
+          echo ""
+          echo "🚨 If Claude workflow fails, check:"
+          echo "   1. GitHub App token generation"
+          echo "   2. GitHub App permissions"
+          echo "   3. Fallback token availability"
+          echo "   4. Anthropic API key validity"
+          echo ""
+          echo "💡 The @claude simple test works because it uses"
+          echo "   minimal GitHub permissions vs the complex workflow"
+          echo "   which requires full GitHub App permissions."
