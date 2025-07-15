@@ -276,11 +276,101 @@ jobs:
             echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
           fi
 
+      - name: Test Anthropic API Authentication
+        id: test-api-auth
+        run: |
+          echo "🧪 TESTING ANTHROPIC API AUTHENTICATION"
+          echo "======================================="
+
+          # Test API key format
+          API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+          if [[ ! "$API_KEY" =~ ^sk-ant- ]]; then
+            echo "⚠️ API key does not start with 'sk-ant-' - this might be invalid"
+            echo "🔍 Key prefix: ${API_KEY:0:10}..."
+          else
+            echo "✅ API key format appears correct (starts with 'sk-ant-')"
+          fi
+
+          # Test API connectivity and authentication
+          echo ""
+          echo "🌐 Testing API connectivity..."
+
+          HTTP_STATUS=$(curl -s -o /tmp/anthropic_response.json -w "%{http_code}" \
+            -X POST "https://api.anthropic.com/v1/messages" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
+            -H "anthropic-version: 2023-06-01" \
+            -d '{
+              "model": "claude-3-5-sonnet-20240620",
+              "max_tokens": 10,
+              "messages": [{"role": "user", "content": "test"}]
+            }')
+
+          echo "📊 HTTP Status Code: $HTTP_STATUS"
+
+          case $HTTP_STATUS in
+            200)
+              echo "✅ API authentication successful!"
+              echo "🎉 Anthropic API is accessible and key is valid"
+              echo "api_valid=true" >> $GITHUB_OUTPUT
+              ;;
+            401)
+              echo "❌ Authentication failed - Invalid API key"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "🔧 Please check your ANTHROPIC_API_KEY secret"
+              echo "api_valid=false" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+            403)
+              echo "🚫 Forbidden - API key may not have required permissions"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "api_valid=false" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+            429)
+              echo "⏳ Rate limited - too many requests"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "💡 This might be temporary - the workflow may still work"
+              echo "api_valid=rate_limited" >> $GITHUB_OUTPUT
+              ;;
+            500|502|503|504)
+              echo "🔥 Anthropic API server error (HTTP $HTTP_STATUS)"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "💡 This is likely temporary - check https://status.anthropic.com/"
+              echo "api_valid=server_error" >> $GITHUB_OUTPUT
+              ;;
+            000)
+              echo "🌐 Network connectivity issue - cannot reach Anthropic API"
+              echo "🔍 Check if GitHub Actions can access external APIs"
+              echo "api_valid=network_error" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+            *)
+              echo "❓ Unexpected HTTP status: $HTTP_STATUS"
+              echo "📄 Response:"
+              cat /tmp/anthropic_response.json
+              echo ""
+              echo "api_valid=unknown_error" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+          esac
+
+          # Clean up response file
+          rm -f /tmp/anthropic_response.json
+
 
 
       - name: Run Claude Code Review
         id: claude-review
-        if: steps.validate-api-key.outcome == 'success'
+        if: steps.validate-api-key.outcome == 'success' && steps.test-api-auth.outputs.api_valid == 'true'
         uses: anthropics/claude-code-action@v0.0.32
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -322,16 +412,27 @@ jobs:
             Focus on security, compatibility, and WordPress best practices. Be concise but thorough.
 
       - name: Handle Claude Review Failure
-        if: failure() && steps.validate-api-key.outcome == 'success'
+        if: failure()
         run: |
           echo "❌ CLAUDE CODE REVIEW FAILED"
           echo "============================"
           echo ""
-          echo "🔍 TROUBLESHOOTING STEPS:"
-          echo "1. Check if ANTHROPIC_API_KEY is valid and has sufficient credits"
-          echo "2. Verify the model name is correct: ${{ needs.cost-optimization-check.outputs.model_selection }}"
-          echo "3. Check Anthropic API status: https://status.anthropic.com/"
-          echo "4. Review the action logs above for specific error messages"
+          echo "🔍 VALIDATION RESULTS:"
+          echo "API Key Validation: ${{ steps.validate-api-key.outcome }}"
+          echo "API Authentication Test: ${{ steps.test-api-auth.outcome }}"
+          echo "API Valid Status: ${{ steps.test-api-auth.outputs.api_valid }}"
+          echo ""
+          echo "🛠️ TROUBLESHOOTING STEPS:"
+          if [ "${{ steps.test-api-auth.outputs.api_valid }}" != "true" ]; then
+            echo "1. 🚨 [PRIORITY] Fix API authentication issue identified above"
+            echo "2. 🔑 Check ANTHROPIC_API_KEY secret configuration"
+            echo "3. 💳 Verify API key has sufficient credits at https://console.anthropic.com/"
+          else
+            echo "1. ✅ API authentication passed - issue may be with the Claude action itself"
+            echo "2. 🌐 Check Anthropic API status: https://status.anthropic.com/"
+            echo "3. 📋 Review the action logs above for specific error messages"
+            echo "4. ⚙️ Consider trying a different model or reducing timeout"
+          fi
           echo ""
           echo "📋 DEBUG INFO:"
           echo "Model: ${{ needs.cost-optimization-check.outputs.model_selection }}"
@@ -340,6 +441,27 @@ jobs:
           echo "Timeout: 8 minutes"
           echo ""
           echo "💡 If the issue persists, try manually triggering the workflow or check API status"
+
+      - name: Handle API Validation Failure
+        if: failure() && (steps.validate-api-key.outcome == 'failure' || steps.test-api-auth.outcome == 'failure')
+        run: |
+          echo "🚨 API VALIDATION FAILED"
+          echo "========================"
+          echo ""
+          echo "📝 SUMMARY: The Claude Code Review was skipped due to API validation failure"
+          echo ""
+          echo "🔍 Validation Steps:"
+          echo "- API Key Check: ${{ steps.validate-api-key.outcome }}"
+          echo "- API Auth Test: ${{ steps.test-api-auth.outcome }}"
+          echo "- API Valid Status: ${{ steps.test-api-auth.outputs.api_valid }}"
+          echo ""
+          echo "⚡ ACTION REQUIRED: Please fix the API configuration before the review can proceed"
+          echo ""
+          echo "🛠️ Common solutions:"
+          echo "1. 🔐 Ensure ANTHROPIC_API_KEY secret is set in repository settings"
+          echo "2. ✅ Verify the API key is valid and starts with 'sk-ant-'"
+          echo "3. 💳 Check API key has sufficient credits at https://console.anthropic.com/"
+          echo "4. 🔑 Verify API key permissions allow access to Claude models"
 
   # COST OPTIMIZATION: Show cache hit information
   cache-skip-notification:
