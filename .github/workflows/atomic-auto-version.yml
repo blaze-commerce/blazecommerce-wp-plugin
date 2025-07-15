@@ -1,6 +1,9 @@
 name: "Atomic Auto Version Bump"
 
 "on":
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       bump_type:

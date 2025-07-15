@@ -1,12 +1,13 @@
 name: "Priority 4: Auto Version Bump"
 
-"on":
-  push:
-    branches:
-      - main
-      - develop
-      - 'feature/**'
-      - 'release/**'
+# DISABLED - Testing atomic workflow
+# "on":
+#   push:
+#     branches:
+#       - main
+#       - develop
+#       - 'feature/**'
+#       - 'release/**'
 
 # Priority 4: Post-approval workflow - runs ONLY after PR is approved and Priority 3 completes
 concurrency:
