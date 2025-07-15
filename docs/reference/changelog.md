@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note**: Release dates have been corrected based on actual Git commit history to ensure accuracy.
 
+## [1.14.6] - 2025-07-15
+
+### Features
+- **Data Validation**: Added comprehensive data validation and sanitization system for improved security and data integrity
+- **TypesenseClient Enhancements**: Improved connection parameter validation and error handling
+- **Settings Integration**: Added validation settings to General Settings page
+
+### Security
+- **Input Sanitization**: Enhanced sanitization for all user inputs and API parameters
+- **Error Handling**: Improved error handling for invalid data with detailed logging
+
+### Documentation
+- **API Documentation**: Added comprehensive documentation for the Data Validation API
+- **Feature Guide**: Added user guide for the Data Validation feature
+
 ## [1.12.0] - 2025-07-11
 
 

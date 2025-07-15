@@ -39,13 +39,30 @@ class TypesenseClient {
 			) {
 				throw new Exception( 'Typesense settings not found' );
 			}
-			$this->api_key  = $settings['typesense_api_key'];
-			$this->store_id = $settings['store_id'];
-			$this->host     = $settings['typesense_host'];
+
+			// Validate and sanitize settings using DataValidator if available
+			if ( class_exists( '\\BlazeWooless\\Features\\DataValidator' ) ) {
+				$validator = \BlazeWooless\Features\DataValidator::get_instance();
+
+				// Sanitize API key and host
+				$api_key = $validator->sanitize_text( $settings['typesense_api_key'] );
+				$store_id = $validator->sanitize_text( $settings['store_id'] );
+				$host = $validator->validate_url( $settings['typesense_host'] );
+
+				$this->api_key = $api_key;
+				$this->store_id = $store_id;
+				$this->host = $host;
+			} else {
+				// Fallback to basic sanitization if DataValidator is not available
+				$this->api_key = sanitize_text_field( $settings['typesense_api_key'] );
+				$this->store_id = sanitize_text_field( $settings['store_id'] );
+				$this->host = esc_url_raw( $settings['typesense_host'] );
+			}
+
 			$this->site_url = $this->normalize_site_url( site_url() );
 
 			try {
-				$client = $this->get_client( $this->api_key, $settings['typesense_host'] );
+				$client = $this->get_client( $this->api_key, $this->host );
 			} catch (\Throwable $th) {
 				$client = null;
 			}
@@ -105,6 +122,52 @@ class TypesenseClient {
 
 	public function get_site_url() {
 		return $this->site_url;
+	}
+
+	/**
+	 * Validate connection parameters
+	 *
+	 * @param string $api_key API key to validate
+	 * @param string $host Host URL to validate
+	 * @param string $store_id Store ID to validate
+	 * @return array Validation result with status and message
+	 */
+	public function validate_connection_params( $api_key, $host, $store_id ) {
+		$errors = array();
+
+		// Validate API key
+		if ( empty( $api_key ) ) {
+			$errors[] = 'API key is required';
+		} elseif ( strlen( $api_key ) < 10 ) {
+			$errors[] = 'API key appears to be too short';
+		}
+
+		// Validate host
+		if ( empty( $host ) ) {
+			$errors[] = 'Host URL is required';
+		} elseif ( ! filter_var( $host, FILTER_VALIDATE_URL ) ) {
+			$errors[] = 'Host URL is not valid';
+		}
+
+		// Validate store ID
+		if ( empty( $store_id ) ) {
+			$errors[] = 'Store ID is required';
+		} elseif ( ! preg_match( '/^[a-zA-Z0-9_-]+$/', $store_id ) ) {
+			$errors[] = 'Store ID contains invalid characters';
+		}
+
+		if ( empty( $errors ) ) {
+			return array(
+				'status' => 'valid',
+				'message' => 'Connection parameters are valid'
+			);
+		} else {
+			return array(
+				'status' => 'invalid',
+				'message' => 'Validation errors: ' . implode( ', ', $errors ),
+				'errors' => $errors
+			);
+		}
 	}
 
 	/**
@@ -198,8 +261,22 @@ class TypesenseClient {
 		return $this->get_active_collection_access( 'page' )->documents;
 	}
 
-	public function test_connection( $api_key, $store_id, $environement ) {
-		$client = $this->get_client( $api_key, $environement );
+	public function test_connection( $api_key, $store_id, $environment ) {
+		// First validate connection parameters
+		$validation = $this->validate_connection_params( $api_key, $environment, $store_id );
+		if ( $validation['status'] !== 'valid' ) {
+			return array( 'status' => 'error', 'message' => $validation['message'] );
+		}
+
+		// If using DataValidator, sanitize inputs
+		if ( class_exists( '\\BlazeWooless\\Features\\DataValidator' ) ) {
+			$validator = \BlazeWooless\Features\DataValidator::get_instance();
+			$api_key = $validator->sanitize_text( $api_key );
+			$store_id = $validator->sanitize_text( $store_id );
+			$environment = $validator->validate_url( $environment );
+		}
+
+		$client = $this->get_client( $api_key, $environment );
 		try {
 			$collections = $client->collections->retrieve();
 			return array( 'status' => 'success', 'message' => 'Typesense is working!', 'collection' => $collections );
