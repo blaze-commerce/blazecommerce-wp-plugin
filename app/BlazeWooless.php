@@ -152,6 +152,33 @@ class BlazeWooless {
 			header( 'Access-Control-Allow-Credentials: true' );
 		}
 	}
+
+	/**
+	 * Get plugin version information
+	 *
+	 * @return array Plugin version details
+	 * @since 1.15.0
+	 */
+	public function get_version_info() {
+		return array(
+			'version' => BLAZE_COMMERCE_VERSION,
+			'plugin_name' => 'Blaze Commerce',
+			'build_date' => date( 'Y-m-d H:i:s' ),
+			'php_version' => PHP_VERSION,
+			'wp_version' => get_bloginfo( 'version' )
+		);
+	}
+
+	/**
+	 * Check if plugin version is compatible with requirements
+	 *
+	 * @param string $min_version Minimum required version
+	 * @return bool True if compatible, false otherwise
+	 * @since 1.15.0
+	 */
+	public function is_version_compatible( $min_version ) {
+		return version_compare( BLAZE_COMMERCE_VERSION, $min_version, '>=' );
+	}
 }
 
 BlazeWooless::get_instance();
