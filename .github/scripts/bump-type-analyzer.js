@@ -12,6 +12,13 @@
 const { execSync } = require('child_process');
 const { Logger } = require('./file-change-analyzer');
 
+// Import intelligent commit scanning functions
+const {
+  analyzeCommitHistoryWithGapDetection,
+  detectVersionGaps,
+  getVersionHistory
+} = require('../../scripts/semver-utils');
+
 /**
  * Bump Type Analyzer Class
  */
@@ -280,6 +287,122 @@ class BumpTypeAnalyzer {
   }
 
   /**
+   * Perform intelligent commit analysis with gap detection
+   * @param {boolean} hasMismatch - Whether there's a version mismatch
+   * @param {string} lastTag - Last git tag
+   * @param {object} options - Analysis options
+   * @returns {Object} Enhanced analysis result with gap detection
+   */
+  analyzeIntelligent(hasMismatch = false, lastTag = 'none', options = {}) {
+    try {
+      Logger.info('🔍 Starting intelligent commit analysis with gap detection...');
+
+      const {
+        enableGapDetection = true,
+        enableCumulativeAnalysis = true,
+        verbose = true
+      } = options;
+
+      // Perform intelligent analysis
+      const intelligentResult = analyzeCommitHistoryWithGapDetection({
+        verbose,
+        includeGapDetection: enableGapDetection,
+        maxCommitsToAnalyze: hasMismatch ? this.limitedCommitLimit : 1000,
+        maxTagsToAnalyze: 10,
+        enableCumulativeAnalysis
+      });
+
+      // Get traditional analysis for comparison
+      const traditionalResult = this.analyze(hasMismatch, lastTag);
+
+      // Combine results with intelligent enhancements
+      const enhancedResult = {
+        // Core analysis
+        bumpType: intelligentResult.finalBumpType,
+        reason: this.buildEnhancedReason(intelligentResult, traditionalResult),
+        analysis: {
+          ...traditionalResult.analysis,
+          intelligent: true,
+          confidence: intelligentResult.confidence,
+          gapDetection: intelligentResult.gapDetection,
+          cumulativeAnalysis: intelligentResult.cumulativeAnalysis
+        },
+
+        // Enhanced information
+        intelligentAnalysis: intelligentResult,
+        traditionalAnalysis: traditionalResult,
+        recommendations: intelligentResult.recommendations,
+        strategy: hasMismatch ? 'limited-intelligent' : 'full-intelligent',
+
+        // Compatibility
+        commits: traditionalResult.commits,
+        triggeringCommit: traditionalResult.triggeringCommit
+      };
+
+      // Log intelligent analysis results
+      Logger.info(`✅ Intelligent analysis complete:`);
+      Logger.info(`   Final bump type: ${enhancedResult.bumpType}`);
+      Logger.info(`   Confidence: ${intelligentResult.confidence}`);
+      Logger.info(`   Gap detection: ${intelligentResult.gapDetection ?
+        (intelligentResult.gapDetection.hasGaps ?
+          `${intelligentResult.gapDetection.gapCount} gaps found` : 'No gaps') : 'Disabled'}`);
+      Logger.info(`   Recommendations: ${intelligentResult.recommendations.length}`);
+
+      if (intelligentResult.recommendations.length > 0) {
+        Logger.info('💡 Recommendations:');
+        intelligentResult.recommendations.forEach((rec, i) => {
+          Logger.info(`   ${i + 1}. ${rec}`);
+        });
+      }
+
+      return enhancedResult;
+
+    } catch (error) {
+      Logger.error(`❌ Intelligent analysis failed: ${error.message}`);
+      Logger.info('🔄 Falling back to traditional analysis...');
+
+      // Fallback to traditional analysis
+      const fallbackResult = this.analyze(hasMismatch, lastTag);
+      fallbackResult.analysis.intelligent = false;
+      fallbackResult.analysis.fallback = true;
+      fallbackResult.analysis.error = error.message;
+
+      return fallbackResult;
+    }
+  }
+
+  /**
+   * Build enhanced reason combining intelligent and traditional analysis
+   * @param {Object} intelligentResult - Intelligent analysis result
+   * @param {Object} traditionalResult - Traditional analysis result
+   * @returns {string} Enhanced reason string
+   */
+  buildEnhancedReason(intelligentResult, traditionalResult) {
+    const reasons = [];
+
+    // Primary reason from intelligent analysis
+    if (intelligentResult.currentAnalysis.reasoning.length > 0) {
+      reasons.push(intelligentResult.currentAnalysis.reasoning[0]);
+    }
+
+    // Add gap detection insights
+    if (intelligentResult.gapDetection && intelligentResult.gapDetection.hasGaps) {
+      reasons.push(`Gap detection: ${intelligentResult.gapDetection.gapCount} version gaps found`);
+    }
+
+    // Add cumulative analysis insights
+    if (intelligentResult.cumulativeAnalysis &&
+        intelligentResult.cumulativeAnalysis.cumulativeBumpType !== intelligentResult.currentAnalysis.bumpType) {
+      reasons.push(`Cumulative analysis suggests ${intelligentResult.cumulativeAnalysis.cumulativeBumpType} bump`);
+    }
+
+    // Add confidence indicator
+    reasons.push(`Confidence: ${intelligentResult.confidence}`);
+
+    return reasons.join(' | ');
+  }
+
+  /**
    * Output results in GitHub Actions format
    * @param {Object} result - Analysis result
    */
@@ -323,14 +446,35 @@ class BumpTypeAnalyzer {
 if (require.main === module) {
   try {
     const analyzer = new BumpTypeAnalyzer();
-    
+
     // Get parameters from command line or environment
     const hasMismatch = process.argv[2] === 'true' || process.env.VERSION_MISMATCH === 'true';
     const lastTag = process.argv[3] || process.env.LAST_TAG || 'none';
-    
-    const result = analyzer.analyze(hasMismatch, lastTag);
+    const useIntelligentAnalysis = process.argv[4] === 'true' ||
+                                   process.env.USE_INTELLIGENT_ANALYSIS === 'true' ||
+                                   process.env.ENABLE_GAP_DETECTION === 'true';
+
+    Logger.info(`🔧 Analysis Configuration:`);
+    Logger.info(`   Version mismatch: ${hasMismatch}`);
+    Logger.info(`   Last tag: ${lastTag}`);
+    Logger.info(`   Intelligent analysis: ${useIntelligentAnalysis}`);
+
+    let result;
+
+    if (useIntelligentAnalysis) {
+      Logger.info('🔍 Using intelligent commit analysis with gap detection...');
+      result = analyzer.analyzeIntelligent(hasMismatch, lastTag, {
+        enableGapDetection: true,
+        enableCumulativeAnalysis: true,
+        verbose: true
+      });
+    } else {
+      Logger.info('📊 Using traditional commit analysis...');
+      result = analyzer.analyze(hasMismatch, lastTag);
+    }
+
     analyzer.outputForGitHubActions(result);
-    
+
     process.exit(0);
   } catch (error) {
     Logger.error(`Script execution failed: ${error.message}`);
