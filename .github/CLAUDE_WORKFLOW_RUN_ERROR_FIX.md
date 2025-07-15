@@ -25,7 +25,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]  # ✅ Claude action compatible
   workflow_run:
-    workflows: ["Priority 1: Claude Direct Approval"]
+    workflows: ["Priority 1: Workflow Pre-flight Check"]
     types: [completed]  # ✅ Timing control compatible
 ```
 

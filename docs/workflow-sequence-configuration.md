@@ -5,15 +5,20 @@ This document describes the proper configuration and sequence between the Claude
 
 ## Workflow Sequence
 
-### Priority 1: Claude AI Code Review (`claude-code-review.yml`)
-- **Trigger**: Pull request opened/synchronized
+### Priority 1: Workflow Pre-flight Check (`workflow-preflight-check.yml`)
+- **Trigger**: Pull request opened/synchronized/reopened
+- **Purpose**: Test workflow connectivity and initialization
+- **Output**: Workflow connectivity status and PR context
+
+### Priority 2: Claude AI Code Review (`claude-code-review.yml`)
+- **Trigger**: After Priority 1 completes successfully
 - **Purpose**: Automated code review using Claude AI
 - **Output**: Standardized review with APPROVED/CONDITIONAL APPROVAL/BLOCKED verdict
 
-### Priority 2: Claude AI Approval Gate (`claude-approval-gate.yml`)
-- **Trigger**: After Priority 1 completes successfully
+### Priority 3: Claude AI Approval Gate (`claude-approval-gate.yml`)
+- **Trigger**: After Priority 2 completes successfully
 - **Purpose**: Parse Claude's review and auto-approve if appropriate
-- **Dependencies**: Waits for Priority 1 completion
+- **Dependencies**: Waits for Priority 2 completion
 
 ## Configuration Details
 

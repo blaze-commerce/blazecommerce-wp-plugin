@@ -6,13 +6,13 @@ This document explains the restructured priority system for GitHub workflows in 
 
 ## Workflow Priority Structure (Updated 2025-07-14)
 
-### **🔍 Priority 1: Claude Direct Approval** (`claude-direct-approval.yml`)
+### **🔍 Priority 1: Workflow Pre-flight Check** (`workflow-preflight-check.yml`)
 
-**Purpose**: Initialize approval process BEFORE Claude review to ensure proper workflow sequencing.
+**Purpose**: Test workflow connectivity and initialization BEFORE Claude review to ensure proper workflow sequencing.
 
 **Triggers**:
 - `pull_request: [opened, synchronize, reopened]`
-- `issue_comment: [created]`
+- `pull_request_review: [submitted, dismissed]`
 
 **Key Features**:
 - ✅ **Highest Priority**: Must run BEFORE all other workflows
@@ -20,7 +20,7 @@ This document explains the restructured priority system for GitHub workflows in 
 - ✅ **Direct Approval Logic**: Handles immediate approval scenarios
 
 **Dependencies**: None (runs first in sequence)
-**Concurrency**: `priority-1-claude-direct-approval-pr-{PR_NUMBER}`
+**Concurrency**: `priority-1-workflow-preflight-pr-{PR_NUMBER}`
 
 ### **🤖 Priority 2: Claude AI Code Review** (`claude-code-review.yml`)
 
@@ -28,14 +28,14 @@ This document explains the restructured priority system for GitHub workflows in 
 
 **Triggers**:
 - `pull_request: [opened, synchronize]`
-- `workflow_run: ["🔍 Priority 1: Claude Direct Approval"]`
+- `workflow_run: ["🔍 Priority 1: Workflow Pre-flight Check"]`
 
 **Key Features**:
 - ✅ **Comprehensive Review**: Provides detailed code analysis and suggestions
 - ✅ **Standardized Verdict**: Uses FINAL VERDICT format for approval decisions
 - ✅ **Dependency Aware**: Waits for Priority 1 completion
 
-**Dependencies**: **WAITS FOR** Priority 1 (Claude Direct Approval) to complete
+**Dependencies**: **WAITS FOR** Priority 1 (Workflow Pre-flight Check) to complete
 **Concurrency**: `priority-2-claude-review-pr-{PR_NUMBER}`
 
 ### **✅ Priority 3: Claude AI Approval Gate** (`claude-approval-gate.yml`)
@@ -90,7 +90,7 @@ This document explains the restructured priority system for GitHub workflows in 
 
 ```mermaid
 graph TD
-    A[PR Created/Updated] --> B[🔍 Priority 1: Claude Direct Approval]
+    A[PR Created/Updated] --> B[🔍 Priority 1: Workflow Pre-flight Check]
     B --> C[🤖 Priority 2: Claude AI Code Review]
     C --> D[✅ Priority 3: Claude AI Approval Gate]
 
@@ -145,7 +145,7 @@ on:
   pull_request:                    # ← IMMEDIATE TRIGGER (bypassed dependency)
     types: [opened, synchronize]
   workflow_run:                    # ← DEPENDENCY TRIGGER (intended)
-    workflows: ["🔍 Priority 1: Claude Direct Approval"]
+    workflows: ["🔍 Priority 1: Workflow Pre-flight Check"]
     types: [completed]
 ```
 
@@ -158,7 +158,7 @@ on:
 # FIXED: Single dependency trigger only
 on:
   workflow_run:                    # ← ONLY DEPENDENCY TRIGGER
-    workflows: ["🔍 Priority 1: Claude Direct Approval"]
+    workflows: ["🔍 Priority 1: Workflow Pre-flight Check"]
     types: [completed]
   pull_request_review:             # ← ADDED FOR REVIEW UPDATES
     types: [submitted, dismissed]
@@ -249,7 +249,7 @@ on:
 ### **Check Workflow Status**:
 1. Go to GitHub Actions tab
 2. Look for these workflows in priority order:
-   - "🔍 Priority 1: Claude Direct Approval"
+   - "🔍 Priority 1: Workflow Pre-flight Check"
    - "🤖 Priority 2: Claude AI Code Review"
    - "✅ Priority 3: Claude AI Approval Gate"
    - "🔢 Priority 4: Auto Version Bump" (post-merge)

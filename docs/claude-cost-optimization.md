@@ -4,7 +4,7 @@
 
 This document explains the cost optimization features implemented in our Claude AI GitHub Actions workflows to reduce API costs from ~$35/day to ~$5-8/day (85% reduction).
 
-**Important**: This optimization maintains the existing Priority Queue System architecture, ensuring proper execution order with Priority 1 (Claude Direct Approval) and Priority 3 (Claude Approval Gate).
+**Important**: This optimization maintains the existing Priority Queue System architecture, ensuring proper execution order with Priority 1 (Workflow Pre-flight Check) and Priority 3 (Claude Approval Gate).
 
 ## 🎯 Key Optimizations Implemented
 
