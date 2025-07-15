@@ -376,10 +376,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
-
-          # Using Claude Sonnet model for all reviews
-          model: ${{ needs.cost-optimization-check.outputs.model_selection }}
+          github_token: ${{ steps.app_token.outputs.token }}
 
           # Add timeout to prevent hanging
           timeout_minutes: "8"
@@ -410,6 +407,8 @@ jobs:
             **Status**: APPROVED | CONDITIONAL APPROVAL | BLOCKED
             **Merge Readiness**: READY TO MERGE | READY AFTER FIXES | NOT READY
             **Recommendation**: Brief explanation
+
+            **Claude AI PR Review Complete**
 
             Focus on security, compatibility, and WordPress best practices. Be concise but thorough.
 
