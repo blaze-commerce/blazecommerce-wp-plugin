@@ -1,0 +1,45 @@
+name: Claude Simple Test
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  claude-simple-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Debug PR Info
+        run: |
+          echo "🔍 DEBUG INFORMATION"
+          echo "==================="
+          echo "Event: ${{ github.event_name }}"
+          echo "Author: ${{ github.event.pull_request.user.login }}"
+          echo "Author Association: ${{ github.event.pull_request.author_association }}"
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "Commit SHA: ${{ github.event.pull_request.head.sha }}"
+          echo "Labels: ${{ toJson(github.event.pull_request.labels.*.name) }}"
+
+      - name: Run Simple Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            Please review this WordPress/WooCommerce plugin pull request and provide feedback on:
+            - Code quality and best practices
+            - Potential bugs or security issues
+            - WordPress/WooCommerce specific considerations
+            - Performance implications
+            
+            Be constructive and helpful in your feedback. Focus on the most important issues.
