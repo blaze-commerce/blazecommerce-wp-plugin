@@ -1,4 +1,4 @@
-name: "Priority 9: Test Claude Approval"
+name: "Test Claude Approval"
 
 on:
   workflow_dispatch:

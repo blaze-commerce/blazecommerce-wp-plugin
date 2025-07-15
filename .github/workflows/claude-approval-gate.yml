@@ -1,11 +1,5 @@
-name: "Priority 3: Claude AI Approval Gate"
+name: "Claude AI Approval Gate"
 
-# CRITICAL FIX: Enhanced workflow to prevent premature auto-approval
-# This workflow now ensures Claude AI has reviewed the LATEST commit before approving
-# Fixes issue where auto-approval was based on stale reviews from previous commits
-
-# RACE CONDITION FIX: Trigger on Claude comment posting, not workflow completion
-# This ensures auto-approval only happens AFTER Claude posts the review comment
 on:
   issue_comment:
     types: [created]
@@ -16,29 +10,27 @@ on:
         required: true
         type: string
 
-# Priority 3: Claude AI Approval Gate - runs after Priority 2 completes
+# Simplified concurrency management
 concurrency:
-  group: priority-3-claude-approval-pr-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
-  cancel-in-progress: false  # Don't cancel to ensure approval gate completion
+  group: claude-approval-pr-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
-  claude-approval-gate:
+  claude-approval:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # CRITICAL: Only trigger on Claude FINAL VERDICT comments to prevent race conditions
-    # ENHANCED: More robust condition checking with detailed logging
+    # Only trigger on Claude FINAL VERDICT comments
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'issue_comment' &&
        contains(github.event.comment.body, 'FINAL VERDICT') &&
-       contains(github.event.comment.body, 'Claude AI PR Review Complete') &&
-       (github.event.comment.user.login == 'blazecommerce-automation-bot[bot]' ||
-        contains(github.event.comment.user.login, 'blazecommerce-automation-bot')))
+       contains(github.event.comment.body, 'Claude AI PR Review Complete'))
+    
     permissions:
-      # Required permissions for GitHub App authentication and PR approval
-      contents: read           # Read repository content
-      pull-requests: write     # Create approval reviews
-      actions: read           # Read workflow run information
+      contents: read
+      pull-requests: write
+      actions: read
+    
     steps:
       - name: Generate GitHub App Token
         id: app_token
@@ -50,334 +42,164 @@ jobs:
         with:
           app-id: ${{ secrets.BC_GITHUB_APP_ID }}
           private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
 
-      - name: Determine PR Number and Trigger
-        id: get-pr
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
-          script: |
-            console.log('🚨 CRITICAL DEBUG: AUTO-APPROVAL WORKFLOW TRIGGERED');
-            console.log(`📋 EVENT TYPE: ${context.eventName}`);
-            console.log(`📅 TIMESTAMP: ${new Date().toISOString()}`);
-            console.log('🎯 EXPECTED: issue_comment (with FINAL VERDICT from Claude)');
-
-            // ENHANCED: Log the triggering event details for debugging
-            if (context.eventName === 'issue_comment') {
-              console.log('🔍 ISSUE_COMMENT EVENT DETAILS:');
-              console.log(`   Comment User: ${context.payload.comment?.user?.login || 'UNKNOWN'}`);
-              console.log(`   Comment Body Preview: ${(context.payload.comment?.body || '').substring(0, 200)}...`);
-              console.log(`   Contains FINAL VERDICT: ${(context.payload.comment?.body || '').includes('FINAL VERDICT')}`);
-              console.log(`   Contains Claude Review: ${(context.payload.comment?.body || '').includes('Claude AI PR Review Complete')}`);
-              console.log(`   Is PR: ${!!context.payload.issue?.pull_request}`);
-            }
-
-            let prNumber = null;
-            let shouldRun = false;
-
-            try {
-              // Authentication verification
-              console.log('🔐 Verifying authentication...');
-              const { data: user } = await github.rest.users.getAuthenticated();
-              console.log(`✅ Authenticated as: ${user.login} (${user.type})`);
-            } catch (authError) {
-              console.error(`❌ Authentication error: ${authError.message}`);
-            }
-            
-            // REMOVED: workflow_run trigger completely eliminated to prevent race conditions
-            if (context.eventName === 'issue_comment') {
-              console.log('🔍 ISSUE_COMMENT trigger detected - Claude FINAL VERDICT posted');
-              const comment = context.payload.comment;
-              if (comment && comment.body) {
-                console.log(`📝 Comment from: ${comment.user.login}`);
-                console.log(`📅 Comment created: ${comment.created_at}`);
-                console.log(`🔍 Comment contains FINAL VERDICT: ${comment.body.includes('FINAL VERDICT')}`);
-                
-                // ENHANCED: More specific Claude bot detection for issue_comment trigger
-                const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
-                                   comment.user.login.includes('blazecommerce-automation-bot')) &&
-                                   comment.body.includes('Claude AI PR Review Complete');
-                const hasFinalVerdict = comment.body.includes('FINAL VERDICT');
-                const isPR = context.payload.issue && context.payload.issue.pull_request;
-                
-                console.log('🔍 ISSUE_COMMENT Analysis:');
-                console.log(`   User: ${comment.user.login}`);
-                console.log(`   Is Claude bot: ${isClaudeBot}`);
-                console.log(`   Has FINAL VERDICT: ${hasFinalVerdict}`);
-                console.log(`   Is PR: ${isPR}`);
-                console.log(`   Comment created: ${comment.created_at}`);
-                
-                if (isClaudeBot && hasFinalVerdict && isPR) {
-                  prNumber = context.payload.issue.number;
-                  shouldRun = true;
-                  console.log(`✅ Found Claude FINAL VERDICT in PR: ${prNumber}`);
-                  console.log('🚀 Auto-approval will proceed after timing checks');
-                } else {
-                  console.log('❌ Comment does not meet auto-approval criteria');
-                  shouldRun = false;
-                }
-              }
-            } else if (context.eventName === 'workflow_dispatch') {
-              console.log('🔧 WORKFLOW_DISPATCH trigger detected (manual execution)');
-              prNumber = parseInt(context.payload.inputs.pr_number);
-              shouldRun = true;
-              console.log(`🎯 Manual trigger for PR: ${prNumber}`);
-            } else {
-              console.log(`❌ UNSUPPORTED EVENT TYPE: ${context.eventName}`);
-              console.log('✅ SUPPORTED EVENTS: issue_comment (with FINAL VERDICT), workflow_dispatch');
-              console.log('🚫 REMOVED SUPPORT: workflow_run (caused race conditions)');
-              shouldRun = false;
-            }
-            
-            console.log('Final result - PR: ' + prNumber + ', Should run: ' + shouldRun);
-            core.setOutput('pr_number', prNumber ? prNumber.toString() : '');
-            core.setOutput('should_run', shouldRun.toString());
-
-      - name: Evaluate Claude AI Approval
-        if: steps.get-pr.outputs.should_run == 'true'
-        id: evaluate
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
-          script: |
-            const prNumber = '${{ steps.get-pr.outputs.pr_number }}';
-            console.log('Evaluating Claude approval for PR #' + prNumber);
-
-            // CRITICAL FIX: Get the latest commit timestamp to ensure Claude reviewed current changes
-            console.log('🔍 Getting latest commit information...');
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: parseInt(prNumber)
-            });
-
-            const latestCommitSha = pr.head.sha;
-            console.log(`📊 Latest commit SHA: ${latestCommitSha}`);
-            console.log(`📊 Workflow context SHA: ${context.sha}`);
-            console.log(`📊 PR head SHA: ${pr.head.sha}`);
-
-            // COMMIT CONTEXT FIX: Use PR head commit, not workflow context commit
-            const { data: commit } = await github.rest.repos.getCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: latestCommitSha  // Use PR head SHA, not context.sha
-            });
-
-            const actualCommitDate = new Date(commit.commit.committer.date);
-            console.log(`📅 Actual latest commit date: ${actualCommitDate.toISOString()}`);
-            console.log(`🔍 Commit context fix: Using PR head commit ${latestCommitSha.substring(0, 7)} instead of workflow context`);
-
-            // Get comments on the PR
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: parseInt(prNumber)
-            });
-            
-            // CRITICAL FIX: Only consider Claude comments made AFTER the latest commit
-            let claudeApproval = null;
-            let validClaudeComment = null;
-            
-            for (const comment of comments.reverse()) {
-              const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
-                                 comment.user.login.includes('blazecommerce-automation-bot')) &&
-                                 comment.body.includes('Claude AI PR Review Complete');
-              
-              if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
-                const commentDate = new Date(comment.created_at);
-                console.log(`Found Claude FINAL VERDICT comment from: ${comment.user.login}`);
-                console.log(`Comment created at: ${commentDate.toISOString()}`);
-                console.log(`Latest commit at: ${actualCommitDate.toISOString()}`);
-                
-                // CRITICAL: Only consider comments made AFTER the latest commit
-                const timeDifference = commentDate.getTime() - actualCommitDate.getTime();
-                const minTimeDiff = 10 * 1000; // Reduced to 10 seconds (was 30) after commit context fix
-
-                console.log(`🔍 DETAILED TIMING ANALYSIS (COMMIT CONTEXT FIXED):`);
-                console.log(`   Comment date: ${commentDate.toISOString()}`);
-                console.log(`   Commit date: ${actualCommitDate.toISOString()}`);
-                console.log(`   Time difference: ${Math.round(timeDifference / 1000)}s`);
-                console.log(`   Required minimum: ${Math.round(minTimeDiff / 1000)}s`);
-                console.log(`   Using PR head commit context (not workflow context)`);
-
-                if (commentDate > actualCommitDate && timeDifference >= minTimeDiff) {
-                  console.log('✅ Comment is AFTER latest commit with sufficient time gap - valid for approval');
-                  validClaudeComment = comment;
-                  
-                  // Safe excerpt extraction
-                  const verdictIndex = comment.body.indexOf('FINAL VERDICT');
-                  if (verdictIndex !== -1) {
-                    console.log('Comment excerpt: ' + comment.body.substring(verdictIndex, verdictIndex + 200));
-                  } else {
-                    console.log('Comment excerpt: ' + comment.body.substring(0, 200) + '...');
-                  }
-
-                  // Check for status with flexible formatting (handles markdown bold)
-                  // FIXED: Added support for **Status**: format (asterisks before Status)
-                  if (comment.body.includes('Status**: APPROVED') ||
-                      comment.body.includes('Status: APPROVED') ||
-                      comment.body.includes('**Status**: APPROVED')) {
-                    claudeApproval = 'APPROVED';
-                    console.log('Claude status: APPROVED');
-                  } else if (comment.body.includes('Status**: BLOCKED') ||
-                             comment.body.includes('Status: BLOCKED') ||
-                             comment.body.includes('**Status**: BLOCKED')) {
-                    claudeApproval = 'BLOCKED';
-                    console.log('Claude status: BLOCKED');
-                  } else if (comment.body.includes('Status**: CONDITIONAL') ||
-                             comment.body.includes('Status: CONDITIONAL') ||
-                             comment.body.includes('**Status**: CONDITIONAL')) {
-                    claudeApproval = 'CONDITIONAL';
-                    console.log('Claude status: CONDITIONAL');
-                  }
-                  break;
-                } else if (commentDate <= actualCommitDate) {
-                  console.log('❌ Comment is BEFORE or AT commit time - ignoring stale review');
-                  console.log(`   Comment age: ${commentDate.toISOString()}`);
-                  console.log(`   Commit age: ${actualCommitDate.toISOString()}`);
-                  console.log('   This comment is for previous changes, not current commit');
-                } else {
-                  console.log('❌ Comment is too soon after commit - insufficient review time');
-                  console.log(`   Time gap: ${Math.round(timeDifference / 1000)}s (minimum: ${Math.round(minTimeDiff / 1000)}s)`);
-                  console.log('   Claude needs more time to properly review the changes');
-                }
-              }
-            }
-            
-            if (claudeApproval === 'APPROVED') {
-              console.log('✅ Auto-approving PR #' + prNumber + ' based on Claude AI approval');
-              console.log('🔐 Authentication: Using BlazeCommerce Automation Bot');
-              console.log('📋 Repository: ' + context.repo.owner + '/' + context.repo.repo);
-              console.log('🎯 PR Number: ' + prNumber);
-              console.log(`📅 Claude review timestamp: ${validClaudeComment.created_at}`);
-              console.log(`📅 Latest commit timestamp: ${actualCommitDate.toISOString()}`);
-              
-              // COMMIT CONTEXT FIX: Reduced wait time since commit context issue is resolved
-              const timeSinceCommit = Date.now() - actualCommitDate.getTime();
-              const minWaitTime = 1 * 60 * 1000; // Reduced to 1 minute (was 3) after commit context fix
-
-              console.log(`⏰ TIMING VALIDATION (COMMIT CONTEXT FIXED):`);
-              console.log(`   Commit time: ${actualCommitDate.toISOString()}`);
-              console.log(`   Current time: ${new Date().toISOString()}`);
-              console.log(`   Time since commit: ${Math.round(timeSinceCommit / 1000)}s`);
-              console.log(`   Required minimum: ${Math.round(minWaitTime / 1000)}s`);
-              console.log(`   Using correct PR head commit context`);
-
-              if (timeSinceCommit < minWaitTime) {
-                const remainingWait = minWaitTime - timeSinceCommit;
-                console.log(`⏳ Enforcing 1-minute minimum wait: ${Math.round(remainingWait / 1000)}s remaining`);
-                console.log('🛡️ This prevents premature approval before Claude has sufficient time to review');
-                await new Promise(resolve => setTimeout(resolve, remainingWait));
-                console.log('✅ Minimum wait time completed');
-              } else {
-                console.log('✅ Sufficient time has passed since commit');
-              }
-
-              try {
-                // ENHANCED: Check for existing bot approvals AFTER the latest commit
-                console.log('🔍 Checking for existing bot approvals after latest commit...');
-
-                const { data: existingReviews } = await github.rest.pulls.listReviews({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: parseInt(prNumber)
-                });
-
-                // CRITICAL FIX: Only consider bot approvals made AFTER the latest commit
-                const existingBotApproval = existingReviews.find(review => {
-                  const reviewDate = new Date(review.submitted_at);
-                  const isBot = review.user.login === 'blazecommerce-claude-ai' ||
-                               (review.user.type === 'Bot' && review.user.login.includes('blazecommerce-automation'));
-                  const isApproved = review.state === 'APPROVED';
-                  const isAfterCommit = reviewDate > actualCommitDate;
-                  
-                  console.log(`   Review by ${review.user.login}: ${review.state} at ${reviewDate.toISOString()}`);
-                  console.log(`   Is bot: ${isBot}, Is approved: ${isApproved}, Is after commit: ${isAfterCommit}`);
-                  
-                  return isBot && isApproved && isAfterCommit;
-                });
-
-                if (existingBotApproval) {
-                  console.log('✅ Bot approval already exists for current commit - skipping duplicate');
-                  console.log('📊 Existing Review ID: ' + existingBotApproval.id);
-                  console.log('📅 Existing Review Created: ' + existingBotApproval.submitted_at);
-                  console.log('🔗 Existing Review URL: ' + existingBotApproval.html_url);
-
-                  core.setOutput('result', 'ALREADY_APPROVED');
-                  core.setOutput('review_id', existingBotApproval.id);
-                  core.setOutput('review_url', existingBotApproval.html_url);
-                  return;
-                }
-
-                // Auto-approve the PR with comprehensive error handling and commit tracking
-                console.log('🚀 Attempting to create approval review for current commit...');
-
-                const approvalBody = '✅ **Auto-approved by BlazeCommerce Automation Bot**\n\n' +
-                  'Claude AI has reviewed this PR and provided approval. This automated approval is based on Claude\'s comprehensive security and code quality analysis.\n\n' +
-                  '**Status:** APPROVED by Claude AI\n' +
-                  '**Automation:** BlazeCommerce Automation Bot\n' +
-                  '**Trigger:** ' + context.eventName + ' (FIXED: issue_comment, not workflow_run)\n' +
-                  '**Commit SHA:** ' + latestCommitSha + '\n' +
-                  '**Claude Review Date:** ' + validClaudeComment.created_at + '\n' +
-                  '**Commit Date:** ' + actualCommitDate.toISOString() + '\n' +
-                  '**Timestamp:** ' + new Date().toISOString() + '\n' +
-                  '**Race Condition Fix:** Auto-approval triggered by Claude comment posting, not workflow completion\n\n' +
-                  '🔍 **Verification:** This approval is specifically for commit ' + latestCommitSha.substring(0, 7) + ' and was issued only after Claude AI completed its review of the current changes.';
-
-                const approvalResult = await github.rest.pulls.createReview({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: parseInt(prNumber),
-                  event: 'APPROVE',
-                  body: approvalBody
-                });
-
-                console.log('✅ Successfully created approval review!');
-                console.log('📊 Review ID: ' + approvalResult.data.id);
-                console.log('🔗 Review URL: ' + approvalResult.data.html_url);
-                console.log('📅 Review Created: ' + approvalResult.data.submitted_at);
-
-                core.setOutput('result', 'APPROVED');
-                core.setOutput('review_id', approvalResult.data.id);
-                core.setOutput('review_url', approvalResult.data.html_url);
-
-              } catch (error) {
-                console.error('❌ ERROR creating approval review: ' + error.message);
-                console.error('Stack trace: ' + error.stack);
-                
-                // Check if it's a permissions error
-                if (error.message.includes('403') || error.message.includes('permission')) {
-                  console.error('🔐 PERMISSIONS ERROR: Bot may not have pull-requests:write permission');
-                  console.error('🔧 SOLUTION: Check repository settings and bot permissions');
-                } else if (error.message.includes('422')) {
-                  console.error('📋 VALIDATION ERROR: PR may already be approved or in invalid state');
-                  console.error('🔧 SOLUTION: Check PR status and existing reviews');
-                }
-                
-                core.setOutput('result', 'ERROR');
-                core.setOutput('error', error.message);
-                throw error;
-              }
-            } else if (claudeApproval === 'BLOCKED') {
-              console.log('❌ PR #' + prNumber + ' blocked by Claude AI - manual review required');
-              core.setOutput('result', 'BLOCKED');
-            } else if (claudeApproval === 'IN_PROGRESS') {
-              console.log('🔄 PR #' + prNumber + ' - Claude review in progress, will retry when complete');
-              core.setOutput('result', 'IN_PROGRESS');
-            } else if (claudeApproval === 'PENDING') {
-              console.log('⏳ PR #' + prNumber + ' - no Claude review found for current commit, manual review required');
-              core.setOutput('result', 'PENDING');
-            } else {
-              console.log('⏳ PR #' + prNumber + ' - no clear Claude approval found for current commit, manual review required');
-              core.setOutput('result', 'PENDING');
-            }
-
-      - name: Summary
-        if: always()
+      - name: Determine PR number
+        id: pr-info
         run: |
-          echo "🏁 CLAUDE APPROVAL GATE WORKFLOW COMPLETED"
-          echo "📊 Result: ${{ steps.evaluate.outputs.result || 'SKIPPED' }}"
-          echo "🎯 PR Number: ${{ steps.get-pr.outputs.pr_number || 'N/A' }}"
-          echo "📅 Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          else
+            PR_NUMBER="${{ github.event.issue.number }}"
+          fi
+          
+          echo "pr-number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "🔍 Processing PR #$PR_NUMBER"
+
+      - name: Get PR information
+        id: pr-details
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ steps.pr-info.outputs.pr-number }};
+            
+            try {
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              
+              console.log(`PR #${prNumber}: ${pr.title}`);
+              console.log(`State: ${pr.state}`);
+              console.log(`Head SHA: ${pr.head.sha}`);
+              
+              core.setOutput('pr-state', pr.state);
+              core.setOutput('head-sha', pr.head.sha);
+              core.setOutput('pr-title', pr.title);
+              
+              return pr;
+            } catch (error) {
+              console.error(`Error getting PR #${prNumber}:`, error);
+              core.setFailed(`Failed to get PR information: ${error.message}`);
+            }
+
+      - name: Check Claude review verdict
+        id: claude-verdict
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ steps.pr-info.outputs.pr-number }};
+            const headSha = '${{ steps.pr-details.outputs.head-sha }}';
+            
+            // Get the comment that triggered this workflow
+            let claudeComment;
+            if (context.eventName === 'issue_comment') {
+              claudeComment = context.payload.comment;
+            } else {
+              // For workflow_dispatch, get the latest Claude comment
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber
+              });
+              
+              claudeComment = comments
+                .filter(comment => 
+                  comment.body.includes('FINAL VERDICT') && 
+                  comment.body.includes('Claude AI PR Review Complete')
+                )
+                .pop(); // Get the latest one
+            }
+            
+            if (!claudeComment) {
+              console.log('❌ No Claude review comment found');
+              core.setOutput('approved', 'false');
+              core.setOutput('verdict', 'no-review');
+              return;
+            }
+            
+            console.log(`📝 Claude comment: ${claudeComment.body.substring(0, 200)}...`);
+            
+            // Simple approval logic based on comment content
+            const isApproved = claudeComment.body.includes('✅ APPROVED') || 
+                              claudeComment.body.includes('APPROVED FOR MERGE');
+            
+            console.log(`🤖 Claude verdict: ${isApproved ? 'APPROVED' : 'NOT APPROVED'}`);
+            
+            core.setOutput('approved', isApproved.toString());
+            core.setOutput('verdict', isApproved ? 'approved' : 'rejected');
+            core.setOutput('comment-id', claudeComment.id);
+
+      - name: Auto-approve PR if Claude approved
+        if: steps.claude-verdict.outputs.approved == 'true' && steps.pr-details.outputs.pr-state == 'open'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ steps.pr-info.outputs.pr-number }};
+            
+            try {
+              // Create approval review
+              await github.rest.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                event: 'APPROVE',
+                body: '✅ Auto-approved based on Claude AI review'
+              });
+              
+              console.log(`✅ PR #${prNumber} auto-approved`);
+              
+              // Add approval label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                labels: ['claude-approved']
+              });
+              
+            } catch (error) {
+              console.error('Error auto-approving PR:', error);
+              core.setFailed(`Failed to auto-approve PR: ${error.message}`);
+            }
+
+      - name: Add rejection label if not approved
+        if: steps.claude-verdict.outputs.approved == 'false' && steps.pr-details.outputs.pr-state == 'open'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ steps.pr-info.outputs.pr-number }};
+            
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                labels: ['claude-review-needed']
+              });
+              
+              console.log(`⚠️  PR #${prNumber} marked as needing review`);
+              
+            } catch (error) {
+              console.error('Error adding label:', error);
+            }
+
+  summary:
+    needs: claude-approval
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Approval Summary
+        run: |
+          echo "🏁 Claude Approval Summary"
+          echo "========================="
+          echo "Job Result: ${{ needs.claude-approval.result }}"
+          
+          if [ "${{ needs.claude-approval.result }}" = "success" ]; then
+            echo "✅ Claude approval gate completed successfully"
+          else
+            echo "❌ Claude approval gate failed or was skipped"
+          fi

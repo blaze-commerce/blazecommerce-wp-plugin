@@ -1,4 +1,4 @@
-name: "Priority 8: Test Claude Output Fix"
+name: "Test Claude Output Fix"
 
 # This workflow tests the fix for the GitHub Actions output formatting error
 # "Invalid format 'INFO: Starting Claude review processing v1 for PR #337'"

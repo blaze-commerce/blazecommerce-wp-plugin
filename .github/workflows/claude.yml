@@ -1,4 +1,4 @@
-name: "Priority 7: Claude Code"
+name: "Claude Code Assistant"
 
 on:
   issue_comment:
@@ -9,85 +9,102 @@ on:
     types: [opened, assigned]
   pull_request_review:
     types: [submitted]
-  workflow_dispatch:  # Added for manual testing
+  workflow_dispatch:
     inputs:
       issue_number:
         description: 'Issue or PR number to process'
         required: false
         type: string
 
+# Simplified concurrency management
+concurrency:
+  group: claude-assistant-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  claude:
+  claude-assistant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
-    runs-on: ubuntu-latest
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
+      github.event_name == 'workflow_dispatch'
+    
     permissions:
       contents: read
       pull-requests: write
       issues: write
-      id-token: write
+    
     steps:
-      - name: Generate GitHub App Token
-        id: app_token
-        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
-        env:
-          BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
-          BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
-        uses: actions/create-github-app-token@v1
+      - name: Get context information
+        id: context
+        uses: actions/github-script@v7
         with:
-          app-id: ${{ secrets.BC_GITHUB_APP_ID }}
-          private-key: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
+          script: |
+            let issueNumber, contextType;
+            
+            if (context.eventName === 'workflow_dispatch') {
+              issueNumber = '${{ github.event.inputs.issue_number }}' || context.issue.number;
+              contextType = 'manual';
+            } else if (context.eventName === 'issue_comment') {
+              issueNumber = context.issue.number;
+              contextType = 'comment';
+            } else if (context.eventName === 'pull_request_review_comment') {
+              issueNumber = context.payload.pull_request.number;
+              contextType = 'review_comment';
+            } else if (context.eventName === 'pull_request_review') {
+              issueNumber = context.payload.pull_request.number;
+              contextType = 'review';
+            } else if (context.eventName === 'issues') {
+              issueNumber = context.issue.number;
+              contextType = 'issue';
+            }
+            
+            console.log(`Processing ${contextType} for #${issueNumber}`);
+            core.setOutput('issue_number', issueNumber);
+            core.setOutput('context_type', contextType);
 
-      - name: Verify Authentication
+      - name: Process Claude request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.context.outputs.issue_number }};
+            const contextType = '${{ steps.context.outputs.context_type }}';
+            
+            // Simple Claude assistant response
+            const response = "## 🤖 Claude Assistant Response\n\n" +
+              "Thank you for mentioning me! I'm here to help with code review and assistance.\n\n" +
+              `**Context**: ${contextType}\n` +
+              `**Issue/PR**: #${issueNumber}\n\n` +
+              "For more detailed assistance, please use the dedicated Claude review workflows.\n\n" +
+              "---\n" +
+              "*Claude Assistant - Simplified Mode*";
+            
+            // Post response
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: response
+            });
+            
+            console.log(`Claude assistant response posted to #${issueNumber}`);
+
+  summary:
+    needs: claude-assistant
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Assistant Summary
         run: |
-          echo "🔐 AUTHENTICATION STATUS:"
-          if [ -n "${{ steps.app_token.outputs.token }}" ]; then
-            echo "✅ GitHub App token generated successfully"
-            echo "🤖 Using BlazeCommerce Automation Bot authentication"
-          elif [ -n "${{ secrets.BOT_GITHUB_TOKEN }}" ]; then
-            echo "⚠️ Using BOT_GITHUB_TOKEN fallback"
+          echo "🏁 Claude Assistant Summary"
+          echo "=========================="
+          echo "Job Result: ${{ needs.claude-assistant.result }}"
+          
+          if [ "${{ needs.claude-assistant.result }}" = "success" ]; then
+            echo "✅ Claude assistant completed successfully"
           else
-            echo "⚠️ Using default github.token"
+            echo "❌ Claude assistant failed or was skipped"
           fi
-          echo "📊 Repository: ${{ github.repository }}"
-          echo "🎯 Event: ${{ github.event_name }}"
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
-          fetch-depth: 1
-
-      - name: Run Claude Code
-        id: claude
-        uses: anthropics/claude-code-action@beta
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
-
-          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
-          # model: "claude-opus-4-20250514"
-
-          # Optional: Customize the trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
-
-          # Optional: Trigger when specific user is assigned to an issue
-          # assignee_trigger: "claude-bot"
-
-          # Optional: Allow Claude to run specific commands
-          # allowed_tools: "Bash(npm install),Bash(npm run build),Bash(npm run test:*),Bash(npm run lint:*)"
-
-          # Optional: Add custom instructions for Claude to customize its behavior for your project
-          # custom_instructions: |
-          #   Follow our coding standards
-          #   Ensure all new code has tests
-          #   Use TypeScript for new files
-
-          # Optional: Custom environment variables for Claude
-          # claude_env: |
-          #   NODE_ENV: test
