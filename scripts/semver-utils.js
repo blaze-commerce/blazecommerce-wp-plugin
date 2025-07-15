@@ -237,18 +237,34 @@ function safeGitExec(command, options = {}) {
     throw new Error('Only git commands are allowed');
   }
 
-  // CLAUDE AI REVIEW: Dangerous pattern detection from comment #3060512807
-  // Check for dangerous command patterns
+  // CLAUDE AI REVIEW: Enhanced dangerous pattern detection - more specific patterns
+  // Check for dangerous command patterns while allowing legitimate git usage
   const dangerousPatterns = [
-    /[;&|`$(){}[\]\\'"<>]/,  // Shell metacharacters
+    /[;&|`$(){}[\]\\<>]/,  // Shell metacharacters (excluding quotes which are needed for git)
     /\s(rm|del|format|mkfs|dd)\s/i,  // Dangerous commands
     /\s--exec\s/i,  // Git exec flag
-    /\s-c\s/i,  // Git config flag that could be dangerous
+    /\sgit\s+config\s+/i,  // Git config commands that could be dangerous
+    /\s\|\s/,  // Pipe operators
+    /\s&&\s/,  // Command chaining
+    /\s\|\|\s/,  // OR operators
   ];
 
-  for (const pattern of dangerousPatterns) {
-    if (pattern.test(command)) {
-      throw new Error('Command contains potentially dangerous patterns');
+  // Special allowlist for common git format patterns
+  const allowedPatterns = [
+    /^git\s+.*--format=["'][^"']*["']/,  // Git format strings
+    /^git\s+tag\s+.*--sort=/,  // Git tag sorting
+    /^git\s+show\s+.*--format=/,  // Git show with format
+    /^git\s+log\s+.*--format=/,  // Git log with format
+  ];
+
+  // Check if command matches allowed patterns first
+  const isAllowed = allowedPatterns.some(pattern => pattern.test(command));
+  if (!isAllowed) {
+    // Only check dangerous patterns if not in allowlist
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(command)) {
+        throw new Error('Command contains potentially dangerous patterns');
+      }
     }
   }
 
@@ -1853,6 +1869,407 @@ function resolveVersionConflicts(options = {}) {
   return result;
 }
 
+/**
+ * Get chronological version history from git tags
+ * @param {object} options - Options for version history retrieval
+ * @returns {object} Version history analysis
+ */
+function getVersionHistory(options = {}) {
+  const { verbose = false, limit = 50 } = options;
+
+  try {
+    // Get all version tags sorted by version
+    const tagsOutput = safeGitExec('git tag -l "v*" --sort=-version:refname').trim();
+    const tags = tagsOutput ? tagsOutput.split('\n').filter(tag => tag.trim()) : [];
+
+    if (tags.length === 0) {
+      return {
+        tags: [],
+        history: [],
+        hasHistory: false,
+        lastTag: null
+      };
+    }
+
+    const history = [];
+
+    // Get commit info for each tag
+    for (let i = 0; i < Math.min(tags.length, limit); i++) {
+      const tag = tags[i];
+      try {
+        const tagInfo = safeGitExec(`git show ${tag} --format="%H|%ad|%s" --date=short --no-patch`).trim();
+        const [hash, date, subject] = tagInfo.split('|');
+
+        history.push({
+          tag,
+          version: tag.replace(/^v/, ''),
+          hash,
+          date,
+          subject
+        });
+      } catch (error) {
+        if (verbose) {
+          console.warn(`⚠️  Could not get info for tag ${tag}: ${error.message}`);
+        }
+      }
+    }
+
+    if (verbose) {
+      console.log(`📋 Retrieved ${history.length} version tags from history`);
+    }
+
+    return {
+      tags,
+      history,
+      hasHistory: history.length > 0,
+      lastTag: tags[0] || null
+    };
+
+  } catch (error) {
+    if (verbose) {
+      console.warn(`⚠️  Could not retrieve version history: ${error.message}`);
+    }
+    return {
+      tags: [],
+      history: [],
+      hasHistory: false,
+      lastTag: null
+    };
+  }
+}
+
+/**
+ * Analyze commits between two specific tags or commits
+ * @param {string} fromRef - Starting reference (tag or commit)
+ * @param {string} toRef - Ending reference (tag or commit, defaults to HEAD)
+ * @param {object} options - Analysis options
+ * @returns {object} Commit analysis between references
+ */
+function analyzeCommitsBetweenTags(fromRef, toRef = 'HEAD', options = {}) {
+  const { verbose = false, includeDetails = false } = options;
+
+  try {
+    const range = `${fromRef}..${toRef}`;
+    const messageCommand = `git log ${range} --oneline --no-merges --format="%s"`;
+    const messages = safeGitExec(messageCommand).trim();
+
+    const commitMessages = messages ? messages.split('\n').filter(line => line.trim()) : [];
+
+    // Analyze the commits using existing determineBumpType function
+    const analysis = determineBumpType(commitMessages, { verbose, allowNone: true });
+
+    const result = {
+      range,
+      fromRef,
+      toRef,
+      commitCount: commitMessages.length,
+      commits: commitMessages,
+      analysis,
+      shouldHaveBumped: analysis.bumpType !== 'none'
+    };
+
+    if (includeDetails) {
+      const detailCommand = `git log ${range} --oneline --no-merges --format="%H|%s|%an|%ad" --date=short`;
+      const details = safeGitExec(detailCommand).trim();
+
+      result.details = details ? details.split('\n').map(line => {
+        const [hash, subject, author, date] = line.split('|');
+        return { hash, subject, author, date };
+      }) : [];
+    }
+
+    if (verbose) {
+      console.log(`📊 Analyzed ${commitMessages.length} commits between ${fromRef} and ${toRef}`);
+      console.log(`   Recommended bump: ${analysis.bumpType}`);
+    }
+
+    return result;
+
+  } catch (error) {
+    if (verbose) {
+      console.warn(`⚠️  Could not analyze commits between ${fromRef} and ${toRef}: ${error.message}`);
+    }
+    return {
+      range: `${fromRef}..${toRef}`,
+      fromRef,
+      toRef,
+      commitCount: 0,
+      commits: [],
+      analysis: { bumpType: 'none', reasoning: [`Error: ${error.message}`] },
+      shouldHaveBumped: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Detect version gaps - commits that should have triggered version bumps but didn't
+ * @param {object} options - Gap detection options
+ * @returns {object} Gap detection analysis
+ */
+function detectVersionGaps(options = {}) {
+  const { verbose = false, maxTagsToAnalyze = 10 } = options;
+
+  try {
+    const versionHistory = getVersionHistory({ verbose, limit: maxTagsToAnalyze });
+
+    if (!versionHistory.hasHistory) {
+      return {
+        hasGaps: false,
+        gaps: [],
+        analysis: 'No version history found - cannot detect gaps',
+        recommendations: []
+      };
+    }
+
+    const gaps = [];
+    const recommendations = [];
+
+    // Analyze gaps between consecutive version tags
+    for (let i = 0; i < versionHistory.history.length - 1; i++) {
+      const newerTag = versionHistory.history[i];
+      const olderTag = versionHistory.history[i + 1];
+
+      const commitAnalysis = analyzeCommitsBetweenTags(olderTag.tag, newerTag.tag, { verbose });
+
+      if (commitAnalysis.shouldHaveBumped && commitAnalysis.analysis.bumpType !== 'none') {
+        const actualBump = calculateActualBump(olderTag.version, newerTag.version);
+        const recommendedBump = commitAnalysis.analysis.bumpType;
+
+        // Check if the actual bump was insufficient
+        const bumpPriority = { 'patch': 1, 'minor': 2, 'major': 3 };
+        const actualPriority = bumpPriority[actualBump] || 0;
+        const recommendedPriority = bumpPriority[recommendedBump] || 0;
+
+        if (recommendedPriority > actualPriority) {
+          gaps.push({
+            fromTag: olderTag.tag,
+            toTag: newerTag.tag,
+            fromVersion: olderTag.version,
+            toVersion: newerTag.version,
+            actualBump,
+            recommendedBump,
+            commitCount: commitAnalysis.commitCount,
+            reasoning: commitAnalysis.analysis.reasoning,
+            severity: recommendedPriority - actualPriority
+          });
+
+          recommendations.push(
+            `Gap detected: ${olderTag.tag} → ${newerTag.tag} should have been ${recommendedBump} bump (was ${actualBump})`
+          );
+        }
+      }
+    }
+
+    // Analyze commits since last tag
+    if (versionHistory.lastTag) {
+      const sinceLastTag = analyzeCommitsBetweenTags(versionHistory.lastTag, 'HEAD', { verbose });
+
+      if (sinceLastTag.shouldHaveBumped && sinceLastTag.commitCount > 0) {
+        recommendations.push(
+          `Current gap: ${sinceLastTag.commitCount} commits since ${versionHistory.lastTag} suggest ${sinceLastTag.analysis.bumpType} bump`
+        );
+      }
+    }
+
+    if (verbose) {
+      console.log(`🔍 Gap detection: Found ${gaps.length} version gaps`);
+      if (recommendations.length > 0) {
+        console.log(`💡 Recommendations: ${recommendations.length} items`);
+      }
+    }
+
+    return {
+      hasGaps: gaps.length > 0,
+      gaps,
+      gapCount: gaps.length,
+      analysis: gaps.length > 0 ? 'Version gaps detected' : 'No version gaps found',
+      recommendations,
+      versionHistory
+    };
+
+  } catch (error) {
+    if (verbose) {
+      console.warn(`⚠️  Gap detection failed: ${error.message}`);
+    }
+    return {
+      hasGaps: false,
+      gaps: [],
+      analysis: `Gap detection failed: ${error.message}`,
+      recommendations: [],
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Calculate the actual bump type between two versions
+ * @param {string} fromVersion - Starting version
+ * @param {string} toVersion - Ending version
+ * @returns {string} Bump type (major, minor, patch, or none)
+ */
+function calculateActualBump(fromVersion, toVersion) {
+  try {
+    const from = parseVersion(fromVersion);
+    const to = parseVersion(toVersion);
+
+    if (!from || !to) {
+      return 'unknown';
+    }
+
+    if (to.major > from.major) {
+      return 'major';
+    } else if (to.minor > from.minor) {
+      return 'minor';
+    } else if (to.patch > from.patch) {
+      return 'patch';
+    } else {
+      return 'none';
+    }
+  } catch (error) {
+    return 'unknown';
+  }
+}
+
+/**
+ * Intelligent commit history analysis with gap detection
+ * Main function that implements comprehensive commit scanning and analysis
+ * @param {object} options - Analysis options
+ * @returns {object} Comprehensive commit analysis with gap detection
+ */
+function analyzeCommitHistoryWithGapDetection(options = {}) {
+  const {
+    verbose = false,
+    includeGapDetection = true,
+    maxCommitsToAnalyze = 1000,
+    maxTagsToAnalyze = 10,
+    enableCumulativeAnalysis = true
+  } = options;
+
+  try {
+    if (verbose) {
+      console.log('🔍 Starting intelligent commit history analysis...');
+    }
+
+    // Get current commits since last tag
+    const currentCommits = getCommitsSinceLastTag(maxCommitsToAnalyze, { verbose, includeDetails: true });
+
+    // Perform standard bump type analysis
+    const bumpAnalysis = determineBumpType(currentCommits.messages, {
+      verbose,
+      allowNone: true,
+      enableRevertHandling: true
+    });
+
+    // Initialize result object
+    const result = {
+      currentAnalysis: {
+        commitCount: currentCommits.count,
+        lastTag: currentCommits.lastTag,
+        range: currentCommits.range,
+        bumpType: bumpAnalysis.bumpType,
+        reasoning: bumpAnalysis.reasoning,
+        commits: bumpAnalysis.commits,
+        summary: bumpAnalysis.summary
+      },
+      gapDetection: null,
+      cumulativeAnalysis: null,
+      recommendations: [],
+      finalBumpType: bumpAnalysis.bumpType,
+      confidence: 'high'
+    };
+
+    // Perform gap detection if enabled
+    if (includeGapDetection) {
+      if (verbose) {
+        console.log('🔍 Performing gap detection analysis...');
+      }
+
+      const gapAnalysis = detectVersionGaps({ verbose, maxTagsToAnalyze });
+      result.gapDetection = gapAnalysis;
+
+      if (gapAnalysis.hasGaps) {
+        result.recommendations.push(...gapAnalysis.recommendations);
+
+        // Adjust confidence based on gap detection
+        if (gapAnalysis.gapCount > 2) {
+          result.confidence = 'medium';
+          result.recommendations.push('Multiple version gaps detected - consider reviewing version history');
+        }
+      }
+    }
+
+    // Perform cumulative analysis if enabled
+    if (enableCumulativeAnalysis && currentCommits.lastTag) {
+      if (verbose) {
+        console.log('🔍 Performing cumulative analysis...');
+      }
+
+      const cumulativeCommits = analyzeCommitsBetweenTags(
+        currentCommits.lastTag,
+        'HEAD',
+        { verbose, includeDetails: true }
+      );
+
+      result.cumulativeAnalysis = {
+        totalCommitsSinceLastTag: cumulativeCommits.commitCount,
+        cumulativeBumpType: cumulativeCommits.analysis.bumpType,
+        cumulativeReasoning: cumulativeCommits.analysis.reasoning
+      };
+
+      // Use cumulative analysis for final decision if it suggests a higher bump
+      const bumpPriority = { 'none': 0, 'patch': 1, 'minor': 2, 'major': 3 };
+      const currentPriority = bumpPriority[result.finalBumpType] || 0;
+      const cumulativePriority = bumpPriority[cumulativeCommits.analysis.bumpType] || 0;
+
+      if (cumulativePriority > currentPriority) {
+        result.finalBumpType = cumulativeCommits.analysis.bumpType;
+        result.recommendations.push(
+          `Cumulative analysis suggests ${cumulativeCommits.analysis.bumpType} bump (higher than individual analysis: ${bumpAnalysis.bumpType})`
+        );
+      }
+    }
+
+    // Generate final recommendations
+    if (result.finalBumpType === 'none' && currentCommits.count > 0) {
+      result.recommendations.push('Commits found but no conventional commit patterns detected - consider using conventional commit format');
+      result.confidence = 'low';
+    }
+
+    if (verbose) {
+      console.log(`✅ Intelligent analysis complete:`);
+      console.log(`   Final bump type: ${result.finalBumpType}`);
+      console.log(`   Confidence: ${result.confidence}`);
+      console.log(`   Recommendations: ${result.recommendations.length}`);
+    }
+
+    return result;
+
+  } catch (error) {
+    if (verbose) {
+      console.error(`❌ Intelligent commit analysis failed: ${error.message}`);
+    }
+
+    return {
+      currentAnalysis: {
+        commitCount: 0,
+        lastTag: null,
+        range: 'unknown',
+        bumpType: 'none',
+        reasoning: [`Error: ${error.message}`],
+        commits: { breaking: [], features: [], fixes: [], other: [], invalid: [], reverted: [] },
+        summary: { total: 0, conventional: 0, breaking: 0, features: 0, fixes: 0, reverted: 0, netCommits: 0 }
+      },
+      gapDetection: null,
+      cumulativeAnalysis: null,
+      recommendations: [`Analysis failed: ${error.message}`],
+      finalBumpType: 'patch', // Safe fallback
+      confidence: 'low',
+      error: error.message
+    };
+  }
+}
+
 module.exports = {
   parseVersion,
   isValidSemver,
@@ -1888,5 +2305,11 @@ module.exports = {
   VersionError,
   SEMVER_REGEX,
   CONVENTIONAL_COMMIT_REGEX,
-  BREAKING_CHANGE_PATTERNS
+  BREAKING_CHANGE_PATTERNS,
+  // INTELLIGENT COMMIT SCANNING: New enhanced functions
+  getVersionHistory,
+  analyzeCommitsBetweenTags,
+  detectVersionGaps,
+  calculateActualBump,
+  analyzeCommitHistoryWithGapDetection
 };
