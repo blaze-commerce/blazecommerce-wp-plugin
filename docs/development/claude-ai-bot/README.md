@@ -114,9 +114,17 @@ graph TB
 
 ### Required Secrets
 ```yaml
-ANTHROPIC_API_KEY: Claude AI API access key
+ANTHROPIC_API_KEY: Claude AI API access key (validated before each review)
 BOT_GITHUB_TOKEN: Bot account personal access token
 ```
+
+### API Key Validation
+The system now includes intelligent API key validation that:
+- **Tests model availability** in cost-ascending order (Haiku → Sonnet)
+- **Validates API access** before attempting code reviews
+- **Provides fallback strategies** when validation fails
+- **Caches validation results** to optimize performance
+- **Posts warning comments** when API issues are detected
 
 ### Bot Account
 - **Username**: `blazecommerce-claude-ai`

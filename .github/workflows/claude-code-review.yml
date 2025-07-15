@@ -51,6 +51,8 @@ jobs:
       pr_number: ${{ steps.execution-check.outputs.pr_number }}
       cache_key: ${{ steps.cache-check.outputs.cache_key }}
       cache_hit: ${{ steps.cache-check.outputs.cache_hit }}
+      validated_models: ${{ steps.api-key-validation.outputs.validated_models }}
+      validation_status: ${{ steps.api-key-validation.outputs.validation_status }}
     steps:
       - name: Generate GitHub App Token
         id: app_token
@@ -138,6 +140,58 @@ jobs:
               core.setOutput('cache_hit', 'false');
             }
 
+      - name: API Key Validation
+        id: api-key-validation
+        run: |
+          echo "🔑 API KEY VALIDATION"
+          echo "===================="
+
+          # Check if API key is set
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "❌ ERROR: ANTHROPIC_API_KEY secret is not set!"
+            echo "validation_status=failed" >> $GITHUB_OUTPUT
+            echo "validated_models=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "✅ ANTHROPIC_API_KEY is configured"
+          echo "🧪 Testing model availability in cost-ascending order..."
+
+          # Models to test in cost order (cheapest to most expensive)
+          models=("claude-3-haiku-20240307" "claude-3-5-sonnet-20240620")
+          validated_models=()
+
+          for model in "${models[@]}"; do
+            echo "🔍 Testing model: $model"
+
+            # Test model with minimal API call
+            http_code=$(curl -s -w "%{http_code}" -o /dev/null \
+              -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
+              -H "anthropic-version: 2023-06-01" \
+              -H "content-type: application/json" \
+              -d "{\"model\": \"$model\", \"max_tokens\": 1, \"messages\": [{\"role\": \"user\", \"content\": \"test\"}]}" \
+              https://api.anthropic.com/v1/messages)
+
+            if [ "$http_code" = "200" ]; then
+              echo "✅ Model $model is available (HTTP $http_code)"
+              validated_models+=("\"$model\"")
+            else
+              echo "❌ Model $model failed validation (HTTP $http_code)"
+            fi
+          done
+
+          # Format validated models as JSON array
+          if [ ${#validated_models[@]} -eq 0 ]; then
+            echo "⚠️ No models passed validation - will use fallback"
+            echo "validation_status=failed" >> $GITHUB_OUTPUT
+            echo "validated_models=[]" >> $GITHUB_OUTPUT
+          else
+            validated_json="[$(IFS=,; echo "${validated_models[*]}")]"
+            echo "✅ Validated models: $validated_json"
+            echo "validation_status=success" >> $GITHUB_OUTPUT
+            echo "validated_models=$validated_json" >> $GITHUB_OUTPUT
+          fi
+
       - name: Intelligent Model Selection
         id: model-selection
         uses: actions/github-script@v7
@@ -149,12 +203,42 @@ jobs:
 
             const prNumber = ${{ github.event.pull_request.number || github.event.inputs.pr_number }};
             const forceSonnet = ${{ github.event.inputs.force_sonnet || false }};
+            const validationStatus = '${{ steps.api-key-validation.outputs.validation_status }}';
+            const validatedModelsJson = '${{ steps.api-key-validation.outputs.validated_models }}';
 
-            // Force Sonnet if requested via workflow_dispatch
+            console.log(`🔑 API Validation Status: ${validationStatus}`);
+            console.log(`✅ Validated Models: ${validatedModelsJson}`);
+
+            // Parse validated models
+            let validatedModels = [];
+            try {
+              validatedModels = JSON.parse(validatedModelsJson || '[]');
+            } catch (error) {
+              console.log(`⚠️ Error parsing validated models: ${error.message}`);
+              validatedModels = [];
+            }
+
+            // Force Sonnet if requested via workflow_dispatch (but only if validated)
             if (forceSonnet) {
               console.log('🔧 MANUAL OVERRIDE: Force Sonnet requested');
-              core.setOutput('model', 'claude-3-5-sonnet-20240620');
-              core.setOutput('reason', 'Manual override via workflow_dispatch');
+              const sonnetModel = 'claude-3-5-sonnet-20240620';
+              if (validationStatus === 'success' && validatedModels.includes(sonnetModel)) {
+                core.setOutput('model', sonnetModel);
+                core.setOutput('reason', 'Manual override via workflow_dispatch (validated)');
+              } else {
+                console.log('⚠️ Sonnet not validated, using fallback');
+                core.setOutput('model', sonnetModel);
+                core.setOutput('reason', 'Manual override via workflow_dispatch (fallback - validation failed)');
+              }
+              return;
+            }
+
+            // Handle validation failure - use fallback model
+            if (validationStatus !== 'success' || validatedModels.length === 0) {
+              console.log('⚠️ API validation failed or no models available');
+              const fallbackModel = 'claude-3-5-sonnet-20240620';
+              core.setOutput('model', fallbackModel);
+              core.setOutput('reason', 'Fallback model - API validation failed');
               return;
             }
 
@@ -197,25 +281,46 @@ jobs:
                 criticalPatterns.some(pattern => pattern.test(file))
               );
 
-              // Decision logic
+              // Helper function to select best available model from validated models
+              function selectValidatedModel(preferredModel, fallbackModel, reason) {
+                if (validatedModels.includes(preferredModel)) {
+                  return { model: preferredModel, reason: reason + ' (validated)' };
+                } else if (validatedModels.includes(fallbackModel)) {
+                  return { model: fallbackModel, reason: reason + ' (fallback - preferred model not validated)' };
+                } else {
+                  // Last resort - use first validated model
+                  return {
+                    model: validatedModels[0],
+                    reason: reason + ' (using first validated model)'
+                  };
+                }
+              }
+
+              // Decision logic - only use validated models
               let model, reason;
+              const sonnetModel = 'claude-3-5-sonnet-20240620';
+              const haikuModel = 'claude-3-haiku-20240307';
 
               if (hasCriticalFiles) {
-                model = 'claude-3-5-sonnet-20240620';
-                reason = 'Critical security/auth/payment files detected';
-                console.log('🔴 SONNET SELECTED: Critical files found');
+                const result = selectValidatedModel(sonnetModel, haikuModel, 'Critical security/auth/payment files detected');
+                model = result.model;
+                reason = result.reason;
+                console.log('🔴 CRITICAL FILES: ' + reason);
               } else if (totalChanges > 200) {
-                model = 'claude-3-5-sonnet-20240620';
-                reason = `Large changeset (${totalChanges} changes > 200 threshold)`;
-                console.log('🔴 SONNET SELECTED: Large changeset');
+                const result = selectValidatedModel(sonnetModel, haikuModel, `Large changeset (${totalChanges} changes > 200 threshold)`);
+                model = result.model;
+                reason = result.reason;
+                console.log('🔴 LARGE CHANGESET: ' + reason);
               } else if (totalChanges > 100 && changedFiles.some(f => f.endsWith('.php'))) {
-                model = 'claude-3-5-sonnet-20240620';
-                reason = `Medium PHP changeset (${totalChanges} changes)`;
-                console.log('🟡 SONNET SELECTED: Medium PHP changes');
+                const result = selectValidatedModel(sonnetModel, haikuModel, `Medium PHP changeset (${totalChanges} changes)`);
+                model = result.model;
+                reason = result.reason;
+                console.log('🟡 MEDIUM PHP CHANGES: ' + reason);
               } else {
-                model = 'claude-3-haiku-20240307';
-                reason = `Simple changes (${totalChanges} changes, no critical files)`;
-                console.log('🟢 HAIKU SELECTED: Simple changes');
+                const result = selectValidatedModel(haikuModel, sonnetModel, `Simple changes (${totalChanges} changes, no critical files)`);
+                model = result.model;
+                reason = result.reason;
+                console.log('🟢 SIMPLE CHANGES: ' + reason);
               }
 
               console.log(`✅ Model: ${model}`);
@@ -226,9 +331,17 @@ jobs:
 
             } catch (error) {
               console.error(`❌ ERROR in model selection: ${error.message}`);
-              // Fallback to Haiku for safety
-              core.setOutput('model', 'claude-3-haiku-20240307');
-              core.setOutput('reason', 'Error in selection, defaulting to Haiku');
+              // Fallback to first validated model or default
+              let fallbackModel, fallbackReason;
+              if (validatedModels.length > 0) {
+                fallbackModel = validatedModels[0];
+                fallbackReason = 'Error in selection, using first validated model';
+              } else {
+                fallbackModel = 'claude-3-5-sonnet-20240620';
+                fallbackReason = 'Error in selection, using default model (validation failed)';
+              }
+              core.setOutput('model', fallbackModel);
+              core.setOutput('reason', fallbackReason);
             }
 
   claude-review:
@@ -254,6 +367,8 @@ jobs:
           echo "📋 PR NUMBER: ${{ needs.cost-optimization-check.outputs.pr_number }}"
           echo "🤖 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
           echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+          echo "🔑 VALIDATION STATUS: ${{ needs.cost-optimization-check.outputs.validation_status }}"
+          echo "✅ VALIDATED MODELS: ${{ needs.cost-optimization-check.outputs.validated_models }}"
           echo "💾 CACHE STATUS: ${{ needs.cost-optimization-check.outputs.cache_hit == 'true' && 'HIT (Skipped)' || 'MISS (Proceeding)' }}"
           echo "⏰ EXECUTION TIME: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "============================================"
@@ -313,7 +428,38 @@ jobs:
             echo "✅ ANTHROPIC_API_KEY is configured"
             echo "📋 SELECTED MODEL: ${{ needs.cost-optimization-check.outputs.model_selection }}"
             echo "📝 SELECTION REASON: ${{ needs.cost-optimization-check.outputs.model_reason }}"
+            echo "🔑 VALIDATION STATUS: ${{ needs.cost-optimization-check.outputs.validation_status }}"
+            echo "✅ VALIDATED MODELS: ${{ needs.cost-optimization-check.outputs.validated_models }}"
           fi
+
+      - name: Post API Validation Warning
+        if: needs.cost-optimization-check.outputs.validation_status == 'failed'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
+          script: |
+            const prNumber = ${{ needs.cost-optimization-check.outputs.pr_number }};
+
+            const message = `⚠️ **API Validation Warning**
+
+            The Claude AI code review is proceeding with a fallback model because API validation failed for all models.
+
+            **Possible causes:**
+            - API key may be invalid or expired
+            - API rate limits may have been reached
+            - Anthropic API service may be experiencing issues
+
+            **Selected Model:** \`${{ needs.cost-optimization-check.outputs.model_selection }}\`
+            **Selection Reason:** ${{ needs.cost-optimization-check.outputs.model_reason }}
+
+            The review will continue, but you may want to check your API key configuration.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: message
+            });
 
       - name: Run Claude Code Review
         id: claude-review
