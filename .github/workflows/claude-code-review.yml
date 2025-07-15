@@ -381,7 +381,7 @@ jobs:
           # Add timeout to prevent hanging
           timeout_minutes: "8"
 
-          # COST OPTIMIZATION: Concise prompt (reduced from 138 lines to ~20 lines)
+          # CRITICAL FIX: Enhanced prompt with MANDATORY format enforcement for auto-approval detection
           direct_prompt: |
             Review this WordPress/WooCommerce plugin PR focusing on critical issues:
 
@@ -402,13 +402,40 @@ jobs:
             - Documentation updates
             - Performance optimizations
 
-            **Required Final Format:**
+            ⚠️ **STATUS DECISION LOGIC - FOLLOW THIS EXACTLY:**
+
+            **Use "BLOCKED" when:**
+            - Critical security vulnerabilities exist
+            - Previous required changes are NOT implemented
+            - Breaking changes without proper handling
+            - WordPress/WooCommerce compatibility issues
+
+            **Use "CONDITIONAL APPROVAL" when:**
+            - Minor improvements needed but not blocking
+            - Previous required changes are implemented but minor issues remain
+            - Code works but could be optimized
+
+            **Use "APPROVED" when:**
+            - No critical issues found
+            - All previous required changes have been implemented
+            - Code follows WordPress best practices
+            - Ready for production deployment
+
+            ⚠️ **CRITICAL: You MUST end your review with this EXACT format for auto-approval to work:**
+
             ### FINAL VERDICT
-            **Status**: APPROVED | CONDITIONAL APPROVAL | BLOCKED
-            **Merge Readiness**: READY TO MERGE | READY AFTER FIXES | NOT READY
+            **Status**: APPROVED
+            **Merge Readiness**: READY TO MERGE
             **Recommendation**: Brief explanation
 
             **Claude AI PR Review Complete**
+
+            ⚠️ **IMPORTANT FORMATTING RULES:**
+            - Use EXACTLY "### FINAL VERDICT" (with 3 hashtags)
+            - Use EXACTLY "**Status**: [STATUS]" (with double asterisks)
+            - Use EXACTLY "**Claude AI PR Review Complete**" at the end
+            - Status must be one of: APPROVED | CONDITIONAL APPROVAL | BLOCKED
+            - This format is REQUIRED for the automation bot to detect your review
 
             Focus on security, compatibility, and WordPress best practices. Be concise but thorough.
 

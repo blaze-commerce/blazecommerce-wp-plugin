@@ -4,9 +4,12 @@ name: "Priority 3: Claude AI Approval Gate"
 # This workflow now ensures Claude AI has reviewed the LATEST commit before approving
 # Fixes issue where auto-approval was based on stale reviews from previous commits
 
-# RACE CONDITION FIX: Trigger on Claude comment posting, not workflow completion
-# This ensures auto-approval only happens AFTER Claude posts the review comment
+# CRITICAL FIX: Trigger on Claude Review workflow completion AND comment posting
+# This ensures auto-approval only happens AFTER Claude completes the review
 on:
+  workflow_run:
+    workflows: ["Priority 2: Claude AI Code Review"]
+    types: [completed]
   issue_comment:
     types: [created]
   workflow_dispatch:
@@ -27,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     # Always run this debug job to capture conditional evaluation details
-    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
     steps:
       - name: Debug Conditional Logic Evaluation
         env:
@@ -57,12 +60,45 @@ jobs:
             echo "  Is Pull Request: ${IS_PULL_REQUEST}"
             echo ""
 
-            echo "🔍 CONDITIONAL CHECKS:"
-            echo "  Contains 'FINAL VERDICT': ${{ contains(github.event.comment.body, 'FINAL VERDICT') }}"
-            echo "  Contains 'Claude AI PR Review Complete': ${{ contains(github.event.comment.body, 'Claude AI PR Review Complete') }}"
-            echo "  User login exact match: ${{ github.event.comment.user.login == 'blazecommerce-automation-bot[bot]' }}"
-            echo "  User login contains match: ${{ contains(github.event.comment.user.login, 'blazecommerce-automation-bot') }}"
-            echo "  User type is Bot: ${{ github.event.comment.user.type == 'Bot' }}"
+            echo "🔍 DETAILED DETECTION ANALYSIS:"
+            echo "  Comment Body Length: ${#COMMENT_BODY} characters"
+            echo "  Comment User: '${COMMENT_USER}'"
+            echo "  Comment User Type: '${COMMENT_USER_TYPE}'"
+            echo ""
+
+            echo "🔍 SEARCH TESTS:"
+            echo "  Contains 'FINAL VERDICT' (case sensitive): $(echo "${COMMENT_BODY}" | grep -q 'FINAL VERDICT' && echo 'true' || echo 'false')"
+            echo "  Contains 'final verdict' (case insensitive): $(echo "${COMMENT_BODY}" | grep -qi 'final verdict' && echo 'true' || echo 'false')"
+            echo "  Contains 'Claude AI PR Review Complete': $(echo "${COMMENT_BODY}" | grep -q 'Claude AI PR Review Complete' && echo 'true' || echo 'false')"
+            echo "  Contains 'Claude AI' (partial): $(echo "${COMMENT_BODY}" | grep -q 'Claude AI' && echo 'true' || echo 'false')"
+            echo ""
+
+            echo "🔍 COMMENT BODY SAMPLE (first 500 chars):"
+            printf '%s\n' "${COMMENT_BODY}" | head -c 500
+            echo ""
+            echo "..."
+            echo ""
+
+            echo "🔍 COMMENT BODY SAMPLE (last 200 chars):"
+            printf '%s\n' "${COMMENT_BODY}" | tail -c 200
+            echo ""
+
+            echo "🔍 HEX DUMP ANALYSIS (looking for hidden characters):"
+            echo "First 100 chars as hex:"
+            printf '%s' "${COMMENT_BODY}" | head -c 100 | xxd -l 100 || echo "xxd not available"
+            echo ""
+
+            echo "🔍 SPECIFIC PATTERN SEARCHES:"
+            echo "  Searching for 'FINAL VERDICT' with context:"
+            echo "${COMMENT_BODY}" | grep -n -A2 -B2 'FINAL VERDICT' || echo "  NOT FOUND"
+            echo ""
+            echo "  Searching for 'Claude AI PR Review Complete' with context:"
+            echo "${COMMENT_BODY}" | grep -n -A2 -B2 'Claude AI PR Review Complete' || echo "  NOT FOUND"
+            echo ""
+
+            echo "🔍 GITHUB CONTEXT COMPARISON:"
+            echo "  GitHub context FINAL VERDICT: ${{ contains(github.event.comment.body, 'FINAL VERDICT') }}"
+            echo "  GitHub context Claude Complete: ${{ contains(github.event.comment.body, 'Claude AI PR Review Complete') }}"
             echo ""
 
             echo "📄 COMMENT BODY PREVIEW (first 300 chars):"
@@ -100,10 +136,10 @@ jobs:
   claude-approval-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # CRITICAL FIX: Simplified conditional logic to match working debug job pattern
-    # ISSUE: Complex multi-line YAML condition was causing job skips despite valid triggers
-    # SOLUTION: Use simple condition like debug job, move detailed checks to job steps
-    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch'
+    # CRITICAL FIX: Handle multiple trigger types for proper workflow sequencing
+    # ISSUE: Race condition between Claude Review and Approval Gate workflows
+    # SOLUTION: Support both workflow_run (after Claude completes) and issue_comment (direct trigger)
+    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
     permissions:
       # Required permissions for GitHub App authentication and PR approval
       contents: read           # Read repository content
@@ -132,13 +168,27 @@ jobs:
             exit 0
           fi
 
+          # Handle workflow_run triggers (Claude Review completion)
+          if [ "${EVENT_NAME}" = "workflow_run" ]; then
+            echo "🔄 workflow_run trigger detected - Claude Review workflow completed"
+            echo "✅ Proceeding to check for Claude review comments"
+            echo "trigger_valid=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           # Validate issue_comment triggers
           if [ "${EVENT_NAME}" = "issue_comment" ]; then
             echo "🔍 Validating issue_comment trigger..."
 
-            # ENHANCED: Format-agnostic FINAL VERDICT detection
+            # ENHANCED: Format-agnostic FINAL VERDICT detection with detailed debugging
             # Clean comment body: remove HTML tags, normalize whitespace, convert to lowercase
             CLEAN_COMMENT=$(echo "${COMMENT_BODY}" | tr '[:upper:]' '[:lower:]' | sed 's/<[^>]*>//g' | tr -d '\n\r\t' | sed 's/[[:space:]]\+/ /g')
+
+            echo "🔍 DETAILED FORMAT DETECTION DEBUG:"
+            echo "  Original comment length: ${#COMMENT_BODY} characters"
+            echo "  Clean comment length: ${#CLEAN_COMMENT} characters"
+            echo "  Looking for: 'FINAL VERDICT' or 'final verdict'"
+            echo ""
 
             # Multiple detection patterns for robustness
             if echo "${CLEAN_COMMENT}" | grep -q "final verdict" || \
@@ -149,9 +199,24 @@ jobs:
               echo "✅ Comment contains 'FINAL VERDICT' (format-agnostic detection)"
               echo "🔍 Clean comment preview: ${CLEAN_COMMENT:0:200}..."
             else
-              echo "❌ Comment does not contain 'FINAL VERDICT' in any recognized format"
-              echo "🔍 Original comment preview: ${COMMENT_BODY:0:200}..."
-              echo "🔍 Clean comment preview: ${CLEAN_COMMENT:0:200}..."
+              echo "❌ CRITICAL: Comment does not contain 'FINAL VERDICT' in any recognized format"
+              echo ""
+              echo "🚨 LIKELY CAUSE: Claude code review action is not following the direct_prompt format!"
+              echo "🔧 SOLUTION: Check .github/workflows/claude-code-review.yml direct_prompt section"
+              echo ""
+              echo "🔍 DEBUGGING INFO:"
+              echo "  Original comment preview: ${COMMENT_BODY:0:300}..."
+              echo "  Clean comment preview: ${CLEAN_COMMENT:0:300}..."
+              echo "  Comment ends with: ${COMMENT_BODY: -50}"
+              echo ""
+              echo "📋 EXPECTED FORMAT:"
+              echo "  ### FINAL VERDICT"
+              echo "  **Status**: APPROVED"
+              echo "  **Merge Readiness**: READY TO MERGE"
+              echo "  **Recommendation**: Brief explanation"
+              echo ""
+              echo "  **Claude AI PR Review Complete**"
+              echo ""
               echo "trigger_valid=false" >> $GITHUB_OUTPUT
               exit 0
             fi
@@ -309,10 +374,33 @@ jobs:
               prNumber = parseInt(context.payload.inputs.pr_number);
               shouldRun = true;
               console.log(`🎯 Manual trigger for PR: ${prNumber}`);
+            } else if (context.eventName === 'workflow_run') {
+              console.log('🔄 WORKFLOW_RUN trigger detected (Claude Review completed)');
+              console.log(`📋 Workflow: ${context.payload.workflow_run.name}`);
+              console.log(`📊 Conclusion: ${context.payload.workflow_run.conclusion}`);
+
+              // Only proceed if Claude Review workflow succeeded
+              if (context.payload.workflow_run.conclusion === 'success') {
+                // Extract PR number from the workflow_run event
+                const headBranch = context.payload.workflow_run.head_branch;
+                console.log(`🌿 Head branch: ${headBranch}`);
+
+                // Get PR number from the workflow_run pull_requests array
+                if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
+                  prNumber = context.payload.workflow_run.pull_requests[0].number;
+                  shouldRun = true;
+                  console.log(`✅ Found PR from workflow_run: ${prNumber}`);
+                } else {
+                  console.log('❌ No PR found in workflow_run event');
+                  shouldRun = false;
+                }
+              } else {
+                console.log(`❌ Claude Review workflow failed: ${context.payload.workflow_run.conclusion}`);
+                shouldRun = false;
+              }
             } else {
               console.log(`❌ UNSUPPORTED EVENT TYPE: ${context.eventName}`);
-              console.log('✅ SUPPORTED EVENTS: issue_comment (with FINAL VERDICT), workflow_dispatch');
-              console.log('🚫 REMOVED SUPPORT: workflow_run (caused race conditions)');
+              console.log('✅ SUPPORTED EVENTS: issue_comment, workflow_dispatch, workflow_run');
               shouldRun = false;
             }
             
