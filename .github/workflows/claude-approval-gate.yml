@@ -30,6 +30,15 @@ jobs:
     if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Debug Conditional Logic Evaluation
+        env:
+          # SECURITY FIX: Use environment variables to safely handle HTML content and special characters
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENT_CREATED: ${{ github.event.comment.created_at }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          IS_PULL_REQUEST: ${{ !!github.event.issue.pull_request }}
         run: |
           echo "🔍 CONDITIONAL LOGIC DEBUG - Claude Approval Gate Workflow"
           echo "=================================================="
@@ -40,12 +49,12 @@ jobs:
 
           if [ "${{ github.event_name }}" = "issue_comment" ]; then
             echo "📝 ISSUE COMMENT EVENT DETAILS:"
-            echo "  Comment ID: ${{ github.event.comment.id }}"
-            echo "  Comment User: ${{ github.event.comment.user.login }}"
-            echo "  Comment User Type: ${{ github.event.comment.user.type }}"
-            echo "  Comment Created: ${{ github.event.comment.created_at }}"
-            echo "  Issue/PR Number: ${{ github.event.issue.number }}"
-            echo "  Is Pull Request: ${{ !!github.event.issue.pull_request }}"
+            echo "  Comment ID: ${COMMENT_ID}"
+            echo "  Comment User: ${COMMENT_USER}"
+            echo "  Comment User Type: ${COMMENT_USER_TYPE}"
+            echo "  Comment Created: ${COMMENT_CREATED}"
+            echo "  Issue/PR Number: ${ISSUE_NUMBER}"
+            echo "  Is Pull Request: ${IS_PULL_REQUEST}"
             echo ""
 
             echo "🔍 CONDITIONAL CHECKS:"
@@ -57,16 +66,18 @@ jobs:
             echo ""
 
             echo "📄 COMMENT BODY PREVIEW (first 300 chars):"
-            echo "${{ github.event.comment.body }}" | head -c 300
+            # SECURITY FIX: Use environment variable to safely handle HTML content and special characters
+            # This prevents shell interpretation of CSS properties like 'margin-left:' as commands
+            printf '%s\n' "${COMMENT_BODY}" | head -c 300
             echo ""
             echo "..."
             echo ""
 
             echo "✅ ENHANCED CONDITIONAL EVALUATION:"
-            # Enhanced bot detection logic
-            if [[ "${{ github.event.comment.user.login }}" == "blazecommerce-automation-bot[bot]" ]] || \
-               [[ "${{ github.event.comment.user.login }}" == *"blazecommerce-automation-bot"* ]] || \
-               [[ "${{ github.event.comment.user.type }}" == "Bot" && "${{ github.event.comment.user.login }}" == *"blazecommerce"* ]]; then
+            # Enhanced bot detection logic using environment variables
+            if [[ "${COMMENT_USER}" == "blazecommerce-automation-bot[bot]" ]] || \
+               [[ "${COMMENT_USER}" == *"blazecommerce-automation-bot"* ]] || \
+               [[ "${COMMENT_USER_TYPE}" == "Bot" && "${COMMENT_USER}" == *"blazecommerce"* ]]; then
               echo "  ✅ Bot user detection: PASSED"
             else
               echo "  ❌ Bot user detection: FAILED"
