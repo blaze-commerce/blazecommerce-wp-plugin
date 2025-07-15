@@ -136,9 +136,15 @@ jobs:
           if [ "${EVENT_NAME}" = "issue_comment" ]; then
             echo "🔍 Validating issue_comment trigger..."
 
-            # ENHANCED: Format-agnostic FINAL VERDICT detection
+            # ENHANCED: Format-agnostic FINAL VERDICT detection with detailed debugging
             # Clean comment body: remove HTML tags, normalize whitespace, convert to lowercase
             CLEAN_COMMENT=$(echo "${COMMENT_BODY}" | tr '[:upper:]' '[:lower:]' | sed 's/<[^>]*>//g' | tr -d '\n\r\t' | sed 's/[[:space:]]\+/ /g')
+
+            echo "🔍 DETAILED FORMAT DETECTION DEBUG:"
+            echo "  Original comment length: ${#COMMENT_BODY} characters"
+            echo "  Clean comment length: ${#CLEAN_COMMENT} characters"
+            echo "  Looking for: 'FINAL VERDICT' or 'final verdict'"
+            echo ""
 
             # Multiple detection patterns for robustness
             if echo "${CLEAN_COMMENT}" | grep -q "final verdict" || \
@@ -149,9 +155,24 @@ jobs:
               echo "✅ Comment contains 'FINAL VERDICT' (format-agnostic detection)"
               echo "🔍 Clean comment preview: ${CLEAN_COMMENT:0:200}..."
             else
-              echo "❌ Comment does not contain 'FINAL VERDICT' in any recognized format"
-              echo "🔍 Original comment preview: ${COMMENT_BODY:0:200}..."
-              echo "🔍 Clean comment preview: ${CLEAN_COMMENT:0:200}..."
+              echo "❌ CRITICAL: Comment does not contain 'FINAL VERDICT' in any recognized format"
+              echo ""
+              echo "🚨 LIKELY CAUSE: Claude code review action is not following the direct_prompt format!"
+              echo "🔧 SOLUTION: Check .github/workflows/claude-code-review.yml direct_prompt section"
+              echo ""
+              echo "🔍 DEBUGGING INFO:"
+              echo "  Original comment preview: ${COMMENT_BODY:0:300}..."
+              echo "  Clean comment preview: ${CLEAN_COMMENT:0:300}..."
+              echo "  Comment ends with: ${COMMENT_BODY: -50}"
+              echo ""
+              echo "📋 EXPECTED FORMAT:"
+              echo "  ### FINAL VERDICT"
+              echo "  **Status**: APPROVED"
+              echo "  **Merge Readiness**: READY TO MERGE"
+              echo "  **Recommendation**: Brief explanation"
+              echo ""
+              echo "  **Claude AI PR Review Complete**"
+              echo ""
               echo "trigger_valid=false" >> $GITHUB_OUTPUT
               exit 0
             fi
