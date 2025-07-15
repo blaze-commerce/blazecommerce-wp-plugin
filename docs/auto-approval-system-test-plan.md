@@ -126,7 +126,7 @@ The auto-approval system failed in PR #352 due to:
 4. Validate Priority 3 waits for Priority 2
 
 **Expected Results**:
-- 🔍 Priority 1: Claude Direct Approval (runs first)
+- 🔍 Priority 1: Workflow Pre-flight Check (runs first)
 - 🤖 Priority 2: Claude AI Code Review (waits for Priority 1)
 - ✅ Priority 3: Claude AI Approval Gate (waits for Priority 2)
 
