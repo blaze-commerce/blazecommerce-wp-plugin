@@ -7,17 +7,17 @@ scope: "all_repositories"
 # Cross-Browser Testing Requirements for Next.js Applications
 
 ## Mandatory Testing Protocol
-- **ALWAYS** test Next.js sites across ALL major browsers before deployment
-- **REQUIRED BROWSERS**: Chrome, Firefox, Safari, Edge
-- **TESTING TOOLS**: Use Playwright for automated cross-browser testing
-- **SCOPE**: Both local development testing and production link verification
-- **FOCUS AREAS**: 
+- ALWAYS test Next.js sites across ALL major browsers before deployment
+- REQUIRED BROWSERS: Chrome, Firefox, Safari, Edge
+- TESTING TOOLS: Use Playwright for automated cross-browser testing
+- SCOPE: Both local development testing and production link verification
+- FOCUS AREAS:
   - UI rendering consistency across browsers
   - UX functionality verification
   - Performance validation
   - Responsive design compliance
-- **EXECUTION**: Implement unit tests and integration tests for comprehensive coverage
-- **BLOCKING CONDITION**: No deployment without successful cross-browser test completion
+- EXECUTION: Implement unit tests and integration tests for comprehensive coverage
+- BLOCKING CONDITION: No deployment without successful cross-browser test completion
 
 ## Browser Testing Requirements
 

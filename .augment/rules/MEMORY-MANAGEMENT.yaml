@@ -4,13 +4,11 @@ priority: 1
 scope: "all_repositories"
 ---
 
-# Memory Management and Session Cleanup
-
-## Automatic Memory Reset Protocol
-- **ALWAYS** reset memory and clean up unused sessions when agent has been running for extended periods
-- **ALWAYS** clear context when multiple conversation threads are active
-- **TRIGGER CONDITIONS**: Long-running tasks, multiple open threads, memory usage concerns
-- **EXECUTION**: Automatic cleanup without user intervention required
+# Memory Management Guidelines
+- Monitor memory usage during development
+- Implement proper cleanup for event listeners
+- Use memory profiling tools for optimization
+- Set memory limits for long-running processes
 
 ## Memory Management Guidelines
 

@@ -1,0 +1,11 @@
+---
+type: "always_apply"
+priority: 1
+scope: "all_repositories"
+---
+
+# Memory Management Guidelines
+- Monitor memory usage during development
+- Implement proper cleanup for event listeners
+- Use memory profiling tools for optimization
+- Set memory limits for long-running processes
