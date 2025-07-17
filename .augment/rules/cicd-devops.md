@@ -1,8 +1,9 @@
+---
+type: "agent_requested"
+description: "CI/CD and deployment practices for WordPress plugin development"
+---
+
 # CI/CD & DevOps Standards Rule
-
-**Priority: Auto**
-
-**Description:** Establish continuous integration and deployment practices for WordPress plugin development to ensure code quality, automated testing, and reliable deployments.
 
 ## GitHub Actions Pipeline Requirements
 

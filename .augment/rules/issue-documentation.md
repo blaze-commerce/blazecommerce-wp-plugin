@@ -1,3 +1,9 @@
+---
+type: "always_apply"
+priority: 1
+scope: "blazecommerce_wp_plugin"
+---
+
 # Issue Documentation Requirements - BlazeCommerce WP Plugin
 
 ## 🚨 MANDATORY Documentation Tracking

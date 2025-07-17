@@ -1,8 +1,9 @@
+---
+type: "agent_requested"
+description: "Comprehensive testing standards for WordPress plugin development"
+---
+
 # Testing Requirements Rule
-
-**Priority: Auto**
-
-**Description:** Establish comprehensive testing standards for WordPress plugin development to ensure code quality, functionality, and reliability with WordPress and WooCommerce integration.
 
 ## Testing Framework Requirements
 

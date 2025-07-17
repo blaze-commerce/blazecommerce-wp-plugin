@@ -1,0 +1,59 @@
+---
+type: "always_apply"
+priority: 1
+scope: "all_repositories"
+---
+
+# Memory Management and Session Cleanup
+
+## Automatic Memory Reset Protocol
+- **ALWAYS** reset memory and clean up unused sessions when agent has been running for extended periods
+- **ALWAYS** clear context when multiple conversation threads are active
+- **TRIGGER CONDITIONS**: Long-running tasks, multiple open threads, memory usage concerns
+- **EXECUTION**: Automatic cleanup without user intervention required
+
+## Memory Management Guidelines
+
+### Automatic Cleanup Triggers
+- **Extended Runtime**: Agent running for more than 2 hours continuously
+- **Multiple Threads**: More than 3 active conversation threads
+- **Memory Pressure**: High memory usage detected
+- **Context Overflow**: Conversation context approaching limits
+- **Task Completion**: After completing major multi-step tasks
+
+### Cleanup Actions
+- **Session Reset**: Clear conversation history and context
+- **Memory Flush**: Release unused memory allocations
+- **Thread Consolidation**: Merge or close inactive threads
+- **Cache Clearing**: Clear temporary caches and buffers
+- **State Reset**: Reset internal state variables
+
+### Implementation Requirements
+- **Automatic Execution**: No user confirmation required
+- **Background Processing**: Cleanup occurs without interrupting workflow
+- **Graceful Handling**: Preserve critical context during cleanup
+- **Performance Monitoring**: Track memory usage and cleanup effectiveness
+- **Error Recovery**: Handle cleanup failures gracefully
+
+### User Communication
+- **Minimal Notification**: Brief status update when cleanup occurs
+- **Context Preservation**: Maintain conversation continuity
+- **Seamless Experience**: Cleanup should be transparent to user
+- **Progress Indication**: Show cleanup progress for long operations
+
+## Best Practices
+
+### Proactive Management
+- **Regular Monitoring**: Continuously monitor memory usage
+- **Predictive Cleanup**: Anticipate memory needs and clean proactively
+- **Efficient Processing**: Use memory-efficient algorithms and data structures
+- **Resource Optimization**: Optimize resource usage throughout operations
+
+### Emergency Protocols
+- **Critical Memory**: Immediate cleanup when memory critically low
+- **System Stability**: Prioritize system stability over task completion
+- **Graceful Degradation**: Reduce functionality if needed to maintain stability
+- **Recovery Procedures**: Implement recovery procedures for memory issues
+
+---
+**Priority**: ALWAYS | **Scope**: All repositories | **Enforcement**: Automatic

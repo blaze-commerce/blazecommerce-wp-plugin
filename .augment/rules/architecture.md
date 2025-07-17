@@ -1,8 +1,9 @@
+---
+type: "agent_requested"
+description: "Architectural patterns and organizational standards for WordPress plugin development"
+---
+
 # Architecture Guidelines Rule
-
-**Priority: Auto**
-
-**Description:** Define architectural patterns and organizational standards for WordPress plugin development to ensure scalable, maintainable, and well-structured code that follows WordPress and WooCommerce best practices.
 
 ## Directory Structure Standards
 

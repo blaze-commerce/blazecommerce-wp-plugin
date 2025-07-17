@@ -1,8 +1,9 @@
+---
+type: "agent_requested"
+description: "Git workflow and pull request standards for WordPress plugin development"
+---
+
 # Git & PR Standards Rule
-
-**Priority: Auto**
-
-**Description:** Enforce consistent Git workflow and pull request standards for WordPress plugin development to ensure code quality, traceability, and collaborative development.
 
 ## Conventional Commits Format
 

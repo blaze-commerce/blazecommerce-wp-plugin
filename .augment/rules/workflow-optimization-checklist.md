@@ -1,3 +1,8 @@
+---
+type: "agent_requested"
+description: "Implementation checklist for BlazeCommerce workflow optimization"
+---
+
 # BlazeCommerce Workflow Optimization - Implementation Checklist
 
 ## 📋 Task Completion Status

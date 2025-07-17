@@ -1,8 +1,10 @@
+---
+type: "always_apply"
+priority: 1
+scope: "blazecommerce_wp_plugin"
+---
+
 # Security Guidelines Rule
-
-**Priority: ALWAYS**
-
-**Description:** Enforce strict security practices for WordPress plugin development to protect against vulnerabilities and ensure safe development practices.
 
 ## Core Security Principles
 

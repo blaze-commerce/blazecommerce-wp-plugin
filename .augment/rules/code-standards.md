@@ -1,8 +1,9 @@
+---
+type: "agent_requested"
+description: "Code quality standards for WordPress plugin development"
+---
+
 # Code Quality Standards Rule
-
-**Priority: Auto**
-
-**Description:** Enforce consistent code quality standards for WordPress plugin development to ensure maintainable, secure, and performant code that follows WordPress and WooCommerce best practices.
 
 ## PHP Code Standards
 

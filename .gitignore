@@ -3,6 +3,10 @@
 # Learn more about .gitignore:
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
+# Allow YAML files in .augment directories
+!.augment/**/*.yaml
+!.augment/**/*.yml
+
 # Node artifact files
 node_modules/
 dist/

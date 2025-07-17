@@ -1,3 +1,8 @@
+---
+type: "agent_requested"
+description: "Summary of BlazeCommerce workflow optimization implementation"
+---
+
 # BlazeCommerce Workflow Optimization Summary
 
 ## 🎯 Overview
