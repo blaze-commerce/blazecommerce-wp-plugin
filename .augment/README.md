@@ -10,6 +10,11 @@ The `.augment` directory serves as a centralized location for AI assistants to a
 
 ⚠️ **DO NOT EDIT FILES IN THIS DIRECTORY DIRECTLY**
 
+🚨 **CRITICAL: Rule File Standards**
+- **MANDATORY**: All rule files in .augment/rules/ MUST use .yaml format ONLY
+- **PROHIBITED**: Creating .md files in any .augment/rules/ directory
+- **REFERENCE**: See `.augment/rules/MANDATORY-YAML-STANDARDS.yaml` for requirements
+
 These files are **copies** of the original documentation maintained in the `/docs` directory. Any changes should be made to the original files in `/docs`, and then the copies in `.augment` should be updated accordingly.
 
 ## Files Included
