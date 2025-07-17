@@ -1,0 +1,58 @@
+---
+type: "always_apply"
+priority: 1
+scope: "blazecommerce_wp_plugin"
+description: "Cross-browser testing guidelines for WordPress plugin admin interfaces"
+---
+
+# WordPress Plugin Cross-Browser Testing Guidelines
+
+## Admin Interface Testing
+
+### 1. WordPress Admin Compatibility
+- **Browser Support**: Test in browsers supported by WordPress core
+- **Admin Themes**: Test with different admin color schemes
+- **Screen Options**: Verify screen options work correctly
+- **Responsive Admin**: Test admin interface on mobile devices
+
+### 2. JavaScript Compatibility
+- **WordPress Scripts**: Ensure compatibility with WordPress core scripts
+- **jQuery Versions**: Test with different jQuery versions
+- **Browser APIs**: Test modern browser APIs with fallbacks
+- **Error Handling**: Implement proper JavaScript error handling
+
+## Frontend Integration Testing
+
+### 1. Theme Compatibility
+- **Multiple Themes**: Test with popular WordPress themes
+- **CSS Conflicts**: Check for CSS conflicts with themes
+- **JavaScript Conflicts**: Verify no JavaScript conflicts occur
+- **Responsive Design**: Test responsive behavior across themes
+
+### 2. Plugin Compatibility
+- **Popular Plugins**: Test with commonly used WordPress plugins
+- **WooCommerce**: Specific testing for WooCommerce integration
+- **Caching Plugins**: Test with caching plugins enabled
+- **Security Plugins**: Verify compatibility with security plugins
+
+## Browser-Specific Testing
+
+### 1. Desktop Browsers
+- **Chrome**: Primary testing browser for development
+- **Firefox**: Test for Firefox-specific issues
+- **Safari**: Test on macOS Safari for WebKit compatibility
+- **Edge**: Test Microsoft Edge compatibility
+
+### 2. Mobile Testing
+- **Mobile Admin**: Test WordPress mobile admin interface
+- **Touch Interactions**: Verify touch-friendly admin controls
+- **Viewport Handling**: Test responsive admin layouts
+- **Performance**: Monitor mobile performance
+
+## Testing Checklist
+- [ ] Admin interface works in all supported browsers
+- [ ] Frontend integration tested across themes
+- [ ] JavaScript functionality verified
+- [ ] CSS rendering consistent
+- [ ] Mobile admin interface functional
+- [ ] Plugin conflicts resolved

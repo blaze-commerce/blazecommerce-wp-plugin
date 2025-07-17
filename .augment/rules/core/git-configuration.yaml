@@ -1,0 +1,170 @@
+---
+description: 'IMPORTANT: When Augment creates pull requests, it uses your local Git
+  configu...'
+priority: 1
+scope: blazecommerce_wp_plugin
+type: always_apply
+---
+
+# Git Configuration & Attribution Guidelines
+
+## ⚠️ Critical Warning: Pull Request Attribution
+
+**IMPORTANT**: When Augment creates pull requests, it uses your local Git configuration (`user.name` and `user.email`) for commit attribution. If these settings are incorrect, commits will be attributed to the wrong GitHub account.
+
+**Before creating any pull requests through Augment, you MUST verify your Git identity matches your GitHub account.**
+
+## Why This Matters
+
+- Pull requests created by Augment use local Git configuration for author attribution
+- Incorrect configuration results in commits being attributed to other users
+- This affects contribution history, notifications, and code ownership tracking
+- Once pushed, attribution cannot be easily changed without rewriting Git history
+
+## Pre-PR Verification Checklist
+
+**✅ ALWAYS complete this checklist before creating pull requests:**
+
+1. [ ] Verify Git user name: `git config user.name`
+2. [ ] Verify Git email: `git config user.email`
+3. [ ] Confirm email matches your GitHub account
+4. [ ] Confirm name matches your preferred display name
+5. [ ] Test with a small commit if unsure
+
+## Step-by-Step Configuration
+
+### 1. Check Current Configuration
+
+```bash
+# Check current Git identity
+git config user.name
+git config user.email
+
+# Check all Git configuration
+git config --list | grep user
+```
+
+### 2. Verify GitHub Account Match
+
+- Ensure the email matches one of your verified emails in GitHub Settings > Emails
+- Confirm the name is how you want to appear in commit history
+
+### 3. Update Configuration (if needed)
+
+```bash
+# Set your name (use your real name or preferred display name)
+git config --global user.name "Your Full Name"
+
+# Set your email (must match GitHub account)
+git config --global user.email "your.email@example.com"
+```
+
+### 4. Verify Changes
+
+```bash
+# Confirm the changes
+git config user.name
+git config user.email
+```
+
+## Configuration Examples
+
+### ✅ Correct Configuration
+```bash
+$ git config user.name
+John Smith
+
+$ git config user.email
+john.smith@company.com
+```
+
+### ❌ Incorrect Configuration
+```bash
+$ git config user.name
+lanz-2024
+
+$ git config user.email
+alan@blazecommerce.io
+```
+
+## Local vs Global Configuration
+
+### Global Configuration (Recommended)
+```bash
+# Sets for all repositories on your machine
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+### Repository-Specific Configuration
+```bash
+# Sets only for current repository
+git config user.name "Your Name"
+git config user.email "your.email@example.com"
+```
+
+## Troubleshooting
+
+### Problem: Email not verified on GitHub
+**Solution**: Add and verify the email in GitHub Settings > Emails
+
+### Problem: Commits show wrong author after PR creation
+**Solution**: 
+1. Fix Git configuration
+2. Create new commits with correct attribution
+3. Avoid force-pushing to shared branches
+
+### Problem: Multiple GitHub accounts
+**Solution**: Use repository-specific configuration for different projects
+
+### Problem: Corporate vs personal email
+**Solution**: 
+- Use global config for primary account
+- Override with local config for specific repositories
+
+## Best Practices
+
+1. **Set global configuration** for your primary development identity
+2. **Use repository-specific config** only when working with different accounts
+3. **Verify configuration** before starting work on new repositories
+4. **Use verified emails** that are associated with your GitHub account
+5. **Keep consistent naming** across all your development tools
+
+## Integration with Augment
+
+When using Augment to create pull requests:
+
+1. Augment reads your local Git configuration
+2. All commits use your configured identity
+3. Pull requests are created with proper attribution
+4. No additional authentication is needed for attribution
+
+## Quick Reference Commands
+
+```bash
+# Check current identity
+git config user.name && git config user.email
+
+# Set global identity
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Set local identity (current repo only)
+git config user.name "Your Name"
+git config user.email "your.email@example.com"
+
+# View all user configuration
+git config --list | grep user
+```
+
+## Security Notes
+
+- Never commit with someone else's identity
+- Always use your own verified email address
+- Be cautious when working on shared machines
+- Consider using SSH keys for additional security
+
+---
+
+*Last updated: 2025-01-10*
+*Always verify your Git configuration before creating pull requests through Augment*

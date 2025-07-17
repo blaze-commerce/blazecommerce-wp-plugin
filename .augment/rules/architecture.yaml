@@ -1,0 +1,50 @@
+---
+type: "always_apply"
+priority: 1
+scope: "blazecommerce_wp_plugin"
+description: "WordPress plugin architecture guidelines for BlazeCommerce"
+---
+
+# BlazeCommerce WordPress Plugin Architecture
+
+## Plugin Structure
+- **Framework**: WordPress Plugin API with modern PHP practices
+- **Namespace**: BlazeWooless for all classes and functions
+- **Autoloading**: PSR-4 compliant autoloading
+- **Dependencies**: Composer for PHP dependencies
+- **Database**: WordPress database with custom tables when needed
+
+## Directory Structure
+```
+app/
+├── Ajax/               # AJAX handlers
+├── Settings/           # Admin settings pages
+├── Api/               # REST API endpoints
+├── Services/          # Business logic services
+├── Models/            # Data models
+├── Helpers/           # Utility functions
+└── Integrations/      # Third-party integrations
+
+lib/                   # Legacy functions (being refactored)
+assets/               # CSS, JS, images
+views/                # Template files
+blocks/               # Gutenberg blocks
+```
+
+## Code Standards
+- **PHP Version**: Minimum PHP 7.4, target PHP 8.0+
+- **WordPress Version**: Minimum WordPress 5.8
+- **Coding Standards**: WordPress Coding Standards (WPCS)
+- **Security**: Sanitize inputs, escape outputs, validate nonces
+
+## Plugin Architecture Patterns
+- **Singleton Pattern**: For main plugin class
+- **Factory Pattern**: For creating objects
+- **Observer Pattern**: For hooks and filters
+- **Dependency Injection**: For service management
+
+## Integration Points
+- **WooCommerce**: Extend WooCommerce functionality
+- **GraphQL**: Provide GraphQL endpoints
+- **REST API**: Custom REST API endpoints
+- **Frontend**: Communicate with Next.js frontend
