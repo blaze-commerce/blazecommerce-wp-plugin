@@ -1,8 +1,8 @@
 ---
-description: Implementation checklist for BlazeCommerce workflow optimization tasks
+type: "recommended"
 priority: 3
-scope: blazecommerce_wp_plugin
-type: recommended
+scope: "blazecommerce_wp_plugin"
+description: "Implementation checklist for BlazeCommerce workflow optimization tasks"
 ---
 
 # BlazeCommerce Workflow Optimization - Implementation Checklist

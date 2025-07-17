@@ -1,9 +1,8 @@
 ---
-description: Summary of comprehensive workflow optimization implemented for BlazeCommerce
-  repository
+type: "recommended"
 priority: 3
-scope: blazecommerce_wp_plugin
-type: recommended
+scope: "blazecommerce_wp_plugin"
+description: "Summary of comprehensive workflow optimization implemented for BlazeCommerce repository"
 ---
 
 # BlazeCommerce Workflow Optimization Summary
