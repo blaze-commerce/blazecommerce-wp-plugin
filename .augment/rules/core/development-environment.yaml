@@ -1,0 +1,42 @@
+---
+description: '- CRITICAL: Verify Git identity before creating pull requests through
+  Augment'
+priority: 1
+scope: blazecommerce_wp_plugin
+type: always_apply
+---
+
+# Development Environment Guidelines
+
+## Local Development Setup
+
+### Git Configuration
+- **CRITICAL**: Verify Git identity before creating pull requests through Augment
+- See `.augment/rules/core/git-configuration.md` for complete Git setup guidelines
+- Quick check: `git config user.name && git config user.email`
+
+### Domain Configuration
+- Use .local domain instead of localhost for LocalWP domains for local backend access
+- Next.js projects should be deployed to browser locally to see live code changes applied in real-time during development
+
+### Development Commands
+- Prefer 'yarn d' command to include 'yarn prebuild && yarn dev' and open browser to http://localhost:3000 in incognito mode
+
+### Debugging & Logging
+- Avoid adding console.log statements that would appear in browser console - only use server-side logging when necessary
+- Remove error_log() statements from code after debugging is complete
+- Need guidance on how to display debug information for LocalWP sites in the development environment
+
+### Code Quality
+- Ensure no TypeScript issues/errors in the codebase
+
+## File Management
+
+### Augment Configuration
+- Prefer a single augment ignore file for the workspace, with .sql files ignored
+- Prefer Augment files stored at /home/lan/Documents/DEV/BlazeCommerce/Augment Files, organized by category in folders
+- Prefer .augment-guidelines file to stay under 2000 character limit, merge duplicates, shorten content when possible, or move detailed guidelines to respective MD files in categorized folders
+- Detailed guidelines are split into MD files in Augment Files folder
+- Prefer .augment/guidelines/README.md to be processed at session start along with .augment-guidelines for complete context of all detailed guidelines and protocols
+
+*Last updated: 2024-12-19*

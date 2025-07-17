@@ -1,0 +1,37 @@
+---
+description: '- User''s workflow involves WordPress/WooCommerce backend with block
+  editor co...'
+priority: 1
+scope: blazecommerce_wp_plugin
+type: always_apply
+---
+
+# WordPress & WooCommerce Guidelines
+
+## Workflow & Architecture
+- User's workflow involves WordPress/WooCommerce backend with block editor content synced to Typesense and rendered in Next.js frontend
+- Max Mega Menu styling configured via attributes in WordPress block editor, including both active background and text color attributes
+
+## Plugin Development
+- When modifying BlazeCommerce WordPress plugin files, run build process in plugin's blocks directory after changes
+- Prefer implementing plugin fixes in child themes instead of modifying plugin files directly
+
+## Site Configuration
+- For dancewear-bc-v3 site, the active theme is blazecommerce-child-main (BC Child), not the Porselli theme
+
+## GridPane Environment
+- In Gridpane environments, WP CLI commands use format 'gp wp site-name.domain command' with wp-config.php outside htdocs directory
+- Gridpane SSH server IP address is 45.77.228.92 for accessing the live site infrastructure
+- Require strict read-only access when checking SSH servers - no modifications or commands that change anything should be executed
+
+## Email Configuration
+- Prefer using GridPane's built-in SendGrid email service instead of WP Mail SMTP plugin for live sites
+- For BlazeCommerce/dancewear projects, use orders@dancewear.co.uk for WooCommerce order emails and no-reply@dancewear.co.uk for non-order emails
+
+## WooCommerce Specifics
+- In WooCommerce, product code is different from SKU - they are separate fields that should be handled distinctly in search functionality
+- Prefer to check WooCommerce tax settings on SSH server before implementing cart/tax-related fixes to understand backend configuration
+- Prefer to avoid WooCommerce tax setting changes that might cause checkout problems
+- Tax should be included in product prices for headless BlazeCommerce implementations, contrasting with previous non-headless setup behavior
+
+*Last updated: 2024-12-19*

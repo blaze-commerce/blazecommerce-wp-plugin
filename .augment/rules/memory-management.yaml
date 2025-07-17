@@ -1,0 +1,58 @@
+---
+type: "always_apply"
+priority: 1
+scope: "blazecommerce_wp_plugin"
+description: "Memory management guidelines for WordPress plugin development"
+---
+
+# WordPress Plugin Memory Management Guidelines
+
+## PHP Memory Management
+
+### 1. Memory Limits
+- **WordPress Default**: 256MB memory limit for most operations
+- **Large Operations**: Increase memory limit temporarily for bulk operations
+- **Memory Monitoring**: Monitor memory usage during development
+- **Error Handling**: Implement proper error handling for memory exhaustion
+
+### 2. Object Management
+- **Object Cleanup**: Unset large objects when no longer needed
+- **Circular References**: Avoid circular references that prevent garbage collection
+- **Static Variables**: Use static variables judiciously to avoid memory leaks
+- **Global Variables**: Minimize use of global variables
+
+## Database Memory Management
+
+### 1. Query Optimization
+- **Limit Results**: Use LIMIT clauses to restrict result sets
+- **Pagination**: Implement pagination for large datasets
+- **Indexed Queries**: Ensure queries use proper database indexes
+- **Query Caching**: Implement query caching where appropriate
+
+### 2. WordPress Database API
+- **wpdb Prepared Statements**: Use prepared statements to prevent memory issues
+- **Result Cleanup**: Unset query results after processing
+- **Transients**: Use transients for caching to reduce database load
+- **Object Cache**: Leverage WordPress object caching when available
+
+## WordPress Specific Optimizations
+
+### 1. Hook Management
+- **Hook Cleanup**: Remove hooks when no longer needed
+- **Priority Management**: Use appropriate hook priorities
+- **Conditional Hooks**: Only add hooks when necessary
+- **Memory-Intensive Hooks**: Avoid memory-intensive operations in frequently called hooks
+
+### 2. Plugin Architecture
+- **Lazy Loading**: Load plugin components only when needed
+- **Singleton Pattern**: Use singleton pattern to prevent multiple instances
+- **Dependency Injection**: Use dependency injection to manage object lifecycle
+- **Resource Cleanup**: Implement proper cleanup in plugin deactivation
+
+## Performance Monitoring
+
+### 1. Memory Profiling
+- **Xdebug Profiling**: Use Xdebug for memory profiling
+- **Query Monitor**: Use Query Monitor plugin for WordPress-specific profiling
+- **Memory Alerts**: Set up alerts for high memory usage
+- **Regular Audits**: Conduct regular memory usage audits
