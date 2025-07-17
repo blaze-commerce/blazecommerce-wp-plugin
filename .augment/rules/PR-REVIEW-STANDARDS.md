@@ -1,0 +1,238 @@
+---
+type: "always_apply"
+priority: 1
+scope: "blazecommerce_wp_plugin"
+---
+
+# PR Review Standards - BlazeCommerce WP Plugin (MANDATORY)
+
+## 🚨 CRITICAL: Pre-PR Validation Requirements
+
+### ALWAYS Apply Before Creating PRs
+- **ALWAYS**: All Augment-generated code MUST automatically adhere to these standards BEFORE PR creation
+- **ALWAYS**: Proactive compliance to ensure Claude review workflow efficiency
+- **ALWAYS**: Reduced back-and-forth review cycles through immediate standards compliance
+
+## 🔴 Critical Issues (Must Fix - BLOCKING)
+
+### WordPress/WooCommerce Security
+- **SQL Injection**: All database queries use prepared statements
+- **XSS Prevention**: All output properly escaped using WordPress functions
+- **CSRF Protection**: All forms include proper nonce verification
+- **Input Validation**: All user inputs sanitized with WordPress functions
+- **Capability Checks**: Proper user permission verification for all admin functions
+- **File Security**: No direct file access, proper permission checks
+
+### Plugin Compatibility & Standards
+- **WordPress API**: Proper use of WordPress hooks, filters, and functions
+- **WooCommerce Integration**: Correct WooCommerce API usage
+- **Plugin Conflicts**: No conflicts with common WordPress plugins
+- **Database Changes**: Proper database schema updates and rollbacks
+- **Activation/Deactivation**: Proper plugin lifecycle handling
+
+### Performance & Reliability
+- **Database Optimization**: Efficient queries, proper indexing
+- **Memory Usage**: Optimized memory consumption
+- **Error Handling**: Comprehensive error handling and logging
+- **Caching**: Proper use of WordPress caching mechanisms
+- **Load Times**: No significant performance impact
+
+## 🟡 Important Issues (Should Fix - CONDITIONAL APPROVAL)
+
+### WordPress Coding Standards
+- **PSR Compliance**: Follow PSR-1, PSR-2, PSR-4 standards
+- **WordPress Standards**: Follow WordPress PHP Coding Standards
+- **Function Naming**: Consistent prefixing and naming conventions
+- **Code Organization**: Proper file structure and class organization
+- **Documentation**: Adequate PHPDoc comments and inline documentation
+
+### WooCommerce Best Practices
+- **Hook Usage**: Proper use of WooCommerce action and filter hooks
+- **Data Handling**: Correct product, order, and customer data management
+- **Payment Integration**: Secure payment processing if applicable
+- **Email Templates**: Proper email template customization
+- **REST API**: Correct WooCommerce REST API implementation
+
+## 🟢 Suggestions (Nice to Have - APPROVED WITH NOTES)
+
+### Plugin Enhancements
+- **Admin Interface**: Improved admin UI/UX
+- **Settings API**: Advanced settings management
+- **Multisite Support**: WordPress multisite compatibility
+- **Performance**: Advanced optimization techniques
+- **Documentation**: Comprehensive user and developer documentation
+
+## 🎯 WordPress Plugin Validation
+
+### Security Implementation
+```php
+// REQUIRED: Input sanitization
+$user_input = sanitize_text_field($_POST['user_input']);
+$email = sanitize_email($_POST['email']);
+$textarea = sanitize_textarea_field($_POST['textarea']);
+$html = wp_kses_post($_POST['html_content']);
+
+// REQUIRED: Output escaping
+echo esc_html($user_data);
+echo '<input value="' . esc_attr($user_input) . '">';
+echo '<a href="' . esc_url($link_url) . '">Link</a>';
+
+// REQUIRED: Capability checks
+if (!current_user_can('manage_woocommerce')) {
+    wp_die(__('You do not have sufficient permissions.', 'blazecommerce'));
+}
+
+// REQUIRED: Nonce verification
+if (!wp_verify_nonce($_POST['_wpnonce'], 'blazecommerce_action')) {
+    wp_die(__('Security check failed.', 'blazecommerce'));
+}
+
+// REQUIRED: Database security
+global $wpdb;
+$results = $wpdb->get_results($wpdb->prepare(
+    "SELECT * FROM {$wpdb->prefix}blazecommerce_table WHERE user_id = %d AND status = %s",
+    $user_id,
+    'active'
+));
+```
+
+### Plugin Structure
+```php
+// REQUIRED: Plugin header
+<?php
+/**
+ * Plugin Name: BlazeCommerce Plugin
+ * Plugin URI: https://blazecommerce.io
+ * Description: Advanced e-commerce functionality for WordPress
+ * Version: 1.0.0
+ * Author: BlazeCommerce Team
+ * Text Domain: blazecommerce
+ * Domain Path: /languages
+ */
+
+// REQUIRED: Prevent direct access
+defined('ABSPATH') || exit;
+
+// REQUIRED: Plugin constants
+define('BLAZECOMMERCE_VERSION', '1.0.0');
+define('BLAZECOMMERCE_PLUGIN_FILE', __FILE__);
+define('BLAZECOMMERCE_PLUGIN_PATH', plugin_dir_path(__FILE__));
+define('BLAZECOMMERCE_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// REQUIRED: Main plugin class
+class BlazeCommerce_Plugin {
+    public function __construct() {
+        add_action('init', array($this, 'init'));
+        register_activation_hook(__FILE__, array($this, 'activate'));
+        register_deactivation_hook(__FILE__, array($this, 'deactivate'));
+    }
+    
+    public function init() {
+        // Plugin initialization
+    }
+    
+    public function activate() {
+        // Activation logic
+    }
+    
+    public function deactivate() {
+        // Deactivation logic
+    }
+}
+
+new BlazeCommerce_Plugin();
+```
+
+### WooCommerce Integration
+```php
+// REQUIRED: WooCommerce dependency check
+function blazecommerce_check_woocommerce() {
+    if (!class_exists('WooCommerce')) {
+        add_action('admin_notices', function() {
+            echo '<div class="notice notice-error"><p>';
+            echo __('BlazeCommerce requires WooCommerce to be installed and active.', 'blazecommerce');
+            echo '</p></div>';
+        });
+        return false;
+    }
+    return true;
+}
+
+// REQUIRED: Proper hook usage
+add_action('woocommerce_single_product_summary', 'blazecommerce_add_product_info', 25);
+add_filter('woocommerce_product_tabs', 'blazecommerce_custom_product_tabs');
+
+// REQUIRED: Data validation
+function blazecommerce_process_order_data($order_id) {
+    $order = wc_get_order($order_id);
+    if (!$order) {
+        return new WP_Error('invalid_order', __('Invalid order ID.', 'blazecommerce'));
+    }
+    
+    // Process order data
+}
+```
+
+## 🔄 Automated Compliance Checklist
+
+### Before PR Creation (MANDATORY)
+- [ ] **Security**: All inputs sanitized, outputs escaped, capability checks
+- [ ] **WooCommerce**: Proper API usage, dependency checks
+- [ ] **Performance**: Optimized queries, efficient code
+- [ ] **Standards**: WordPress and PSR coding standards
+- [ ] **Compatibility**: No conflicts with common plugins
+- [ ] **Error Handling**: Comprehensive error management
+- [ ] **Documentation**: PHPDoc comments for all functions
+- [ ] **Testing**: Plugin functionality thoroughly tested
+
+### Code Quality Gates
+- [ ] **No Security Issues**: Zero security vulnerabilities
+- [ ] **Standards Compliance**: Follows all coding standards
+- [ ] **Performance**: No performance regressions
+- [ ] **WooCommerce**: Proper integration and compatibility
+- [ ] **Database**: Optimized and secure database operations
+- [ ] **Activation**: Plugin activates and deactivates properly
+
+## 🤖 Claude Review Integration
+
+### Expected Review Format (EXACT FORMAT REQUIRED)
+```markdown
+### FINAL VERDICT
+**Status**: [PR_APPROVED_BY_BLAZE_BOT | CONDITIONAL APPROVAL | BLOCKED]
+**Merge Readiness**: [READY TO MERGE | READY AFTER FIXES | NOT READY]
+**Recommendation**: [Brief explanation]
+
+**Claude AI PR Review Complete**
+```
+
+### Plugin-Specific Review Criteria
+- **Security**: Input/output handling, SQL injection prevention
+- **WooCommerce**: API usage, hook implementation, data handling
+- **Performance**: Database queries, caching, memory usage
+- **Compatibility**: Plugin conflicts, WordPress version support
+- **Standards**: Coding standards, documentation quality
+
+## 🚫 Enforcement Rules
+
+### Blocking Conditions (CRITICAL: REQUIRED)
+- **Security vulnerabilities**: Any security issue blocks merge
+- **WooCommerce incompatibility**: Breaking WooCommerce functionality
+- **Database issues**: SQL injection or performance problems
+- **Plugin conflicts**: Conflicts with essential plugins
+- **Standards violations**: Major coding standard violations
+
+### Conditional Approval Conditions
+- **Minor performance issues**: Acceptable with optimization plan
+- **Documentation gaps**: Acceptable with completion timeline
+- **Code organization**: Acceptable with refactoring notes
+- **Non-critical standards**: Minor violations with fix plan
+
+### Auto-Approval Conditions (PR_APPROVED_BY_BLAZE_BOT)
+- **All checks pass**: No critical or important issues found
+- **Security compliant**: All security standards met
+- **Performance optimized**: Meets performance benchmarks
+- **Well documented**: Complete documentation provided
+- **Standards compliant**: Follows all coding standards
+
+---
+**Priority**: ALWAYS | **Scope**: BlazeCommerce WP Plugin | **Enforcement**: Automated + Manual

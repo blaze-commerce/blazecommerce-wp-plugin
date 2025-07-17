@@ -1,94 +1,75 @@
-# Issue Documentation Rule
+# Issue Documentation Requirements - BlazeCommerce WP Plugin
 
-**Priority: ALWAYS**
+## 🚨 MANDATORY Documentation Tracking
 
-**Description:** Mandate comprehensive documentation of all issues, tests, and resolutions for AI learning and institutional knowledge.
+### ALWAYS Priority Requirements
+- **ALWAYS**: Document every change, prompt, or conversation in Augment for context preservation
+- **ALWAYS**: Test and validate all changes made through Augment interactions
+- **ALWAYS**: Record all AI-assisted development activities for institutional knowledge
 
-## Core Requirements
+## 📋 Required Documentation
 
-### Documentation Template
-```markdown
-# Issue: [Brief Description]
+### For Every Issue/Feature/Change
+1. **Problem Statement**: Clear description of issue or need
+2. **Solution Approach**: Detailed explanation of proposed solution
+3. **Implementation Details**: Technical specifications and requirements
+4. **Testing Plan**: How solution will be tested and validated
+5. **Documentation Updates**: What documentation needs creation/updates
 
-## Problem
-- **Symptoms**: What was observed
-- **Impact**: Functionality affected
-- **Environment**: WordPress/WooCommerce/PHP/plugin versions
+### Documentation Locations
+- **Issue Documentation**: `/.docs/issues/`
+- **Feature Documentation**: `/.docs/features/`
+- **Change Documentation**: `/.docs/changes/`
+- **Plugin Documentation**: `/.docs/plugin/`
+- **WordPress Documentation**: `/.docs/wordpress/`
+- **API Documentation**: `/.docs/api/`
+- **Summary Documents**: `/.docs/summaries/`
+- **Reports**: `/.docs/reports/`
 
-## Root Cause
-- **Investigation**: What was debugged
-- **Findings**: What was discovered
-- **Cause**: Underlying technical issue
+## 🔄 Mandatory Process
 
-## Solution
-- **Code**: PHP modifications made
-- **Database**: Schema/data changes
-- **Config**: WordPress/WooCommerce settings
-- **Testing**: Verification method
+### Before Starting Work
+1. Create issue documentation file in appropriate `/.docs/` directory
+2. Document problem statement and proposed solution
+3. Outline implementation approach and technical requirements
+4. Define testing criteria and acceptance criteria
+5. Identify all documentation requiring updates
 
-## Prevention
-- **Monitoring**: Detection method
-- **Guidelines**: Prevention measures
-```
+### During Development
+1. Update issue documentation with progress and changes
+2. Document deviations from original plan
+3. Record technical decisions or trade-offs
+4. Update relevant plugin/WordPress documentation in real-time
 
-### WordPress Plugin Focus
-- Hook/filter implementation problems
-- WooCommerce integration conflicts
-- Database query optimizations
-- WordPress version compatibility
-- Custom post type/meta field issues
+### Before Closing Issue
+1. Verify all documentation complete and accurate
+2. Test all code examples in documentation
+3. Update related documentation affected by changes
+## ✅ Quality Standards
 
-- PHP version compatibility problems
-- WordPress core function usage issues
-- Plugin conflict resolutions
-- Performance optimizations
-- Security vulnerability fixes
+### Content Requirements
+- Clear, concise language
+- Step-by-step instructions where applicable
+- PHP code examples with proper syntax highlighting
+- Screenshots/diagrams for UI changes
+- Links to related documentation
+- Version information and dates
 
-### Security Compliance (CRITICAL)
-- **NEVER** include credentials, API keys, tokens, passwords
-- **NEVER** include database strings or server details
-- **NEVER** include user personal information
-- Use placeholder: `[REPLACE_WITH_ACTUAL_VALUE_FROM_USER_CREDENTIALS]`
-- Sanitize code examples, remove production URLs, anonymize data
+### Format Standards
+- Markdown format for all documentation
+- Consistent heading structure (H1 for title, H2 for sections)
+- Table of contents for longer documents
+- Proper code block formatting with language specification
+- Cross-references to related documents
 
-### File Organization
-- **Location**: `/.augment/rules/issues/` (primary), `/docs/troubleshooting/` (backup)
-- **Naming**: `YYYY-MM-DD-issue-brief-description.md`
-- **Format**: Markdown with descriptive names
+## 🚫 Enforcement Rules
 
-### Workflow Integration
-- Document issues during development
-- Include resolution in commit messages
-- Reference in pull requests
-- Document test cases revealing issues
-- Note performance impact
+### No Exceptions Policy
+- **Issues without proper documentation** will not be accepted
+- **Pull requests must include documentation updates**
+- **Code reviews must verify documentation completeness**
+- **No deployment without complete documentation**
+- **All summary documents must be in `/.docs/summaries/`**
 
-### Common Issue Examples
-
-#### WooCommerce Hook Issues
-```php
-// Fixed hook implementation
-add_action('woocommerce_order_status_changed', 'blazecommerce_update_order_status', 10, 4);
-function blazecommerce_update_order_status($order_id, $old_status, $new_status, $order) {
-    if (!$order instanceof WC_Order) return;
-    blazecommerce_update_custom_order_status($order_id, $new_status);
-}
-```
-
-#### Performance Optimization
-- **Before**: Query time: 2.5s, Memory: 128MB
-- **After**: Query time: 0.3s, Memory: 64MB
-- **Solution**: Added indexes, optimized WP_Query, implemented caching
-
-### Issue Categories
-- **Plugin Conflicts**: Hook priorities, JS/CSS conflicts, admin interface
-- **WordPress Core**: Deprecated functions, version compatibility, REST API, Gutenberg
-- **Performance**: Query optimization, memory usage, caching, asset loading
-
-## Enforcement
-**ALWAYS** priority - cannot be bypassed. Ensures:
-1. Institutional knowledge preservation
-2. AI pattern recognition
-3. Quality improvement
-4. Team efficiency
-5. Plugin stability
+---
+**Priority**: ALWAYS | **Scope**: BlazeCommerce WP Plugin | **Enforcement**: Mandatory
