@@ -1298,7 +1298,11 @@
                 _data[key] = itemEl.find('.input.' + name).val();
             }
 
-            rowData[selectedCountry] = _data;
+            countries.forEach(function (country) {
+                rowData[country] = _data;
+            });
+
+            console.log('rowData', rowData)
 
             itemEl.data('row-data', rowData)
 
@@ -1325,12 +1329,11 @@
 
         if (!blockMetadata) {
             blockMetadata = {};
-            countries.forEach(function (country) {
-                blockMetadata[country] = initialFieldValue;
-            });
         }
 
-        blockMetadata[selectedCountry] = _data;
+        countries.forEach(function (country) {
+            blockMetadata[country] = _data;
+        });
         console.log('generateDynamicMetaData', blockMetadata);
 
         return blockMetadata;
