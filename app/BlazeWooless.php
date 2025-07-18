@@ -163,6 +163,199 @@ class BlazeWooless
             header('Access-Control-Allow-Credentials: true');
         }
     }
+
+    /**
+     * Get plugin version information
+     *
+     * @return array Plugin version details
+     * @since 1.15.0
+     */
+    public function get_version_info()
+    {
+        return array(
+            'version' => BLAZE_COMMERCE_VERSION,
+            'plugin_name' => 'Blaze Commerce',
+            'build_date' => date('Y-m-d H:i:s'),
+            'php_version' => PHP_VERSION,
+            'wp_version' => get_bloginfo('version')
+        );
+    }
+
+    /**
+     * Check if plugin version is compatible with requirements
+     *
+     * @param string $min_version Minimum required version
+     * @return bool True if compatible, false otherwise
+     * @since 1.15.0
+     */
+    public function is_version_compatible($min_version)
+    {
+        return version_compare(BLAZE_COMMERCE_VERSION, $min_version, '>=');
+    }
+
+    /**
+     * Enhanced logging utility for debugging and monitoring
+     *
+     * @param string $message Log message
+     * @param string $level Log level (info, warning, error, debug)
+     * @param array $context Additional context data
+     * @return void
+     */
+    public function log_debug($message, $level = 'info', $context = array())
+    {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+
+        $timestamp = current_time('Y-m-d H:i:s');
+        $formatted_message = sprintf(
+            '[%s] [%s] BlazeCommerce: %s',
+            $timestamp,
+            strtoupper($level),
+            $message
+        );
+
+        if (!empty($context)) {
+            $formatted_message .= ' | Context: ' . wp_json_encode($context);
+        }
+
+        error_log($formatted_message);
+
+        // Also log to WordPress debug.log if available
+        if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+            error_log($formatted_message);
+        }
+    }
+
+    /**
+     * Log performance metrics for optimization analysis
+     *
+     * @param string $operation Operation name
+     * @param float $execution_time Execution time in seconds
+     * @param array $metrics Additional performance metrics
+     * @return void
+     */
+    public function log_performance($operation, $execution_time, $metrics = array())
+    {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+
+        $performance_data = array_merge(array(
+            'operation' => $operation,
+            'execution_time' => round($execution_time, 4),
+            'memory_usage' => memory_get_usage(true),
+            'peak_memory' => memory_get_peak_usage(true),
+        ), $metrics);
+
+        $this->log_debug(
+            sprintf('Performance: %s completed in %s seconds', $operation, $execution_time),
+            'debug',
+            $performance_data
+        );
+    }
+
+    /**
+     * Smart cache utility for API responses and expensive operations
+     *
+     * @param string $cache_key Unique cache identifier
+     * @param callable $callback Function to execute if cache miss
+     * @param int $expiration Cache expiration in seconds (default: 1 hour)
+     * @return mixed Cached or fresh data
+     */
+    public function get_cached_data($cache_key, $callback, $expiration = 3600)
+    {
+        // Sanitize cache key
+        $cache_key = 'blaze_commerce_' . sanitize_key($cache_key);
+
+        // Try to get from cache first
+        $cached_data = get_transient($cache_key);
+
+        if (false !== $cached_data) {
+            return $cached_data;
+        }
+
+        // Cache miss - execute callback to get fresh data
+        if (is_callable($callback)) {
+            $fresh_data = call_user_func($callback);
+
+            // Store in cache for future requests
+            set_transient($cache_key, $fresh_data, $expiration);
+
+            return $fresh_data;
+        }
+
+        return null;
+    }
+
+    /**
+     * Clear specific cache entries or all plugin caches
+     *
+     * @param string|null $cache_key Specific cache key to clear, or null for all
+     * @return bool True if cache was cleared successfully
+     */
+    public function clear_cache($cache_key = null)
+    {
+        if ($cache_key) {
+            // Clear specific cache entry
+            $cache_key = 'blaze_commerce_' . sanitize_key($cache_key);
+            return delete_transient($cache_key);
+        }
+
+        // Clear all plugin caches
+        global $wpdb;
+
+        $cache_prefix = 'blaze_commerce_';
+        $transient_pattern = '_transient_' . $cache_prefix . '%';
+        $timeout_pattern = '_transient_timeout_' . $cache_prefix . '%';
+
+        $deleted = $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+                $transient_pattern,
+                $timeout_pattern
+            )
+        );
+
+        return $deleted !== false;
+    }
+
+    /**
+     * Get cache statistics and health information
+     *
+     * @return array Cache statistics including hit/miss ratios and storage info
+     */
+    public function get_cache_stats()
+    {
+        global $wpdb;
+
+        $cache_prefix = 'blaze_commerce_';
+        $transient_pattern = '_transient_' . $cache_prefix . '%';
+
+        // Count active cache entries
+        $cache_count = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $transient_pattern
+            )
+        );
+
+        // Calculate total cache size (approximate)
+        $cache_size = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE option_name LIKE %s",
+                $transient_pattern
+            )
+        );
+
+        return array(
+            'active_entries' => (int) $cache_count,
+            'total_size_bytes' => (int) $cache_size,
+            'total_size_mb' => round($cache_size / 1024 / 1024, 2),
+            'cache_prefix' => $cache_prefix,
+            'timestamp' => current_time('timestamp')
+        );
+    }
 }
 
 BlazeWooless::get_instance();

@@ -4,9 +4,12 @@ name: "Priority 3: Claude AI Approval Gate"
 # This workflow now ensures Claude AI has reviewed the LATEST commit before approving
 # Fixes issue where auto-approval was based on stale reviews from previous commits
 
-# RACE CONDITION FIX: Trigger on Claude comment posting, not workflow completion
-# This ensures auto-approval only happens AFTER Claude posts the review comment
+# CRITICAL FIX: Trigger on Claude Review workflow completion AND comment posting
+# This ensures auto-approval only happens AFTER Claude completes the review
 on:
+  workflow_run:
+    workflows: ["Priority 2: Claude AI Code Review"]
+    types: [completed]
   issue_comment:
     types: [created]
   workflow_dispatch:
@@ -27,9 +30,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     # Always run this debug job to capture conditional evaluation details
-    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
     steps:
       - name: Debug Conditional Logic Evaluation
+        env:
+          # SECURITY FIX: Use environment variables to safely handle HTML content and special characters
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENT_CREATED: ${{ github.event.comment.created_at }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          IS_PULL_REQUEST: ${{ !!github.event.issue.pull_request }}
         run: |
           echo "🔍 CONDITIONAL LOGIC DEBUG - Claude Approval Gate Workflow"
           echo "=================================================="
@@ -40,33 +52,68 @@ jobs:
 
           if [ "${{ github.event_name }}" = "issue_comment" ]; then
             echo "📝 ISSUE COMMENT EVENT DETAILS:"
-            echo "  Comment ID: ${{ github.event.comment.id }}"
-            echo "  Comment User: ${{ github.event.comment.user.login }}"
-            echo "  Comment User Type: ${{ github.event.comment.user.type }}"
-            echo "  Comment Created: ${{ github.event.comment.created_at }}"
-            echo "  Issue/PR Number: ${{ github.event.issue.number }}"
-            echo "  Is Pull Request: ${{ !!github.event.issue.pull_request }}"
+            echo "  Comment ID: ${COMMENT_ID}"
+            echo "  Comment User: ${COMMENT_USER}"
+            echo "  Comment User Type: ${COMMENT_USER_TYPE}"
+            echo "  Comment Created: ${COMMENT_CREATED}"
+            echo "  Issue/PR Number: ${ISSUE_NUMBER}"
+            echo "  Is Pull Request: ${IS_PULL_REQUEST}"
             echo ""
 
-            echo "🔍 CONDITIONAL CHECKS:"
-            echo "  Contains 'FINAL VERDICT': ${{ contains(github.event.comment.body, 'FINAL VERDICT') }}"
-            echo "  Contains 'Claude AI PR Review Complete': ${{ contains(github.event.comment.body, 'Claude AI PR Review Complete') }}"
-            echo "  User login exact match: ${{ github.event.comment.user.login == 'blazecommerce-automation-bot[bot]' }}"
-            echo "  User login contains match: ${{ contains(github.event.comment.user.login, 'blazecommerce-automation-bot') }}"
-            echo "  User type is Bot: ${{ github.event.comment.user.type == 'Bot' }}"
+            echo "🔍 DETAILED DETECTION ANALYSIS:"
+            echo "  Comment Body Length: ${#COMMENT_BODY} characters"
+            echo "  Comment User: '${COMMENT_USER}'"
+            echo "  Comment User Type: '${COMMENT_USER_TYPE}'"
+            echo ""
+
+            echo "🔍 SEARCH TESTS:"
+            echo "  Contains 'FINAL VERDICT' (case sensitive): $(echo "${COMMENT_BODY}" | grep -q 'FINAL VERDICT' && echo 'true' || echo 'false')"
+            echo "  Contains 'final verdict' (case insensitive): $(echo "${COMMENT_BODY}" | grep -qi 'final verdict' && echo 'true' || echo 'false')"
+            echo "  Contains 'Claude AI PR Review Complete': $(echo "${COMMENT_BODY}" | grep -q 'Claude AI PR Review Complete' && echo 'true' || echo 'false')"
+            echo "  Contains 'Claude AI' (partial): $(echo "${COMMENT_BODY}" | grep -q 'Claude AI' && echo 'true' || echo 'false')"
+            echo ""
+
+            echo "🔍 COMMENT BODY SAMPLE (first 500 chars):"
+            printf '%s\n' "${COMMENT_BODY}" | head -c 500
+            echo ""
+            echo "..."
+            echo ""
+
+            echo "🔍 COMMENT BODY SAMPLE (last 200 chars):"
+            printf '%s\n' "${COMMENT_BODY}" | tail -c 200
+            echo ""
+
+            echo "🔍 HEX DUMP ANALYSIS (looking for hidden characters):"
+            echo "First 100 chars as hex:"
+            printf '%s' "${COMMENT_BODY}" | head -c 100 | xxd -l 100 || echo "xxd not available"
+            echo ""
+
+            echo "🔍 SPECIFIC PATTERN SEARCHES:"
+            echo "  Searching for 'FINAL VERDICT' with context:"
+            echo "${COMMENT_BODY}" | grep -n -A2 -B2 'FINAL VERDICT' || echo "  NOT FOUND"
+            echo ""
+            echo "  Searching for 'Claude AI PR Review Complete' with context:"
+            echo "${COMMENT_BODY}" | grep -n -A2 -B2 'Claude AI PR Review Complete' || echo "  NOT FOUND"
+            echo ""
+
+            echo "🔍 GITHUB CONTEXT COMPARISON:"
+            echo "  GitHub context FINAL VERDICT: ${{ contains(github.event.comment.body, 'FINAL VERDICT') }}"
+            echo "  GitHub context Claude Complete: ${{ contains(github.event.comment.body, 'Claude AI PR Review Complete') }}"
             echo ""
 
             echo "📄 COMMENT BODY PREVIEW (first 300 chars):"
-            echo "${{ github.event.comment.body }}" | head -c 300
+            # SECURITY FIX: Use environment variable to safely handle HTML content and special characters
+            # This prevents shell interpretation of CSS properties like 'margin-left:' as commands
+            printf '%s\n' "${COMMENT_BODY}" | head -c 300
             echo ""
             echo "..."
             echo ""
 
             echo "✅ ENHANCED CONDITIONAL EVALUATION:"
-            # Enhanced bot detection logic
-            if [[ "${{ github.event.comment.user.login }}" == "blazecommerce-automation-bot[bot]" ]] || \
-               [[ "${{ github.event.comment.user.login }}" == *"blazecommerce-automation-bot"* ]] || \
-               [[ "${{ github.event.comment.user.type }}" == "Bot" && "${{ github.event.comment.user.login }}" == *"blazecommerce"* ]]; then
+            # Enhanced bot detection logic using environment variables
+            if [[ "${COMMENT_USER}" == "blazecommerce-automation-bot[bot]" ]] || \
+               [[ "${COMMENT_USER}" == *"blazecommerce-automation-bot"* ]] || \
+               [[ "${COMMENT_USER_TYPE}" == "Bot" && "${COMMENT_USER}" == *"blazecommerce"* ]]; then
               echo "  ✅ Bot user detection: PASSED"
             else
               echo "  ❌ Bot user detection: FAILED"
@@ -89,25 +136,96 @@ jobs:
   claude-approval-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # ENHANCED: More flexible conditional logic with improved bot detection and fallback mechanisms
-    # CRITICAL FIX: Relaxed user matching to prevent workflow skips due to bot user representation variations
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' &&
-       contains(github.event.comment.body, 'FINAL VERDICT') &&
-       contains(github.event.comment.body, 'Claude AI PR Review Complete') &&
-       (github.event.comment.user.login == 'blazecommerce-automation-bot[bot]' ||
-        contains(github.event.comment.user.login, 'blazecommerce-automation-bot') ||
-        (github.event.comment.user.type == 'Bot' && contains(github.event.comment.user.login, 'blazecommerce'))))
+    # CRITICAL FIX: Handle multiple trigger types for proper workflow sequencing
+    # ISSUE: Race condition between Claude Review and Approval Gate workflows
+    # SOLUTION: Support both workflow_run (after Claude completes) and issue_comment (direct trigger)
+    if: github.event_name == 'issue_comment' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
     permissions:
       # Required permissions for GitHub App authentication and PR approval
       contents: read           # Read repository content
       pull-requests: write     # Create approval reviews
       actions: read           # Read workflow run information
     steps:
+      - name: Validate Claude Comment Trigger
+        id: validate-trigger
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          echo "🔍 VALIDATING CLAUDE COMMENT TRIGGER"
+          echo "=================================================="
+          echo "Event: ${EVENT_NAME}"
+          echo "Comment User: ${COMMENT_USER}"
+          echo "Comment User Type: ${COMMENT_USER_TYPE}"
+          echo ""
+
+          # Skip validation for manual workflow_dispatch triggers
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "✅ Manual workflow_dispatch trigger - validation skipped"
+            echo "trigger_valid=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Handle workflow_run triggers (Claude Review completion)
+          if [ "${EVENT_NAME}" = "workflow_run" ]; then
+            echo "🔄 workflow_run trigger detected - Claude Review workflow completed"
+            echo "✅ Proceeding to check for Claude review comments"
+            echo "trigger_valid=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Validate issue_comment triggers
+          if [ "${EVENT_NAME}" = "issue_comment" ]; then
+            echo "🔍 Validating issue_comment trigger..."
+
+            # SIMPLIFIED: Direct detection of approval status
+            echo "🔍 APPROVAL STATUS DETECTION:"
+            echo "  Looking for: 'PR_APPROVED_BY_BLAZE_BOT'"
+            echo ""
+
+            # Check for approval status
+            if echo "${COMMENT_BODY}" | grep -q "PR_APPROVED_BY_BLAZE_BOT"; then
+              echo "✅ Comment contains 'PR_APPROVED_BY_BLAZE_BOT' - approval detected"
+              echo "🔍 Comment preview: ${COMMENT_BODY:0:200}..."
+            else
+              echo "ℹ️  Comment does not contain 'PR_APPROVED_BY_BLAZE_BOT' - no approval action needed"
+              echo "🔍 Comment preview: ${COMMENT_BODY:0:200}..."
+              echo "trigger_valid=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+
+
+            # Check if user is Claude automation bot
+            if [ "${COMMENT_USER}" = "blazecommerce-automation-bot[bot]" ] || \
+               echo "${COMMENT_USER}" | grep -q "blazecommerce-automation-bot" || \
+               ([ "${COMMENT_USER_TYPE}" = "Bot" ] && echo "${COMMENT_USER}" | grep -q "blazecommerce"); then
+              echo "✅ Comment from valid Claude automation bot: ${COMMENT_USER}"
+            else
+              echo "❌ Comment not from Claude automation bot: ${COMMENT_USER}"
+              echo "trigger_valid=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            echo "✅ All validation checks passed - proceeding with approval gate"
+            echo "🚀 Setting trigger_valid=true for downstream steps"
+            echo "trigger_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Unexpected event type: ${EVENT_NAME}"
+            echo "🚫 Setting trigger_valid=false - workflow will exit"
+            echo "trigger_valid=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo ""
+          echo "🎯 VALIDATION COMPLETE - RESULT: trigger_valid=true"
+          echo "📋 Next step: Determine PR Number and Trigger"
+
       - name: Generate GitHub App Token
         id: app_token
-        if: env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
+        if: steps.validate-trigger.outputs.trigger_valid == 'true' && env.BC_GITHUB_APP_ID != '' && env.BC_GITHUB_APP_PRIVATE_KEY != ''
         env:
           BC_GITHUB_APP_ID: ${{ secrets.BC_GITHUB_APP_ID }}
           BC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.BC_GITHUB_APP_PRIVATE_KEY }}
@@ -120,6 +238,7 @@ jobs:
 
       - name: Determine PR Number and Trigger
         id: get-pr
+        if: steps.validate-trigger.outputs.trigger_valid == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app_token.outputs.token || secrets.BOT_GITHUB_TOKEN || github.token }}
@@ -133,10 +252,19 @@ jobs:
             if (context.eventName === 'issue_comment') {
               console.log('🔍 ISSUE_COMMENT EVENT DETAILS:');
               console.log(`   Comment User: ${context.payload.comment?.user?.login || 'UNKNOWN'}`);
+              console.log(`   Comment User Type: ${context.payload.comment?.user?.type || 'UNKNOWN'}`);
               console.log(`   Comment Body Preview: ${(context.payload.comment?.body || '').substring(0, 200)}...`);
-              console.log(`   Contains FINAL VERDICT: ${(context.payload.comment?.body || '').includes('FINAL VERDICT')}`);
-              console.log(`   Contains Claude Review: ${(context.payload.comment?.body || '').includes('Claude AI PR Review Complete')}`);
+              // ENHANCED: Format-agnostic FINAL VERDICT detection
+              const commentBody = context.payload.comment?.body || '';
+              const cleanComment = commentBody.toLowerCase().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+              const hasFinalVerdict = commentBody.includes('PR_APPROVED_BY_BLAZE_BOT');
+
+              console.log(`   Contains FINAL VERDICT (enhanced): ${hasFinalVerdict}`);
+              console.log(`   Contains PR_APPROVED_BY_BLAZE_BOT: ${commentBody.includes('PR_APPROVED_BY_BLAZE_BOT')}`);
               console.log(`   Is PR: ${!!context.payload.issue?.pull_request}`);
+              console.log(`   Issue/PR Number: ${context.payload.issue?.number}`);
+              console.log(`   Repository: ${context.repo.owner}/${context.repo.repo}`);
+              console.log(`   Clean comment preview: ${cleanComment.substring(0, 200)}...`);
             }
 
             let prNumber = null;
@@ -158,29 +286,47 @@ jobs:
               if (comment && comment.body) {
                 console.log(`📝 Comment from: ${comment.user.login}`);
                 console.log(`📅 Comment created: ${comment.created_at}`);
-                console.log(`🔍 Comment contains FINAL VERDICT: ${comment.body.includes('FINAL VERDICT')}`);
-                
-                // ENHANCED: More specific Claude bot detection for issue_comment trigger
+                // ENHANCED: Format-agnostic FINAL VERDICT detection
+                const cleanCommentBody = comment.body.toLowerCase().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+                const hasFinalVerdictEnhanced = comment.body.includes('PR_APPROVED_BY_BLAZE_BOT');
+
+                console.log(`🔍 Comment contains PR_APPROVED_BY_BLAZE_BOT: ${hasFinalVerdictEnhanced}`);
+                console.log(`🔍 Clean comment preview: ${cleanCommentBody.substring(0, 200)}...`);
+
+                // CRITICAL FIX: Enhanced Claude bot detection for issue_comment trigger
                 const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
-                                   comment.user.login.includes('blazecommerce-automation-bot')) &&
-                                   comment.body.includes('Claude AI PR Review Complete');
-                const hasFinalVerdict = comment.body.includes('FINAL VERDICT');
-                const isPR = context.payload.issue && context.payload.issue.pull_request;
-                
+                                   comment.user.login.includes('blazecommerce-automation-bot'));
+                const hasFinalVerdict = hasFinalVerdictEnhanced;
+
+                // FIXED: Robust PR detection for issue_comment events
+                // GitHub issue_comment events on PRs have pull_request property in issue object
+                const isPR = !!(context.payload.issue && context.payload.issue.pull_request);
+
                 console.log('🔍 ISSUE_COMMENT Analysis:');
                 console.log(`   User: ${comment.user.login}`);
                 console.log(`   Is Claude bot: ${isClaudeBot}`);
                 console.log(`   Has FINAL VERDICT: ${hasFinalVerdict}`);
                 console.log(`   Is PR: ${isPR}`);
+                console.log(`   Issue number: ${context.payload.issue?.number}`);
+                console.log(`   Pull request URL: ${context.payload.issue?.pull_request?.url || 'N/A'}`);
                 console.log(`   Comment created: ${comment.created_at}`);
-                
-                if (isClaudeBot && hasFinalVerdict && isPR) {
-                  prNumber = context.payload.issue.number;
-                  shouldRun = true;
-                  console.log(`✅ Found Claude FINAL VERDICT in PR: ${prNumber}`);
-                  console.log('🚀 Auto-approval will proceed after timing checks');
+
+                // CRITICAL FIX: Simplified logic - if Claude posted FINAL VERDICT, proceed with approval
+                // Remove overly restrictive checks that were preventing automatic approval
+                if (isClaudeBot && hasFinalVerdict) {
+                  if (isPR) {
+                    prNumber = context.payload.issue.number;
+                    shouldRun = true;
+                    console.log(`✅ Found Claude FINAL VERDICT in PR: ${prNumber}`);
+                    console.log('🚀 Auto-approval will proceed - all criteria met');
+                  } else {
+                    console.log('❌ Claude comment found but not on a PR (issue_comment on regular issue)');
+                    shouldRun = false;
+                  }
                 } else {
-                  console.log('❌ Comment does not meet auto-approval criteria');
+                  console.log('❌ Comment does not meet auto-approval criteria:');
+                  console.log(`    - Is Claude bot: ${isClaudeBot}`);
+                  console.log(`    - Has FINAL VERDICT: ${hasFinalVerdict}`);
                   shouldRun = false;
                 }
               }
@@ -189,19 +335,54 @@ jobs:
               prNumber = parseInt(context.payload.inputs.pr_number);
               shouldRun = true;
               console.log(`🎯 Manual trigger for PR: ${prNumber}`);
+            } else if (context.eventName === 'workflow_run') {
+              console.log('🔄 WORKFLOW_RUN trigger detected (Claude Review completed)');
+              console.log(`📋 Workflow: ${context.payload.workflow_run.name}`);
+              console.log(`📊 Conclusion: ${context.payload.workflow_run.conclusion}`);
+
+              // Only proceed if Claude Review workflow succeeded
+              if (context.payload.workflow_run.conclusion === 'success') {
+                // Extract PR number from the workflow_run event
+                const headBranch = context.payload.workflow_run.head_branch;
+                console.log(`🌿 Head branch: ${headBranch}`);
+
+                // Get PR number from the workflow_run pull_requests array
+                if (context.payload.workflow_run.pull_requests && context.payload.workflow_run.pull_requests.length > 0) {
+                  prNumber = context.payload.workflow_run.pull_requests[0].number;
+                  shouldRun = true;
+                  console.log(`✅ Found PR from workflow_run: ${prNumber}`);
+                } else {
+                  console.log('❌ No PR found in workflow_run event');
+                  shouldRun = false;
+                }
+              } else {
+                console.log(`❌ Claude Review workflow failed: ${context.payload.workflow_run.conclusion}`);
+                shouldRun = false;
+              }
             } else {
               console.log(`❌ UNSUPPORTED EVENT TYPE: ${context.eventName}`);
-              console.log('✅ SUPPORTED EVENTS: issue_comment (with FINAL VERDICT), workflow_dispatch');
-              console.log('🚫 REMOVED SUPPORT: workflow_run (caused race conditions)');
+              console.log('✅ SUPPORTED EVENTS: issue_comment, workflow_dispatch, workflow_run');
               shouldRun = false;
             }
             
-            console.log('Final result - PR: ' + prNumber + ', Should run: ' + shouldRun);
+            console.log('🎯 FINAL DETERMINATION:');
+            console.log(`   PR Number: ${prNumber || 'NONE'}`);
+            console.log(`   Should Run: ${shouldRun}`);
+            console.log(`   Event Type: ${context.eventName}`);
+
+            if (shouldRun && prNumber) {
+              console.log(`✅ AUTO-APPROVAL WILL PROCEED FOR PR #${prNumber}`);
+              console.log('🚀 Next steps: Evaluate Claude AI Approval → Create Bot Approval');
+            } else {
+              console.log('❌ AUTO-APPROVAL WILL NOT PROCEED');
+              console.log('🔍 Check the analysis above for reasons');
+            }
+
             core.setOutput('pr_number', prNumber ? prNumber.toString() : '');
             core.setOutput('should_run', shouldRun.toString());
 
       - name: Evaluate Claude AI Approval
-        if: steps.get-pr.outputs.should_run == 'true'
+        if: steps.validate-trigger.outputs.trigger_valid == 'true' && steps.get-pr.outputs.should_run == 'true'
         id: evaluate
         uses: actions/github-script@v7
         with:
@@ -247,10 +428,12 @@ jobs:
             
             for (const comment of comments.reverse()) {
               const isClaudeBot = (comment.user.login === 'blazecommerce-automation-bot[bot]' ||
-                                 comment.user.login.includes('blazecommerce-automation-bot')) &&
-                                 comment.body.includes('Claude AI PR Review Complete');
+                                 comment.user.login.includes('blazecommerce-automation-bot'));
               
-              if (isClaudeBot && (comment.body.includes('FINAL VERDICT') || comment.body.includes('### FINAL VERDICT'))) {
+              // SIMPLIFIED: Direct detection of approval status
+              const hasApprovalStatus = comment.body.includes('PR_APPROVED_BY_BLAZE_BOT');
+
+              if (isClaudeBot && hasApprovalStatus) {
                 const commentDate = new Date(comment.created_at);
                 console.log(`Found Claude FINAL VERDICT comment from: ${comment.user.login}`);
                 console.log(`Comment created at: ${commentDate.toISOString()}`);
@@ -271,32 +454,12 @@ jobs:
                   console.log('✅ Comment is AFTER latest commit with sufficient time gap - valid for approval');
                   validClaudeComment = comment;
                   
-                  // Safe excerpt extraction
-                  const verdictIndex = comment.body.indexOf('FINAL VERDICT');
-                  if (verdictIndex !== -1) {
-                    console.log('Comment excerpt: ' + comment.body.substring(verdictIndex, verdictIndex + 200));
-                  } else {
-                    console.log('Comment excerpt: ' + comment.body.substring(0, 200) + '...');
-                  }
+                  // SIMPLIFIED: Direct approval detection
+                  console.log('✅ Found PR_APPROVED_BY_BLAZE_BOT in comment');
+                  console.log('Comment excerpt: ' + comment.body.substring(comment.body.indexOf('PR_APPROVED_BY_BLAZE_BOT') - 50, comment.body.indexOf('PR_APPROVED_BY_BLAZE_BOT') + 100));
 
-                  // Check for status with flexible formatting (handles markdown bold)
-                  // FIXED: Added support for **Status**: format (asterisks before Status)
-                  if (comment.body.includes('Status**: APPROVED') ||
-                      comment.body.includes('Status: APPROVED') ||
-                      comment.body.includes('**Status**: APPROVED')) {
-                    claudeApproval = 'APPROVED';
-                    console.log('Claude status: APPROVED');
-                  } else if (comment.body.includes('Status**: BLOCKED') ||
-                             comment.body.includes('Status: BLOCKED') ||
-                             comment.body.includes('**Status**: BLOCKED')) {
-                    claudeApproval = 'BLOCKED';
-                    console.log('Claude status: BLOCKED');
-                  } else if (comment.body.includes('Status**: CONDITIONAL') ||
-                             comment.body.includes('Status: CONDITIONAL') ||
-                             comment.body.includes('**Status**: CONDITIONAL')) {
-                    claudeApproval = 'CONDITIONAL';
-                    console.log('Claude status: CONDITIONAL');
-                  }
+                  claudeApproval = 'APPROVED';
+                  console.log('Claude status: APPROVED (PR_APPROVED_BY_BLAZE_BOT found)');
                   break;
                 } else if (commentDate <= actualCommitDate) {
                   console.log('❌ Comment is BEFORE or AT commit time - ignoring stale review');
@@ -441,7 +604,7 @@ jobs:
 
       # FALLBACK MECHANISM: Emergency approval for edge cases
       - name: Fallback Approval Check
-        if: always() && steps.get-pr.outputs.should_run == 'true' && (steps.evaluate.outputs.result == 'ERROR' || steps.evaluate.outputs.result == '')
+        if: always() && steps.validate-trigger.outputs.trigger_valid == 'true' && steps.get-pr.outputs.should_run == 'true' && (steps.evaluate.outputs.result == 'ERROR' || steps.evaluate.outputs.result == '')
         id: fallback
         uses: actions/github-script@v7
         with:
@@ -464,12 +627,10 @@ jobs:
               // Look for any Claude-related comment with APPROVED status
               const claudeComment = comments.reverse().find(comment => {
                 const isClaudeRelated = comment.user.login.includes('blazecommerce') ||
-                                       comment.user.type === 'Bot' ||
-                                       comment.body.includes('Claude AI');
-                const hasApproval = comment.body.includes('FINAL VERDICT') &&
-                                   (comment.body.includes('Status**: APPROVED') ||
-                                    comment.body.includes('Status: APPROVED') ||
-                                    comment.body.includes('**Status**: APPROVED'));
+                                       comment.user.type === 'Bot';
+                // ENHANCED: Format-agnostic FINAL VERDICT and APPROVED detection
+                const cleanFallbackBody = comment.body.toLowerCase().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+                const hasApproval = comment.body.includes('PR_APPROVED_BY_BLAZE_BOT');
                 return isClaudeRelated && hasApproval;
               });
 

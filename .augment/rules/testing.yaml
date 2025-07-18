@@ -1,0 +1,54 @@
+---
+type: "always_apply"
+priority: 1
+scope: "blazecommerce_wp_plugin"
+description: "Testing standards for BlazeCommerce WordPress plugin"
+---
+
+# WordPress Plugin Testing Guidelines
+
+## Testing Framework
+- **PHPUnit**: Primary testing framework for PHP code
+- **WordPress Test Suite**: WordPress-specific testing utilities
+- **WP-CLI**: Command-line testing and setup
+- **Codeception**: Acceptance testing framework
+
+## Test Structure
+```
+tests/
+├── unit/              # Unit tests
+├── integration/       # Integration tests
+├── acceptance/        # Acceptance tests
+├── fixtures/          # Test data
+└── bootstrap.php      # Test bootstrap
+```
+
+## Unit Testing
+- **Coverage Target**: Minimum 70% code coverage
+- **Class Testing**: Test all public methods
+- **Function Testing**: Test utility functions
+- **Mock Objects**: Mock WordPress functions and classes
+
+## Integration Testing
+- **Database Testing**: Test database operations
+- **Hook Testing**: Test WordPress hooks and filters
+- **API Testing**: Test REST API endpoints
+- **WooCommerce Integration**: Test WooCommerce functionality
+
+## WordPress-Specific Testing
+- **Multisite Testing**: Test multisite compatibility
+- **Plugin Activation**: Test activation/deactivation hooks
+- **Admin Testing**: Test admin interface functionality
+- **Frontend Testing**: Test frontend output
+
+## Test Environment
+- **Local Testing**: Use Local by Flywheel or similar
+- **CI/CD Testing**: Automated testing in GitHub Actions
+- **Multiple PHP Versions**: Test PHP 7.4, 8.0, 8.1
+- **Multiple WordPress Versions**: Test current and previous versions
+
+## Security Testing
+- **Nonce Verification**: Test nonce validation
+- **Capability Checks**: Test user permission checks
+- **Input Sanitization**: Test data sanitization
+- **SQL Injection**: Test for SQL injection vulnerabilities
