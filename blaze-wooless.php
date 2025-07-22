@@ -66,9 +66,9 @@ function typesense_enqueue_google_fonts($hook)
     );
     wp_enqueue_style('chosen');
 
-    wp_enqueue_style('blaze-wooless-admin-style', plugins_url('assets/css/blaze-wooless.css', __FILE__), null, '1.0');
-    wp_enqueue_script('blaze-wooless-admin-script', plugins_url('assets/js/blaze-wooless.js', __FILE__), array('jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable'), '1.0', true);
-    // wp_enqueue_script( 'blaze-wooless-admin-script-react', plugins_url( 'dist/main.js', __FILE__ ), array( 'jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable' ), '1.0', true );
+    wp_enqueue_style('blaze-wooless-admin-style', plugins_url('assets/css/blaze-wooless.css', __FILE__), null, BLAZE_COMMERCE_VERSION);
+    wp_enqueue_script('blaze-wooless-admin-script', plugins_url('assets/js/blaze-wooless.js', __FILE__), array('jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable'), BLAZE_COMMERCE_VERSION, true);
+    // wp_enqueue_script( 'blaze-wooless-admin-script-react', plugins_url( 'dist/main.js', __FILE__ ), array( 'jquery', 'jquery-ui-droppable', 'jquery-ui-draggable', 'jquery-ui-sortable' ), BLAZE_COMMERCE_VERSION, true );
 
     wp_register_script(
         'chosen',
