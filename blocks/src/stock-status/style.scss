@@ -1,0 +1,69 @@
+/**
+ * Stock Status block styles for both editor and frontend
+ */
+
+.stock-status {
+	margin-bottom: 1.5em;
+
+	&.align-left {
+		text-align: left;
+	}
+
+	&.align-center {
+		text-align: center;
+	}
+
+	&.align-right {
+		text-align: right;
+	}
+
+	.stock-status-container {
+		display: inline-block;
+	}
+
+	.stock-status-indicator {
+		padding: 8px 12px;
+		border-radius: 4px;
+		display: inline-flex;
+		flex-direction: column;
+		font-weight: 500;
+
+		&.in-stock {
+			background-color: #f0f9eb;
+			color: #67c23a;
+			border: 1px solid #c2e7b0;
+		}
+
+		&.out-of-stock {
+			background-color: #fef0f0;
+			color: #f56c6c;
+			border: 1px solid #fbc4c4;
+		}
+
+		&.on-backorder {
+			background-color: #fdf6ec;
+			color: #e6a23c;
+			border: 1px solid #f5dab1;
+		}
+	}
+
+	.stock-quantity {
+		margin-top: 4px;
+		font-size: 0.9em;
+	}
+
+	.stock-status-editor-note {
+		margin-top: 8px;
+		font-size: 0.8em;
+		color: #666;
+	}
+}
+
+/* Placeholder styles for the save component */
+.stock-status-placeholder {
+	padding: 8px 12px;
+	background-color: #f0f0f0;
+	color: #666;
+	border-radius: 4px;
+	font-style: italic;
+}

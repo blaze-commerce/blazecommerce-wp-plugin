@@ -1,0 +1,17 @@
+/* Hide short description when the option is disabled */
+.hide-short-description .wc-block-components-product-summary__short-description,
+.hide-short-description .woocommerce-product-details__short-description,
+.hide-short-description .woocommerce-tabs .description,
+.hide-short-description .single-product-summary .woocommerce-product-details__short-description,
+.hide-short-description .product-summary .woocommerce-product-details__short-description,
+.hide-short-description [data-block-name="woocommerce/product-summary"],
+.hide-short-description .wp-block-woocommerce-product-summary {
+    display: none !important;
+}
+
+/* Editor specific styles */
+.editor-styles-wrapper .hide-short-description .wc-block-components-product-summary__short-description,
+.editor-styles-wrapper .hide-short-description .woocommerce-product-details__short-description,
+.editor-styles-wrapper .hide-short-description [data-block-name="woocommerce/product-summary"] {
+    display: none !important;
+}

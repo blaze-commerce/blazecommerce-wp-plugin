@@ -1,0 +1,22 @@
+/**
+ * The following styles get applied both on the front of your site
+ * and in the editor.
+ *
+ * Most styling is now handled by Tailwind CSS classes.
+ * This file contains only minimal custom styles if needed.
+ */
+
+.wp-block-blaze-commerce-service-features {
+	/* Responsive styles for mobile */
+	@media (max-width: 768px) {
+		/* Force horizontal items to stack vertically on mobile */
+		.flex-row.flex-wrap {
+			flex-direction: column !important;
+		}
+
+		/* Reduce logo margin on mobile */
+		.flex-shrink-0 {
+			margin-right: 0.75rem !important;
+		}
+	}
+}

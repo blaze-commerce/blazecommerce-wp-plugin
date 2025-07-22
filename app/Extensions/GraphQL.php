@@ -223,6 +223,13 @@ class GraphQL {
 							return $payload['user_id'];
 						},
 					),
+					'roles' => array(
+						'type' => array( 'list_of' => 'String' ),
+						'description' => 'Logged in user roles',
+						'resolve' => function ($payload) {
+							return $payload['roles'];
+						},
+					),
 				),
 				'mutateAndGetPayload' => function ($input) {
 					$user = wp_signon(
@@ -237,13 +244,13 @@ class GraphQL {
 						throw new UserError( ! empty( $user->get_error_code() ) ? $user->get_error_code() : 'invalid login' );
 					}
 
-
 					return array(
 						'status' => 'SUCCESS',
 						'email' => esc_html( $user->user_email ),
 						'user_id' => esc_html( $user->ID ),
 						'username' => esc_html( $user->user_login ),
 						'name' => esc_html( $user->display_name ),
+						'roles' => $user->roles,
 					);
 				},
 			)

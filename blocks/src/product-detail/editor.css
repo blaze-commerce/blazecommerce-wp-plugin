@@ -1,0 +1,45 @@
+.blaze-product-detail-block {
+	margin: 1rem 0;
+}
+
+.blaze-product-detail h3 {
+	margin-top: 0;
+	margin-bottom: 1rem;
+}
+
+.blaze-product-detail p {
+	margin-bottom: 0.5rem;
+}
+
+.blaze-product-detail p:last-child {
+	margin-bottom: 0;
+}
+
+.blaze-product-detail .product-short-description {
+	margin-bottom: 1rem;
+}
+
+.blaze-product-detail .product-short-description p {
+	margin-bottom: 0.5rem;
+}
+
+.blaze-product-detail .product-short-description p:last-child {
+	margin-bottom: 0;
+}
+
+.blaze-product-detail .product-price {
+	font-weight: bold;
+}
+
+.blaze-product-detail .product-price del {
+	opacity: 0.7;
+	margin-right: 0.5rem;
+}
+
+.blaze-product-detail .product-price ins {
+	text-decoration: none;
+}
+
+.blaze-product-detail strong {
+	font-weight: 600;
+}

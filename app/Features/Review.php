@@ -33,6 +33,24 @@ class Review {
 					'type' => 'checkbox',
 					'args' => array( 'description' => 'Check this to hide review section in tab. You can display it manually from page builder' ),
 				),
+				array(
+					'id' => 'force_login_to_review',
+					'label' => 'Force Login to Review',
+					'type' => 'checkbox',
+					'args' => array( 'description' => 'Check this to force login to review' ),
+				),
+				array(
+					'id' => 'review_tab_title',
+					'label' => 'Review Tab Title',
+					'type' => 'text',
+					'default' => 'Customer Review',
+				),
+				array(
+					'id' => 'hide_rating_distribution',
+					'label' => 'Hide Rating Distribution',
+					'type' => 'checkbox',
+					'args' => array( 'description' => 'Check this to hide rating distribution' ),
+				)
 
 			),
 
@@ -53,6 +71,27 @@ class Review {
 			'id' => '1002457',
 			'name' => 'hide_review_tab',
 			'value' => (bool) $options['hide_review_tab'],
+			'updated_at' => time(),
+		);
+
+		$documents[] = array(
+			'id' => '1002458',
+			'name' => 'force_login_to_review',
+			'value' => (bool) $options['force_login_to_review'],
+			'updated_at' => time(),
+		);
+
+		$documents[] = array(
+			'id' => '1002459',
+			'name' => 'review_tab_title',
+			'value' => $options['review_tab_title'],
+			'updated_at' => time(),
+		);
+
+		$documents[] = array(
+			'id' => '1002460',
+			'name' => 'hide_rating_distribution',
+			'value' => (bool) $options['hide_rating_distribution'],
 			'updated_at' => time(),
 		);
 

@@ -1,0 +1,36 @@
+/**
+ * The following styles get applied inside the editor only.
+ *
+ * Most styling is now handled by Tailwind CSS classes.
+ * This file contains only editor-specific styles.
+ */
+
+// Sidebar styles for the editor
+.service-feature-item-settings {
+	.service-feature-item-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 10px;
+
+		h3 {
+			margin: 0;
+		}
+	}
+
+	.logo-upload-container {
+		margin-bottom: 15px;
+
+		.logo-preview {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+
+			.logo-actions {
+				display: flex;
+				gap: 10px;
+				margin-top: 10px;
+			}
+		}
+	}
+}
