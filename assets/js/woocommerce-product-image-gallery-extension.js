@@ -7,7 +7,7 @@
 	const { createHigherOrderComponent } = wp.compose;
 
 	// Add verticalStyle attribute to WooCommerce Product Image Gallery block
-	function addVerticalStyleAttribute(settings, name) {
+	function addExtraOptions(settings, name) {
 		if (name !== "woocommerce/product-image-gallery") {
 			return settings;
 		}
@@ -33,7 +33,7 @@
 	}
 
 	// Add control to block inspector
-	const withVerticalStyleControl = createHigherOrderComponent((BlockEdit) => {
+	const withExtraOptionsControl = createHigherOrderComponent((BlockEdit) => {
 		return (props) => {
 			const { attributes, setAttributes, name } = props;
 
@@ -41,7 +41,11 @@
 				return createElement(BlockEdit, props);
 			}
 
-			const { verticalStyle = false } = attributes;
+			const {
+				verticalStyle = false,
+				zoomOnHover = false,
+				displayZoomButton = true,
+			} = attributes;
 
 			return createElement(
 				Fragment,
@@ -93,20 +97,37 @@
 				),
 			);
 		};
-	}, "withVerticalStyleControl");
+	}, "withExtraOptionsControl");
 
-	// Apply the filters
-	addFilter(
-		"blocks.registerBlockType",
-		"blaze-commerce/woocommerce-product-image-gallery-extension/add-attribute",
-		addVerticalStyleAttribute,
-	);
+	// Track if filters have been applied to prevent duplicates
+	let filtersApplied = false;
 
-	addFilter(
-		"editor.BlockEdit",
-		"blaze-commerce/woocommerce-product-image-gallery-extension/add-control",
-		withVerticalStyleControl,
-	);
+	// Function to apply filters
+	function applyFilters() {
+		if (filtersApplied) {
+			return;
+		}
+
+		// Apply the filters with higher priority to ensure they run after WooCommerce blocks are registered
+		addFilter(
+			"blocks.registerBlockType",
+			"blaze-commerce/woocommerce-product-image-gallery-extension/add-attribute",
+			addExtraOptions,
+			20, // Higher priority to run after WooCommerce
+		);
+
+		addFilter(
+			"editor.BlockEdit",
+			"blaze-commerce/woocommerce-product-image-gallery-extension/add-control",
+			withExtraOptionsControl,
+			20, // Higher priority to run after WooCommerce
+		);
+
+		filtersApplied = true;
+	}
+
+	// Apply filters immediately
+	applyFilters();
 
 	// Add custom CSS class when vertical style is enabled
 	const addCustomCSS = createHigherOrderComponent((BlockListBlock) => {
@@ -135,5 +156,6 @@
 		"editor.BlockListBlock",
 		"blaze-commerce/woocommerce-product-image-gallery-extension/add-css",
 		addCustomCSS,
+		20, // Higher priority to run after WooCommerce
 	);
 })();

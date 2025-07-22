@@ -23,12 +23,17 @@ class WooCommerceProductImageGalleryExtension
 
     public function enqueue_block_editor_assets()
     {
+        // Only enqueue if WooCommerce is active and we're in the block editor
+        if (!class_exists('WooCommerce') || !is_admin()) {
+            return;
+        }
+
         // Enqueue our script to extend WooCommerce Product Image Gallery block
         wp_enqueue_script(
             'woocommerce-product-image-gallery-extension',
-            BLAZE_WOOLESS_PLUGIN_URL . 'assets/js/woocommerce-product-image-gallery-extension.js',
-            array('wp-blocks', 'wp-i18n', 'wp-element', 'wp-components', 'wp-block-editor', 'wp-hooks'),
-            BLAZE_WOOLESS_VERSION,
+            BLAZE_COMMERCE_PLUGIN_URL . 'assets/js/woocommerce-product-image-gallery-extension.js',
+            array('wp-blocks', 'wp-i18n', 'wp-element', 'wp-components', 'wp-block-editor', 'wp-hooks', 'wp-compose'),
+            BLAZE_COMMERCE_VERSION,
             true
         );
     }
