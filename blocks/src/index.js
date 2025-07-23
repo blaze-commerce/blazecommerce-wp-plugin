@@ -4,11 +4,11 @@ import { MainMenuConfig } from "./components/maxmegamenu/main-menu-config";
 import { SubmenuConfig } from "./components/maxmegamenu/submenu-config";
 
 // Import blocks
+import "./blaze-slideshow";
 import "./service-features";
 import "./stock-status";
 import "./product-description";
 import "./product-detail";
-import "./blaze-slideshow";
 
 const { createHigherOrderComponent } = wp.compose;
 const { Fragment } = wp.element;
