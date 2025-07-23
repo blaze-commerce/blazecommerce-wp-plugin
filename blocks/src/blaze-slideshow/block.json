@@ -79,6 +79,6 @@
 	"keywords": ["slideshow", "carousel", "slider", "blaze", "responsive"],
 	"textdomain": "blaze-commerce",
 	"editorScript": "file:./index.js",
-	"editorStyle": "file:./editor.scss",
-	"style": "file:./style.scss"
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css"
 }

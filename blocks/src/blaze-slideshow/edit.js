@@ -13,7 +13,6 @@ import {
 	ToggleControl,
 	ColorPicker,
 	TextControl,
-	__experimentalDivider as Divider,
 } from "@wordpress/components";
 import { Fragment } from "@wordpress/element";
 
