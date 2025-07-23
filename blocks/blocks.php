@@ -7,6 +7,21 @@
  * @see https://developer.wordpress.org/reference/functions/register_block_type/
  */
 
+// Register block categories
+add_filter('block_categories_all', 'blaze_commerce_register_block_categories', 10, 2);
+
+function blaze_commerce_register_block_categories($categories, $post)
+{
+    // Add BlazeCommerce category at the beginning
+    array_unshift($categories, array(
+        'slug' => 'blazecommerce',
+        'title' => __('BlazeCommerce', 'blaze-commerce'),
+        'icon' => 'store',
+    ));
+
+    return $categories;
+}
+
 // Register blocks
 add_action('init', 'blaze_commerce_register_blocks');
 

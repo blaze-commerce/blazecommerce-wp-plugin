@@ -4,7 +4,7 @@
   "name": "blaze-commerce/blaze-slideshow",
   "version": "0.1.0",
   "title": "Blaze Slideshow",
-  "category": "woocommerce-product-elements",
+  "category": "blazecommerce",
   "icon": "slides",
   "description": "A responsive slideshow block with customizable navigation and autoplay options",
   "supports": {

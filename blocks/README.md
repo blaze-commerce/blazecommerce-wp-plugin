@@ -6,17 +6,18 @@ This directory contains custom Gutenberg blocks for the Blaze Commerce plugin.
 
 ### 1. Blaze Slideshow Block (`blaze-commerce/blaze-slideshow`)
 
-A responsive slideshow/carousel block with customizable navigation and autoplay options.
+A responsive slideshow/carousel block with customizable navigation and autoplay options. **Universal compatibility** - works with any WordPress theme and template, not limited to WooCommerce.
 
 #### Features:
 
+- **Universal Compatibility**: Works with any WordPress theme and template (not limited to WooCommerce)
 - **Responsive Design**: Configure different number of slides for desktop, tablet, and mobile
 - **Navigation Options**: Enable/disable arrow navigation and dot indicators
 - **Autoplay Support**: Optional autoplay with customizable speed
 - **Touch/Swipe Support**: Mobile-friendly touch gestures
 - **Infinite Loop**: Optional infinite scrolling
 - **Customizable Styling**: Arrow colors, dot colors, and CSS classes
-- **Dynamic Content**: Use any WordPress blocks as slide content
+- **Dynamic Content**: Use any WordPress blocks as slide content (25+ core blocks supported)
 - **Performance Optimized**: Lightweight and efficient implementation
 
 #### Configuration Options:
@@ -38,11 +39,13 @@ A responsive slideshow/carousel block with customizable navigation and autoplay 
 
 #### Usage:
 
-1. Add the "Blaze Slideshow" block to your page
+1. Add the "Blaze Slideshow" block to your page (found in "BlazeCommerce" category)
 2. Configure slideshow settings in the sidebar
 3. Add content blocks inside the slideshow (each top-level block becomes a slide)
-4. Customize styling and behavior options
-5. Preview responsive behavior in the editor
+4. Use any of 25+ supported WordPress core blocks for slide content
+5. Customize styling and behavior options
+6. Preview responsive behavior in the editor
+7. Works on any WordPress template - posts, pages, custom post types, etc.
 
 ### 2. Product Description Block (`blaze-commerce/product-description`)
 
@@ -152,10 +155,10 @@ npm run start
 
 1. **In the WordPress Editor**:
 
-   - Open any post or page in the Gutenberg editor
+   - Open any post, page, or template in the Gutenberg editor
    - Click the "+" button to add a new block
-   - Search for "Blaze Commerce" or find the blocks in the "Blaze Commerce" category
-   - Select either "Product Description" or "Product Detail"
+   - Search for "BlazeCommerce" or find the blocks in the "BlazeCommerce" category
+   - Select any of the available blocks: Blaze Slideshow, Product Description, Product Detail, Service Features, or Product Stock Status
 
 2. **Configuration**:
 

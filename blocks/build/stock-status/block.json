@@ -4,7 +4,7 @@
   "name": "blaze-commerce/stock-status",
   "version": "0.1.0",
   "title": "Product Stock Status",
-  "category": "woocommerce-product-elements",
+  "category": "blazecommerce",
   "icon": "database",
   "description": "Display WooCommerce product stock status with optional quantity",
   "supports": {
