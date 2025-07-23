@@ -90,9 +90,9 @@ class PageMetaFields
         // Enqueue our custom script
         wp_enqueue_script(
             'blaze-page-meta-select2',
-            BLAZE_WOOLESS_PLUGIN_DIR . 'assets/js/page-meta-select2.js',
+            BLAZE_COMMERCE_PLUGIN_URL . 'assets/js/page-meta-select2.js',
             array('jquery', 'select2'),
-            BLAZE_COMMERCE_VERSIO,
+            BLAZE_COMMERCE_VERSION,
             true
         );
 
@@ -106,9 +106,9 @@ class PageMetaFields
         // Enqueue custom CSS for Select2 styling
         wp_enqueue_style(
             'blaze-page-meta-select2-css',
-            BLAZE_WOOLESS_PLUGIN_DIR . 'assets/css/page-meta-select2.css',
+            BLAZE_COMMERCE_PLUGIN_URL . 'assets/css/page-meta-select2.css',
             array('select2'),
-            BLAZE_COMMERCE_VERSIO
+            BLAZE_COMMERCE_VERSION
         );
     }
 
