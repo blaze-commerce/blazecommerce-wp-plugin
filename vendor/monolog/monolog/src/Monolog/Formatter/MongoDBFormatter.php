@@ -14,7 +14,6 @@ namespace Monolog\Formatter;
 use MongoDB\BSON\Type;
 use MongoDB\BSON\UTCDateTime;
 use Monolog\Utils;
-use Monolog\LogRecord;
 
 /**
  * Formats a record for use with the MongoDBHandler.
@@ -23,12 +22,15 @@ use Monolog\LogRecord;
  */
 class MongoDBFormatter implements FormatterInterface
 {
-    private bool $exceptionTraceAsString;
-    private int $maxNestingLevel;
-    private bool $isLegacyMongoExt;
+    /** @var bool */
+    private $exceptionTraceAsString;
+    /** @var int */
+    private $maxNestingLevel;
+    /** @var bool */
+    private $isLegacyMongoExt;
 
     /**
-     * @param int  $maxNestingLevel        0 means infinite nesting, the $record itself is level 1, $record->context is 2
+     * @param int  $maxNestingLevel        0 means infinite nesting, the $record itself is level 1, $record['context'] is 2
      * @param bool $exceptionTraceAsString set to false to log exception traces as a sub documents instead of strings
      */
     public function __construct(int $maxNestingLevel = 3, bool $exceptionTraceAsString = true)
@@ -36,24 +38,24 @@ class MongoDBFormatter implements FormatterInterface
         $this->maxNestingLevel = max($maxNestingLevel, 0);
         $this->exceptionTraceAsString = $exceptionTraceAsString;
 
-        $this->isLegacyMongoExt = \extension_loaded('mongodb') && version_compare((string) phpversion('mongodb'), '1.1.9', '<=');
+        $this->isLegacyMongoExt = extension_loaded('mongodb') && version_compare((string) phpversion('mongodb'), '1.1.9', '<=');
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      *
      * @return mixed[]
      */
-    public function format(LogRecord $record): array
+    public function format(array $record): array
     {
         /** @var mixed[] $res */
-        $res = $this->formatArray($record->toArray());
+        $res = $this->formatArray($record);
 
         return $res;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      *
      * @return array<mixed[]>
      */
@@ -82,9 +84,9 @@ class MongoDBFormatter implements FormatterInterface
                 $array[$name] = $this->formatDate($value, $nestingLevel + 1);
             } elseif ($value instanceof \Throwable) {
                 $array[$name] = $this->formatException($value, $nestingLevel + 1);
-            } elseif (\is_array($value)) {
+            } elseif (is_array($value)) {
                 $array[$name] = $this->formatArray($value, $nestingLevel + 1);
-            } elseif (\is_object($value) && !$value instanceof Type) {
+            } elseif (is_object($value) && !$value instanceof Type) {
                 $array[$name] = $this->formatObject($value, $nestingLevel + 1);
             }
         }
@@ -150,10 +152,11 @@ class MongoDBFormatter implements FormatterInterface
     {
         $milliseconds = floor(((float) $value->format('U.u')) * 1000);
 
-        $milliseconds = (PHP_INT_SIZE === 8) //64-bit OS?
+        $milliseconds = (PHP_INT_SIZE == 8) //64-bit OS?
             ? (int) $milliseconds
             : (string) $milliseconds;
 
+        // @phpstan-ignore-next-line
         return new UTCDateTime($milliseconds);
     }
 }

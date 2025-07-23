@@ -11,9 +11,7 @@
 
 namespace Monolog\Formatter;
 
-use Stringable;
 use Throwable;
-use Monolog\LogRecord;
 
 /**
  * Encodes whatever record data is passed to it as json
@@ -21,6 +19,8 @@ use Monolog\LogRecord;
  * This can be useful to log to databases or remote APIs
  *
  * @author Jordi Boggiano <j.boggiano@seld.be>
+ *
+ * @phpstan-import-type Record from \Monolog\Logger
  */
 class JsonFormatter extends NormalizerFormatter
 {
@@ -28,13 +28,13 @@ class JsonFormatter extends NormalizerFormatter
     public const BATCH_MODE_NEWLINES = 2;
 
     /** @var self::BATCH_MODE_* */
-    protected int $batchMode;
-
-    protected bool $appendNewline;
-
-    protected bool $ignoreEmptyContextAndExtra;
-
-    protected bool $includeStacktraces = false;
+    protected $batchMode;
+    /** @var bool */
+    protected $appendNewline;
+    /** @var bool */
+    protected $ignoreEmptyContextAndExtra;
+    /** @var bool */
+    protected $includeStacktraces = false;
 
     /**
      * @param self::BATCH_MODE_* $batchMode
@@ -70,42 +70,11 @@ class JsonFormatter extends NormalizerFormatter
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
-    public function format(LogRecord $record): string
+    public function format(array $record): string
     {
-        $normalized = $this->normalizeRecord($record);
-
-        return $this->toJson($normalized, true) . ($this->appendNewline ? "\n" : '');
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function formatBatch(array $records): string
-    {
-        return match ($this->batchMode) {
-            static::BATCH_MODE_NEWLINES => $this->formatBatchNewlines($records),
-            default => $this->formatBatchJson($records),
-        };
-    }
-
-    /**
-     * @return $this
-     */
-    public function includeStacktraces(bool $include = true): self
-    {
-        $this->includeStacktraces = $include;
-
-        return $this;
-    }
-
-    /**
-     * @return array<array<mixed>|bool|float|int|\stdClass|string|null>
-     */
-    protected function normalizeRecord(LogRecord $record): array
-    {
-        $normalized = parent::normalizeRecord($record);
+        $normalized = $this->normalize($record);
 
         if (isset($normalized['context']) && $normalized['context'] === []) {
             if ($this->ignoreEmptyContextAndExtra) {
@@ -122,55 +91,84 @@ class JsonFormatter extends NormalizerFormatter
             }
         }
 
-        return $normalized;
+        return $this->toJson($normalized, true) . ($this->appendNewline ? "\n" : '');
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function formatBatch(array $records): string
+    {
+        switch ($this->batchMode) {
+            case static::BATCH_MODE_NEWLINES:
+                return $this->formatBatchNewlines($records);
+
+            case static::BATCH_MODE_JSON:
+            default:
+                return $this->formatBatchJson($records);
+        }
+    }
+
+    /**
+     * @return self
+     */
+    public function includeStacktraces(bool $include = true): self
+    {
+        $this->includeStacktraces = $include;
+
+        return $this;
     }
 
     /**
      * Return a JSON-encoded array of records.
      *
-     * @phpstan-param LogRecord[] $records
+     * @phpstan-param Record[] $records
      */
     protected function formatBatchJson(array $records): string
     {
-        $formatted = array_map(fn (LogRecord $record) => $this->normalizeRecord($record), $records);
-
-        return $this->toJson($formatted, true);
+        return $this->toJson($this->normalize($records), true);
     }
 
     /**
      * Use new lines to separate records instead of a
      * JSON-encoded array.
      *
-     * @phpstan-param LogRecord[] $records
+     * @phpstan-param Record[] $records
      */
     protected function formatBatchNewlines(array $records): string
     {
+        $instance = $this;
+
         $oldNewline = $this->appendNewline;
         $this->appendNewline = false;
-        $formatted = array_map(fn (LogRecord $record) => $this->format($record), $records);
+        array_walk($records, function (&$value, $key) use ($instance) {
+            $value = $instance->format($value);
+        });
         $this->appendNewline = $oldNewline;
 
-        return implode("\n", $formatted);
+        return implode("\n", $records);
     }
 
     /**
      * Normalizes given $data.
      *
-     * @return null|scalar|array<mixed[]|scalar|null|object>|object
+     * @param mixed $data
+     *
+     * @return mixed
      */
-    protected function normalize(mixed $data, int $depth = 0): mixed
+    protected function normalize($data, int $depth = 0)
     {
         if ($depth > $this->maxNormalizeDepth) {
             return 'Over '.$this->maxNormalizeDepth.' levels deep, aborting normalization';
         }
 
-        if (\is_array($data)) {
+        if (is_array($data)) {
             $normalized = [];
 
             $count = 1;
             foreach ($data as $key => $value) {
                 if ($count++ > $this->maxNormalizeItemCount) {
-                    $normalized['...'] = 'Over '.$this->maxNormalizeItemCount.' items ('.\count($data).' total), aborting normalization';
+                    $normalized['...'] = 'Over '.$this->maxNormalizeItemCount.' items ('.count($data).' total), aborting normalization';
                     break;
                 }
 
@@ -180,7 +178,7 @@ class JsonFormatter extends NormalizerFormatter
             return $normalized;
         }
 
-        if (\is_object($data)) {
+        if (is_object($data)) {
             if ($data instanceof \DateTimeInterface) {
                 return $this->formatDate($data);
             }
@@ -194,18 +192,18 @@ class JsonFormatter extends NormalizerFormatter
                 return $data;
             }
 
-            if ($data instanceof Stringable) {
-                return $data->__toString();
-            }
-
             if (\get_class($data) === '__PHP_Incomplete_Class') {
                 return new \ArrayObject($data);
+            }
+
+            if (method_exists($data, '__toString')) {
+                return $data->__toString();
             }
 
             return $data;
         }
 
-        if (\is_resource($data)) {
+        if (is_resource($data)) {
             return parent::normalize($data);
         }
 
@@ -216,7 +214,7 @@ class JsonFormatter extends NormalizerFormatter
      * Normalizes given exception with or without its own stack trace based on
      * `includeStacktraces` property.
      *
-     * @return array<array-key, string|int|array<string|int|array<string>>>
+     * {@inheritDoc}
      */
     protected function normalizeException(Throwable $e, int $depth = 0): array
     {
