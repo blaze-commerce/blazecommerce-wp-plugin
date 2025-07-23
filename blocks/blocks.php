@@ -32,6 +32,9 @@ function blaze_commerce_register_blocks()
 
     // Register product detail block
     register_block_type(__DIR__ . '/src/product-detail');
+
+    // Register blaze slideshow block
+    register_block_type(__DIR__ . '/src/blaze-slideshow');
 }
 
 add_action('enqueue_block_editor_assets', 'extend_block_example_enqueue_block_editor_assets');
@@ -59,4 +62,21 @@ function extend_block_example_enqueue_block_editor_assets()
     );
 
     wp_localize_script('blaze-commerce-blocks-script', 'blaze_commerce_block_config', $config);
+}
+
+// Enqueue frontend assets
+add_action('wp_enqueue_scripts', 'blaze_commerce_enqueue_frontend_assets');
+
+function blaze_commerce_enqueue_frontend_assets()
+{
+    // Check if we have any Blaze Slideshow blocks on the page
+    if (has_block('blaze-commerce/blaze-slideshow')) {
+        wp_enqueue_script(
+            'blaze-slideshow-frontend',
+            plugins_url('/src/blaze-slideshow/frontend.js', __FILE__),
+            array(),
+            '1.0.0',
+            true
+        );
+    }
 }

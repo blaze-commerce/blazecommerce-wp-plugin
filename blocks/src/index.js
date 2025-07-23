@@ -8,6 +8,7 @@ import "./service-features";
 import "./stock-status";
 import "./product-description";
 import "./product-detail";
+import "./blaze-slideshow";
 
 const { createHigherOrderComponent } = wp.compose;
 const { Fragment } = wp.element;

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "blaze-commerce/blaze-slideshow",
+  "version": "0.1.0",
+  "title": "Blaze Slideshow",
+  "category": "woocommerce-product-elements",
+  "icon": "slides",
+  "description": "A responsive slideshow block with customizable navigation and autoplay options",
+  "supports": {
+    "html": false,
+    "align": [
+      "wide",
+      "full"
+    ],
+    "spacing": {
+      "margin": true,
+      "padding": true
+    }
+  },
+  "providesContext": {
+    "blaze-slideshow/isSlide": true
+  },
+  "attributes": {
+    "slidesToShowDesktop": {
+      "type": "number",
+      "default": 3
+    },
+    "slidesToShowTablet": {
+      "type": "number",
+      "default": 2
+    },
+    "slidesToShowMobile": {
+      "type": "number",
+      "default": 1
+    },
+    "enableArrows": {
+      "type": "boolean",
+      "default": true
+    },
+    "enableDots": {
+      "type": "boolean",
+      "default": true
+    },
+    "enableAutoplay": {
+      "type": "boolean",
+      "default": false
+    },
+    "autoplaySpeed": {
+      "type": "number",
+      "default": 3000
+    },
+    "infinite": {
+      "type": "boolean",
+      "default": true
+    },
+    "speed": {
+      "type": "number",
+      "default": 500
+    },
+    "slidesToScroll": {
+      "type": "number",
+      "default": 1
+    },
+    "arrowColor": {
+      "type": "string",
+      "default": "#333333"
+    },
+    "dotColor": {
+      "type": "string",
+      "default": "#cccccc"
+    },
+    "dotActiveColor": {
+      "type": "string",
+      "default": "#333333"
+    },
+    "containerClass": {
+      "type": "string",
+      "default": ""
+    }
+  },
+  "keywords": [
+    "slideshow",
+    "carousel",
+    "slider",
+    "blaze",
+    "responsive"
+  ],
+  "textdomain": "blaze-commerce",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./editor.scss",
+  "style": "file:./style.scss"
+}
