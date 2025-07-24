@@ -83,6 +83,8 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',
 			'\\BlazeWooless\\Features\\PluginIntegrationUrlManager',
+			'\\BlazeWooless\\Features\\EditCartCheckout',
+			'\\BlazeWooless\\Features\\WooCommerceCheckout',
 		);
 
 		foreach ( $features as $feature ) {
