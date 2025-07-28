@@ -14,7 +14,6 @@ use Typesense\Exceptions\TypesenseClientError;
  */
 class Collection
 {
-
     /**
      * @var string
      */
@@ -41,9 +40,14 @@ class Collection
     public Synonyms $synonyms;
 
     /**
+     * @var bool|null
+     */
+    private ?bool $exists = null;
+
+    /**
      * Collection constructor.
      *
-     * @param string $name
+     * @param string  $name
      * @param ApiCall $apiCall
      */
     public function __construct(string $name, ApiCall $apiCall)
@@ -85,6 +89,35 @@ class Collection
     public function getSynonyms(): Synonyms
     {
         return $this->synonyms;
+    }
+
+    /**
+     * Set collection exists flag.
+     *
+     * @param bool $exists
+     *
+     * @return void
+     */
+    public function setExists(bool $exists): void
+    {
+        $this->exists = $exists;
+    }
+
+    /**
+     * @return bool|null
+     */
+    public function exists(): ?bool
+    {
+        if ($this->exists === null) {
+            try {
+                $this->retrieve();
+                $this->exists = true;
+            } catch (TypesenseClientError | HttpClientException $e) {
+                $this->exists = false;
+            }
+        }
+
+        return $this->exists;
     }
 
     /**

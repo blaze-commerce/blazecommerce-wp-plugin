@@ -4,6 +4,7 @@ import { MainMenuConfig } from "./components/maxmegamenu/main-menu-config";
 import { SubmenuConfig } from "./components/maxmegamenu/submenu-config";
 
 // Import blocks
+import "./blaze-slideshow";
 import "./service-features";
 import "./kajal-collection-menu";
 import "./stock-status";

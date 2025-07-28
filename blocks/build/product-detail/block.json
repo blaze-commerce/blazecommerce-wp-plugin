@@ -4,7 +4,7 @@
   "name": "blaze-commerce/product-detail",
   "version": "1.0.0",
   "title": "Product Detail",
-  "category": "woocommerce-product-elements",
+  "category": "blazecommerce",
   "icon": "products",
   "description": "Display WooCommerce product details with customizable options",
   "supports": {

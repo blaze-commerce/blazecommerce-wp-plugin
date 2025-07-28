@@ -1,0 +1,132 @@
+/**
+ * Editor-specific styles for Blaze Slideshow Block
+ * Only applied in the Gutenberg editor
+ */
+
+.wp-block-blaze-commerce-blaze-slideshow {
+	&.blaze-slideshow-editor {
+		border: 1px solid #e0e0e0;
+		border-radius: 8px;
+		padding: 20px;
+		background: #fafafa;
+
+		.slideshow-info {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+			line-height: 1.4;
+			
+			strong {
+				color: #1e1e1e;
+			}
+		}
+
+		.slideshow-container {
+			background: white;
+			
+			.block-editor-inner-blocks {
+				> .block-editor-block-list__layout {
+					display: grid;
+					gap: 15px;
+					
+					// Show preview of responsive layout in editor
+					@media (min-width: 1024px) {
+						grid-template-columns: repeat(var(--preview-slides-desktop, 3), 1fr);
+					}
+					
+					@media (min-width: 768px) and (max-width: 1023px) {
+						grid-template-columns: repeat(var(--preview-slides-tablet, 2), 1fr);
+					}
+					
+					@media (max-width: 767px) {
+						grid-template-columns: repeat(var(--preview-slides-mobile, 1), 1fr);
+					}
+				}
+			}
+		}
+
+		.slideshow-dots-preview {
+			user-select: none;
+		}
+
+		// Highlight the slideshow container when selected
+		&.is-selected {
+			.slideshow-container {
+				border-color: #007cba;
+				box-shadow: 0 0 0 1px #007cba;
+			}
+		}
+
+		// Style for empty state
+		.block-editor-inner-blocks .block-editor-block-list__empty-block-inserter {
+			margin: 20px 0;
+		}
+
+		// Improve visibility of nested blocks
+		.wp-block {
+			position: relative;
+			
+			&::before {
+				content: '';
+				position: absolute;
+				top: -2px;
+				left: -2px;
+				right: -2px;
+				bottom: -2px;
+				border: 2px dashed transparent;
+				border-radius: 4px;
+				pointer-events: none;
+				transition: border-color 0.2s ease;
+			}
+			
+			&:hover::before {
+				border-color: #007cba;
+			}
+			
+			&.is-selected::before {
+				border-color: #007cba;
+				border-style: solid;
+			}
+		}
+	}
+}
+
+// Inspector controls styling
+.components-panel__body {
+	.blaze-slideshow-color-control {
+		.components-base-control__label {
+			margin-bottom: 8px;
+			font-weight: 600;
+		}
+		
+		.components-color-picker {
+			margin-bottom: 16px;
+		}
+	}
+}
+
+// Responsive preview indicators
+.blaze-slideshow-responsive-preview {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 15px;
+	padding: 10px;
+	background: #f0f0f0;
+	border-radius: 4px;
+	font-size: 12px;
+	
+	.preview-item {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		
+		.icon {
+			width: 16px;
+			height: 16px;
+			opacity: 0.7;
+		}
+		
+		.count {
+			font-weight: 600;
+			color: #1e1e1e;
+		}
+	}
+}
