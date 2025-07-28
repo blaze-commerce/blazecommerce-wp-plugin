@@ -15,6 +15,9 @@ function blaze_commerce_register_blocks()
     // Register service features block
     register_block_type(__DIR__ . '/src/service-features');
 
+    // Register kajal collection menu block
+    register_block_type(__DIR__ . '/src/kajal-collection-menu');
+
     // Include stock status block functionality
     require_once __DIR__ . '/src/stock-status/stock-status-block.php';
 

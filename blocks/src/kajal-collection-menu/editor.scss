@@ -1,0 +1,97 @@
+/* Editor styles for Kajal Collection Menu block */
+
+.kajal-collection-menu {
+	.kajal-collection-menu-container {
+		padding: 1.5rem;
+		background: #ffffff;
+		border: 1px solid #e5e7eb;
+		border-radius: 0.5rem;
+	}
+
+	.kajal-menu-title-section {
+		margin-bottom: 1rem;
+	}
+
+	.kajal-menu-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #374151;
+		margin: 0 0 0.5rem 0;
+		font-family: serif;
+	}
+
+	.kajal-menu-underline {
+		width: 100%;
+		height: 2px;
+		background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
+		margin-bottom: 1rem;
+	}
+
+	.kajal-menu-badge {
+		display: inline-block;
+		border: 1px solid #d97706;
+		color: #d97706;
+		padding: 0.5rem 1rem;
+		border-radius: 9999px;
+		font-size: 0.875rem;
+		font-weight: 500;
+		margin-bottom: 1.5rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.kajal-menu-items {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.kajal-menu-item {
+		background: #f3f4f6;
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		transition: all 0.2s ease;
+		cursor: pointer;
+		position: relative;
+		border: 1px solid transparent;
+
+		&:hover {
+			background: #e5e7eb;
+			border-color: #d1d5db;
+		}
+
+		&.selected {
+			border-color: #3b82f6;
+			background: #eff6ff;
+		}
+	}
+
+	.kajal-menu-item-text {
+		color: #374151;
+		font-weight: 500;
+		display: block;
+		padding-right: 2rem;
+	}
+
+	/* Sidebar styles */
+	.menu-item-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1rem;
+
+		h3 {
+			margin: 0;
+			font-size: 1rem;
+			font-weight: 600;
+		}
+	}
+
+	.menu-item-selector {
+		margin-bottom: 1rem;
+	}
+
+	.add-menu-item-sidebar {
+		margin-top: 1rem !important;
+	}
+}

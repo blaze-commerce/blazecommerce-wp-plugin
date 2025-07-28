@@ -5,6 +5,7 @@ import { SubmenuConfig } from "./components/maxmegamenu/submenu-config";
 
 // Import blocks
 import "./service-features";
+import "./kajal-collection-menu";
 import "./stock-status";
 import "./product-description";
 import "./product-detail";
