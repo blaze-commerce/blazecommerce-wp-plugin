@@ -65,6 +65,11 @@ class LoadCartFromSession {
 			}
 		}
 
+		// PHP 8.0+ compatibility: Check if cookie exists before accessing
+		if ( ! isset( $_COOKIE['woocommerce_customer_session_id'] ) ) {
+			return; // Exit early if no session ID available
+		}
+
 		$session_id = sanitize_text_field( $_COOKIE['woocommerce_customer_session_id'] );
 
 		// Bail if there isn't any data
@@ -112,6 +117,11 @@ class LoadCartFromSession {
 		}
 
 		if ( ! isset( $_COOKIE['woocommerce_customer_session_id'] ) || is_user_logged_in() ) {
+			return;
+		}
+
+		// PHP 8.0+ compatibility: Additional safety check
+		if ( empty( $_COOKIE['woocommerce_customer_session_id'] ) ) {
 			return;
 		}
 
