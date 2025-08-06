@@ -51,6 +51,16 @@ Backup and restore all Blaze Commerce plugin settings in JSON format for migrati
 - Security considerations
 - Troubleshooting import/export issues
 
+### [Taxonomy Sync Exclusion](taxonomy-sync-exclusion.md)
+Exclude specific WooCommerce product categories from being synced to the Typesense search index for better search optimization.
+
+**Key Topics:**
+- Category exclusion configuration
+- Typesense sync filtering
+- Admin interface integration
+- Bulk and individual sync handling
+- Performance optimization
+
 ## Feature Categories
 
 ### Core Features
