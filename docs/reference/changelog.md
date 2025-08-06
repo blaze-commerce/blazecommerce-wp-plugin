@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Note**: Release dates have been corrected based on actual Git commit history to ensure accuracy.
 
 
+## [1.15.1] - 2025-08-06
+
+### Features
+- **Taxonomy Sync Exclusion**: Added ability to exclude specific WooCommerce product categories from Typesense sync
+  - Custom meta field checkbox on category edit pages
+  - Automatic filtering during bulk taxonomy sync operations
+  - Individual term handling with proper cleanup and re-inclusion support
+  - Performance optimization by reducing index size for irrelevant categories
+
 ## [1.12.0] - 2025-07-11
 
 

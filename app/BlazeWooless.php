@@ -79,6 +79,7 @@ class BlazeWooless {
 			'\\BlazeWooless\\Features\\LoadCartFromSession',
 			'\\BlazeWooless\\Features\\Authentication',
 			'\\BlazeWooless\\Features\\CategoryBanner',
+			'\\BlazeWooless\\Features\\TaxonomySyncExclusion',
 			'\\BlazeWooless\\Features\\TemplateBuilder',
 			'\\BlazeWooless\\Features\\Review',
 			'\\BlazeWooless\\Features\\Tax',

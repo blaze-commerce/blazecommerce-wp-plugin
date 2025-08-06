@@ -234,8 +234,10 @@ class Taxonomy extends BaseCollection {
 			$term_query = new \WP_Term_Query( $query_args );
 
 			if ( ! empty( $term_query->terms ) && ! is_wp_error( $term_query->terms ) ) {
+				// Filter terms to exclude those marked for exclusion
+				$filtered_terms = apply_filters( 'blazecommerce_taxonomy_sync_terms', $term_query->terms );
 
-				$taxonomy_datas     = $this->prepare_batch_data( $term_query->terms );
+				$taxonomy_datas     = $this->prepare_batch_data( $filtered_terms );
 				$successful_imports = $this->import_prepared_batch( $taxonomy_datas );
 
 				$imported_count = count( $successful_imports );
@@ -284,6 +286,18 @@ class Taxonomy extends BaseCollection {
 		$term = get_term( $term_id, $taxonomy );
 
 		if ( ! $term || is_wp_error( $term ) ) {
+			return;
+		}
+
+		// Check if this term is excluded from sync
+		$exclude_from_sync = get_term_meta( $term_id, 'blaze_exclude_from_typesense_sync', true );
+		if ( $exclude_from_sync === '1' ) {
+			// Term is excluded, try to remove it from Typesense if it exists
+			try {
+				$this->collection()->documents[ (string) $term_id ]->delete();
+			} catch (\Exception $e) {
+				// Term might not exist in Typesense, which is fine
+			}
 			return;
 		}
 
