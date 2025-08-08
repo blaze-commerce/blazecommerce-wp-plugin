@@ -1,0 +1,26 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "blaze-commerce/product-description",
+	"version": "1.0.0",
+	"title": "Product Description",
+	"category": "blazecommerce",
+	"icon": "text",
+	"description": "Display WooCommerce product description",
+	"supports": {
+		"html": false,
+		"align": ["left", "center", "right", "wide", "full"]
+	},
+	"attributes": {
+		"productId": {
+			"type": "number",
+			"default": 0
+		}
+	},
+	"keywords": ["product", "description", "woocommerce", "blaze"],
+	"render": "file:./product-description-block.php",
+	"textdomain": "blaze-commerce",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./editor.css",
+	"style": "file:./style.css"
+}

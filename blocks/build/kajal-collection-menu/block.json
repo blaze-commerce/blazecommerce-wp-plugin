@@ -1,0 +1,88 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "blaze-commerce/kajal-collection-menu",
+  "version": "0.1.0",
+  "title": "Kajal Collection Menu",
+  "category": "woocommerce-product-elements",
+  "icon": "menu",
+  "description": "Display a customizable collection menu with title, badge, and menu items",
+  "supports": {
+    "html": false
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "default": "Choose By Type"
+    },
+    "titleClass": {
+      "type": "string",
+      "default": ""
+    },
+    "showUnderline": {
+      "type": "boolean",
+      "default": true
+    },
+    "underlineClass": {
+      "type": "string",
+      "default": ""
+    },
+    "showBadge": {
+      "type": "boolean",
+      "default": true
+    },
+    "badgeText": {
+      "type": "string",
+      "default": "NEW IN!"
+    },
+    "badgeClass": {
+      "type": "string",
+      "default": ""
+    },
+    "containerClass": {
+      "type": "string",
+      "default": ""
+    },
+    "menuItemClass": {
+      "type": "string",
+      "default": ""
+    },
+    "menuItems": {
+      "type": "array",
+      "default": [
+        {
+          "id": "item-1",
+          "text": "DIVYA - Diamond Mangalsutra",
+          "link": "#",
+          "linkType": "url",
+          "target": "_self"
+        },
+        {
+          "id": "item-2",
+          "text": "Mangalsutra 3.0 - Kismet",
+          "link": "#",
+          "linkType": "url",
+          "target": "_self"
+        },
+        {
+          "id": "item-3",
+          "text": "Mangalsutra 2.0",
+          "link": "#",
+          "linkType": "url",
+          "target": "_self"
+        },
+        {
+          "id": "item-4",
+          "text": "Mangalsutra 1.0",
+          "link": "#",
+          "linkType": "url",
+          "target": "_self"
+        }
+      ]
+    }
+  },
+  "textdomain": "blaze-commerce",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css"
+}

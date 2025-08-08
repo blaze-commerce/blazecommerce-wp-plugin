@@ -1,0 +1,205 @@
+/**
+ * Blaze Slideshow Block Styles
+ * Applied both in editor and frontend
+ */
+
+.wp-block-blaze-commerce-blaze-slideshow {
+	position: relative;
+	overflow: hidden;
+
+	.blaze-slideshow-container {
+		position: relative;
+		width: 100%;
+		overflow: hidden;
+	}
+
+	.blaze-slideshow-track {
+		display: flex;
+		transition: transform 0.5s ease;
+		will-change: transform;
+
+		> * {
+			flex: 0 0 auto;
+			width: 100%;
+			box-sizing: border-box;
+		}
+	}
+
+	// Arrow Navigation
+	.blaze-slideshow-arrow {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		background: rgba(255, 255, 255, 0.8);
+		border: none;
+		border-radius: 50%;
+		width: 40px;
+		height: 40px;
+		cursor: pointer;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 18px;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+		&:hover {
+			background: rgba(255, 255, 255, 0.95);
+			transform: translateY(-50%) scale(1.1);
+		}
+
+		&:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+			
+			&:hover {
+				transform: translateY(-50%) scale(1);
+			}
+		}
+
+		&.prev {
+			left: 15px;
+		}
+
+		&.next {
+			right: 15px;
+		}
+
+		svg {
+			width: 20px;
+			height: 20px;
+			fill: currentColor;
+		}
+	}
+
+	// Dot Navigation
+	.blaze-slideshow-dots {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		margin-top: 20px;
+		gap: 8px;
+
+		.dot {
+			width: 12px;
+			height: 12px;
+			border-radius: 50%;
+			border: none;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			background-color: var(--dot-color, #cccccc);
+
+			&:hover {
+				transform: scale(1.2);
+			}
+
+			&.active {
+				background-color: var(--dot-active-color, #333333);
+				transform: scale(1.3);
+			}
+		}
+	}
+
+	// Responsive breakpoints
+	@media (min-width: 1024px) {
+		.blaze-slideshow-track > * {
+			width: calc(100% / var(--slides-desktop, 3));
+		}
+	}
+
+	@media (min-width: 768px) and (max-width: 1023px) {
+		.blaze-slideshow-track > * {
+			width: calc(100% / var(--slides-tablet, 2));
+		}
+	}
+
+	@media (max-width: 767px) {
+		.blaze-slideshow-track > * {
+			width: calc(100% / var(--slides-mobile, 1));
+		}
+
+		.blaze-slideshow-arrow {
+			width: 35px;
+			height: 35px;
+			font-size: 16px;
+
+			&.prev {
+				left: 10px;
+			}
+
+			&.next {
+				right: 10px;
+			}
+		}
+	}
+
+	// Loading state
+	&.loading {
+		.blaze-slideshow-track {
+			opacity: 0.7;
+		}
+	}
+
+	// Smooth transitions
+	&.transitioning {
+		.blaze-slideshow-track {
+			transition: transform var(--transition-speed, 500ms) ease;
+		}
+	}
+}
+
+// Editor specific styles
+.blaze-slideshow-editor {
+	.blaze-slideshow-preview {
+		.slideshow-container {
+			min-height: 200px;
+			
+			.wp-block {
+				margin-bottom: 1rem;
+				
+				&:last-child {
+					margin-bottom: 0;
+				}
+			}
+		}
+
+		.slideshow-dots-preview {
+			pointer-events: none;
+		}
+	}
+}
+
+// Animation keyframes
+@keyframes slideIn {
+	from {
+		opacity: 0;
+		transform: translateX(30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes slideOut {
+	from {
+		opacity: 1;
+		transform: translateX(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateX(-30px);
+	}
+}
+
+// Accessibility improvements
+.blaze-slideshow-arrow:focus {
+	outline: 2px solid #005cee;
+	outline-offset: 2px;
+}
+
+.blaze-slideshow-dots .dot:focus {
+	outline: 2px solid #005cee;
+	outline-offset: 2px;
+}

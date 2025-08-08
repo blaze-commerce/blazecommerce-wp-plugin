@@ -140,7 +140,7 @@ class WoocommerceProductAddons {
 						break;
 					default:
 						//skip the field if it is not supported to prevent errors
-						continue;
+						continue 2;
 				}
 
 				$data = $field->get_cart_item_data();

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "blaze-commerce/stock-status",
+  "version": "0.1.0",
+  "title": "Product Stock Status",
+  "category": "blazecommerce",
+  "icon": "database",
+  "description": "Display WooCommerce product stock status with optional quantity",
+  "supports": {
+    "html": false,
+    "align": true
+  },
+  "attributes": {
+    "align": {
+      "type": "string",
+      "default": "left"
+    },
+    "showQuantity": {
+      "type": "boolean",
+      "default": false
+    },
+    "className": {
+      "type": "string"
+    }
+  },
+  "render": "file:./stock-status-block.php",
+  "textdomain": "blaze-commerce",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css"
+}
