@@ -75,7 +75,6 @@ class BlazeWooless
         }
     }
 
-<<<<<<< HEAD
     public function register_features()
     {
         $features = array(
@@ -86,28 +85,12 @@ class BlazeWooless
             '\\BlazeWooless\\Features\\LoadCartFromSession',
             '\\BlazeWooless\\Features\\Authentication',
             '\\BlazeWooless\\Features\\CategoryBanner',
+            '\\BlazeWooless\\Features\\TaxonomySyncExclusion',
             '\\BlazeWooless\\Features\\TemplateBuilder',
             '\\BlazeWooless\\Features\\Review',
             '\\BlazeWooless\\Features\\Tax',
             '\\BlazeWooless\\Features\\PluginIntegrationUrlManager',
         );
-=======
-	public function register_features() {
-		$features = array(
-			'\\BlazeWooless\\Features\\ContentBuilder',
-			'\\BlazeWooless\\Features\\AttributeSettings',
-			'\\BlazeWooless\\Features\\CalculateShipping',
-			'\\BlazeWooless\\Features\\DraggableContent',
-			'\\BlazeWooless\\Features\\LoadCartFromSession',
-			'\\BlazeWooless\\Features\\Authentication',
-			'\\BlazeWooless\\Features\\CategoryBanner',
-			'\\BlazeWooless\\Features\\TaxonomySyncExclusion',
-			'\\BlazeWooless\\Features\\TemplateBuilder',
-			'\\BlazeWooless\\Features\\Review',
-			'\\BlazeWooless\\Features\\Tax',
-			'\\BlazeWooless\\Features\\PluginIntegrationUrlManager',
-		);
->>>>>>> main
 
         foreach ($features as $feature) {
             $feature::get_instance();

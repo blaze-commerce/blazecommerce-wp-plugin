@@ -25,14 +25,9 @@ require_once plugin_dir_path(__FILE__) . 'blocks/blocks.php';
 
 // Include test files for development/debugging
 // Updated: Enhanced debugging support for version bump testing
-<<<<<<< HEAD
 if (defined('WP_DEBUG') && WP_DEBUG) {
     require_once plugin_dir_path(__FILE__) . 'test/test-country-specific-images.php';
-=======
-if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-	require_once plugin_dir_path( __FILE__ ) . 'test/test-country-specific-images.php';
-	require_once plugin_dir_path( __FILE__ ) . 'test/test-taxonomy-sync-exclusion.php';
->>>>>>> main
+    require_once plugin_dir_path(__FILE__) . 'test/test-taxonomy-sync-exclusion.php';
 }
 
 
