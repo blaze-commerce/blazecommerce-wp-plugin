@@ -99,3 +99,8 @@ docs/**/*.HEIC
 *.backup
 backup-*/
 
+# Distribution files
+# Plugin zip files should not be committed to repository
+*.zip
+blazecommerce-wp-plugin.zip
+

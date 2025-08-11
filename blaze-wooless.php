@@ -28,6 +28,7 @@ require_once plugin_dir_path( __FILE__ ) . 'blocks/blocks.php';
 if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 	require_once plugin_dir_path( __FILE__ ) . 'test/test-country-specific-images.php';
 	require_once plugin_dir_path( __FILE__ ) . 'test/test-taxonomy-sync-exclusion.php';
+	require_once plugin_dir_path( __FILE__ ) . 'test/test-global-block-config.php';
 }
 
 

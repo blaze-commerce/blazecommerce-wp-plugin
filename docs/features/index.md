@@ -61,6 +61,17 @@ Exclude specific WooCommerce product categories from being synced to the Typesen
 - Bulk and individual sync handling
 - Performance optimization
 
+### [Global Block Region Configuration](global-block-region-config.md)
+Simple global Gutenberg block enhancement that adds a "Region" text field to all blocks' Advanced panel for region-specific content management.
+
+**Key Topics:**
+- Global block enhancement implementation
+- Advanced panel integration
+- Block metadata persistence
+- Frontend data attribute output
+- Simple text-based region specification
+- Automated testing and troubleshooting
+
 ## Feature Categories
 
 ### Core Features
