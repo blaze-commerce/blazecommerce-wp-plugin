@@ -2,51 +2,66 @@
 
 ## Overview
 
-The Global Block Region Configuration feature adds a simple "Region" text field to the Advanced panel of all Gutenberg blocks. This allows content creators to specify which region a block should be displayed in, with the data saved as block metadata.
+The Global Block Region Configuration feature adds a multiselect region control to the Advanced panel of all Gutenberg blocks. This allows content creators to specify which regions each block should be displayed in using checkboxes for available regions from Aelia Currency Switcher configuration.
 
 ## Features
 
 - **Global Implementation**: Automatically adds region configuration to ALL Gutenberg blocks
-- **Advanced Panel Integration**: Places the region field in the standard "Advanced" section
+- **Advanced Panel Integration**: Places the regions control in the standard "Advanced" section
+- **Multiselect Interface**: Checkbox-based selection for multiple regions
+- **Aelia Integration**: Automatically pulls regions from Aelia Currency Switcher configuration
+- **REST API Backend**: Efficient region data loading via WordPress REST API with global caching
 - **Metadata Storage**: Saves region data as block attributes and HTML data attributes
-- **Simple Interface**: Clean text input field with helpful description
-- **Frontend Integration**: Adds `data-blaze-region` attribute to block HTML for frontend use
+- **Frontend Integration**: Adds `data-blaze-regions` attribute to block HTML for frontend use
 
 ## How It Works
 
 ### 1. Block Attribute Addition
 
-The system automatically adds a `blazeCommerceRegion` attribute to all blocks:
+The system automatically adds a `blazeCommerceRegions` attribute to all blocks:
 
 ```javascript
-settings.attributes.blazeCommerceRegion = {
-    type: 'string',
-    default: ''
+settings.attributes.blazeCommerceRegions = {
+    type: 'array',
+    default: []
 };
 ```
 
-### 2. Inspector Control
+### 2. REST API Endpoint
 
-A text control is added to the Advanced panel of every block:
+A REST API endpoint provides available regions from Aelia Currency Switcher:
 
-```javascript
-createElement(TextControl, {
-    label: 'Region',
-    value: regionValue,
-    onChange: (value) => {
-        setAttributes({ blazeCommerceRegion: value });
-    },
-    help: 'Specify the region where this block should be displayed',
-    className: 'blaze-commerce-region-control'
-})
+```php
+register_rest_route('wp/v2', '/blaze-commerce/regions', array(
+    'methods' => 'GET',
+    'callback' => 'blaze_commerce_get_regions',
+    'permission_callback' => function() {
+        return current_user_can('edit_posts');
+    }
+));
 ```
 
-### 3. Frontend Output
+### 3. Inspector Control
 
-When a region is specified, it's saved as a data attribute in the block's HTML:
+Checkbox controls are added to the Advanced panel of every block:
+
+```javascript
+availableRegions.map(region =>
+    createElement(CheckboxControl, {
+        key: region.code,
+        label: region.label,
+        checked: selectedRegions.includes(region.code),
+        onChange: () => toggleRegion(region.code)
+    })
+)
+```
+
+### 4. Frontend Output
+
+When regions are selected, they're saved as a comma-separated data attribute in the block's HTML:
 
 ```html
-<div data-blaze-region="US" class="wp-block-paragraph">
+<div data-blaze-regions="US,CA" class="wp-block-paragraph">
     Block content here...
 </div>
 ```
@@ -99,6 +114,40 @@ When a region is specified, it's saved as a data attribute in the block's HTML:
 - `wp-block-editor` - Block editor components (InspectorAdvancedControls)
 - `wp-hooks` - WordPress filter system
 - `wp-compose` - Higher-order components
+- `wp-api-fetch` - REST API requests
+
+## Performance Optimization
+
+### Global Caching System
+
+The implementation uses a sophisticated caching system to prevent performance issues:
+
+- **Single API Request**: Regions are fetched only once per editor session, regardless of block count
+- **Shared Cache**: All blocks share the same regions data via global cache
+- **Promise Reuse**: Multiple blocks loading simultaneously share the same API request
+- **Immediate Loading**: Cached data is available instantly for subsequent blocks
+
+### Cache Management
+
+```javascript
+// Cache structure
+regionsCache = {
+    data: null,        // Cached regions array
+    loading: false,    // Loading state flag
+    error: null,       // Error state
+    promise: null      // Shared promise for concurrent requests
+}
+
+// Clear cache if needed (available in browser console)
+window.blazeCommerceClearRegionsCache();
+```
+
+### Performance Benefits
+
+- **Eliminates N+1 Problem**: No matter how many blocks (10, 100, or 1000), only 1 API request is made
+- **Faster Loading**: Subsequent blocks load instantly using cached data
+- **Reduced Server Load**: Minimal impact on WordPress REST API
+- **Better User Experience**: No loading delays after the first block
 
 ## Block Exclusions
 

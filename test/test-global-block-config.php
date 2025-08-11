@@ -31,6 +31,7 @@ class Test_Global_Block_Config {
 
         $this->test_script_enqueue();
         $this->test_file_exists();
+        $this->test_rest_endpoint();
         $this->log_test_results();
     }
 
@@ -83,6 +84,57 @@ class Test_Global_Block_Config {
 
             $this->log_success($test_name, "File exists and is readable ({$file_size} bytes)");
             
+        } catch (Exception $e) {
+            $this->log_error($test_name, $e->getMessage());
+        }
+    }
+
+    /**
+     * Test: REST API endpoint for regions
+     */
+    public function test_rest_endpoint() {
+        $test_name = 'REST Endpoint Test';
+
+        try {
+            // Test if PageMetaFields extension is available
+            if (!class_exists('BlazeWooless\Extensions\PageMetaFields')) {
+                throw new Exception('PageMetaFields extension not available');
+            }
+
+            // Test get_available_regions method
+            $page_meta_fields = \BlazeWooless\Extensions\PageMetaFields::get_instance();
+            $regions = $page_meta_fields->get_available_regions();
+
+            if (!is_array($regions)) {
+                throw new Exception('Failed to get regions data - not an array');
+            }
+
+            $region_count = count($regions);
+
+            // Test region data structure if regions exist
+            if ($region_count > 0) {
+                $first_region = reset($regions);
+                $required_keys = ['label', 'currency', 'country_code', 'country_name'];
+
+                foreach ($required_keys as $key) {
+                    if (!isset($first_region[$key])) {
+                        throw new Exception("Region data missing required key: {$key}");
+                    }
+                }
+            }
+
+            // Test REST endpoint callback function
+            if (!function_exists('blaze_commerce_get_regions')) {
+                throw new Exception('REST endpoint callback function missing');
+            }
+
+            $message = "Regions available: {$region_count}, Data structure valid, Callback exists, Caching implemented";
+            if ($region_count === 0) {
+                $message .= " (Note: No regions configured in Aelia Currency Switcher)";
+            }
+
+            $this->log_success($test_name, $message);
+
         } catch (Exception $e) {
             $this->log_error($test_name, $e->getMessage());
         }

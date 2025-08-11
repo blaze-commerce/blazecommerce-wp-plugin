@@ -1,36 +1,47 @@
 /**
  * Global Block Configuration Styles
- * 
+ *
  * Styles for the global block region configuration interface
  */
 
-/* Region control styling in Advanced panel */
-.components-panel__body .components-base-control.blaze-commerce-region-control {
+/* Regions control container */
+.blaze-commerce-regions-control {
     margin-bottom: 16px;
 }
 
-.components-panel__body .components-base-control.blaze-commerce-region-control .components-base-control__label {
+.blaze-commerce-regions-control .components-base-control__label {
     font-weight: 600;
+    margin-bottom: 12px;
+    color: #1e1e1e;
+    display: block;
+}
+
+/* Checkboxes container */
+.blaze-commerce-regions-checkboxes {
     margin-bottom: 8px;
+}
+
+.blaze-commerce-regions-checkboxes .components-checkbox-control {
+    margin-bottom: 8px;
+}
+
+.blaze-commerce-regions-checkboxes .components-checkbox-control:last-child {
+    margin-bottom: 0;
+}
+
+/* Checkbox styling */
+.blaze-commerce-regions-checkboxes .components-checkbox-control__input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.blaze-commerce-regions-checkboxes .components-checkbox-control__label {
+    font-size: 13px;
+    line-height: 1.4;
     color: #1e1e1e;
 }
 
-.components-panel__body .components-base-control.blaze-commerce-region-control .components-text-control__input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #949494;
-    border-radius: 2px;
-    font-size: 13px;
-    line-height: 1.4;
-}
-
-.components-panel__body .components-base-control.blaze-commerce-region-control .components-text-control__input:focus {
-    border-color: #007cba;
-    box-shadow: 0 0 0 1px #007cba;
-    outline: none;
-}
-
-.components-panel__body .components-base-control.blaze-commerce-region-control .components-base-control__help {
+/* Description text */
+.blaze-commerce-regions-control .description {
     font-size: 12px;
     font-style: normal;
     color: #757575;
@@ -38,8 +49,13 @@
     margin-bottom: 0;
 }
 
+/* Loading spinner */
+.blaze-commerce-regions-control .components-spinner {
+    margin: 8px 0;
+}
+
 /* Block editor specific adjustments */
-.block-editor-block-inspector .components-panel__body.is-opened .blaze-commerce-region-control {
+.block-editor-block-inspector .components-panel__body.is-opened .blaze-commerce-regions-control {
     border-top: 1px solid #e0e0e0;
     padding-top: 16px;
     margin-top: 16px;
@@ -47,7 +63,7 @@
 
 /* Responsive adjustments */
 @media (max-width: 782px) {
-    .components-panel__body .components-base-control.blaze-commerce-region-control .components-text-control__input {
-        font-size: 16px; /* Prevent zoom on iOS */
+    .blaze-commerce-regions-checkboxes .components-checkbox-control__label {
+        font-size: 14px; /* Slightly larger on mobile */
     }
 }
