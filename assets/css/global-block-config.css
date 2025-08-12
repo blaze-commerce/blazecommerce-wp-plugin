@@ -1,0 +1,69 @@
+/**
+ * Global Block Configuration Styles
+ *
+ * Styles for the global block region configuration interface
+ */
+
+/* Regions control container */
+.blaze-commerce-regions-control {
+    margin-bottom: 16px;
+}
+
+.blaze-commerce-regions-control .components-base-control__label {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #1e1e1e;
+    display: block;
+}
+
+/* Checkboxes container */
+.blaze-commerce-regions-checkboxes {
+    margin-bottom: 8px;
+}
+
+.blaze-commerce-regions-checkboxes .components-checkbox-control {
+    margin-bottom: 8px;
+}
+
+.blaze-commerce-regions-checkboxes .components-checkbox-control:last-child {
+    margin-bottom: 0;
+}
+
+/* Checkbox styling */
+.blaze-commerce-regions-checkboxes .components-checkbox-control__input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.blaze-commerce-regions-checkboxes .components-checkbox-control__label {
+    font-size: 13px;
+    line-height: 1.4;
+    color: #1e1e1e;
+}
+
+/* Description text */
+.blaze-commerce-regions-control .description {
+    font-size: 12px;
+    font-style: normal;
+    color: #757575;
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+/* Loading spinner */
+.blaze-commerce-regions-control .components-spinner {
+    margin: 8px 0;
+}
+
+/* Block editor specific adjustments */
+.block-editor-block-inspector .components-panel__body.is-opened .blaze-commerce-regions-control {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 16px;
+    margin-top: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 782px) {
+    .blaze-commerce-regions-checkboxes .components-checkbox-control__label {
+        font-size: 14px; /* Slightly larger on mobile */
+    }
+}
