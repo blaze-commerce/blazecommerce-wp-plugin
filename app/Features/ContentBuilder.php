@@ -20,6 +20,8 @@ class ContentBuilder {
 		add_action( 'init', array( $this, 'register_blaze_settings_post_type' ), 0, 1 );
 		add_action( 'admin_init', array( $this, 'prevent_access_to_list' ) );
 		add_action( 'save_post_blaze_settings', array( $this, 'save' ), 10, 2 );
+
+		add_filter( 'wpseo_sitemap_exclude_post_type', array( $this, 'xml_sitemap_post_types' ), 10, 2 );
 	}
 
 	public function register_blaze_settings_post_type() {
@@ -95,5 +97,23 @@ class ContentBuilder {
 				->site_info()
 				->upsert( $settings[ $post_name ] );
 		}
+	}
+
+	/**
+	 * Make sure blaze_settings is not included in the XML sitemap.
+	 *
+	 * @since 1.0
+	 *
+	 * @param bool   $include_in_sitemap Whether or not to include this post type in the XML sitemap.
+	 * @param string $post_type          The post type of the post.
+	 *
+	 * @return bool
+	 */
+	public function xml_sitemap_post_types( $include_in_sitemap, $post_type ) {
+		if ( $post_type === 'blaze_settings' ) {
+			return true;
+		}
+
+		return $include_in_sitemap;
 	}
 }
