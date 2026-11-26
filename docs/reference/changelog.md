@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Note**: Release dates have been corrected based on actual Git commit history to ensure accuracy.
 
 
+## [Unreleased]
+
+### Bug Fixes
+
+- **Blog post sync**: Published posts are now indexed into Typesense on save (`wp_after_insert_post`), after the block editor has saved categories, featured image and meta
+  - Scheduled posts published by WP-Cron, and WP-CLI saves without `--user`, are indexed too
+  - A post that is unpublished, made private, rescheduled or trashed, or permanently deleted, is removed from the index (new `BaseCollection::delete()`)
+  - Pages keep their existing `save_post_page` behaviour
+
 ## [1.15.1] - 2025-08-06
 
 ### Features
