@@ -296,6 +296,16 @@ class BaseCollection {
 		return $this->get_active_collection()->documents->upsert( $document_data );
 	}
 
+	/**
+	 * Delete one document by ID from the ACTIVE collection (same target as upsert()).
+	 *
+	 * @param string|int $id Document ID.
+	 * @return array Typesense response (the deleted document).
+	 */
+	public function delete( $id ) {
+		return $this->get_active_collection()->documents[ (string) $id ]->delete();
+	}
+
 
 	/**
 	 * Get the ACTIVE collection object for CRUD operations
