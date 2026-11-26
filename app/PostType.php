@@ -17,6 +17,10 @@ class PostType {
 
 	public function __construct() {
 		add_action( 'save_post_page', array( $this, 'upsert_page_data' ), 10, 3 );
+		// Posts live in the same Typesense collection as pages (see Page::get_syncable_post_types()),
+		// so they need the same on-save upsert. Without this a new post only appears after a manual
+		// `wp bc-sync page_and_post --all`.
+		add_action( 'save_post_post', array( $this, 'upsert_post_data' ), 10, 3 );
 	}
 
 
@@ -105,5 +109,25 @@ class PostType {
 
 		}
 		return;
+	}
+
+	/**
+	 * Index a blog post into Typesense when it is saved.
+	 *
+	 * Only published posts are indexed, matching `wp bc-sync page_and_post --all`, which imports
+	 * post_status = publish. Honours the `blazecommerce/collection/syncable_post_types` filter.
+	 * Everything else (enable_system, autosave, permissions, connection check) is handled by
+	 * upsert_page_data().
+	 */
+	public function upsert_post_data( $post_id, $post, $update ) {
+		if ( ! $post instanceof \WP_Post || 'publish' !== $post->post_status ) {
+			return;
+		}
+
+		if ( ! in_array( 'post', Page::get_instance()->get_syncable_post_types(), true ) ) {
+			return;
+		}
+
+		$this->upsert_page_data( $post_id, $post, $update );
 	}
 }
