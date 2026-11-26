@@ -7,6 +7,21 @@ use BlazeWooless\Collections\Page;
 class PostType {
 	private static $instance = null;
 
+	/**
+	 * Posts upserted in this request, post ID => hash of the document that was sent.
+	 * A second save of the same, unchanged post in one request does not write again.
+	 *
+	 * @var array<int, string>
+	 */
+	private static $upserted_posts = array();
+
+	/**
+	 * Posts removed from the index in this request, post ID => true.
+	 *
+	 * @var array<int, bool>
+	 */
+	private static $deleted_posts = array();
+
 	public static function get_instance() {
 		if ( self::$instance === null ) {
 			self::$instance = new self();
@@ -17,10 +32,15 @@ class PostType {
 
 	public function __construct() {
 		add_action( 'save_post_page', array( $this, 'upsert_page_data' ), 10, 3 );
-		// Posts live in the same Typesense collection as pages (see Page::get_syncable_post_types()),
-		// so they need the same on-save upsert. Without this a new post only appears after a manual
-		// `wp bc-sync page_and_post --all`.
-		add_action( 'save_post_post', array( $this, 'upsert_post_data' ), 10, 3 );
+
+		// Blog posts live in the same Typesense collection as pages (Page::get_syncable_post_types()).
+		// wp_after_insert_post (WP 5.6+) fires after the block editor has saved the categories, the
+		// featured image and the meta, so the document holds the values the editor just saved.
+		add_action( 'wp_after_insert_post', array( $this, 'upsert_post_data' ), 10, 4 );
+		// Unpublish, private, scheduled-again and trash all leave the 'publish' status.
+		add_action( 'transition_post_status', array( $this, 'remove_unpublished_post' ), 10, 3 );
+		// Permanent delete, including `wp post delete --force`, which skips the trash.
+		add_action( 'before_delete_post', array( $this, 'delete_post_data' ), 10, 1 );
 	}
 
 
@@ -112,22 +132,167 @@ class PostType {
 	}
 
 	/**
-	 * Index a blog post into Typesense when it is saved.
+	 * Index a blog post into Typesense once WordPress has finished saving it.
 	 *
-	 * Only published posts are indexed, matching `wp bc-sync page_and_post --all`, which imports
-	 * post_status = publish. Honours the `blazecommerce/collection/syncable_post_types` filter.
-	 * Everything else (enable_system, autosave, permissions, connection check) is handled by
-	 * upsert_page_data().
+	 * Hooked to wp_after_insert_post. Only published posts are indexed, matching
+	 * `wp bc-sync page_and_post --all` (post_status = publish). Revisions and autosaves have their
+	 * own post type, so the 'post' type check skips them. Pages keep their save_post_page path.
+	 *
+	 * @param int           $post_id     Post ID.
+	 * @param \WP_Post      $post        Post object as saved.
+	 * @param bool          $update      Whether this is an existing post being updated.
+	 * @param \WP_Post|null $post_before Post object before the update, null for new posts.
+	 * @return void
 	 */
-	public function upsert_post_data( $post_id, $post, $update ) {
-		if ( ! $post instanceof \WP_Post || 'publish' !== $post->post_status ) {
+	public function upsert_post_data( $post_id, $post, $update, $post_before = null ) {
+		if ( ! $post instanceof \WP_Post || 'post' !== $post->post_type || 'publish' !== $post->post_status ) {
 			return;
+		}
+
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		if ( ! $this->can_sync_posts() || ! $this->can_index_post( $post->ID ) ) {
+			return;
+		}
+
+		$page_collection = Page::get_instance();
+		$document        = $page_collection->get_data( $post );
+		if ( empty( $document ) ) {
+			return;
+		}
+
+		$hash = md5( (string) wp_json_encode( $document ) );
+		if ( isset( self::$upserted_posts[ $post->ID ] ) && self::$upserted_posts[ $post->ID ] === $hash ) {
+			return;
+		}
+
+		try {
+			do_action( 'ts_before_page_upsert', $post );
+			$page_collection->upsert( $document );
+			self::$upserted_posts[ $post->ID ] = $hash;
+			unset( self::$deleted_posts[ $post->ID ] );
+			do_action( 'ts_page_upsert', $post );
+		} catch ( \Throwable $e ) {
+			$this->log( 'TS Post Upsert Exception (post ' . $post->ID . '): ' . $e->getMessage() );
+		}
+	}
+
+	/**
+	 * Remove a blog post from the index when it leaves the 'publish' status.
+	 *
+	 * Covers publish -> draft, pending, private, future and trash. No capability check: core has
+	 * already authorised the status change, and removing non-public content must never be skipped.
+	 *
+	 * @param string   $new_status New post status.
+	 * @param string   $old_status Previous post status.
+	 * @param \WP_Post $post       Post object.
+	 * @return void
+	 */
+	public function remove_unpublished_post( $new_status, $old_status, $post ) {
+		if ( ! $post instanceof \WP_Post || 'post' !== $post->post_type ) {
+			return;
+		}
+
+		if ( 'publish' !== $old_status || 'publish' === $new_status ) {
+			return;
+		}
+
+		if ( ! $this->can_sync_posts() ) {
+			return;
+		}
+
+		$this->delete_post_document( $post->ID );
+	}
+
+	/**
+	 * Remove a blog post from the index before it is permanently deleted.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	public function delete_post_data( $post_id ) {
+		if ( 'post' !== get_post_type( $post_id ) ) {
+			return;
+		}
+
+		if ( ! $this->can_sync_posts() ) {
+			return;
+		}
+
+		$this->delete_post_document( (int) $post_id );
+	}
+
+	/**
+	 * Delete one post document from the active page collection, once per request.
+	 *
+	 * A missing document (already removed, or never indexed) throws and is logged at debug level.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	private function delete_post_document( $post_id ) {
+		if ( isset( self::$deleted_posts[ $post_id ] ) ) {
+			return;
+		}
+
+		self::$deleted_posts[ $post_id ] = true;
+		unset( self::$upserted_posts[ $post_id ] );
+
+		try {
+			do_action( 'ts_before_page_delete', $post_id );
+			Page::get_instance()->delete( $post_id );
+			do_action( 'ts_page_delete', $post_id );
+		} catch ( \Throwable $e ) {
+			$this->log( 'TS Post Delete Exception (post ' . $post_id . '): ' . $e->getMessage() );
+		}
+	}
+
+	/**
+	 * Whether post sync is on: system enabled, 'post' still syncable, Typesense configured.
+	 *
+	 * @return bool
+	 */
+	private function can_sync_posts() {
+		if ( ! boolval( bw_get_general_settings( 'enable_system' ) ) ) {
+			return false;
 		}
 
 		if ( ! in_array( 'post', Page::get_instance()->get_syncable_post_types(), true ) ) {
-			return;
+			return false;
 		}
 
-		$this->upsert_page_data( $post_id, $post, $update );
+		return TypesenseClient::get_instance()->can_connect();
+	}
+
+	/**
+	 * Whether the current request may index this post.
+	 *
+	 * Scheduled posts are published by WP-Cron (publish_future_post) with no logged-in user, and
+	 * `wp post create/update` runs as user 0 unless --user is passed. Both are trusted contexts, so
+	 * they skip the edit_post check that editor saves go through.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return bool
+	 */
+	private function can_index_post( $post_id ) {
+		if ( wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return true;
+		}
+
+		return current_user_can( 'edit_post', $post_id );
+	}
+
+	/**
+	 * Debug log through the WooCommerce logger when it is available.
+	 *
+	 * @param string $message Message.
+	 * @return void
+	 */
+	private function log( $message ) {
+		if ( function_exists( 'wc_get_logger' ) ) {
+			wc_get_logger()->debug( $message, array( 'source' => 'wooless-post-sync' ) );
+		}
 	}
 }
